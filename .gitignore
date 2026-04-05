@@ -30,3 +30,5 @@ apps/shield/evidence/
 *.dmg
 *.vmdk
 *.vhd
+.DS_Store
+**/.DS_Store
