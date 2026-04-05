@@ -1,0 +1,34 @@
+[
+  {
+    "filename": "verification_report.latest.json",
+    "sha256": "ffc2952b03bed71fa7e9a55110191661f7432df75b38134e269067f75bce86d9"
+  },
+  {
+    "filename": "verification_summary.txt",
+    "sha256": "18f3808176dcc4fa900dca723c9bccb57aadcbd3deceb9fd0b341d40e62e4c2a"
+  },
+  {
+    "filename": "replay_report.latest.json",
+    "sha256": "baecc87708fadb3ed298d9d4c15f4253b4b73354b1f2b80fe255e4e5e558acc7"
+  },
+  {
+    "filename": "replay_summary.txt",
+    "sha256": "1e1e391828994ad793105f7456c5d2dcd47195c14b47d843d1ef9a388538e22b"
+  },
+  {
+    "filename": "integrity_violations.json",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  {
+    "filename": "integrity_violations_summary.txt",
+    "sha256": "3f7ef044b76e66879157655a561ecf93a5247351a9478772ab511010cbb626bf"
+  },
+  {
+    "filename": "case_versions.json",
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  {
+    "filename": "case_settings.json",
+    "sha256": "b6b824eb99821b648952e1cbbf626c6f4ac4fee37135baa1f40bd2e961f2c8a7"
+  }
+]

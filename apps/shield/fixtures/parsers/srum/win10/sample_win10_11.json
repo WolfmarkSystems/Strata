@@ -1,0 +1,15 @@
+﻿{
+  "records": [
+    {
+      "record_id": 1011,
+      "provider": "network",
+      "record_type": "network-usage",
+      "timestamp_utc": "2026-03-10T11:00:00Z",
+      "app_name": "app11.exe",
+      "exe_path": "C:\\Program Files\\App11\\app11.exe",
+      "user_sid": "S-1-5-21-1000",
+      "bytes_in": 1100,
+      "bytes_out": 2200
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-08T02:37:54.660144700+00:00",
+  "platform": "windows",
+  "command": "timeline",
+  "args": [
+    "--case",
+    "demo_case_001",
+    "--db",
+    ".\\exports\\cases\\demo_case.sqlite",
+    "--json-result",
+    ".\\gui-tauri\\gui\\runs\\timeline_result.json",
+    "--quiet"
+  ],
+  "status": "error",
+  "exit_code": 1,
+  "error": "Error querying activity_log: no such table: activity_log",
+  "warning": null,
+  "error_type": "database_error",
+  "hint": "Check activity_log table availability",
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 20
+}

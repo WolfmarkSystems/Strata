@@ -1,0 +1,10 @@
+{
+  "command": "verify",
+  "args": [
+    "--case",
+    "{{case_id}}",
+    "--db",
+    "{{db_path}}"
+  ],
+  "result_path": "gui/runs/verify_result.json"
+}

@@ -1,0 +1,1 @@
+txn 06 CreateFile C:\\Temp\\a06.txt Rename $MFT $UsnJrnl

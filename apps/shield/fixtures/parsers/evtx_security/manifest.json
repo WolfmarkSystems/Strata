@@ -1,0 +1,277 @@
+﻿{
+    "generated_utc":  "2026-03-11T10:26:00.1282887Z",
+    "parser":  "evtx_security",
+    "count":  30,
+    "fixtures":  [
+                     {
+                         "id":  "evtx-security-win10-01",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_01.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4624
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-02",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_02.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4672
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-03",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_03.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4625
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-04",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_04.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4624
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-05",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_05.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4672
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-06",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_06.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4625
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-07",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_07.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4624
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-08",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_08.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4672
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-09",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_09.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4625
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-10",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_10.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4624
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-11",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_11.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4672
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-12",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_12.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4625
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-13",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_13.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4624
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-14",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_14.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4672
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win10-15",
+                         "path":  "fixtures/parsers/evtx_security/win10/w10_security_15.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    4625
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-01",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_01.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4624
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-02",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_02.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4688
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-03",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_03.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4625
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-04",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_04.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4720
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-05",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_05.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4624
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-06",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_06.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4688
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-07",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_07.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4625
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-08",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_08.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4720
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-09",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_09.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4624
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-10",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_10.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4688
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-11",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_11.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4625
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-12",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_12.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4720
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-13",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_13.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4624
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-14",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_14.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4688
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-security-win11-15",
+                         "path":  "fixtures/parsers/evtx_security/win11/w11_security_15.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    4625
+                                                ]
+                     }
+                 ]
+}

@@ -1,0 +1,151 @@
+name: Strata Tree — Cross-Platform Build
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'apps/tree/strata-tree/**'
+      - 'crates/**'
+      - '.github/workflows/tree-build.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/tree/strata-tree/**'
+      - 'crates/**'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ─── Build + Check (no std tests — egui requires a display) ───────────────
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: strata-tree.exe
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            artifact: strata-tree
+          - os: macos-13
+            target: x86_64-apple-darwin
+            artifact: strata-tree
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      # Linux: install OpenGL + X11 libs required by eframe/glow.
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            libssl-dev \
+            libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libxkbcommon-dev \
+            libgl1-mesa-dev \
+            libgtk-3-dev
+
+      - name: cargo check
+        run: cargo check -p strata-tree --target ${{ matrix.target }}
+
+      - name: cargo build --release
+        run: cargo build -p strata-tree --release --target ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: strata-tree-${{ matrix.os }}
+          path: target/${{ matrix.target }}/release/${{ matrix.artifact }}
+          retention-days: 30
+
+  # ─── Cargo Deny — license + advisory checks ───────────────────────────────
+  deny:
+    name: License & Advisory Check
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check advisories licenses bans
+          manifest-path: apps/tree/strata-tree/Cargo.toml
+
+  # ─── Clippy ───────────────────────────────────────────────────────────────
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libssl-dev libxcb-render0-dev libxcb-shape0-dev \
+            libxcb-xfixes0-dev libxkbcommon-dev libgl1-mesa-dev libgtk-3-dev
+      - name: cargo clippy
+        run: cargo clippy -p strata-tree -- -D warnings
+
+  # ─── Release bundle (tag-triggered only) ─────────────────────────────────
+  release:
+    name: Release Bundle
+    if: startsWith(github.ref, 'refs/tags/tree-v')
+    needs: [build, deny, clippy]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+
+      - name: Create release archives
+        run: |
+          cd dist
+          for dir in */; do
+            base="${dir%/}"
+            zip -r "${base}.zip" "${base}/"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
+          name: "Strata Tree ${{ github.ref_name }}"
+          body: |
+            ## Strata Tree — Forensic Analysis Workbench
+
+            Portable, standalone digital forensics workbench.
+            No installation required. Single binary.
+
+            ### Artifacts
+            | Platform | Download |
+            |---|---|
+            | Windows x64 | `strata-tree-windows-latest.zip` |
+            | Linux x64   | `strata-tree-ubuntu-22.04.zip`  |
+            | macOS x64   | `strata-tree-macos-13.zip`      |

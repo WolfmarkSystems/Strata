@@ -1,0 +1,2 @@
+﻿source,event_type,snapshot_id,timestamp_unix,file_path,source_record_id
+shadow-copy,shadow-copy-event,SC-6,1700300270,C:/Windows/System32/cmd.exe,sc-6

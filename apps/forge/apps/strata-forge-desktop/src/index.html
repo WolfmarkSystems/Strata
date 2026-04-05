@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vantor Forge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06080c;
+      --surface: #0c0e14;
+      --surface-el: #12141c;
+      --border: #1e2636;
+      --accent: #f97316;
+      --accent-glow: rgba(249,115,22,0.25);
+      --cyan: #00d4ff;
+      --text: #c8c8e0;
+      --text-dim: #6b7280;
+      --text-muted: #3d4555;
+      --danger: #ef4444;
+      --green: #4ade80;
+      --font: 'Outfit', sans-serif;
+      --mono: 'JetBrains Mono', 'Courier New', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 14px; }
+
+    /* TITLEBAR */
+    .titlebar { height: 36px; background: var(--bg); display: flex; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--border); user-select: none; }
+    .titlebar-drag { flex: 1; height: 100%; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.8rem; letter-spacing: 1.5px; color: var(--accent); }
+    .tb-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+    .tb-actions { display: flex; height: 100%; }
+    .tb-btn { width: 40px; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-dim); font-size: 1rem; transition: background 0.15s; }
+    .tb-btn:hover { background: #1e2636; color: var(--text); }
+    .tb-btn.close:hover { background: #e81123; color: #fff; }
+
+    /* MAIN LAYOUT */
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    /* LEFT SIDEBAR */
+    .sidebar { width: 220px; min-width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .sidebar-section { padding: 12px; border-bottom: 1px solid var(--border); }
+    .sidebar-title { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 8px; }
+    .quick-btn { display: block; width: 100%; padding: 7px 10px; margin-bottom: 4px; background: var(--surface-el); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.8rem; cursor: pointer; text-align: left; font-family: var(--font); transition: border-color 0.2s, background 0.2s; }
+    .quick-btn:hover { border-color: var(--accent); background: rgba(249,115,22,0.06); }
+
+    /* CONTEXT PANEL */
+    .ctx-chip { display: inline-block; background: var(--surface-el); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; margin: 2px; font-size: 0.7rem; color: var(--text-dim); font-family: var(--mono); max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ctx-chip b { color: var(--accent); font-weight: 500; margin-right: 3px; }
+    .ctx-clear { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; margin-top: 6px; font-family: var(--font); }
+    .ctx-clear:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* HISTORY LIST */
+    .history-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .hist-item { padding: 6px 8px; margin-bottom: 2px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: background 0.15s; }
+    .hist-item:hover { background: var(--surface-el); color: var(--text); }
+    .hist-item.active { background: rgba(249,115,22,0.1); color: var(--accent); border-left: 2px solid var(--accent); }
+    .hist-new { display: block; width: calc(100% - 16px); margin: 6px 8px; padding: 6px; background: none; border: 1px dashed var(--border); color: var(--text-dim); border-radius: 5px; font-size: 0.75rem; cursor: pointer; text-align: center; font-family: var(--font); }
+    .hist-new:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* STATUS INDICATOR */
+    .status-bar { padding: 6px 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 0.65rem; color: var(--text-muted); }
+    .s-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+    .s-dot.ok { background: var(--green); box-shadow: 0 0 4px var(--green); }
+    .s-dot.err { background: var(--danger); }
+
+    /* RIGHT: CHAT AREA */
+    .chat-area { flex: 1; display: flex; flex-direction: column; }
+
+    /* CHAT LOG */
+    .chat-log { flex: 1; overflow-y: auto; padding: 20px 28px; display: flex; flex-direction: column; gap: 16px; }
+    .chat-log::-webkit-scrollbar { width: 5px; }
+    .chat-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+
+    .msg { max-width: 88%; display: flex; flex-direction: column; gap: 4px; animation: fadeIn 0.2s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .msg-user { align-self: flex-end; }
+    .msg-ai { align-self: flex-start; }
+    .msg-label { font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .msg-user .msg-label { color: var(--accent); text-align: right; }
+    .msg-ai .msg-label { color: var(--cyan); }
+    .msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; line-height: 1.55; border: 1px solid var(--border); white-space: pre-wrap; word-break: break-word; position: relative; }
+    .msg-user .msg-bubble { background: #1a1510; border-color: rgba(249,115,22,0.2); border-bottom-right-radius: 3px; }
+    .msg-ai .msg-bubble { background: var(--surface-el); border-bottom-left-radius: 3px; }
+    .msg-ts { font-size: 0.58rem; color: var(--text-muted); }
+    .msg-user .msg-ts { text-align: right; }
+
+    /* COPY BUTTON */
+    .copy-btn { position: absolute; top: 6px; right: 6px; background: var(--surface); border: 1px solid var(--border); color: var(--text-dim); width: 22px; height: 22px; border-radius: 4px; cursor: pointer; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.15s; }
+    .msg-bubble:hover .copy-btn { opacity: 1; }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* MITRE CHIPS */
+    .mitre-chip { display: inline-block; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.3); color: var(--accent); padding: 1px 6px; border-radius: 3px; font-family: var(--mono); font-size: 0.75rem; margin: 1px; cursor: default; }
+
+    /* INPUT */
+    .input-pane { padding: 12px 28px 20px; }
+    .input-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 6px 16px; display: flex; align-items: center; gap: 10px; transition: border-color 0.3s; }
+    .input-box:focus-within { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+    #user-input { flex: 1; background: transparent; border: none; color: var(--text); font-family: var(--font); font-size: 0.9rem; outline: none; padding: 8px 0; resize: none; max-height: 100px; }
+    .btn-send { background: var(--accent); color: #000; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; flex-shrink: 0; }
+    .btn-send:hover { filter: brightness(1.15); }
+    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* SETTINGS MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 500px; max-height: 80vh; overflow-y: auto; }
+    .modal-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; }
+    .modal-body { padding: 16px 18px; }
+    .modal-foot { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 0.72rem; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input, .field select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-family: var(--mono); font-size: 0.82rem; }
+    .btn-primary { background: var(--accent); color: #000; border: none; padding: 7px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: var(--font); font-size: 0.8rem; }
+    .btn-secondary { background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 7px 16px; border-radius: 6px; cursor: pointer; font-family: var(--font); font-size: 0.8rem; }
+    .btn-secondary:hover { border-color: var(--text-dim); color: var(--text); }
+
+    /* WELCOME */
+    .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; color: var(--text-muted); text-align: center; padding: 40px; }
+    .welcome h2 { color: var(--accent); font-size: 1.1rem; margin-bottom: 8px; letter-spacing: 1px; }
+    .welcome p { font-size: 0.82rem; max-width: 400px; line-height: 1.5; }
+    .kb-stats { margin-top: 16px; font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <!-- TITLEBAR -->
+  <div class="titlebar" data-tauri-drag-region style="-webkit-app-region: drag;">
+    <div class="titlebar-drag" data-tauri-drag-region style="pointer-events: none;">
+      <div class="tb-dot"></div>
+      VANTOR FORGE
+    </div>
+    <div class="tb-actions" style="-webkit-app-region: no-drag;">
+      <div class="tb-btn" onclick="openSettings()" title="Settings">&#9881;</div>
+      <div class="tb-btn" id="tb-min" title="Minimize">&#8211;</div>
+      <div class="tb-btn close" id="tb-close" title="Close">&times;</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar">
+      <!-- Quick Tools -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">Quick Tools</div>
+        <button class="quick-btn" onclick="quickTool('explain')">EXPLAIN THIS</button>
+        <button class="quick-btn" onclick="quickTool('ioc')">IOC LOOKUP</button>
+        <button class="quick-btn" onclick="quickTool('attack')">ATT&amp;CK MAPPING</button>
+        <button class="quick-btn" onclick="quickTool('draft')">DRAFT PARAGRAPH</button>
+        <button class="quick-btn" onclick="quickTool('timeline')">SYNTHESIZE TIMELINE</button>
+      </div>
+
+      <!-- Context Panel -->
+      <div class="sidebar-section" id="ctx-panel">
+        <div class="sidebar-title">Context</div>
+        <div id="ctx-chips"><span style="color:var(--text-muted);font-size:0.72rem;">No context loaded</span></div>
+        <button class="ctx-clear" onclick="clearContext()">CLEAR CONTEXT</button>
+      </div>
+
+      <!-- History -->
+      <div class="sidebar-title" style="padding: 8px 12px 0;">History</div>
+      <button class="hist-new" onclick="newConversation()">+ New Conversation</button>
+      <div class="history-list" id="history-list"></div>
+
+      <!-- Status -->
+      <div class="status-bar">
+        <div class="s-dot" id="s-dot"></div>
+        <span id="s-text">Checking...</span>
+        <span style="flex:1"></span>
+        <span id="kb-info"></span>
+      </div>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat-area">
+      <div class="chat-log" id="chat-log">
+        <div class="welcome" id="welcome">
+          <h2>VANTOR FORGE</h2>
+          <p>Forensic knowledge engine. Ask about artifacts, IOCs, MITRE techniques, malware families, or draft court-ready paragraphs.</p>
+          <div class="kb-stats" id="kb-stats-display"></div>
+        </div>
+      </div>
+      <div class="input-pane">
+        <div class="input-box">
+          <textarea id="user-input" placeholder="Ask Forge anything..." rows="1"></textarea>
+          <button class="btn-send" id="send-btn" title="Send">
+            <svg fill="currentColor" viewBox="0 0 24 24" width="16"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <span>FORGE SETTINGS</span>
+        <button class="btn-secondary" onclick="closeSettings()">Close</button>
+      </div>
+      <div class="modal-body">
+        <div class="field"><label>LLM Server URL</label><input id="s-url" type="text"></div>
+        <div class="field"><label>Model</label><input id="s-model" type="text"></div>
+        <div class="field"><label>Timeout (seconds)</label><input id="s-timeout" type="number"></div>
+        <div class="field"><label>Context Server Port</label><input id="s-port" type="number"></div>
+        <div class="field"><label>Examiner Name</label><input id="s-examiner" type="text"></div>
+        <div class="field"><label>Max Conversation History</label><input id="s-maxhist" type="number"></div>
+        <div style="margin-top:8px;">
+          <button class="btn-secondary" id="s-test" onclick="testConnection()">Test Connection</button>
+          <span id="s-test-result" style="margin-left:8px;font-size:0.75rem;"></span>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-secondary" onclick="closeSettings()">Cancel</button>
+        <button class="btn-primary" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- IOC INPUT MODAL -->
+  <div class="modal-overlay" id="ioc-modal">
+    <div class="modal" style="width:420px;">
+      <div class="modal-head"><span>IOC LOOKUP</span></div>
+      <div class="modal-body">
+        <div class="field"><label>Enter IOCs (one per line)</label>
+          <textarea id="ioc-input" style="width:100%;height:120px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:0.82rem;" placeholder="e.g. mimikatz.exe&#10;192.168.1.100&#10;T1003"></textarea>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-secondary" onclick="closeIocModal()">Cancel</button>
+        <button class="btn-primary" onclick="submitIocLookup()">Analyze</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const { invoke } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
+const { getCurrentWindow } = window.__TAURI__.window;
+const appWindow = getCurrentWindow();
+
+// ── State ──
+let isSending = false;
+let history = [];
+let conversationId = null;
+
+const chatLog = document.getElementById('chat-log');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const sDot = document.getElementById('s-dot');
+const sText = document.getElementById('s-text');
+const welcome = document.getElementById('welcome');
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('tb-close').onclick = () => appWindow.close();
+  document.getElementById('tb-min').onclick = () => appWindow.minimize();
+
+  userInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+  });
+  userInput.onkeydown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  };
+  sendBtn.onclick = () => sendMessage();
+
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.onclick = (e) => { if (e.target === m) m.classList.remove('open'); };
+  });
+
+  checkHealth();
+  setInterval(checkHealth, 30000);
+  loadKbStats();
+  loadHistory();
+});
+
+// ── Health ──
+async function checkHealth() {
+  try {
+    const ok = await invoke('forge_health_check');
+    sDot.className = ok ? 's-dot ok' : 's-dot err';
+    sText.textContent = ok ? 'Connected' : 'Disconnected';
+  } catch {
+    sDot.className = 's-dot err';
+    sText.textContent = 'Error';
+  }
+}
+
+// ── KB Stats ──
+async function loadKbStats() {
+  try {
+    const [tools, techs, arts, paths, actors] = await invoke('forge_kb_stats');
+    document.getElementById('kb-stats-display').textContent =
+      `${tools} tools | ${techs} techniques | ${arts} artifacts | ${actors} actors`;
+    document.getElementById('kb-info').textContent = `KB: ${tools}T ${techs}M`;
+  } catch {}
+}
+
+// ── Context ──
+async function refreshContext() {
+  try {
+    const ctx = await invoke('forge_get_context');
+    const el = document.getElementById('ctx-chips');
+    el.innerHTML = '';
+    let hasCtx = false;
+    if (ctx.file_path) { el.innerHTML += chip('File', ctx.file_path); hasCtx = true; }
+    if (ctx.file_hash_sha256) { el.innerHTML += chip('Hash', ctx.file_hash_sha256.substring(0, 16) + '...'); hasCtx = true; }
+    if (ctx.file_category) { el.innerHTML += chip('Cat', ctx.file_category); hasCtx = true; }
+    if (ctx.registry_path) { el.innerHTML += chip('Reg', ctx.registry_path); hasCtx = true; }
+    if (ctx.case_name) { el.innerHTML += chip('Case', ctx.case_name); hasCtx = true; }
+    if (ctx.ioc_list && ctx.ioc_list.length) { el.innerHTML += chip('IOCs', ctx.ioc_list.length + ' items'); hasCtx = true; }
+    if (!hasCtx) el.innerHTML = '<span style="color:var(--text-muted);font-size:0.72rem;">No context loaded</span>';
+  } catch {}
+}
+function chip(label, value) {
+  return `<span class="ctx-chip"><b>${label}:</b> ${esc(value)}</span>`;
+}
+async function clearContext() {
+  await invoke('forge_clear_context');
+  refreshContext();
+}
+
+// ── Messages ──
+function appendMsg(role, content) {
+  if (welcome) welcome.style.display = 'none';
+  const div = document.createElement('div');
+  div.className = `msg msg-${role === 'user' ? 'user' : 'ai'}`;
+  const label = document.createElement('div');
+  label.className = 'msg-label';
+  label.textContent = role === 'user' ? 'Examiner' : 'Forge';
+  div.appendChild(label);
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = renderContent(content);
+  // Copy button
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = '\u2398';
+  copyBtn.title = 'Copy';
+  copyBtn.onclick = () => { navigator.clipboard.writeText(content); copyBtn.textContent = '\u2713'; setTimeout(() => copyBtn.textContent = '\u2398', 1500); };
+  bubble.appendChild(copyBtn);
+  div.appendChild(bubble);
+  const ts = document.createElement('div');
+  ts.className = 'msg-ts';
+  ts.textContent = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+  div.appendChild(ts);
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return bubble;
+}
+
+function renderContent(text) {
+  let html = esc(text);
+  // Highlight MITRE T-codes
+  html = html.replace(/\b(T1\d{3}(?:\.\d{3})?)\b/g, '<span class="mitre-chip">$1</span>');
+  // Basic code blocks
+  html = html.replace(/```([\s\S]*?)```/g, '<pre style="background:var(--bg);padding:8px;border-radius:6px;margin:6px 0;font-family:var(--mono);font-size:0.8rem;overflow-x:auto;">$1</pre>');
+  html = html.replace(/`([^`]+)`/g, '<code style="background:var(--bg);padding:1px 4px;border-radius:3px;font-family:var(--mono);font-size:0.82rem;">$1</code>');
+  return html;
+}
+
+// ── Send Message ──
+async function sendMessage(override) {
+  if (isSending) return;
+  const txt = (override || userInput.value).trim();
+  if (!txt) return;
+  isSending = true;
+  sendBtn.disabled = true;
+  if (!override) { userInput.value = ''; userInput.style.height = 'auto'; }
+  appendMsg('user', txt);
+  history.push({ role: 'user', content: txt });
+  // Trim history
+  const maxHist = 20;
+  if (history.length > maxHist) history.splice(0, history.length - maxHist);
+
+  const bubble = appendMsg('assistant', '');
+  bubble.innerHTML = '<span style="color:var(--text-muted);">Thinking...</span>';
+  let fullOutput = '';
+
+  try {
+    const unlisten1 = await listen('forge-token', (event) => {
+      fullOutput += event.payload;
+      bubble.innerHTML = renderContent(fullOutput);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    });
+    const unlisten2 = await listen('forge-done', () => {
+      unlisten1(); unlisten2();
+      bubble.innerHTML = renderContent(fullOutput);
+      // Re-add copy button
+      const cb = document.createElement('button');
+      cb.className = 'copy-btn'; cb.textContent = '\u2398'; cb.title = 'Copy';
+      cb.onclick = () => { navigator.clipboard.writeText(fullOutput); cb.textContent = '\u2713'; setTimeout(() => cb.textContent = '\u2398', 1500); };
+      bubble.appendChild(cb);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      history.push({ role: 'assistant', content: fullOutput });
+      isSending = false;
+      sendBtn.disabled = false;
+      saveCurrentConversation();
+    });
+
+    await invoke('forge_stream_query', {
+      query: txt,
+      history: history.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
+      context: null
+    });
+  } catch (e) {
+    bubble.innerHTML = `<span style="color:var(--danger);">Error: ${esc(String(e))}</span>`;
+    isSending = false;
+    sendBtn.disabled = false;
+  }
+}
+
+// ── Quick Tools ──
+async function quickTool(type) {
+  if (isSending) return;
+  if (type === 'ioc') { document.getElementById('ioc-modal').classList.add('open'); return; }
+  const cmdMap = { explain: 'forge_explain', attack: 'forge_attack_map', draft: 'forge_draft_paragraph', timeline: 'forge_synthesize_timeline' };
+  const cmd = cmdMap[type];
+  if (!cmd) return;
+
+  isSending = true;
+  sendBtn.disabled = true;
+  if (welcome) welcome.style.display = 'none';
+  const labels = { explain: 'Explain this artifact', attack: 'Map to ATT&CK techniques', draft: 'Draft court-ready paragraph', timeline: 'Synthesize attack timeline' };
+  appendMsg('user', labels[type] || type);
+  const bubble = appendMsg('assistant', '');
+  bubble.innerHTML = '<span style="color:var(--text-muted);">Analyzing...</span>';
+  let fullOutput = '';
+
+  try {
+    const unlisten1 = await listen('forge-token', (event) => { fullOutput += event.payload; bubble.innerHTML = renderContent(fullOutput); chatLog.scrollTop = chatLog.scrollHeight; });
+    const unlisten2 = await listen('forge-done', () => { unlisten1(); unlisten2(); bubble.innerHTML = renderContent(fullOutput); isSending = false; sendBtn.disabled = false; });
+    await invoke(cmd);
+  } catch (e) {
+    bubble.innerHTML = `<span style="color:var(--danger);">Error: ${esc(String(e))}</span>`;
+    isSending = false;
+    sendBtn.disabled = false;
+  }
+}
+
+function closeIocModal() { document.getElementById('ioc-modal').classList.remove('open'); }
+
+async function submitIocLookup() {
+  const raw = document.getElementById('ioc-input').value.trim();
+  if (!raw) return;
+  closeIocModal();
+  const iocs = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+
+  // First do local enrichment
+  let enrichResults = [];
+  for (const ioc of iocs) {
+    try {
+      const result = await invoke('forge_enrich_ioc', { iocValue: ioc });
+      enrichResults.push(result);
+    } catch {}
+  }
+
+  // Build summary for user
+  let summary = 'IOC Lookup Results (Local KB):\n';
+  for (const r of enrichResults) {
+    summary += `\n[${r.verdict}] ${r.ioc} (${r.ioc_type}, confidence: ${r.confidence}%)\n`;
+    if (r.description) summary += `  ${r.description}\n`;
+    if (r.mitre_techniques.length) summary += `  MITRE: ${r.mitre_techniques.join(', ')}\n`;
+    if (r.threat_actors.length) summary += `  Actors: ${r.threat_actors.join(', ')}\n`;
+    if (r.recommendation) summary += `  Action: ${r.recommendation}\n`;
+  }
+
+  // Also send to LLM for deeper analysis
+  await sendMessage(`Analyze these IOCs:\n${iocs.join('\n')}\n\nLocal KB enrichment:\n${summary}`);
+}
+
+// ── History ──
+async function loadHistory() {
+  try {
+    const convos = await invoke('forge_list_conversations');
+    const list = document.getElementById('history-list');
+    list.innerHTML = '';
+    for (const c of convos) {
+      const el = document.createElement('div');
+      el.className = 'hist-item' + (c.id === conversationId ? ' active' : '');
+      el.textContent = c.title;
+      el.title = `${c.created_at} | ${c.message_count} messages`;
+      el.onclick = () => loadConversation(c.id);
+      list.appendChild(el);
+    }
+  } catch {}
+}
+
+async function loadConversation(id) {
+  try {
+    const conv = await invoke('forge_load_conversation', { id });
+    conversationId = conv.id;
+    history = conv.messages.map(m => ({ role: m.role === 'User' ? 'user' : 'assistant', content: m.content }));
+    chatLog.innerHTML = '';
+    for (const m of conv.messages) {
+      appendMsg(m.role === 'User' ? 'user' : 'assistant', m.content);
+    }
+    loadHistory();
+  } catch (e) { console.error('Failed to load conversation:', e); }
+}
+
+async function newConversation() {
+  history = [];
+  conversationId = null;
+  chatLog.innerHTML = '';
+  if (welcome) { welcome.style.display = ''; chatLog.appendChild(welcome); }
+  try {
+    const conv = await invoke('forge_new_conversation', { caseName: null });
+    conversationId = conv.id;
+    loadHistory();
+  } catch {}
+}
+
+async function saveCurrentConversation() {
+  try { await invoke('forge_save_conversation'); } catch {}
+}
+
+// ── Settings ──
+async function openSettings() {
+  try {
+    const s = await invoke('forge_get_settings');
+    document.getElementById('s-url').value = s.llm_base_url;
+    document.getElementById('s-model').value = s.llm_model;
+    document.getElementById('s-timeout').value = s.llm_timeout_secs;
+    document.getElementById('s-port').value = s.context_server_port;
+    document.getElementById('s-examiner').value = s.examiner_name;
+    document.getElementById('s-maxhist').value = s.max_conversation_history;
+    document.getElementById('s-test-result').textContent = '';
+  } catch {}
+  document.getElementById('settings-modal').classList.add('open');
+}
+
+function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
+
+async function saveSettings() {
+  try {
+    await invoke('forge_save_settings', {
+      newSettings: {
+        llm_base_url: document.getElementById('s-url').value,
+        llm_model: document.getElementById('s-model').value,
+        llm_timeout_secs: parseInt(document.getElementById('s-timeout').value) || 120,
+        context_server_port: parseInt(document.getElementById('s-port').value) || 7842,
+        stream_responses: true,
+        max_conversation_history: parseInt(document.getElementById('s-maxhist').value) || 20,
+        font_size: 14,
+        save_conversation_history: true,
+        examiner_name: document.getElementById('s-examiner').value,
+      }
+    });
+    closeSettings();
+  } catch (e) { alert('Save failed: ' + e); }
+}
+
+async function testConnection() {
+  const el = document.getElementById('s-test-result');
+  el.textContent = 'Testing...';
+  el.style.color = 'var(--text-dim)';
+  try {
+    const ok = await invoke('forge_health_check');
+    el.textContent = ok ? 'Connected' : 'Failed — ollama not responding';
+    el.style.color = ok ? 'var(--green)' : 'var(--danger)';
+  } catch (e) {
+    el.textContent = 'Error: ' + e;
+    el.style.color = 'var(--danger)';
+  }
+}
+
+// ── Util ──
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+refreshContext();
+setInterval(refreshContext, 10000);
+</script>
+</body>
+</html>

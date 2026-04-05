@@ -1,0 +1,4 @@
+Case ID: test_case_001
+Session started: 2026-03-17T18:28:26.711028700+00:00
+Total violations: 0
+

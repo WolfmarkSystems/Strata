@@ -1,0 +1,3 @@
+﻿record_id,timestamp_utc,provider,record_type,app_name,exe_path,user_sid,bytes_in,bytes_out
+2006,2026-03-11T14:30:00Z,network,network-usage,win11app6.exe,C:/Program Files/Win11App6/win11app6.exe,S-1-5-21-2000,900,1500
+

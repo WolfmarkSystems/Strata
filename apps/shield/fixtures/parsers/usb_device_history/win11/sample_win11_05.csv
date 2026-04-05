@@ -1,0 +1,2 @@
+vendor_id,product_id,serial_number,friendly_name,timestamp,device_instance_id,device_class
+0795,5605,USB-SERIAL-W11-05,USB Device W11 05,1700201005,USB\\VID_0795PID_5605\\SN05,storage

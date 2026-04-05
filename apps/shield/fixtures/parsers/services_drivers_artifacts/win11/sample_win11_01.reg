@@ -1,0 +1,4 @@
+﻿[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Drv01]
+"DisplayName"="Driver 01"
+"ImagePath"="\\SystemRoot\\System32\\drivers\\drv01.sys"
+"Start"=dword:00000003

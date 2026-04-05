@@ -1,0 +1,9 @@
+Case ID: test_case_001
+Started: 
+Finished: 
+Status: Pass
+
+Steps:
+
+Fingerprints:
+  Tables fingerprinted: 0

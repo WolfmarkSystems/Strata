@@ -1,0 +1,5 @@
+{
+  "command": "capabilities",
+  "args": [],
+  "result_path": "gui/runs/capabilities_result.json"
+}

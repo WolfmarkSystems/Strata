@@ -1,0 +1,4 @@
+﻿[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run]
+"BadApp10"="C:\\Tools\\bad10.exe --silent"
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\bam\State\UserSettings\S-1-5-21]
+"C:\\Tools\\bad10.exe"=qword:01da1747cc62e100

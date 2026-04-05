@@ -1,0 +1,4 @@
+﻿[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Drv07]
+"DisplayName"="Driver 07"
+"ImagePath"="\\SystemRoot\\System32\\drivers\\drv07.sys"
+"Start"=dword:00000003

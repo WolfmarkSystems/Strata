@@ -1,0 +1,2 @@
+Az.Accounts|2.14.1|C:\\Modules\\Az.Accounts|Azure module
+Pester,5.5.1,C:\\Modules\\Pester,Test module

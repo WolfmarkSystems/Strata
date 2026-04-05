@@ -1,0 +1,16 @@
+﻿[
+{
+    "program_name":  "APP04.EXE",
+    "last_run_time":  1700003004,
+    "run_count":  4,
+    "files_referenced":  [
+                             "C:/Windows/System32/app04.exe"
+                         ],
+    "directories_referenced":  [
+                                   "C:/Windows/System32"
+                               ],
+    "volumes_referenced":  [
+                               "C:"
+                           ]
+}
+]

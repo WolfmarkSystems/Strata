@@ -1,0 +1,10 @@
+{
+  "command": "triage-session",
+  "args": [
+    "--case",
+    "{{case_id}}",
+    "--db",
+    "{{db_path}}"
+  ],
+  "result_path": "gui/runs/triage_result.json"
+}

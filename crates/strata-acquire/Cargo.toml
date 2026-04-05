@@ -1,0 +1,12 @@
+[package]
+name = "strata-acquire"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+strata-core = { workspace = true }
+anyhow = "1.0"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+sha2 = "0.10"
+uuid = { version = "1.6", features = ["v4", "serde"] }

@@ -1,0 +1,11 @@
+{
+  "command": "watchpoints",
+  "args": [
+    "--case",
+    "{{case_id}}",
+    "--db",
+    "{{db_path}}",
+    "--status"
+  ],
+  "result_path": "gui/runs/watchpoints_result.json"
+}

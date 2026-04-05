@@ -1,0 +1,1 @@
+﻿[{"consumer":"powershell.exe -nop","filter":"SELECT * FROM RegistryKeyChangeEvent"}]

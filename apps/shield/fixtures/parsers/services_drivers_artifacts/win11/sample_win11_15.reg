@@ -1,0 +1,4 @@
+﻿[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Drv15]
+"DisplayName"="Driver 15"
+"ImagePath"="\\SystemRoot\\System32\\drivers\\drv15.sys"
+"Start"=dword:00000003

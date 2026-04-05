@@ -1,0 +1,16 @@
+﻿[
+{
+    "program_name":  "APP06.EXE",
+    "last_run_time":  1700003006,
+    "run_count":  6,
+    "files_referenced":  [
+                             "C:/Windows/System32/app06.exe"
+                         ],
+    "directories_referenced":  [
+                                   "C:/Windows/System32"
+                               ],
+    "volumes_referenced":  [
+                               "C:"
+                           ]
+}
+]

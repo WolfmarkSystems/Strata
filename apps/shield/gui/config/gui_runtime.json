@@ -1,0 +1,15 @@
+{
+  "repo_root": "D:\\forensic-suite",
+  "evidence_dir": "D:\\forensic-suite\\evidence",
+  "exports_dir": "D:\\forensic-suite\\exports",
+  "cases_dir": "D:\\forensic-suite\\exports\\cases",
+  "runs_dir": "D:\\forensic-suite\\exports\\runs",
+  "defensibility_dir": "D:\\forensic-suite\\exports\\defensibility",
+  "smoke_dir": "D:\\forensic-suite\\exports\\smoke",
+  "gui_runs_dir": "D:\\forensic-suite\\gui\\runs",
+  "cli_release_exe": "D:\\forensic-suite\\target\\release\\forensic_cli.exe",
+  "cli_debug_exe": "D:\\forensic-suite\\target\\debug\\forensic_cli.exe",
+  "default_case_id": "demo_case_001",
+  "default_case_db": "D:\\forensic-suite\\exports\\cases\\demo_case.sqlite",
+  "default_smoke_out": "D:\\forensic-suite\\exports\\smoke\\surface_smoke"
+}

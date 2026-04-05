@@ -1,0 +1,24 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-13T02:09:54.471010200+00:00",
+  "platform": "windows",
+  "command": "verify",
+  "args": [
+    "--case",
+    "verify_case",
+    "--db",
+    "tests_temp_verify_json_result_success_1773367793161204500\\case.sqlite",
+    "--json-result",
+    "tests_temp_verify_json_result_success_1773367793161204500\\verify_result.json",
+    "--quiet"
+  ],
+  "status": "error",
+  "exit_code": 1,
+  "error": "Verification failed: FOREIGN KEY constraint failed",
+  "warning": null,
+  "error_type": "error",
+  "hint": "Check database path and case ID",
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 0
+}

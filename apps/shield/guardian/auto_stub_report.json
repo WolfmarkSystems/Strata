@@ -1,0 +1,920 @@
+﻿[
+    {
+        "File":  "\\engine\\src\\carving\\mod.rs",
+        "Line":  400,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\case\\database.rs",
+        "Line":  1775,
+        "Content":  "Err(rusqlite::Error::QueryReturnedNoRows) =\u003e Ok(Vec::new()),",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\accessibility.rs",
+        "Line":  31,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\accessibility.rs",
+        "Line":  86,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\archive.rs",
+        "Line":  67,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\archive.rs",
+        "Line":  102,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\backup.rs",
+        "Line":  41,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\backup.rs",
+        "Line":  55,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\backup.rs",
+        "Line":  66,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\backup.rs",
+        "Line":  92,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\certificate.rs",
+        "Line":  33,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\cleanup.rs",
+        "Line":  33,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\cleanup.rs",
+        "Line":  97,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\credentials.rs",
+        "Line":  39,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\credentials.rs",
+        "Line":  53,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\credentials.rs",
+        "Line":  64,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\credentials.rs",
+        "Line":  91,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\credentials.rs",
+        "Line":  105,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\dropbox.rs",
+        "Line":  120,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\dropbox.rs",
+        "Line":  144,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\dropbox.rs",
+        "Line":  160,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\dropbox.rs",
+        "Line":  193,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\dump.rs",
+        "Line":  59,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\etw.rs",
+        "Line":  17,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\etw.rs",
+        "Line":  34,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\etw.rs",
+        "Line":  110,
+        "Content":  "Err(_) =\u003e return Ok(Vec::new()),",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\etw.rs",
+        "Line":  114,
+        "Content":  "Err(_) =\u003e return Ok(Vec::new()),",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\etw.rs",
+        "Line":  117,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\font.rs",
+        "Line":  40,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\font.rs",
+        "Line":  89,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\googledrive.rs",
+        "Line":  125,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\googledrive.rs",
+        "Line":  152,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\googledrive.rs",
+        "Line":  166,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\googledrive.rs",
+        "Line":  191,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\googledrive.rs",
+        "Line":  207,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\googledrive.rs",
+        "Line":  215,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\ink.rs",
+        "Line":  33,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\ink.rs",
+        "Line":  73,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\installer.rs",
+        "Line":  24,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\installer.rs",
+        "Line":  35,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\installer.rs",
+        "Line":  49,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\installer.rs",
+        "Line":  80,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\installer.rs",
+        "Line":  107,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\jet.rs",
+        "Line":  134,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\jet.rs",
+        "Line":  167,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\mobile.rs",
+        "Line":  167,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\mobile.rs",
+        "Line":  189,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\mobile.rs",
+        "Line":  214,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\mobile.rs",
+        "Line":  237,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\mobile.rs",
+        "Line":  262,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\mobile.rs",
+        "Line":  290,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\mobile.rs",
+        "Line":  318,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\mobile.rs",
+        "Line":  348,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\notifications.rs",
+        "Line":  20,
+        "Content":  "Err(_) =\u003e return Ok(Vec::new()),",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\notifications.rs",
+        "Line":  27,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\office.rs",
+        "Line":  98,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\office.rs",
+        "Line":  128,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\office.rs",
+        "Line":  131,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\office.rs",
+        "Line":  162,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\onedrive.rs",
+        "Line":  129,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\onedrive.rs",
+        "Line":  161,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\onedrive.rs",
+        "Line":  186,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\pdf.rs",
+        "Line":  112,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\pdf.rs",
+        "Line":  145,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\pdf.rs",
+        "Line":  172,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\registryhive.rs",
+        "Line":  134,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\registryhive.rs",
+        "Line":  137,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\registryhive.rs",
+        "Line":  168,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\registryhive.rs",
+        "Line":  171,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\registryhive.rs",
+        "Line":  243,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\registryhive.rs",
+        "Line":  246,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\registryhive.rs",
+        "Line":  252,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\registryhive.rs",
+        "Line":  256,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\restoration.rs",
+        "Line":  33,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\restoration.rs",
+        "Line":  60,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\sandbox.rs",
+        "Line":  18,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\sandbox.rs",
+        "Line":  56,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\search.rs",
+        "Line":  58,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\search.rs",
+        "Line":  85,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\search.rs",
+        "Line":  108,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\search.rs",
+        "Line":  134,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\setupapi.rs",
+        "Line":  19,
+        "Content":  "Err(_) =\u003e return Ok(Vec::new()),",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\snipping.rs",
+        "Line":  29,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\snipping.rs",
+        "Line":  61,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\snipping.rs",
+        "Line":  88,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\spotlight.rs",
+        "Line":  28,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\spotlight.rs",
+        "Line":  31,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\taskbar.rs",
+        "Line":  154,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\taskxml.rs",
+        "Line":  14,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\taskxml.rs",
+        "Line":  36,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\terminal.rs",
+        "Line":  24,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\terminal.rs",
+        "Line":  84,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\timesync.rs",
+        "Line":  27,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\timesync.rs",
+        "Line":  45,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\timesync.rs",
+        "Line":  105,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  67,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  105,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  132,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  151,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  170,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  184,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  199,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  206,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  226,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  245,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  266,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  282,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\triage_presets.rs",
+        "Line":  291,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\troubleshooting.rs",
+        "Line":  31,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\troubleshooting.rs",
+        "Line":  48,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\troubleshooting.rs",
+        "Line":  75,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\troubleshooting.rs",
+        "Line":  101,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\troubleshooting.rs",
+        "Line":  127,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\video.rs",
+        "Line":  71,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\windowsimage.rs",
+        "Line":  65,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\windowsimage.rs",
+        "Line":  96,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\wintimeline.rs",
+        "Line":  21,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\wmi.rs",
+        "Line":  121,
+        "Content":  "..Default::default()",
+        "Type":  "DefaultReturn"
+    },
+    {
+        "File":  "\\engine\\src\\classification\\wmi.rs",
+        "Line":  242,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\container\\mod.rs",
+        "Line":  69,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\filesystem\\ntfs.rs",
+        "Line":  164,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\filesystem\\ntfs.rs",
+        "Line":  180,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\filesystem\\ntfs.rs",
+        "Line":  193,
+        "Content":  "Err(_) =\u003e Ok(Vec::new()),",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\parsers\\ios\\biome.rs",
+        "Line":  35,
+        "Content":  "return Ok(Vec::new()); // Not a valid biome segmented stream",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\parsers\\ios\\interactionc.rs",
+        "Line":  34,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\parsers\\ios\\knowledgec.rs",
+        "Line":  35,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\parsers\\ios\\powerlog.rs",
+        "Line":  38,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\aff4.rs",
+        "Line":  48,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\iso.rs",
+        "Line":  65,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  92,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  99,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  106,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  113,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  120,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  469,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  949,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  1112,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  1302,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  1313,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  1509,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  2411,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  2419,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  2427,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  2435,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  2438,
+        "Content":  "_ =\u003e Ok(Vec::new()),",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  2475,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\mod.rs",
+        "Line":  2613,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\qcow2.rs",
+        "Line":  48,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\split_raw.rs",
+        "Line":  52,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\vhd.rs",
+        "Line":  182,
+        "Content":  "_ =\u003e Ok(Vec::new()),",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\vhd.rs",
+        "Line":  216,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\vhd.rs",
+        "Line":  221,
+        "Content":  "return Ok(Vec::new());",
+        "Type":  "EmptyReturn"
+    },
+    {
+        "File":  "\\engine\\src\\virtualization\\vmdk.rs",
+        "Line":  50,
+        "Content":  "Ok(Vec::new())",
+        "Type":  "EmptyReturn"
+    }
+]

@@ -1,0 +1,12 @@
+{
+  "command": "examine",
+  "args": [
+    "--case",
+    "{{case_id}}",
+    "--db",
+    "{{db_path}}",
+    "--preset",
+    "Fast Triage"
+  ],
+  "result_path": "gui/runs/examine_result.json"
+}

@@ -1,0 +1,17 @@
+{
+  "case_id": "test_case_001",
+  "tool_version": "0.1.0",
+  "schema_version": "1.0",
+  "started_utc": "2026-03-08T18:08:50.140174800+00:00",
+  "finished_utc": "2026-03-08T18:08:50.140174800+00:00",
+  "status": "MISSING",
+  "checks": [],
+  "stats": {
+    "activity_events_checked": 0,
+    "packets_checked": 0,
+    "exhibits_checked": 0,
+    "read_models_rebuilt": false,
+    "timeline_events_checked": 0,
+    "fts_queue_depth": 0
+  }
+}

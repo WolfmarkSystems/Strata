@@ -1,0 +1,371 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.47s
+     Running unittests src\lib.rs (target\debug\deps\forensic_suite_lib-77a32328459ad789.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\forensic_suite_gui-99563b355e940d60.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\forensic_cli-2879aab790e7506b.exe)
+
+running 2 tests
+test tests::read_json_file_with_limit_rejects_oversized_json ... ok
+test tests::read_json_file_with_limit_parses_small_json ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\smoke_test.rs (target\debug\deps\smoke_test-f70c2d7c9e7c45ef.exe)
+
+running 33 tests
+test test_replay_missing_case_exits_validation_error ... ok
+test test_macos_catalog_list_json_result_flag ... ok
+test test_capabilities_json_result_flag ... ok
+test test_smoke_test_small_raw_file ... ok
+test test_smoke_test_json_result_flag ... ok
+test test_doctor_json_result_flag ... ok
+test test_replay_missing_db_exits_validation_error ... ok
+test test_timeline_json_result_success_writes_envelope ... ok
+test test_examine_missing_db_exits_validation ... ok
+test test_macos_catalog_invalid_key_exits_validation ... ok
+test test_examine_missing_case_exits_validation ... ok
+test test_timeline_missing_case_exits_validation ... ok
+test test_macos_catalog_key_scan_json_result_success ... ok
+test test_timeline_missing_db_exits_validation ... ok
+test test_triage_session_json_result_success ... ok
+test test_smoke_test_missing_image_exits_nonzero ... ok
+test test_triage_session_missing_case_exits_validation ... ok
+test test_examine_preset_not_found_exits_error ... ok
+test test_examine_json_result_success ... ok
+test test_replay_json_result_success_writes_envelope ... ok
+test test_triage_session_missing_db_exits_validation ... ok
+test test_verify_json_result_success_writes_envelope ... ok
+test test_verify_missing_case_exits_validation_error ... ok
+test test_verify_missing_db_exits_validation_error ... ok
+test test_violations_clear_missing_case ... ok
+test test_violations_clear_success ... ok
+test test_violations_missing_case ... ok
+test test_violations_missing_db ... ok
+test test_violations_success ... ok
+test test_watchpoints_enable_success ... ok
+test test_watchpoints_missing_case ... ok
+test test_watchpoints_missing_db ... ok
+test test_watchpoints_status_success ... ok
+
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.58s
+
+     Running unittests src\lib.rs (target\debug\deps\forensic_engine-a02720f16cfcf2c9.exe)
+
+running 292 tests
+test analysis::ioc_scanner::tests::test_match_hash_sha256 ... ok
+test analysis::ioc_scanner::tests::test_match_path_wildcard ... ok
+test analysis::ioc_scanner::tests::test_match_hash_md5 ... ok
+test analysis::scoring::tests::test_suspicious_path ... ok
+test analysis::ioc_scanner::tests::test_match_keyword ... ok
+test analysis::scoring::tests::test_determinism ... ok
+test analysis::scoring::tests::test_double_extension ... ok
+test analysis::scoring::tests::test_clamp_never_above_100 ... ok
+test analysis::scoring::tests::test_ioc_hit_adds_points ... ok
+test analysis::scoring::tests::test_strings_url_count ... ok
+test analysis::scoring::tests::test_signals_sorted_by_points_desc_then_key_asc ... ok
+test analysis::ioc_scanner::tests::test_match_path ... ok
+test analysis::scoring::tests::test_high_entropy_tiers ... ok
+test capabilities::tests::test_capability_ordering ... ok
+test capabilities::tests::test_can_run_production ... ok
+test capabilities::tests::test_cannot_run_unsupported ... ok
+test carving::regions::tests::test_coalesce_empty ... ok
+test carving::regions::tests::test_coalesce_deterministic ... ok
+test capabilities::tests::test_check_capabilities ... ok
+test carving::regions::tests::test_coalesce_overlapping ... ok
+test carving::regions::tests::test_coalesce_single_region ... ok
+test analysis::ioc_scanner::tests::test_scan_text_for_rule_regex ... ok
+test audit::integrity::tests::verify_file_integrity_matches_expected_hash ... ok
+test capabilities::tests::test_capabilities_sorted ... ok
+test carving::regions::tests::test_coalesce_within_gap ... ok
+test carving::regions::tests::test_coalesce_with_gap ... ok
+test carving::signatures::tests::test_carve_flags_bits ... ok
+test carving::regions::tests::test_offset_regions ... ok
+test carving::regions::tests::test_region_length ... ok
+test carving::signatures::tests::test_confidence_parsing ... ok
+test carving::signatures::tests::test_default_signatures_exist ... ok
+test carving::signatures::tests::test_find_signature ... ok
+test carving::tests::test_carve_options_default ... ok
+test carving::tests::test_carve_options_with_unallocated ... ok
+test carving::tests::test_carve_session_new ... ok
+test carving::tests::test_carve_session_status_transitions ... ok
+test carving::tests::test_carved_file_creation ... ok
+test analysis::ioc_scanner::tests::test_scan_text_for_rule_hash ... ok
+test analysis::ioc_scanner::tests::test_determinism ... ok
+test case::exhibit_packet::tests::test_classification_from_artifact_path ... ok
+test analysis::ioc_scanner::tests::test_match_regex ... ok
+test case::exhibit_packet::tests::test_classification_from_provenance_module ... ok
+test case::exhibit_packet::tests::test_chrome_history_artifact ... ok
+test case::exhibit_packet::tests::test_deterministic_output ... ok
+test case::exhibit_packet::tests::test_file_item_with_sha256 ... ok
+test case::exhibit_packet::tests::test_evidence_timeline_event ... ok
+test case::exhibit_packet::tests::test_note_key_preference_sha256 ... ok
+test case::exhibit_packet::tests::test_teams_chat_message ... ok
+test case::exhibit_packet::tests::test_truncation ... ok
+test case::exhibit_packet::tests::test_packet_with_mixed_items_and_context ... ok
+test case::triage_session::tests::test_should_log_triage_substep_error_filters_missing_optional_tables ... ok
+test case::verify::tests::test_checks_are_sorted_by_name ... ok
+test audit::integrity::tests::verify_baseline_detects_modified_file ... ok
+test case::report_templates::tests::test_read_template_file_rejects_oversized_input ... ok
+test case::report_templates::tests::test_generate_report_skeleton ... ok
+test case::examiner_presets::tests::test_auto_preset_setting ... ok
+test case::examiner_presets::tests::test_init_default_presets ... ok
+test case::examiner_presets::tests::test_locked_key_enforcement ... ok
+test case::triage_session::tests::test_triage_session_strict_mode ... ok
+test case::triage_session::tests::test_happy_path_triage_session ... ok
+test case::verify::tests::test_verification_status_ordering ... ok
+test case::verify::tests::test_verification_summary_sorted ... ok
+test case::add_to_notes::tests::test_max_items_validation ... ok
+test case::triage_session::tests::test_triage_session_with_violations_fails ... ok
+test case::verify::tests::test_verify_options_defaults ... ok
+test case::add_to_notes::tests::test_note_only_mode ... ok
+test case::add_to_notes::tests::test_deterministic_content_json ... ok
+test case::add_to_notes::tests::test_note_plus_exhibits_mode ... ok
+test case::verify::tests::test_write_missing_verification_artifacts ... ok
+test case::verify::tests::test_write_verification_artifacts ... ok
+test case::verify::tests::test_db_integrity_check ... ok
+test case::verify::tests::test_export_guard_allows_no_verification ... ok
+test case::watchpoints::tests::test_enable_watchpoints_with_partial_schema ... ok
+test case::replay::tests::test_diff_analysis_classification ... ok
+test case::verify::tests::test_export_guard_blocks_old_report ... ok
+test case::verify::tests::test_export_guard_blocks_fail_status ... ok
+test case::verify::tests::test_export_guard_allows_warn_by_default ... ok
+test case::replay::tests::test_fingerprint_deterministic ... ok
+test classification::archive::tests::parse_zip_archive_reads_json_archive_fields ... ok
+test classification::archive::tests::parse_zip_archive_uses_magic_fallback_for_non_json ... ok
+test classification::autorun::tests::parse_autorun_registry_export ... ok
+test classification::dhcplease::tests::parse_dhcp_csv ... ok
+test classification::dnscache::tests::parse_ipconfig_displaydns_style ... ok
+test classification::eventlog::tests::decodes_xml_entities_in_event_fields ... ok
+test classification::eventlog::tests::evtx_dedup_keeps_distinct_record_ids ... ok
+test classification::eventlog::tests::parse_legacy_evt_records_extracts_core_fields ... ok
+test case::replay::tests::test_replay_detects_changed_activity_log ... ok
+test classification::eventlog::tests::parses_event_data_duplicate_keys_with_suffixes ... ok
+test classification::eventlog::tests::parses_evtx_ascii_xml_event ... ok
+test classification::eventlog::tests::parses_evtx_semantic_fields_and_named_data ... ok
+test classification::eventlog::tests::parse_security_log_counts_events_from_xml ... ok
+test classification::eventlog::tests::parses_evtx_utf16_xml_event ... ok
+test classification::eventlog::tests::parses_user_from_event_data_when_security_attr_missing ... ok
+test classification::eventlog::tests::semantic_summary_for_account_lockout ... ok
+test classification::eventlog::tests::semantic_summary_for_eventlog_clear_event ... ok
+test classification::eventlog::tests::semantic_summary_for_group_membership_change ... ok
+test classification::eventlog::tests::semantic_summary_for_network_connection_event ... ok
+test classification::eventlog::tests::semantic_summary_for_process_creation_event ... ok
+test classification::eventlog::tests::semantic_summary_for_sysmon_process_create ... ok
+test classification::eventlog::tests::semantic_summary_for_sysmon_registry_event ... ok
+test classification::eventlog::tests::semantic_summary_for_unexpected_shutdown_event ... ok
+test classification::font::tests::extract_font_names_falls_back_without_json ... ok
+test classification::font::tests::extract_font_names_reads_json ... ok
+test classification::iislog::tests::parse_w3c_iis_line ... ok
+test classification::jumplist::tests::dedupe_and_sort_entries_orders_by_rank_then_timestamp ... ok
+test classification::jumplist::tests::dedupe_and_sort_entries_prefers_lower_rank_and_record_id ... ok
+test classification::jumplist::tests::parse_destlist_entries_surfaces_record_metadata ... ok
+test classification::jumplist::tests::parse_destlist_structured_parses_multiple_entries ... ok
+test classification::jumplist::tests::parse_jumplist_binary_extracts_ascii_paths ... ok
+test classification::jumplist::tests::parse_jumplist_binary_extracts_utf16_paths_and_timestamps ... ok
+test classification::jumplist::tests::parse_jumplist_binary_fallback_when_destlist_without_paths ... ok
+test case::verify::tests::test_export_guard_blocks_warn_when_strict ... ok
+test classification::macos_artifacts::tests::converts_apple_epoch_to_unix ... ok
+test case::replay::tests::test_replay_pass_with_stable_data ... ok
+test classification::macos_artifacts::tests::parses_bash_history_with_timestamp_markers ... ok
+test classification::macos_artifacts::tests::parses_zsh_extended_history_format ... ok
+test classification::jumplist::tests::parseautomaticdestinations_accepts_single_file_input ... ok
+test classification::jumplist::tests::parseautomaticdestinations_uses_per_file_app_id_hint ... ok
+test classification::macos_catalog::tests::adds_airdrop_semantic_record ... ok
+test case::verify::tests::test_export_guard_requires_verification ... ok
+test classification::macos_catalog::tests::adds_airplay_semantic_record ... ok
+test classification::macos_catalog::tests::adds_bluetooth_paired_semantic_record ... ok
+test classification::macos_catalog::tests::adds_dock_semantic_record ... ok
+test classification::macos_catalog::tests::adds_finder_sidebar_semantic_record ... ok
+test classification::macos_catalog::tests::adds_hotspot_semantic_record ... ok
+test classification::macos_catalog::tests::adds_finder_tags_semantic_record ... ok
+test classification::macos_catalog::tests::adds_installhistory_semantic_record ... ok
+test case::verify::tests::test_fts_queue_check_warns_when_not_empty ... ok
+test classification::macos_catalog::tests::adds_launchservices_semantic_record ... ok
+test classification::macos_catalog::tests::adds_location_services_semantic_record ... ok
+test classification::macos_artifacts::tests::parses_quarantine_rows_from_sqlite ... ok
+test classification::macos_catalog::tests::adds_loginitems_semantic_record ... ok
+test classification::macos_catalog::tests::adds_loginwindow_semantic_record ... ok
+test classification::macos_catalog::tests::adds_mail_accounts_semantic_record ... ok
+test classification::macos_catalog::tests::adds_mail_rules_semantic_record ... ok
+test classification::macos_catalog::tests::adds_network_interfaces_semantic_record ... ok
+test classification::macos_catalog::tests::adds_network_preferences_semantic_record ... ok
+test classification::macos_catalog::tests::adds_office_mru_semantic_record ... ok
+test classification::macos_catalog::tests::adds_preferences_semantic_record ... ok
+test classification::macos_catalog::tests::adds_preview_recents_semantic_record ... ok
+test classification::macos_catalog::tests::adds_print_recent_jobs_semantic_record ... ok
+test classification::macos_catalog::tests::adds_private_relay_semantic_record ... ok
+test classification::macos_catalog::tests::catalog_keys_are_unique ... ok
+test classification::macos_catalog::tests::adds_recent_items_semantic_record ... ok
+test classification::macos_catalog::tests::adds_saved_state_windows_semantic_record ... ok
+test classification::macos_catalog::tests::has_at_least_260_macos_catalog_specs ... ok
+test classification::macos_catalog::tests::adds_time_machine_semantic_record ... ok
+test classification::macos_catalog::tests::adds_wifi_known_networks_semantic_record ... ok
+test classification::macos_catalog::tests::parses_plist_without_extension_from_directory_scan ... ok
+test classification::macos_catalog::tests::parses_plist_focused_directory_artifact_rows ... ok
+test classification::mftparse::tests::extract_binary_mft_attributes_lists_attribute_types ... ok
+test classification::macos_catalog::tests::parses_text_artifact_lines ... ok
+test classification::mftparse::tests::extract_binary_mft_attributes_prefers_named_attribute_label ... ok
+test classification::mftparse::tests::parse_binary_mft_record_extracts_core_fields ... ok
+test classification::mftparse::tests::parse_binary_mft_record_prefers_win32_name_over_dos_alias ... ok
+test classification::mftparse::tests::parse_binary_mft_record_uses_file_name_times_when_si_missing ... ok
+test classification::mftparse::tests::parse_binary_mft_record_uses_non_resident_real_size ... ok
+test classification::mftparse::tests::parse_json_mft_record_still_supported ... ok
+test classification::macos_catalog::tests::adds_system_version_semantic_record ... ok
+test classification::pdf::tests::extract_pdf_metadata_invalid_json_returns_empty_metadata ... ok
+test classification::pdf::tests::extract_pdf_metadata_reads_json ... ok
+test classification::prefetch::tests::derive_volumes_handles_drive_and_network_paths ... ok
+test case::verify::tests::test_timeline_idempotency_check ... ok
+test classification::prefetch::tests::normalize_prefetch_program_from_filename_keeps_non_hash_suffix ... ok
+test classification::macos_catalog::tests::parses_xml_plist_artifact_rows ... ok
+test classification::prefetchdata::tests::parse_prefetch_header_fields ... ok
+test classification::prefetchdata::tests::parse_prefetch_legacy_run_count_offset ... ok
+test classification::reg_export::tests::convert_filetime ... ok
+test classification::prefetch::tests::parse_prefetch_surfaces_references_and_run_metadata ... ok
+test classification::prefetch::tests::scan_prefetch_directory_only_reads_pf_files ... ok
+test classification::regbam::tests::extract_shim_paths_from_value_data ... ok
+test classification::prefetch::tests::scan_prefetch_directory_sorts_by_last_run_time_desc ... ok
+test classification::netreg::tests::parse_tcpip_params_from_reg_export ... ok
+test classification::macos_catalog::tests::parses_sqlite_artifact_rows ... ok
+test classification::reg_export::tests::parse_basic_reg_records ... ok
+test classification::macos_catalog::tests::parses_sqlite_plist_blob_rows ... ok
+test classification::regautoplay::tests::parse_default_programs ... ok
+test classification::regbam::tests::parse_bam_state_entries ... ok
+test classification::regbitlocker::tests::parse_bitlocker_status ... ok
+test classification::regdesktop::tests::parse_desktop_wallpaper ... ok
+test classification::registryhive::tests::extract_registry_security_descriptor_parses_json ... ok
+test classification::registryhive::tests::parse_registry_hive_handles_utf16_nk_names ... ok
+test classification::regenv::tests::parse_environment_path_entries ... ok
+test classification::registryhive::tests::parse_registry_timestamp_converts_filetime ... ok
+test classification::registryhive::tests::parse_registry_hive_reads_regf_header_and_root ... ok
+test classification::registryhive::tests::enumerate_binary_registry_keys_and_values ... ok
+test classification::registryhive::tests::enumerate_key_values_reads_big_data_db_cell ... ok
+test classification::registryhive::tests::enumerate_key_values_uses_root_when_offset_zero ... ok
+test classification::regmru2::tests::parse_open_save_mru ... ok
+test classification::registryhive::tests::enumerate_registry_keys_supports_lf_index_format ... ok
+test classification::registryhive::tests::enumerate_registry_keys_traverses_linked_subkeys_from_root ... ok
+test classification::reglogon::tests::parse_winlogon_basics ... ok
+test classification::regprint::tests::parse_printer_registry_values ... ok
+test classification::regoffice::tests::parse_office_mru_paths ... ok
+test classification::regproxy::tests::parse_proxy_settings ... ok
+test case::watchpoints::tests::test_watchpoints_disabled_no_violations ... ok
+test classification::regsecurity::tests::parse_password_policy ... ok
+test classification::regmru::tests::parse_run_mru_from_reg_export ... ok
+test classification::reguserassist::tests::decode_userassist_name ... ok
+test classification::regtask::tests::parse_taskcache_tree_entries ... ok
+test classification::regurl::tests::parse_ie_typed_urls ... ok
+test classification::reguserassist::tests::parse_userassist_count ... ok
+test classification::regtime::tests::parse_time_registry_config ... ok
+test classification::scalpel::tests::read_prefix_caps_bytes ... ok
+test classification::smbinfo::tests::parse_pipe_smb_sessions ... ok
+test classification::reguninstall::tests::parse_uninstall_entries ... ok
+test classification::sysmon::tests::parse_basic_sysmon_block ... ok
+test classification::windowsimage::tests::parse_wim_header_fallback_uses_input_size ... ok
+test classification::windowsimage::tests::parse_wim_header_from_json ... ok
+test classification::regservice::tests::parse_service_config ... ok
+test classification::reguac::tests::parse_uac_policy ... ok
+test classification::scalpel::tests::read_text_prefix_reads_lossy_utf8 ... ok
+test classification::regusb::tests::parse_usb_entries ... ok
+test disk::format::tests::detect_image_format_uses_extension_fallback_for_e01 ... ok
+test events::tests::test_event_serialization ... ok
+test events::tests::test_eventbus_emit_and_receive ... ok
+test classification::regwifi::tests::parse_wifi_profile_export ... ok
+test events::tests::test_multiple_subscribers ... ok
+test disk::format::tests::detect_image_format_uses_extension_fallback_for_s01 ... ok
+test disk::format::tests::get_image_segments_detects_e01_sequence ... ok
+test disk::format::tests::count_segments_detects_e01_style_sequence ... ok
+test strings::tests::test_gating_allows_executables ... ok
+test strings::tests::test_gating_skips_high_entropy ... ok
+test strings::tests::test_gating_skips_images ... ok
+test strings::tests::test_gating_skips_large_files ... ok
+test disk::format::tests::get_image_segments_detects_numeric_extension_sequence ... ok
+test disk::format::tests::get_image_segments_detects_underscore_sequence ... ok
+test classification::regwinver::tests::parse_windows_version_fields ... ok
+test strings::tests::test_extract_min_length ... ok
+test strings::tests::test_extract_ascii_strings ... ok
+test case::verify::tests::test_verify_case_fails_with_tampered_hash ... ok
+test strings::tests::test_regex_detection_ips ... ok
+test strings::tests::test_extract_utf16_strings ... ok
+test strings::tests::test_regex_detection_paths ... ok
+test tests::file_table_tests::test_file_table_filter_serialization ... ok
+test tests::file_table_tests::test_file_table_query_default ... ok
+test tests::file_table_tests::test_file_table_query_with_filters ... ok
+test strings::tests::test_regex_detection_emails ... ok
+test tests::container_tests::test_raw_container_open ... ok
+test tests::file_table_tests::test_file_table_result_with_next_cursor ... ok
+test tests::file_table_tests::test_file_table_result_with_pagination ... ok
+test tests::file_table_tests::test_file_table_row_creation ... ok
+test tests::file_table_tests::test_sort_dir_variants ... ok
+test tests::file_table_tests::test_sort_field_variants ... ok
+[fixture-harness] corpus harness skipped; set FORENSIC_CORPUS_HARNESS=1 to enable
+test tests::filesystem_tests::test_ntfs_timestamp_conversion ... ok
+test tests::filesystem_tests::test_timeline_entry ... ok
+test tests::fixture_harness::fixture_harness_tests::test_corpus_parser_harness_opt_in ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_kind_format_expectations ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_manifest_is_readable ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_manifest_audit ... ok
+test tests::container_tests::test_sector_size_detection ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_parser_expectations ... ok
+test tests::fixture_harness::fixture_harness_tests::test_parser_fixture_harness ... ok
+test tests::global_search_tests::test_global_search_hit_serialization ... ok
+test tests::global_search_tests::test_global_search_query_default ... ok
+test tests::global_search_tests::test_global_search_query_with_filters ... ok
+test tests::signature_tests::test_pdf_detection ... ok
+test tests::signature_tests::test_file_signature_detection ... ok
+test tests::string_tests::test_string_extraction_ascii ... ok
+test tests::string_tests::test_keyword_extraction ... ok
+test tests::tests::test_hash_options_default ... ok
+test tests::tests::test_hash_results_init ... ok
+test tests::verification_tests::test_check_result_creation ... ok
+test case::verify::tests::test_verify_case_passes_with_valid_data ... ok
+test tests::verification_tests::test_case_verifier_new ... ok
+test strings::tests::test_regex_detection_urls ... ok
+test tests::verification_tests::test_sample_limit_option ... ok
+test tests::verification_tests::test_strict_fts_option ... ok
+test strings::tests::test_sampling_flag ... ok
+test tests::verification_tests::test_verification_stats_defaults ... ok
+test tests::verification_tests::test_verification_status_ordering ... ok
+test tests::verification_tests::test_verify_options_default ... ok
+test tests::verification_tests::test_verify_options_with_sample_limit ... ok
+test strings::tests::test_determinism ... ok
+test case::watchpoints::tests::test_clear_violations ... ok
+test case::watchpoints::tests::test_actor_attribution ... ok
+test strings::tests::test_output_truncation ... ok
+test case::watchpoints::tests::test_different_cases_isolated ... ok
+test case::watchpoints::tests::test_fail_if_violations ... ok
+test case::watchpoints::tests::test_watchpoint_settings_work_without_uuid_function ... ok
+test case::watchpoints::tests::test_watchpoints_enabled_creates_violation ... ok
+test case::watchpoints::tests::test_multiple_tables_watchpoint ... ok
+test tests::verification_tests::test_activity_hash_chain_check_with_empty_log ... ok
+test tests::verification_tests::test_db_integrity_check_passes ... ok
+test tests::verification_tests::test_packet_manifest_check_with_empty_packets ... ok
+test tests::verification_tests::test_report_contains_all_check_types ... ok
+test tests::verification_tests::test_timeline_idempotency_check ... ok
+test tests::verification_tests::test_fts_queue_check ... ok
+test tests::verification_tests::test_read_models_check ... ok
+test case::watchpoints::tests::test_enable_disable_watchpoints ... ok
+test case::triage_session::tests::test_list_sessions ... ok
+test case::watchpoints::tests::test_batch_insert_performance ... ok
+
+test result: ok. 292 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.05s
+
+   Doc-tests forensic_suite_lib
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests forensic_engine
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

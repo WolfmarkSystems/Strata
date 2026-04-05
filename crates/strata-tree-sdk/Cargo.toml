@@ -1,0 +1,13 @@
+[package]
+name = "strata-tree-sdk"
+version = "0.1.0"
+edition = "2021"
+description = "Strata Tree Plugin SDK — stable C-ABI plugin interface"
+repository = "https://github.com/strata-forensics/strata"
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+# No dependencies — SDK is intentionally minimal to keep the ABI stable.
+# Plugins link against this crate and export exactly the symbols below.

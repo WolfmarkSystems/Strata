@@ -1,0 +1,3 @@
+﻿task: C:\\Tools\\dropper10.exe
+autorun: C:\\Tools\\dropper10.exe --boot
+amcache: C:\\Tools\\dropper10.exe

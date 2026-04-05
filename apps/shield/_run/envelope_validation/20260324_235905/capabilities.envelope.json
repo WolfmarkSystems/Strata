@@ -1,0 +1,630 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-25T03:59:05.219065+00:00",
+  "platform": "windows",
+  "command": "capabilities",
+  "args": [
+    "capabilities",
+    "--quiet",
+    "--json-result",
+    "D:\\forensic-suite\\_run\\envelope_validation\\20260324_235905\\capabilities.envelope.json"
+  ],
+  "status": "ok",
+  "exit_code": 0,
+  "error": null,
+  "warning": null,
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 0,
+  "data": {
+    "capabilities": [
+      {
+        "name": "artifact.macos.browser",
+        "status": "beta",
+        "platforms": [
+          "macos"
+        ],
+        "description": "macOS browser history"
+      },
+      {
+        "name": "artifact.macos.catalog",
+        "status": "experimental",
+        "platforms": [
+          "macos"
+        ],
+        "description": "Expanded macOS artifact catalog parser set"
+      },
+      {
+        "name": "artifact.macos.downloads",
+        "status": "beta",
+        "platforms": [
+          "macos"
+        ],
+        "description": "macOS Safari download record parsing"
+      },
+      {
+        "name": "artifact.macos.quarantine",
+        "status": "beta",
+        "platforms": [
+          "macos"
+        ],
+        "description": "macOS LaunchServices quarantine event parsing"
+      },
+      {
+        "name": "artifact.macos.shell_history",
+        "status": "beta",
+        "platforms": [
+          "macos"
+        ],
+        "description": "macOS shell history (zsh/bash) parsing"
+      },
+      {
+        "name": "artifact.windows.amcache",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows Amcache extraction"
+      },
+      {
+        "name": "artifact.windows.autoruns",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows autorun persistence extraction"
+      },
+      {
+        "name": "artifact.windows.bam",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows BAM execution artifact extraction"
+      },
+      {
+        "name": "artifact.windows.browser",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows browser history extraction"
+      },
+      {
+        "name": "artifact.windows.chat",
+        "status": "experimental",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows chat/ messaging app artifacts"
+      },
+      {
+        "name": "artifact.windows.defender",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows Defender artifact extraction"
+      },
+      {
+        "name": "artifact.windows.eventlog",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows EVTX/Event Log parsing"
+      },
+      {
+        "name": "artifact.windows.eventlog.security",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows Security log semantic extraction"
+      },
+      {
+        "name": "artifact.windows.eventlog.sysmon",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Sysmon event semantic extraction"
+      },
+      {
+        "name": "artifact.windows.iis",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows IIS configuration/log parsing"
+      },
+      {
+        "name": "artifact.windows.jumplist",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows Jump List parsing (DestList/entry extraction)"
+      },
+      {
+        "name": "artifact.windows.lnk",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows shortcut (LNK) parsing"
+      },
+      {
+        "name": "artifact.windows.ntfs.mft",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "NTFS MFT record parsing"
+      },
+      {
+        "name": "artifact.windows.ntfs.timeline",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "NTFS-derived timeline signal extraction"
+      },
+      {
+        "name": "artifact.windows.powershell",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows PowerShell artifact extraction"
+      },
+      {
+        "name": "artifact.windows.prefetch",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows Prefetch parsing"
+      },
+      {
+        "name": "artifact.windows.rdp",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows RDP artifact extraction"
+      },
+      {
+        "name": "artifact.windows.recycle_bin",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows Recycle Bin artifact extraction"
+      },
+      {
+        "name": "artifact.windows.registry",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows Registry parsing"
+      },
+      {
+        "name": "artifact.windows.registry.exports",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows .reg export parsing"
+      },
+      {
+        "name": "artifact.windows.registry.hive",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows registry hive parsing (REGF/NK/value traversal)"
+      },
+      {
+        "name": "artifact.windows.scheduled_tasks",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows scheduled task extraction"
+      },
+      {
+        "name": "artifact.windows.services",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows service configuration extraction"
+      },
+      {
+        "name": "artifact.windows.shellbags",
+        "status": "beta",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows Shellbags parsing"
+      },
+      {
+        "name": "artifact.windows.thumbcache",
+        "status": "experimental",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows thumbnail cache extraction"
+      },
+      {
+        "name": "artifact.windows.usb",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows USB device history extraction"
+      },
+      {
+        "name": "artifact.windows.userassist",
+        "status": "production",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows UserAssist extraction"
+      },
+      {
+        "name": "artifact.windows.wmi",
+        "status": "experimental",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Windows WMI artifact extraction"
+      },
+      {
+        "name": "container.aff4",
+        "status": "stub",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "description": "AFF4 format"
+      },
+      {
+        "name": "container.e01",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "EnCase E01 format"
+      },
+      {
+        "name": "container.raw",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Raw disk images (dd, raw)"
+      },
+      {
+        "name": "container.split",
+        "status": "stub",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Split/raw segments"
+      },
+      {
+        "name": "container.vhd",
+        "status": "experimental",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Microsoft VHD/VHDX virtual disk"
+      },
+      {
+        "name": "container.vmdk",
+        "status": "experimental",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "description": "VMware VMDK virtual disk"
+      },
+      {
+        "name": "encryption.bitlocker",
+        "status": "experimental",
+        "platforms": [
+          "windows"
+        ],
+        "description": "BitLocker encrypted volume support"
+      },
+      {
+        "name": "encryption.filevault",
+        "status": "stub",
+        "platforms": [
+          "macos"
+        ],
+        "description": "macOS FileVault encrypted volume"
+      },
+      {
+        "name": "encryption.luks",
+        "status": "stub",
+        "platforms": [
+          "linux"
+        ],
+        "description": "Linux LUKS encrypted volume"
+      },
+      {
+        "name": "export.defensibility",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Defensibility bundle export"
+      },
+      {
+        "name": "export.report",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Report generation"
+      },
+      {
+        "name": "filesystem.apfs",
+        "status": "beta",
+        "platforms": [
+          "macos",
+          "linux"
+        ],
+        "description": "Apple APFS filesystem"
+      },
+      {
+        "name": "filesystem.apfs.unallocated_map",
+        "status": "experimental",
+        "platforms": [
+          "macos"
+        ],
+        "description": "APFS unallocated region enumeration"
+      },
+      {
+        "name": "filesystem.exfat",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "exFAT filesystem"
+      },
+      {
+        "name": "filesystem.exfat.unallocated_map",
+        "status": "experimental",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "description": "exFAT unallocated region enumeration"
+      },
+      {
+        "name": "filesystem.ext4",
+        "status": "production",
+        "platforms": [
+          "linux"
+        ],
+        "description": "ext4 filesystem"
+      },
+      {
+        "name": "filesystem.ext4.unallocated_map",
+        "status": "beta",
+        "platforms": [
+          "linux"
+        ],
+        "description": "ext4 unallocated region enumeration via block bitmaps"
+      },
+      {
+        "name": "filesystem.fat",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "FAT12/FAT16/FAT32 filesystem"
+      },
+      {
+        "name": "filesystem.fat.unallocated_map",
+        "status": "stub",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "description": "FAT unallocated region enumeration"
+      },
+      {
+        "name": "filesystem.hfsplus",
+        "status": "stub",
+        "platforms": [
+          "macos",
+          "linux"
+        ],
+        "description": "HFS+ filesystem"
+      },
+      {
+        "name": "filesystem.ntfs",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "description": "NTFS filesystem"
+      },
+      {
+        "name": "filesystem.ntfs.unallocated_map",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "description": "NTFS unallocated region enumeration via $Bitmap"
+      },
+      {
+        "name": "filesystem.xfs",
+        "status": "stub",
+        "platforms": [
+          "linux"
+        ],
+        "description": "XFS filesystem"
+      },
+      {
+        "name": "live.memory",
+        "status": "experimental",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Live memory acquisition and analysis"
+      },
+      {
+        "name": "live.registry",
+        "status": "stub",
+        "platforms": [
+          "windows"
+        ],
+        "description": "Live Windows Registry access"
+      },
+      {
+        "name": "module.carving",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Signature-based file carving"
+      },
+      {
+        "name": "module.classification",
+        "status": "beta",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "File type classification and analysis"
+      },
+      {
+        "name": "module.preview",
+        "status": "beta",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "File content preview"
+      },
+      {
+        "name": "module.timeline",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Timeline generation and analysis"
+      },
+      {
+        "name": "partition.gpt",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "GUID Partition Table"
+      },
+      {
+        "name": "partition.mbr",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Master Boot Record"
+      },
+      {
+        "name": "partition.raid",
+        "status": "experimental",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "description": "RAID detection"
+      },
+      {
+        "name": "workflow.examiner-presets",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Examiner presets for defensible workflow"
+      },
+      {
+        "name": "workflow.replay",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Deterministic replay workflow"
+      },
+      {
+        "name": "workflow.triage",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Full triage session workflow"
+      },
+      {
+        "name": "workflow.verify",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Case verification workflow"
+      },
+      {
+        "name": "workflow.watchpoints",
+        "status": "production",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "description": "Integrity watchpoints"
+      }
+    ],
+    "tool_version": "0.1.0",
+    "generated_utc": "2026-03-25T03:59:05.218618300+00:00"
+  }
+}

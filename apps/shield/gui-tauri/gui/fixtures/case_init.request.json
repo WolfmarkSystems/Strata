@@ -1,0 +1,11 @@
+{
+  "command": "case",
+  "args": [
+    "init",
+    "--case",
+    "{{case_id}}",
+    "--db",
+    "{{db_path}}"
+  ],
+  "result_path": "gui/runs/case_init_result.json"
+}

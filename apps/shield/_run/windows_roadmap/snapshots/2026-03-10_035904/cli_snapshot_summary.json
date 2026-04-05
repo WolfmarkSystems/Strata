@@ -1,0 +1,34 @@
+﻿{
+    "timestamp_utc":  "2026-03-10T03:59:07.305Z",
+    "out_dir":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_035904",
+    "runs":  [
+                 {
+                     "name":  "capabilities_json",
+                     "args":  "capabilities --json",
+                     "exit_code":  0,
+                     "output_file":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_035904\\capabilities_json.out",
+                     "sha256":  "855BFAE4EA484A4E14FD9B42A9F199BD134A216FCE29AEDDDE267ECDD3C1C309"
+                 },
+                 {
+                     "name":  "doctor_json",
+                     "args":  "doctor --json",
+                     "exit_code":  0,
+                     "output_file":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_035904\\doctor_json.out",
+                     "sha256":  "4B0F9EB9A8DA6A8D5281B9610F7364FC798A1172CB9611832F84B8E4A630739D"
+                 },
+                 {
+                     "name":  "timeline_help",
+                     "args":  "timeline --help",
+                     "exit_code":  0,
+                     "output_file":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_035904\\timeline_help.out",
+                     "sha256":  "D1AFC5C328407B5A6978D286974D6E068E51C4810043A659C75D2A2DC26A4CE9"
+                 },
+                 {
+                     "name":  "violations_help",
+                     "args":  "violations --help",
+                     "exit_code":  0,
+                     "output_file":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_035904\\violations_help.out",
+                     "sha256":  "D1AFC5C328407B5A6978D286974D6E068E51C4810043A659C75D2A2DC26A4CE9"
+                 }
+             ]
+}

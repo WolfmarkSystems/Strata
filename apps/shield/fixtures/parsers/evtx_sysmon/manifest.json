@@ -1,0 +1,277 @@
+﻿{
+    "generated_utc":  "2026-03-11T21:23:51.1818649Z",
+    "parser":  "evtx_sysmon",
+    "count":  30,
+    "fixtures":  [
+                     {
+                         "id":  "evtx-sysmon-win10-01",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_01.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    1
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-02",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_02.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    3
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-03",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_03.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    8
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-04",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_04.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    10
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-05",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_05.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    11
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-06",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_06.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    13
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-07",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_07.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    1
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-08",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_08.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    3
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-09",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_09.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    8
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-10",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_10.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    10
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-11",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_11.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    11
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-12",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_12.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    13
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-13",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_13.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    1
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-14",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_14.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    3
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win10-15",
+                         "path":  "fixtures/parsers/evtx_sysmon/win10/w10_sysmon_15.evtx",
+                         "os":  "windows10",
+                         "kind":  "evtx_xml",
+                         "contains_event_ids":  [
+                                                    8
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-01",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_01.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    1
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-02",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_02.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    3
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-03",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_03.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    7
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-04",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_04.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    11
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-05",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_05.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    12
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-06",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_06.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    13
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-07",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_07.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    22
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-08",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_08.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    1
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-09",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_09.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    3
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-10",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_10.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    7
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-11",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_11.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    11
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-12",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_12.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    12
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-13",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_13.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    13
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-14",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_14.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    22
+                                                ]
+                     },
+                     {
+                         "id":  "evtx-sysmon-win11-15",
+                         "path":  "fixtures/parsers/evtx_sysmon/win11/w11_sysmon_15.xml",
+                         "os":  "windows11",
+                         "kind":  "evtx_utf16_xml",
+                         "contains_event_ids":  [
+                                                    1
+                                                ]
+                     }
+                 ]
+}

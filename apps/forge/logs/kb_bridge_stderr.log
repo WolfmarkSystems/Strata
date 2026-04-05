@@ -1,0 +1,76 @@
+127.0.0.1 - - [03/Feb/2026 23:48:12] "POST /chat HTTP/1.1" 400 -
+127.0.0.1 - - [04/Feb/2026 04:42:47] "POST /chat HTTP/1.1" 400 -
+127.0.0.1 - - [04/Feb/2026 04:45:45] code 501, message Unsupported method ('OPTIONS')
+127.0.0.1 - - [04/Feb/2026 04:45:45] "OPTIONS /chat HTTP/1.1" 501 -
+127.0.0.1 - - [04/Feb/2026 18:01:56] code 501, message Unsupported method ('OPTIONS')
+127.0.0.1 - - [04/Feb/2026 18:01:56] "OPTIONS /chat HTTP/1.1" 501 -
+127.0.0.1 - - [04/Feb/2026 18:02:49] code 501, message Unsupported method ('OPTIONS')
+127.0.0.1 - - [04/Feb/2026 18:02:49] "OPTIONS /chat HTTP/1.1" 501 -
+127.0.0.1 - - [04/Feb/2026 18:18:30] "POST /chat HTTP/1.1" 400 -
+127.0.0.1 - - [04/Feb/2026 18:24:17] "POST /chat HTTP/1.1" 400 -
+127.0.0.1 - - [04/Feb/2026 18:24:37] "POST /chat HTTP/1.1" 400 -
+127.0.0.1 - - [04/Feb/2026 18:55:22] "POST /chat HTTP/1.1" 502 -
+127.0.0.1 - - [04/Feb/2026 19:25:28] "POST /chat HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 16:53:43] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 16:53:43] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 16:53:43] "POST /search HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 16:53:45] "POST /chat HTTP/1.1" 502 -
+127.0.0.1 - - [21/Mar/2026 16:54:14] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 16:54:14] "POST /search HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 16:55:44] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 16:55:44] "POST /search HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 16:55:53] "POST /chat HTTP/1.1" 200 -
+127.0.0.1 - - [21/Mar/2026 16:55:53] "POST /chat HTTP/1.1" 502 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 64139)
+Traceback (most recent call last):
+  File "D:\DFIR Coding AI\scripts\..\bin\kb\dfir_kb_bridge.py", line 676, in _handle_chat
+    self._send(200, json.loads(raw))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\DFIR Coding AI\scripts\..\bin\kb\dfir_kb_bridge.py", line 351, in _send
+    self.wfile.write(data)
+    ~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\socketserver.py", line 845, in write
+    self._sock.sendall(b)
+    ~~~~~~~~~~~~~~~~~~^^^
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\http\server.py", line 447, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\http\server.py", line 435, in handle_one_request
+    method()
+    ~~~~~~^^
+  File "D:\DFIR Coding AI\scripts\..\bin\kb\dfir_kb_bridge.py", line 377, in do_POST
+    self._handle_chat()
+    ~~~~~~~~~~~~~~~~~^^
+  File "D:\DFIR Coding AI\scripts\..\bin\kb\dfir_kb_bridge.py", line 678, in _handle_chat
+    self._send(502, {"error": "llama_forward_failed", "detail": str(exc)})
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\DFIR Coding AI\scripts\..\bin\kb\dfir_kb_bridge.py", line 350, in _send
+    self.end_headers()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\http\server.py", line 549, in end_headers
+    self.flush_headers()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\http\server.py", line 553, in flush_headers
+    self.wfile.write(b"".join(self._headers_buffer))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\socketserver.py", line 845, in write
+    self._sock.sendall(b)
+    ~~~~~~~~~~~~~~~~~~^^^
+ConnectionAbortedError: [WinError 10053] An established connection was aborted by the software in your host machine
+----------------------------------------
+127.0.0.1 - - [21/Mar/2026 16:57:09] "POST /chat HTTP/1.1" 200 -

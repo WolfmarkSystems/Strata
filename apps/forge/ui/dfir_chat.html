@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vantor Forge AI | Architecture Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0b0e;
+      --bg-surface: #12141a;
+      --bg-bubble-user: #1c2128;
+      --bg-bubble-ai: #161b22;
+      --accent: #00d4ff;
+      --accent-glow: rgba(0, 212, 255, 0.3);
+      --text-main: #e6e8eb;
+      --text-dim: #8b949e;
+      --border: #30363d;
+      --radius-lg: 24px;
+      --radius-md: 12px;
+      --font-main: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* TOP BAR */
+    header {
+      height: 60px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10, 11, 14, 0.8);
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    .logo-area { display: flex; align-items: center; gap: 12px; }
+    .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+    .logo-text { font-weight: 600; letter-spacing: 1px; font-size: 1.1rem; text-transform: uppercase; }
+
+    .btn-config {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-config:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+
+    /* CHAT AREA */
+    #chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 40px 10%;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      scroll-behavior: smooth;
+    }
+    #chat-container::-webkit-scrollbar { width: 6px; }
+    #chat-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+    .msg { max-width: 85%; display: flex; flex-direction: column; gap: 8px; animation: slideIn 0.3s ease-out; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .msg-user { align-self: flex-end; }
+    .msg-ai { align-self: flex-start; }
+
+    .msg-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; }
+    .msg-user .msg-label { align-self: flex-end; color: var(--accent); }
+
+    .msg-bubble {
+      padding: 16px 20px;
+      border-radius: 18px;
+      line-height: 1.55;
+      font-size: 0.95rem;
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+    }
+    .msg-user .msg-bubble { 
+      background: var(--bg-bubble-user); 
+      border-bottom-right-radius: 4px; 
+      border-color: rgba(0, 212, 255, 0.2);
+    }
+    .msg-ai .msg-bubble { 
+      background: var(--bg-bubble-ai); 
+      border-bottom-left-radius: 4px; 
+      font-family: var(--font-main);
+    }
+
+    code { font-family: var(--font-mono); font-size: 0.85rem; background: #24292e; padding: 2px 4px; border-radius: 4px; }
+    pre { background: #0d1117; padding: 16px; border-radius: 12px; margin: 12px 0; overflow-x: auto; border: 1px solid var(--border); }
+    pre code { background: none; padding: 0; }
+
+    /* INPUT AREA */
+    .input-wrapper {
+      padding: 24px 10% 40px;
+      background: linear-gradient(to top, var(--bg-dark) 80%, transparent);
+    }
+    .input-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .input-box:focus-within { border-color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
+
+    #msg-input {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-family: var(--font-main);
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      resize: none;
+      max-height: 150px;
+      padding: 8px 0;
+    }
+
+    .btn-send {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+    .btn-send:hover { transform: scale(1.1); filter: brightness(1.2); }
+    .btn-send svg { width: 20px; height: 20px; }
+
+    /* MODAL */
+    #modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(5px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-content {
+      background: var(--bg-surface);
+      width: 100%;
+      max-width: 700px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFade 0.2s ease-out;
+    }
+    @keyframes modalFade { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+    .modal-header {
+      padding: 16px 24px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #sys-editor {
+      background: #0d1117;
+      color: #79c0ff;
+      border: none;
+      padding: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      height: 400px;
+      resize: none;
+      outline: none;
+    }
+    .btn-save { background: var(--accent); color: #000; padding: 8px 20px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; }
+    .btn-close { color: var(--text-dim); background: none; border: none; cursor: pointer; font-size: 1.2rem; }
+
+    .status-footer { text-align: center; padding-bottom: 20px; font-size: 0.7rem; color: var(--text-dim); letter-spacing: 1px; }
+
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-area">
+      <div class="logo-dot"></div>
+      <div class="logo-text">Vantor Forge <span style="color:var(--accent); font-weight: 300;">AI</span></div>
+    </div>
+    <button class="btn-config" id="open-config">Update System Prompt</button>
+  </header>
+
+  <main id="chat-container">
+    <!-- Messages appear here -->
+  </main>
+
+  <div class="input-wrapper">
+    <div class="input-box">
+      <textarea id="msg-input" placeholder="Initiate architectural consultation..." rows="1"></textarea>
+      <button class="btn-send" id="send-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="status-footer">BACKEND: OLLAMA / PHI4-MINI [PORT 11434] // KB BRIDGE [PORT 8090] // VANTOR_ROOT: D:\Vantor</div>
+
+  <!-- MODAL -->
+  <div id="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-size: 1rem; font-weight: 400;">System Prompt Configuration</h3>
+        <div style="display: flex; gap: 12px; align-items:center;">
+          <button class="btn-save" id="save-sys">Save Changes</button>
+          <button class="btn-close" id="close-modal">&times;</button>
+        </div>
+      </div>
+      <textarea id="sys-editor"></textarea>
+    </div>
+  </div>
+
+  <script>
+    const SERVER = "http://127.0.0.1:8090";
+    const chatContainer = document.getElementById("chat-container");
+    const msgInput = document.getElementById("msg-input");
+    const sysEditor = document.getElementById("sys-editor");
+    const modal = document.getElementById("modal-overlay");
+
+    const DEFAULT_SYS = `You are VANTOR FORGE.
+Expert in low-level systems engineering, forensic artifact parsing (No-Touch), and Rust development.
+You prioritize safety, modularity via Vantor SDK, and deterministic outputs.
+Your tone is quirky, sharp, and enthusiastic. You are Korbyn's partner.
+If greeted casually, reply briefly: "What's the mission?"`;
+
+    let messages = [];
+
+    function appendMessage(role, content) {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = `msg msg-${role === "user" ? "user" : "ai"}`;
+      
+      const label = document.createElement("div");
+      label.className = "msg-label";
+      label.textContent = role === "user" ? "Examiner (Korbyn)" : "Forge";
+      
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble";
+      bubble.textContent = content;
+
+      msgDiv.appendChild(label);
+      msgDiv.appendChild(bubble);
+      chatContainer.appendChild(msgDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function send() {
+      const content = msgInput.value.trim();
+      if (!content) return;
+      msgInput.value = "";
+      msgInput.style.height = 'auto';
+
+      appendMessage("user", content);
+      messages.push({ role: "user", content });
+
+      const sysText = localStorage.getItem("dfir_sys_prompt") || DEFAULT_SYS;
+      const payload = {
+        model: "phi4-mini",
+        messages: [{ role: "system", content: sysText }, ...messages],
+        temperature: 0.4
+      };
+
+      try {
+        const r = await fetch(`${SERVER}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const j = await r.json();
+        const out = j?.choices?.[0]?.message?.content ?? "Error: No response";
+        
+        appendMessage("assistant", out);
+        messages.push({ role: "assistant", content: out });
+        localStorage.setItem("dfir_chat_msgs", JSON.stringify(messages));
+      } catch (e) {
+        appendMessage("assistant", `[OFFLINE] Connection to KB Bridge failed: ${e}`);
+      }
+    }
+
+    // Modal Handlers
+    document.getElementById("open-config").onclick = () => {
+      sysEditor.value = localStorage.getItem("dfir_sys_prompt") || DEFAULT_SYS;
+      modal.style.display = "flex";
+    };
+    document.getElementById("close-modal").onclick = () => modal.style.display = "none";
+    document.getElementById("save-sys").onclick = () => {
+      localStorage.setItem("dfir_sys_prompt", sysEditor.value);
+      modal.style.display = "none";
+      alert("System Prompt synchronized.");
+    };
+
+    // UX Handlers
+    msgInput.oninput = () => {
+      msgInput.style.height = 'auto';
+      msgInput.style.height = msgInput.scrollHeight + 'px';
+    };
+    msgInput.onkeydown = (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+    };
+    document.getElementById("send-btn").onclick = send;
+
+    // Init
+    window.onload = () => {
+      const saved = localStorage.getItem("dfir_chat_msgs");
+      if (saved) {
+        try {
+          messages = JSON.parse(saved);
+          messages.forEach(m => appendMessage(m.role, m.content));
+        } catch {}
+      }
+    };
+  </script>
+</body>
+</html>

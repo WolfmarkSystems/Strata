@@ -1,0 +1,511 @@
+[2026-03-21 22:26:51.738] [CRITICAL] load_evidence_and_build_tree START - path: F:\SANS\FOR500 Class related\Stack_Disk_Image\Stack001_Surface_HDD.E01
+[2026-03-21 22:26:51.739] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-21 22:26:51.739] [CRITICAL] Checking if path exists...
+[2026-03-21 22:26:51.739] [CRITICAL] Checking if file or directory...
+[2026-03-21 22:26:51.739] [CRITICAL] is_file = true, is_directory = false
+[2026-03-21 22:26:51.739] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-21 22:26:51.779] [CRITICAL] Evidence container opened: E01
+[2026-03-21 22:26:51.779] [CRITICAL] Container type: E01 (EnCase)
+[2026-03-21 22:26:51.780] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-21 22:26:51.790] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-21 22:27:13.152] [CRITICAL] Tree built successfully
+[2026-03-21 22:27:13.175] [CRITICAL] Starting background search indexing for 93874 nodes...
+[2026-03-21 22:27:13.177] [CRITICAL] Failed to create analyzer: Failed to set WAL mode: Execute returned results - did you mean to call query?
+[2026-03-21 22:27:13.195] [CRITICAL] Serializing to JSON...
+[2026-03-21 22:27:13.195] [CRITICAL] Starting background analysis...
+[2026-03-21 22:27:13.272] [CRITICAL] hash_vfs_files: start
+[2026-03-21 22:27:14.952] [CRITICAL] hash_vfs_files: discovered 77303 candidate files
+[2026-03-21 22:27:14.953] [CRITICAL] hash_vfs_files: first file /vol0\! (0 bytes)
+[2026-03-21 22:32:05.687] [CRITICAL] hash_vfs_files: processed 5000/77303 candidates
+[2026-03-21 22:36:55.216] [CRITICAL] hash_vfs_files: processed 10000/77303 candidates
+[2026-03-21 22:37:44.075] [CRITICAL] load_evidence_and_build_tree START - path: F:\SANS\FOR500 Class related\Stack_Disk_Image\Stack001_Surface_HDD.E01
+[2026-03-21 22:37:44.077] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-21 22:37:44.077] [CRITICAL] Checking if path exists...
+[2026-03-21 22:37:44.077] [CRITICAL] Checking if file or directory...
+[2026-03-21 22:37:44.077] [CRITICAL] is_file = true, is_directory = false
+[2026-03-21 22:37:44.077] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-21 22:37:44.117] [CRITICAL] Evidence container opened: E01
+[2026-03-21 22:37:44.117] [CRITICAL] Container type: E01 (EnCase)
+[2026-03-21 22:37:44.119] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-21 22:37:44.119] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-21 22:38:05.493] [CRITICAL] Tree built successfully
+[2026-03-21 22:38:05.516] [CRITICAL] Starting background search indexing for 93874 nodes...
+[2026-03-21 22:38:05.543] [CRITICAL] Serializing to JSON...
+[2026-03-21 22:38:05.544] [CRITICAL] Starting background analysis...
+[2026-03-21 22:38:05.585] [CRITICAL] hash_vfs_files: start
+[2026-03-21 22:38:05.618] [CRITICAL] About to return JSON...
+[2026-03-21 22:38:05.618] [CRITICAL] Result has tree children: 1
+[2026-03-21 22:38:06.021] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "Stack001_Surface_HDD.E01",
+    "path": "F:\\SANS\\FOR500 Class related\\Stack_Disk_Image\\Stack001_Surface_HDD.E01",
+    "isDir": true,
+    "children": [
+      {
+        "name": "Volume0 (NTFS)",
+        "path": "F:\\SANS\\FOR500 Class related\\Stack_Disk_Image\\Stack001_Surface_HDD.E01",
+        "isDir": true,
+        "children": [
+          {
+            "name": "#!001",
+            "path": "/vol0\\#!001",
+            "isDir": true,
+            "children": [
+        
+[2026-03-21 22:38:06.022] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-21 22:38:07.089] [CRITICAL] Search indexing complete in 1.57s
+[2026-03-21 22:38:07.309] [CRITICAL] hash_vfs_files: discovered 77303 candidate files
+[2026-03-21 22:38:07.309] [CRITICAL] hash_vfs_files: first file /vol0\! (0 bytes)
+[2026-03-21 22:45:37.757] [CRITICAL] hash_vfs_files: processed 5000/77303 candidates
+[2026-03-21 22:50:00.382] [CRITICAL] load_evidence_and_build_tree START - path: F:\SANS\FOR500 Class related\Stack_Disk_Image\Stack001_Surface_HDD.E01
+[2026-03-21 22:50:00.382] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-21 22:50:00.382] [CRITICAL] Checking if path exists...
+[2026-03-21 22:50:00.383] [CRITICAL] Checking if file or directory...
+[2026-03-21 22:50:00.383] [CRITICAL] is_file = true, is_directory = false
+[2026-03-21 22:50:00.383] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-21 22:50:00.423] [CRITICAL] Evidence container opened: E01
+[2026-03-21 22:50:00.423] [CRITICAL] Container type: E01 (EnCase)
+[2026-03-21 22:50:00.425] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-21 22:50:00.425] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-21 22:50:21.858] [CRITICAL] Tree built successfully
+[2026-03-21 22:50:21.881] [CRITICAL] Starting background search indexing for 93874 nodes...
+[2026-03-21 22:50:21.906] [CRITICAL] Serializing to JSON...
+[2026-03-21 22:50:21.907] [CRITICAL] Starting background analysis...
+[2026-03-21 22:50:21.949] [CRITICAL] hash_vfs_files: start
+[2026-03-21 22:50:22.059] [CRITICAL] About to return JSON...
+[2026-03-21 22:50:22.060] [CRITICAL] Result has tree children: 1
+[2026-03-21 22:50:22.461] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "Stack001_Surface_HDD.E01",
+    "path": "F:\\SANS\\FOR500 Class related\\Stack_Disk_Image\\Stack001_Surface_HDD.E01",
+    "isDir": true,
+    "children": [
+      {
+        "name": "Volume0 (NTFS)",
+        "path": "F:\\SANS\\FOR500 Class related\\Stack_Disk_Image\\Stack001_Surface_HDD.E01",
+        "isDir": true,
+        "children": [
+          {
+            "name": "#!001",
+            "path": "/vol0\\#!001",
+            "isDir": true,
+            "children": [
+        
+[2026-03-21 22:50:22.461] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-21 22:50:23.644] [CRITICAL] hash_vfs_files: discovered 77303 candidate files
+[2026-03-21 22:50:23.644] [CRITICAL] hash_vfs_files: first file /vol0\! (0 bytes)
+[2026-03-21 22:50:23.670] [CRITICAL] Search indexing complete in 1.79s
+[2026-03-21 23:00:03.025] [CRITICAL] load_evidence_and_build_tree START - path: F:\SANS\FOR500 Class related\Stack_Disk_Image\Stack001_Surface_HDD.E01
+[2026-03-21 23:00:03.025] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-21 23:00:03.025] [CRITICAL] Checking if path exists...
+[2026-03-21 23:00:03.026] [CRITICAL] Checking if file or directory...
+[2026-03-21 23:00:03.026] [CRITICAL] is_file = true, is_directory = false
+[2026-03-21 23:00:03.026] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-21 23:00:03.063] [CRITICAL] Evidence container opened: E01
+[2026-03-21 23:00:03.063] [CRITICAL] Container type: E01 (EnCase)
+[2026-03-21 23:00:03.065] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-21 23:00:03.065] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-21 23:00:24.539] [CRITICAL] Tree built successfully
+[2026-03-21 23:00:24.564] [CRITICAL] Starting background search indexing for 93874 nodes...
+[2026-03-21 23:00:24.591] [CRITICAL] Serializing to JSON...
+[2026-03-21 23:00:24.591] [CRITICAL] Starting background analysis...
+[2026-03-21 23:00:24.632] [CRITICAL] hash_vfs_files: start
+[2026-03-21 23:00:24.666] [CRITICAL] About to return JSON...
+[2026-03-21 23:00:24.666] [CRITICAL] Result has tree children: 1
+[2026-03-21 23:00:25.068] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "Stack001_Surface_HDD.E01",
+    "path": "F:\\SANS\\FOR500 Class related\\Stack_Disk_Image\\Stack001_Surface_HDD.E01",
+    "isDir": true,
+    "children": [
+      {
+        "name": "Volume0 (NTFS)",
+        "path": "F:\\SANS\\FOR500 Class related\\Stack_Disk_Image\\Stack001_Surface_HDD.E01",
+        "isDir": true,
+        "children": [
+          {
+            "name": "#!001",
+            "path": "/vol0\\#!001",
+            "isDir": true,
+            "children": [
+        
+[2026-03-21 23:00:25.068] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-21 23:00:26.326] [CRITICAL] hash_vfs_files: discovered 77303 candidate files
+[2026-03-21 23:00:26.326] [CRITICAL] hash_vfs_files: first file /vol0\! (0 bytes)
+[2026-03-21 23:00:26.550] [CRITICAL] Search indexing complete in 1.99s
+[2026-03-21 23:23:28.630] [CRITICAL] load_evidence_and_build_tree START - path: F:\SANS\FOR500 Class related\Stack_Disk_Image\Stack001_Surface_HDD.E01
+[2026-03-21 23:23:28.630] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-21 23:23:28.630] [CRITICAL] Checking if path exists...
+[2026-03-21 23:23:28.630] [CRITICAL] Checking if file or directory...
+[2026-03-21 23:23:28.630] [CRITICAL] is_file = true, is_directory = false
+[2026-03-21 23:23:28.630] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-21 23:23:28.667] [CRITICAL] Evidence container opened: E01
+[2026-03-21 23:23:28.667] [CRITICAL] Container type: E01 (EnCase)
+[2026-03-21 23:23:28.669] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-21 23:23:28.670] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-21 23:23:49.871] [CRITICAL] Tree built successfully
+[2026-03-21 23:23:49.893] [CRITICAL] Starting background search indexing for 93874 nodes...
+[2026-03-21 23:23:49.919] [CRITICAL] Serializing to JSON...
+[2026-03-21 23:23:49.919] [CRITICAL] Starting background analysis...
+[2026-03-21 23:23:49.959] [CRITICAL] hash_vfs_files: start
+[2026-03-21 23:23:50.034] [CRITICAL] About to return JSON...
+[2026-03-21 23:23:50.034] [CRITICAL] Result has tree children: 1
+[2026-03-21 23:23:50.431] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "Stack001_Surface_HDD.E01",
+    "path": "F:\\SANS\\FOR500 Class related\\Stack_Disk_Image\\Stack001_Surface_HDD.E01",
+    "isDir": true,
+    "children": [
+      {
+        "name": "Volume0 (NTFS)",
+        "path": "F:\\SANS\\FOR500 Class related\\Stack_Disk_Image\\Stack001_Surface_HDD.E01",
+        "isDir": true,
+        "children": [
+          {
+            "name": "#!001",
+            "path": "/vol0\\#!001",
+            "isDir": true,
+            "children": [
+        
+[2026-03-21 23:23:50.431] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-21 23:23:51.693] [CRITICAL] hash_vfs_files: discovered 77303 candidate files
+[2026-03-21 23:23:51.693] [CRITICAL] hash_vfs_files: first file /vol0\! (0 bytes)
+[2026-03-21 23:23:52.105] [CRITICAL] Search indexing complete in 2.21s
+[2026-03-21 23:30:44.982] [CRITICAL] hash_vfs_files: processed 5000/77303 candidates
+[2026-03-21 23:40:22.790] [CRITICAL] load_evidence_and_build_tree START - path: F:\SANS\FOR500 Class related\Stack_Disk_Image\Stack001_Surface_HDD.E01
+[2026-03-21 23:40:22.791] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-21 23:40:22.791] [CRITICAL] Checking if path exists...
+[2026-03-21 23:40:22.791] [CRITICAL] Checking if file or directory...
+[2026-03-21 23:40:22.791] [CRITICAL] is_file = true, is_directory = false
+[2026-03-21 23:40:22.791] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-21 23:40:22.830] [CRITICAL] Evidence container opened: E01
+[2026-03-21 23:40:22.830] [CRITICAL] Container type: E01 (EnCase)
+[2026-03-21 23:40:22.833] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-21 23:40:22.833] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-21 23:40:44.125] [CRITICAL] Tree built successfully
+[2026-03-21 23:40:44.149] [CRITICAL] Starting background search indexing for 93874 nodes...
+[2026-03-21 23:40:44.174] [CRITICAL] Serializing to JSON...
+[2026-03-21 23:40:44.174] [CRITICAL] Starting background analysis...
+[2026-03-21 23:40:44.176] [CRITICAL] About to return JSON...
+[2026-03-21 23:40:44.176] [CRITICAL] Result has tree children: 1
+[2026-03-21 23:40:44.224] [CRITICAL] hash_vfs_files: start
+[2026-03-21 23:40:44.589] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "Stack001_Surface_HDD.E01",
+    "path": "F:\\SANS\\FOR500 Class related\\Stack_Disk_Image\\Stack001_Surface_HDD.E01",
+    "isDir": true,
+    "children": [
+      {
+        "name": "Volume0 (NTFS)",
+        "path": "F:\\SANS\\FOR500 Class related\\Stack_Disk_Image\\Stack001_Surface_HDD.E01",
+        "isDir": true,
+        "children": [
+          {
+            "name": "#!001",
+            "path": "/vol0\\#!001",
+            "isDir": true,
+            "children": [
+        
+[2026-03-21 23:40:44.589] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-21 23:40:45.954] [CRITICAL] hash_vfs_files: discovered 77303 candidate files
+[2026-03-21 23:40:45.954] [CRITICAL] hash_vfs_files: first file /vol0\! (0 bytes)
+[2026-03-21 23:40:46.574] [CRITICAL] Search indexing complete in 2.43s
+[2026-03-21 23:46:01.752] [CRITICAL] hash_vfs_files: processed 5000/77303 candidates
+[2026-03-21 23:51:18.617] [CRITICAL] hash_vfs_files: processed 10000/77303 candidates
+[2026-03-21 23:56:33.233] [CRITICAL] hash_vfs_files: processed 15000/77303 candidates
+[2026-03-22 00:02:09.517] [CRITICAL] hash_vfs_files: processed 20000/77303 candidates
+[2026-03-22 00:09:24.494] [CRITICAL] hash_vfs_files: processed 25000/77303 candidates
+[2026-03-22 00:15:13.622] [CRITICAL] hash_vfs_files: processed 30000/77303 candidates
+[2026-03-22 00:20:45.821] [CRITICAL] hash_vfs_files: processed 35000/77303 candidates
+[2026-03-22 00:26:38.005] [CRITICAL] hash_vfs_files: processed 40000/77303 candidates
+[2026-03-22 00:32:25.616] [CRITICAL] hash_vfs_files: processed 45000/77303 candidates
+[2026-03-22 00:38:19.948] [CRITICAL] hash_vfs_files: processed 50000/77303 candidates
+[2026-03-22 00:44:12.634] [CRITICAL] hash_vfs_files: processed 55000/77303 candidates
+[2026-03-22 00:50:06.404] [CRITICAL] hash_vfs_files: processed 60000/77303 candidates
+[2026-03-22 00:55:59.214] [CRITICAL] hash_vfs_files: processed 65000/77303 candidates
+[2026-03-22 01:01:58.188] [CRITICAL] hash_vfs_files: processed 70000/77303 candidates
+[2026-03-22 01:07:52.949] [CRITICAL] hash_vfs_files: processed 75000/77303 candidates
+[2026-03-22 01:10:41.643] [CRITICAL] hash_vfs_files: complete (hashed 77297)
+[2026-03-22 20:22:52.656] [CRITICAL] load_evidence_and_build_tree START - path: D:\forensic-suite\evidence\sdb1.img
+[2026-03-22 20:22:52.657] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-22 20:22:52.657] [CRITICAL] Checking if path exists...
+[2026-03-22 20:22:52.657] [CRITICAL] Checking if file or directory...
+[2026-03-22 20:22:52.657] [CRITICAL] is_file = true, is_directory = false
+[2026-03-22 20:22:52.657] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-22 20:22:52.658] [CRITICAL] Evidence container opened: Raw
+[2026-03-22 20:22:52.658] [CRITICAL] Container type: RAW/DD
+[2026-03-22 20:22:52.659] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-22 20:22:52.659] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-22 20:22:52.661] [CRITICAL] Tree built successfully
+[2026-03-22 20:22:52.662] [CRITICAL] Serializing to JSON...
+[2026-03-22 20:22:52.662] [CRITICAL] Starting background analysis...
+[2026-03-22 20:22:52.662] [CRITICAL] Starting background search indexing for 5 nodes...
+[2026-03-22 20:22:52.663] [CRITICAL] hash_vfs_files: start
+[2026-03-22 20:22:52.664] [CRITICAL] hash_vfs_files: discovered 0 candidate files
+[2026-03-22 20:22:52.665] [CRITICAL] About to return JSON...
+[2026-03-22 20:22:52.666] [CRITICAL] Result has tree children: 1
+[2026-03-22 20:22:52.666] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "sdb1.img",
+    "path": "D:\\forensic-suite\\evidence\\sdb1.img",
+    "isDir": true,
+    "children": [
+      {
+        "name": "Volume0 (Unknown)",
+        "path": "D:\\forensic-suite\\evidence\\sdb1.img",
+        "isDir": true,
+        "children": [
+          {
+            "name": "0",
+            "path": "/vol0\\0",
+            "isDir": true,
+            "children": [
+              {
+                "name": "Unallocated",
+                "path": "0/Unallocated",
+     
+[2026-03-22 20:22:52.666] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-22 20:22:52.682] [CRITICAL] Search indexing complete in 0.02s
+[2026-03-22 20:25:22.172] [CRITICAL] load_evidence_and_build_tree START - path: F:\MAC Image for Axiom\jTallon_macOS11\jTallon macOS.E01
+[2026-03-22 20:25:22.172] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-22 20:25:22.172] [CRITICAL] Checking if path exists...
+[2026-03-22 20:25:22.172] [CRITICAL] Checking if file or directory...
+[2026-03-22 20:25:22.172] [CRITICAL] is_file = true, is_directory = false
+[2026-03-22 20:25:22.172] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-22 20:25:22.292] [CRITICAL] Evidence container opened: E01
+[2026-03-22 20:25:22.292] [CRITICAL] Container type: E01 (EnCase)
+[2026-03-22 20:25:22.293] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-22 20:25:22.294] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-22 20:25:22.294] [CRITICAL] Tree built successfully
+[2026-03-22 20:25:22.294] [CRITICAL] Serializing to JSON...
+[2026-03-22 20:25:22.294] [CRITICAL] Starting background analysis...
+[2026-03-22 20:25:22.295] [CRITICAL] Starting background search indexing for 1 nodes...
+[2026-03-22 20:25:22.312] [CRITICAL] Search indexing complete in 0.02s
+[2026-03-22 20:25:22.334] [CRITICAL] About to return JSON...
+[2026-03-22 20:25:22.334] [CRITICAL] Result has tree children: 0
+[2026-03-22 20:25:22.334] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "jTallon macOS.E01",
+    "path": "F:\\MAC Image for Axiom\\jTallon_macOS11\\jTallon macOS.E01",
+    "isDir": true,
+    "children": [],
+    "visibleByDefault": false,
+    "category": null,
+    "hash": null,
+    "size": 0,
+    "mftRecordId": null,
+    "sequenceNumber": null,
+    "isDeleted": false,
+    "adsNames": [],
+    "slackSize": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "accessedTime": null,
+    "mftChangedTime": null,
+    "isCarved": false,
+    "
+[2026-03-22 20:25:22.334] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-22 20:25:22.441] [CRITICAL] hash_vfs_files: start
+[2026-03-22 20:25:22.442] [CRITICAL] hash_vfs_files: discovered 0 candidate files
+[2026-03-22 20:25:40.242] [CRITICAL] load_evidence_and_build_tree START - path: F:\MAC Image for Axiom\jTallon_macOS11.7z.001
+[2026-03-22 20:25:40.242] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-22 20:25:40.242] [CRITICAL] Checking if path exists...
+[2026-03-22 20:25:40.242] [CRITICAL] Checking if file or directory...
+[2026-03-22 20:25:40.243] [CRITICAL] is_file = true, is_directory = false
+[2026-03-22 20:25:40.243] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-22 20:25:40.243] [CRITICAL] Evidence container opened: Raw
+[2026-03-22 20:25:40.243] [CRITICAL] Container type: RAW/DD
+[2026-03-22 20:25:40.244] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-22 20:25:40.244] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-22 20:25:40.246] [CRITICAL] Tree built successfully
+[2026-03-22 20:25:40.246] [CRITICAL] Serializing to JSON...
+[2026-03-22 20:25:40.247] [CRITICAL] Starting background search indexing for 5 nodes...
+[2026-03-22 20:25:40.247] [CRITICAL] Starting background analysis...
+[2026-03-22 20:25:40.248] [CRITICAL] hash_vfs_files: start
+[2026-03-22 20:25:40.249] [CRITICAL] hash_vfs_files: discovered 0 candidate files
+[2026-03-22 20:25:40.251] [CRITICAL] About to return JSON...
+[2026-03-22 20:25:40.251] [CRITICAL] Result has tree children: 1
+[2026-03-22 20:25:40.251] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "jTallon_macOS11.7z.001",
+    "path": "F:\\MAC Image for Axiom\\jTallon_macOS11.7z.001",
+    "isDir": true,
+    "children": [
+      {
+        "name": "Volume0 (Unknown)",
+        "path": "F:\\MAC Image for Axiom\\jTallon_macOS11.7z.001",
+        "isDir": true,
+        "children": [
+          {
+            "name": "0",
+            "path": "/vol0\\0",
+            "isDir": true,
+            "children": [
+              {
+                "name": "Unallocated",
+              
+[2026-03-22 20:25:40.251] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-22 20:25:40.256] [CRITICAL] Search indexing complete in 0.01s
+[2026-03-22 20:51:55.576] [CRITICAL] load_evidence_and_build_tree START - path: F:\Paladin\paladin_edge_64.iso
+[2026-03-22 20:51:55.576] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-22 20:51:55.576] [CRITICAL] Checking if path exists...
+[2026-03-22 20:51:55.576] [CRITICAL] Checking if file or directory...
+[2026-03-22 20:51:55.576] [CRITICAL] is_file = true, is_directory = false
+[2026-03-22 20:51:55.576] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-22 20:51:55.576] [CRITICAL] Evidence container opened: Raw
+[2026-03-22 20:51:55.577] [CRITICAL] Container type: RAW/DD
+[2026-03-22 20:51:55.577] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-22 20:51:55.586] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-22 20:51:55.587] [CRITICAL] Tree built successfully
+[2026-03-22 20:51:55.588] [CRITICAL] Serializing to JSON...
+[2026-03-22 20:51:55.588] [CRITICAL] Starting background search indexing for 8 nodes...
+[2026-03-22 20:51:55.588] [CRITICAL] Starting background analysis...
+[2026-03-22 20:51:55.589] [CRITICAL] hash_vfs_files: start
+[2026-03-22 20:51:55.589] [CRITICAL] hash_vfs_files: discovered 0 candidate files
+[2026-03-22 20:51:55.591] [CRITICAL] About to return JSON...
+[2026-03-22 20:51:55.591] [CRITICAL] Result has tree children: 1
+[2026-03-22 20:51:55.591] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "paladin_edge_64.iso",
+    "path": "F:\\Paladin\\paladin_edge_64.iso",
+    "isDir": true,
+    "children": [
+      {
+        "name": "Volume0 (ISO9660)",
+        "path": "F:\\Paladin\\paladin_edge_64.iso",
+        "isDir": true,
+        "children": [
+          {
+            "name": "0",
+            "path": "/vol0\\0",
+            "isDir": true,
+            "children": [
+              {
+                "name": "boot",
+                "path": "0/boot",
+                "isD
+[2026-03-22 20:51:55.591] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-22 20:51:55.602] [CRITICAL] Search indexing complete in 0.01s
+[2026-03-22 21:53:50.288] [CRITICAL] load_evidence_and_build_tree START - path: F:\MAC Image for Axiom\jTallon_macOS11\jTallon macOS.E01
+[2026-03-22 21:53:50.288] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-22 21:53:50.288] [CRITICAL] Checking if path exists...
+[2026-03-22 21:53:50.288] [CRITICAL] Checking if file or directory...
+[2026-03-22 21:53:50.289] [CRITICAL] is_file = true, is_directory = false
+[2026-03-22 21:53:50.289] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-22 21:53:50.409] [CRITICAL] Evidence container opened: E01
+[2026-03-22 21:53:50.409] [CRITICAL] Container type: E01 (EnCase)
+[2026-03-22 21:53:50.410] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-22 21:53:50.411] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-22 21:53:50.411] [CRITICAL] Tree built successfully
+[2026-03-22 21:53:50.412] [CRITICAL] Serializing to JSON...
+[2026-03-22 21:53:50.412] [CRITICAL] Starting background analysis...
+[2026-03-22 21:53:50.412] [CRITICAL] Starting background search indexing for 1 nodes...
+[2026-03-22 21:53:50.415] [CRITICAL] About to return JSON...
+[2026-03-22 21:53:50.416] [CRITICAL] Result has tree children: 0
+[2026-03-22 21:53:50.416] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "jTallon macOS.E01",
+    "path": "F:\\MAC Image for Axiom\\jTallon_macOS11\\jTallon macOS.E01",
+    "isDir": true,
+    "children": [],
+    "visibleByDefault": false,
+    "category": null,
+    "hash": null,
+    "size": 0,
+    "mftRecordId": null,
+    "sequenceNumber": null,
+    "isDeleted": false,
+    "adsNames": [],
+    "slackSize": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "accessedTime": null,
+    "mftChangedTime": null,
+    "isCarved": false,
+    "
+[2026-03-22 21:53:50.416] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-22 21:53:50.444] [CRITICAL] Search indexing complete in 0.03s
+[2026-03-22 21:53:50.568] [CRITICAL] hash_vfs_files: start
+[2026-03-22 21:53:50.568] [CRITICAL] hash_vfs_files: discovered 0 candidate files
+[2026-03-22 22:14:04.635] [CRITICAL] load_evidence_and_build_tree START - path: F:\MAC Image for Axiom\jTallon_macOS11\jTallon macOS.E01
+[2026-03-22 22:14:04.635] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-22 22:14:04.635] [CRITICAL] Checking if path exists...
+[2026-03-22 22:14:04.635] [CRITICAL] Checking if file or directory...
+[2026-03-22 22:14:04.636] [CRITICAL] is_file = true, is_directory = false
+[2026-03-22 22:14:04.636] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-22 22:14:04.762] [CRITICAL] Evidence container opened: E01
+[2026-03-22 22:14:04.762] [CRITICAL] Container type: E01 (EnCase)
+[2026-03-22 22:14:04.763] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-22 22:14:04.763] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-22 22:14:04.764] [CRITICAL] Tree built successfully
+[2026-03-22 22:14:04.765] [CRITICAL] Starting background search indexing for 1 nodes...
+[2026-03-22 22:14:04.765] [CRITICAL] Serializing to JSON...
+[2026-03-22 22:14:04.765] [CRITICAL] Starting background analysis...
+[2026-03-22 22:14:04.768] [CRITICAL] About to return JSON...
+[2026-03-22 22:14:04.769] [CRITICAL] Result has tree children: 0
+[2026-03-22 22:14:04.769] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "jTallon macOS.E01",
+    "path": "F:\\MAC Image for Axiom\\jTallon_macOS11\\jTallon macOS.E01",
+    "isDir": true,
+    "children": [],
+    "visibleByDefault": false,
+    "category": null,
+    "hash": null,
+    "size": 0,
+    "mftRecordId": null,
+    "sequenceNumber": null,
+    "isDeleted": false,
+    "adsNames": [],
+    "slackSize": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "accessedTime": null,
+    "mftChangedTime": null,
+    "isCarved": false,
+    "
+[2026-03-22 22:14:04.769] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-22 22:14:04.774] [CRITICAL] Search indexing complete in 0.01s
+[2026-03-22 22:14:04.922] [CRITICAL] hash_vfs_files: start
+[2026-03-22 22:14:04.923] [CRITICAL] hash_vfs_files: discovered 0 candidate files
+[2026-03-23 06:12:24.195] [CRITICAL] load_evidence_and_build_tree START - path: F:\MAC Image for Axiom\jTallon_macOS11\jTallon macOS.E01
+[2026-03-23 06:12:24.195] [CRITICAL] triage pipeline marker: 2026-03-18-progress-v3
+[2026-03-23 06:12:24.195] [CRITICAL] Checking if path exists...
+[2026-03-23 06:12:24.196] [CRITICAL] Checking if file or directory...
+[2026-03-23 06:12:24.196] [CRITICAL] is_file = true, is_directory = false
+[2026-03-23 06:12:24.196] [CRITICAL] Step 1: Opening evidence container...
+[2026-03-23 06:12:24.321] [CRITICAL] Evidence container opened: E01
+[2026-03-23 06:12:24.322] [CRITICAL] Container type: E01 (EnCase)
+[2026-03-23 06:12:24.322] [CRITICAL] Step 2: Preparing quick tree build...
+[2026-03-23 06:12:24.323] [CRITICAL] Step 5: Building tree with VFS...
+[2026-03-23 06:12:24.323] [CRITICAL] Tree built successfully
+[2026-03-23 06:12:24.324] [CRITICAL] Serializing to JSON...
+[2026-03-23 06:12:24.324] [CRITICAL] Starting background analysis...
+[2026-03-23 06:12:24.324] [CRITICAL] Starting background search indexing for 1 nodes...
+[2026-03-23 06:12:24.328] [CRITICAL] About to return JSON...
+[2026-03-23 06:12:24.329] [CRITICAL] Result has tree children: 0
+[2026-03-23 06:12:24.329] [CRITICAL] JSON result (first 500 chars): {
+  "tree": {
+    "name": "jTallon macOS.E01",
+    "path": "F:\\MAC Image for Axiom\\jTallon_macOS11\\jTallon macOS.E01",
+    "isDir": true,
+    "children": [],
+    "visibleByDefault": false,
+    "category": null,
+    "hash": null,
+    "size": 0,
+    "mftRecordId": null,
+    "sequenceNumber": null,
+    "isDeleted": false,
+    "adsNames": [],
+    "slackSize": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "accessedTime": null,
+    "mftChangedTime": null,
+    "isCarved": false,
+    "
+[2026-03-23 06:12:24.329] [CRITICAL] SUCCESS - returning to frontend
+[2026-03-23 06:12:24.335] [CRITICAL] Search indexing complete in 0.01s
+[2026-03-23 06:12:24.479] [CRITICAL] hash_vfs_files: start
+[2026-03-23 06:12:24.480] [CRITICAL] hash_vfs_files: discovered 0 candidate files

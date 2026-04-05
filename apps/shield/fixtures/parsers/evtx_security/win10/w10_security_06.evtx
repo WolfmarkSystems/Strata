@@ -1,0 +1,1 @@
+﻿<Event><System><Provider Name="Microsoft-Windows-Security-Auditing"/><EventID>4625</EventID><Level>3</Level><EventRecordID>1006</EventRecordID><TimeCreated SystemTime="2026-03-10T06:06:00.000Z"/><Computer>WIN10-LAB</Computer></System><EventData><Data Name="TargetUserName">user6</Data><Data Name="IpAddress">10.0.0.6</Data></EventData></Event>

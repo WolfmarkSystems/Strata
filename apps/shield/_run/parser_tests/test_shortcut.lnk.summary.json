@@ -1,0 +1,36 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-25T03:59:05.472606900+00:00",
+  "platform": "windows",
+  "image_path": "D:\\forensic-suite\\fixtures\\artifacts\\test_shortcut.lnk",
+  "out_dir": ".\\exports\\smoke_test",
+  "mft_count": 50,
+  "timeline_enabled": true,
+  "audit_enabled": true,
+  "did_open_image": false,
+  "evidence_size_bytes": 0,
+  "bytes_actually_read": 0,
+  "sample_sha256": null,
+  "container_type": null,
+  "filesystem_detected": null,
+  "mft_records_attempted": 0,
+  "mft_records_emitted": 0,
+  "analysis_mode": "none",
+  "analysis_valid": false,
+  "warning": "Failed to open evidence image",
+  "outputs": {
+    "summary_txt": ".\\exports\\smoke_test\\summary.txt",
+    "timeline_csv": ".\\exports\\smoke_test\\timeline.csv",
+    "audit_json": ".\\exports\\smoke_test\\audit.json",
+    "json_summary": "D:\\forensic-suite\\_run\\parser_tests\\test_shortcut.lnk.summary.json"
+  },
+  "sizes": {
+    "summary_txt": 186,
+    "timeline_csv": 23,
+    "audit_json": 168,
+    "json_summary": 0
+  },
+  "elapsed_ms": 0,
+  "status": "warn",
+  "error": null
+}

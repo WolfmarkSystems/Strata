@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vantor Tree v0.3.0 — UI Mockup</title>
+<style>
+  :root {
+    --bg:        #0f1117;
+    --panel:     #161b27;
+    --card:      #1e2535;
+    --elevated:  #252d3d;
+    --border:    #2a3347;
+    --active:    #7dd3fc;
+    --text:      #e2e8f0;
+    --secondary: #8899aa;
+    --muted:     #4a5568;
+    --suspicious:#f59e0b;
+    --flagged:   #ef4444;
+    --clean:     #22c55e;
+    --carved:    #a855f7;
+    --radius-lg: 10px;
+    --radius-md: 6px;
+    --radius-sm: 4px;
+    --radius-pill: 20px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    height: 48px;
+  }
+
+  .toolbar-left { display: flex; gap: 6px; align-items: center; }
+  .toolbar-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .toolbar-right { display: flex; gap: 6px; align-items: center; }
+
+  .btn {
+    padding: 5px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--active);
+    border-color: var(--active);
+    color: #0f1117;
+    font-weight: 700;
+  }
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--secondary);
+  }
+
+  .toolbar-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+  }
+  .toolbar-meta-item {
+    color: var(--secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .toolbar-meta-item span {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .toolbar-divider {
+    width: 1px;
+    height: 14px;
+    background: var(--border);
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  /* ── LEFT ICON SIDEBAR ── */
+  .sidebar {
+    width: 48px;
+    background: var(--panel);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 16px;
+    position: relative;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .sidebar-icon:hover {
+    background: var(--card);
+    color: var(--secondary);
+  }
+  .sidebar-icon.active {
+    background: var(--card);
+    color: var(--active);
+    border-left-color: var(--active);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+  .sidebar-spacer { flex: 1; }
+  .sidebar-settings {
+    color: var(--muted);
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: var(--radius-md);
+  }
+  .sidebar-settings:hover { color: var(--secondary); background: var(--card); }
+
+  /* ── CONTENT AREA ── */
+  .content {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  /* ── EVIDENCE PANEL ── */
+  .evidence-panel {
+    width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 10px 12px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--secondary);
+  }
+
+  .evidence-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .tree-node {
+    padding: 5px 12px 5px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--secondary);
+    border-left: 2px solid transparent;
+  }
+  .tree-node:hover { background: var(--elevated); color: var(--text); }
+  .tree-node.selected {
+    background: var(--elevated);
+    color: var(--active);
+    border-left-color: var(--active);
+  }
+  .tree-node.root { color: var(--text); font-weight: 600; padding-left: 10px; }
+  .tree-node.vol { padding-left: 22px; }
+  .tree-node.dir { padding-left: 34px; }
+  .tree-icon { font-size: 13px; flex-shrink: 0; }
+
+  .filter-input {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font-size: 11px;
+    padding: 5px 10px;
+    width: 100%;
+    outline: none;
+    margin: 8px 12px;
+    width: calc(100% - 24px);
+  }
+  .filter-input::placeholder { color: var(--muted); }
+  .filter-input:focus { border-color: var(--active); }
+
+  /* ── FILE TABLE ── */
+  .file-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .file-table-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .file-table-header {
+    display: grid;
+    grid-template-columns: 1fr 80px 140px 140px 60px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+  .col-header {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .col-header:hover { color: var(--text); }
+
+  .file-table-body {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .file-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 140px 140px 60px;
+    padding: 0 12px;
+    height: 28px;
+    align-items: center;
+    gap: 8px;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+  }
+  .file-row:hover { background: var(--elevated); }
+  .file-row.selected {
+    background: var(--elevated);
+    border-left-color: var(--active);
+  }
+  .file-row.suspicious { border-left-color: var(--suspicious); }
+  .file-row.flagged { border-left-color: var(--flagged); }
+
+  .file-name {
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .file-icon { font-size: 13px; flex-shrink: 0; }
+  .file-size { font-size: 12px; color: var(--secondary); text-align: right; }
+  .file-date { font-size: 11px; color: var(--secondary); font-variant-numeric: tabular-nums; }
+  .file-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-suspicious { background: var(--suspicious); color: #0f1117; }
+  .badge-flagged { background: var(--flagged); color: #fff; }
+  .badge-carved { background: var(--carved); color: #fff; }
+  .badge-clean { background: var(--clean); color: #0f1117; }
+  .badge-exe { background: var(--muted); color: var(--text); }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel {
+    width: 260px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .detail-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-tab {
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: var(--muted);
+    margin-bottom: -1px;
+  }
+  .detail-tab.active {
+    background: var(--active);
+    color: #0f1117;
+  }
+  .detail-tab:hover:not(.active) { color: var(--secondary); }
+
+  .detail-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; }
+
+  .meta-field { display: flex; flex-direction: column; gap: 3px; }
+  .meta-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .meta-value { font-size: 12px; color: var(--text); word-break: break-all; }
+  .meta-value.highlight { color: var(--active); }
+  .meta-value.warning { color: var(--suspicious); }
+  .meta-divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+  .bookmark-btn {
+    background: transparent;
+    border: 1px solid var(--active);
+    color: var(--active);
+    border-radius: var(--radius-md);
+    padding: 5px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .bookmark-btn:hover { background: var(--active); color: #0f1117; }
+
+  .notes-area {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font-size: 12px;
+    padding: 8px;
+    resize: none;
+    height: 70px;
+    outline: none;
+    font-family: inherit;
+  }
+  .notes-area:focus { border-color: var(--active); }
+  .notes-area::placeholder { color: var(--muted); }
+
+  /* ── HEX PREVIEW ── */
+  .hex-preview {
+    background: var(--panel);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    padding: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: var(--active);
+    line-height: 1.6;
+    overflow: hidden;
+  }
+  .hex-offset { color: var(--muted); }
+  .hex-null { color: var(--muted); }
+
+  /* ── STATUS BAR ── */
+  .status-wrap {
+    position: fixed;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+  }
+  .status-pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    padding: 5px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .stat { display: flex; align-items: center; gap: 5px; color: var(--secondary); }
+  .stat-val { color: var(--text); }
+  .stat-val.warn { color: var(--suspicious); }
+  .stat-val.danger { color: var(--flagged); }
+  .stat-divider { width: 1px; height: 12px; background: var(--border); }
+
+  /* ── VANTOR LOGO in toolbar ── */
+  .vantor-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 12px;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .vantor-v {
+    width: 28px;
+    height: 28px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .vantor-wordmark {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--text);
+  }
+  .vantor-sub {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <!-- Logo -->
+  <div class="vantor-logo">
+    <div class="vantor-v">
+      <svg width="16" height="16" viewBox="0 0 400 400">
+        <polygon points="110,90 189,310 211,310 290,90 268,90 200,263.4 132,90"
+          fill="#7dd3fc" opacity="0.95"/>
+        <line x1="110" y1="90" x2="290" y2="90"
+          stroke="#7dd3fc" stroke-width="18" stroke-linecap="square" opacity="1"/>
+      </svg>
+    </div>
+    <div>
+      <div class="vantor-wordmark">VANTOR</div>
+      <div class="vantor-sub">TREE v0.3.0</div>
+    </div>
+  </div>
+
+  <!-- Left buttons -->
+  <div class="toolbar-left">
+    <button class="btn btn-primary">+ Open Evidence</button>
+    <button class="btn btn-secondary">New Case</button>
+    <button class="btn btn-secondary">Open Case</button>
+    <button class="btn btn-secondary">Profile</button>
+  </div>
+
+  <!-- Center meta -->
+  <div class="toolbar-center">
+    <div class="toolbar-meta">
+      <div class="toolbar-meta-item">CASE: <span>Unsaved Session</span></div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-meta-item">EXAMINER: <span>Examiner 1</span></div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-meta-item">E01: <span>Stack001_Surface_HDD.E01</span></div>
+    </div>
+  </div>
+
+  <!-- Right buttons -->
+  <div class="toolbar-right">
+    <button class="btn btn-secondary">Hash All</button>
+    <button class="btn btn-secondary">Carve</button>
+    <button class="btn btn-secondary">Index</button>
+    <button class="btn btn-secondary">Report</button>
+    <button class="btn btn-secondary">Export</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- ICON SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-icon active" title="File Explorer">📁</div>
+    <div class="sidebar-icon" title="Bookmarks">🔖</div>
+    <div class="sidebar-icon" title="Gallery">🖼</div>
+    <div class="sidebar-icon" title="Timeline">⏱</div>
+    <div class="sidebar-icon" title="Registry">🗂</div>
+    <div class="sidebar-icon" title="Event Logs">📜</div>
+    <div class="sidebar-icon" title="Browser History">🌐</div>
+    <div class="sidebar-icon" title="Search">🔍</div>
+    <div class="sidebar-icon" title="Hash Sets">#</div>
+    <div class="sidebar-icon" title="Audit Log">📊</div>
+    <div class="sidebar-icon" title="Plugins">🔌</div>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-settings" title="Settings">⚙</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- EVIDENCE PANEL -->
+    <div class="evidence-panel">
+      <div class="card" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+        <div class="card-header">
+          <span class="card-title">Evidence Tree</span>
+          <span style="font-size:10px; color:var(--muted)">1</span>
+        </div>
+        <input class="filter-input" placeholder="Filter path..." value="/ntfs_vol0">
+        <div class="evidence-tree">
+          <div class="tree-node root">
+            <span class="tree-icon">💿</span>
+            Stack001_Surface_HDD.E01
+          </div>
+          <div class="tree-node vol">
+            <span class="tree-icon">⚠️</span>
+            UNVERIFIED
+          </div>
+          <div class="tree-node vol selected">
+            <span class="tree-icon">📂</span>
+            [NTFS Vol 1] /ntfs_vol0
+          </div>
+          <div class="tree-node dir">
+            <span class="tree-icon">📁</span>
+            Documents and Settings
+          </div>
+          <div class="tree-node dir">
+            <span class="tree-icon">📁</span>
+            Program Files
+          </div>
+          <div class="tree-node dir">
+            <span class="tree-icon">📁</span>
+            Program Files (x86)
+          </div>
+          <div class="tree-node dir">
+            <span class="tree-icon">📁</span>
+            Users
+          </div>
+          <div class="tree-node dir">
+            <span class="tree-icon">📁</span>
+            Windows
+          </div>
+          <div class="tree-node dir">
+            <span class="tree-icon">📁</span>
+            Windows/Prefetch
+          </div>
+          <div class="tree-node dir">
+            <span class="tree-icon">📁</span>
+            Windows/System32
+          </div>
+          <div class="tree-node dir">
+            <span class="tree-icon">📁</span>
+            PerfLogs
+          </div>
+          <div class="tree-node dir">
+            <span class="tree-icon">📁</span>
+            Recovery
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILE TABLE + DETAIL -->
+    <div class="file-section">
+      <div class="card file-table-card">
+        <div class="card-header">
+          <span class="card-title">File Listing — [NTFS Volume 1] /ntfs_vol0</span>
+          <span style="font-size:10px; color:var(--muted)">4,847 items</span>
+        </div>
+        <div class="file-table-header">
+          <div class="col-header">Name ↕</div>
+          <div class="col-header">Size</div>
+          <div class="col-header">Modified</div>
+          <div class="col-header">Created</div>
+          <div class="col-header">Status</div>
+        </div>
+        <div class="file-table-body">
+
+          <div class="file-row">
+            <div class="file-name"><span class="file-icon">📁</span>Documents and Settings</div>
+            <div class="file-size">—</div>
+            <div class="file-date">1970-01-01</div>
+            <div class="file-date">—</div>
+            <div></div>
+          </div>
+
+          <div class="file-row">
+            <div class="file-name"><span class="file-icon">📁</span>Program Files</div>
+            <div class="file-size">—</div>
+            <div class="file-date">2023-03-22</div>
+            <div class="file-date">2021-06-05</div>
+            <div></div>
+          </div>
+
+          <div class="file-row">
+            <div class="file-name"><span class="file-icon">📁</span>Users</div>
+            <div class="file-size">—</div>
+            <div class="file-date">2023-03-22</div>
+            <div class="file-date">2021-06-05</div>
+            <div></div>
+          </div>
+
+          <div class="file-row">
+            <div class="file-name"><span class="file-icon">📁</span>Windows</div>
+            <div class="file-size">—</div>
+            <div class="file-date">2023-03-22</div>
+            <div class="file-date">2021-06-05</div>
+            <div></div>
+          </div>
+
+          <div class="file-row suspicious">
+            <div class="file-name">
+              <span class="file-icon">⚠️</span>
+              mimikatz.exe
+            </div>
+            <div class="file-size">1.2 MB</div>
+            <div class="file-date">2023-03-22 14:55</div>
+            <div class="file-date">2023-03-22 14:55</div>
+            <div><span class="file-badge badge-suspicious">SUSPICIOUS</span></div>
+          </div>
+
+          <div class="file-row selected">
+            <div class="file-name">
+              <span class="file-icon">💾</span>
+              hiberfil.sys
+            </div>
+            <div class="file-size">1.6 GB</div>
+            <div class="file-date">1970-01-01</div>
+            <div class="file-date">—</div>
+            <div><span class="file-badge badge-exe">EXE</span></div>
+          </div>
+
+          <div class="file-row">
+            <div class="file-name"><span class="file-icon">💾</span>pagefile.sys</div>
+            <div class="file-size">743.9 MB</div>
+            <div class="file-date">1970-01-01</div>
+            <div class="file-date">—</div>
+            <div></div>
+          </div>
+
+          <div class="file-row">
+            <div class="file-name"><span class="file-icon">💾</span>swapfile.sys</div>
+            <div class="file-size">144.0 MB</div>
+            <div class="file-date">1970-01-01</div>
+            <div class="file-date">—</div>
+            <div></div>
+          </div>
+
+          <div class="file-row flagged">
+            <div class="file-name">
+              <span class="file-icon">🔴</span>
+              procdump64.exe
+            </div>
+            <div class="file-size">386 KB</div>
+            <div class="file-date">2023-03-22 15:02</div>
+            <div class="file-date">2023-03-22 15:02</div>
+            <div><span class="file-badge badge-flagged">FLAGGED</span></div>
+          </div>
+
+          <div class="file-row">
+            <div class="file-name"><span class="file-icon">📄</span>AUTOEXEC.BAT</div>
+            <div class="file-size">0 B</div>
+            <div class="file-date">1970-01-01</div>
+            <div class="file-date">—</div>
+            <div></div>
+          </div>
+
+          <div class="file-row">
+            <div class="file-name"><span class="file-icon">📄</span>CONFIG.SYS</div>
+            <div class="file-size">0 B</div>
+            <div class="file-date">1970-01-01</div>
+            <div class="file-date">—</div>
+            <div></div>
+          </div>
+
+          <div class="file-row">
+            <div class="file-name"><span class="file-icon">🗑</span>$Recycle.Bin</div>
+            <div class="file-size">—</div>
+            <div class="file-date">2023-03-21</div>
+            <div class="file-date">2021-06-05</div>
+            <div><span class="file-badge badge-clean">DELETED</span></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- DETAIL PANEL -->
+    <div class="detail-panel">
+      <div class="card" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+        <div class="detail-tabs">
+          <div class="detail-tab active">Meta</div>
+          <div class="detail-tab">Hex</div>
+          <div class="detail-tab">Text</div>
+          <div class="detail-tab">Image</div>
+        </div>
+        <div class="detail-body">
+
+          <div class="meta-field">
+            <div class="meta-label">File Name</div>
+            <div class="meta-value highlight">hiberfil.sys</div>
+          </div>
+
+          <div class="meta-field">
+            <div class="meta-label">Path</div>
+            <div class="meta-value">[NTFS Vol 1] /ntfs_vol0/hiberfil.sys</div>
+          </div>
+
+          <div class="meta-divider"></div>
+
+          <div class="meta-field">
+            <div class="meta-label">Size</div>
+            <div class="meta-value">1.6 GB (1,686,564,864 bytes)</div>
+          </div>
+
+          <div class="meta-field">
+            <div class="meta-label">Modified</div>
+            <div class="meta-value">1970-01-01T00:00:00Z</div>
+          </div>
+
+          <div class="meta-field">
+            <div class="meta-label">Created</div>
+            <div class="meta-value">—</div>
+          </div>
+
+          <div class="meta-field">
+            <div class="meta-label">Accessed</div>
+            <div class="meta-value">—</div>
+          </div>
+
+          <div class="meta-divider"></div>
+
+          <div class="meta-field">
+            <div class="meta-label">MD5</div>
+            <div class="meta-value" style="color:var(--muted)">not computed</div>
+          </div>
+
+          <div class="meta-field">
+            <div class="meta-label">SHA-256</div>
+            <div class="meta-value" style="color:var(--muted)">not computed</div>
+          </div>
+
+          <div class="meta-divider"></div>
+
+          <div class="meta-field">
+            <div class="meta-label">Deleted</div>
+            <div class="meta-value">No</div>
+          </div>
+
+          <div class="meta-field">
+            <div class="meta-label">Carved</div>
+            <div class="meta-value">No</div>
+          </div>
+
+          <div class="meta-field">
+            <div class="meta-label">Category</div>
+            <div class="meta-value warning">Executable</div>
+          </div>
+
+          <div class="meta-field">
+            <div class="meta-label">Hash Set</div>
+            <div class="meta-value" style="color:var(--muted)">None</div>
+          </div>
+
+          <div class="meta-divider"></div>
+
+          <!-- Mini hex preview -->
+          <div class="hex-preview">
+<span class="hex-offset">0000 0000</span>  50 61 67 65 46 69 6C 65  50 61 67 65 46 69 6C 65
+<span class="hex-offset">0000 0010</span>  06 00 00 00 00 00 00 00  <span class="hex-null">00 00 00 00 00 00 00 00</span>
+<span class="hex-offset">0000 0020</span>  01 00 00 00 00 10 00 00  <span class="hex-null">00 00 00 00</span> 00 10 00 00
+          </div>
+
+          <div class="meta-divider"></div>
+
+          <div class="meta-field">
+            <div class="meta-label">Examiner Notes</div>
+            <textarea class="notes-area" placeholder="Add examination notes..."></textarea>
+          </div>
+
+          <button class="bookmark-btn">+ Bookmark</button>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- STATUS PILL -->
+<div class="status-wrap">
+  <div class="status-pill">
+    <div class="stat">FILES <span class="stat-val">4,847</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat">DELETED <span class="stat-val">312</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat">SUSPICIOUS <span class="stat-val warn">20</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat">FLAGGED <span class="stat-val danger">2</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat">CARVED <span class="stat-val">0</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat">HASHED <span class="stat-val">0</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat" style="color:var(--muted)">v0.3.0 · WINDOWS X86_64 · 2026-03-29</div>
+  </div>
+</div>
+
+</body>
+</html>

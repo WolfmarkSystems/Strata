@@ -1,0 +1,14 @@
+{
+  "command": "smoke-test",
+  "args": [
+    "--image",
+    "{{evidence_path}}",
+    "--out",
+    "{{output_dir}}",
+    "--mft",
+    "50",
+    "--no-timeline",
+    "--no-audit"
+  ],
+  "result_path": "gui/runs/smoke_test_surface_result.json"
+}

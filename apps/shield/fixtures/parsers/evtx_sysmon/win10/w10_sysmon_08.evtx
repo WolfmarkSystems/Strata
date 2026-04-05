@@ -1,0 +1,1 @@
+﻿<Event><System><Provider Name="Microsoft-Windows-Sysmon"/><EventID>3</EventID><Level>4</Level><EventRecordID>3008</EventRecordID><TimeCreated SystemTime="2026-03-10T12:08:00.000Z"/><Computer>WIN10-LAB</Computer></System><EventData><Data Name="Image">C:\Windows\System32\tool8.exe</Data><Data Name="CommandLine">C:\Windows\System32\tool8.exe /run</Data></EventData></Event>

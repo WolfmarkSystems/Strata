@@ -1,0 +1,4 @@
+﻿[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Drv05]
+"DisplayName"="Driver 05"
+"ImagePath"="\\SystemRoot\\System32\\drivers\\drv05.sys"
+"Start"=dword:00000003

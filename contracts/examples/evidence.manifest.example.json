@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-2026-0001",
+  "evidence_id": "evidence-001",
+  "source": {
+    "type": "disk_image",
+    "path": "E:/cases/case-2026-0001/evidence/disk01.E01",
+    "size_bytes": 10737418240,
+    "container_type": "E01"
+  },
+  "hashes": {
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "sha1": "0123456789abcdef0123456789abcdef01234567"
+  },
+  "ingested_at_utc": "2026-03-26T22:00:00Z"
+}

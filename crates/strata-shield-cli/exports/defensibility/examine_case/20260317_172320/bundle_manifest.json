@@ -1,0 +1,34 @@
+[
+  {
+    "filename": "verification_report.latest.json",
+    "sha256": "63428b1bfbb2dc1082fb60a676307a0127f1f13fbb2d72322c1a0fb4557e36f4"
+  },
+  {
+    "filename": "verification_summary.txt",
+    "sha256": "adb6b46be89c64e650c4906cade6015883a6ec5408f84613c79a56f94255cb39"
+  },
+  {
+    "filename": "replay_report.latest.json",
+    "sha256": "d8a3f2cd5830e5627f9e381c73ec3419dc4f541575f3eeff39238a947d2c2ace"
+  },
+  {
+    "filename": "replay_summary.txt",
+    "sha256": "1b40403c4e1b6e41c01b18d8d983b0b5343ebf025e9282686aae8b20bbf8b8fb"
+  },
+  {
+    "filename": "integrity_violations.json",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  {
+    "filename": "integrity_violations_summary.txt",
+    "sha256": "944ee14dde81b8881a19e35499f0dabca43a953bfefc1ca66458bb4a728ad30c"
+  },
+  {
+    "filename": "case_versions.json",
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  {
+    "filename": "case_settings.json",
+    "sha256": "b6b824eb99821b648952e1cbbf626c6f4ac4fee37135baa1f40bd2e961f2c8a7"
+  }
+]

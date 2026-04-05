@@ -1,0 +1,4 @@
+{
+  "command": "doctor",
+  "args": ["--json-result", "gui/runs/doctor_result.json", "--quiet"]
+}

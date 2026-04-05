@@ -1,0 +1,20 @@
+﻿{
+    "notes":  "Synthetic timeline/correlation QA fixtures for shape/perf sanity checks.",
+    "sources":  [
+                    {
+                        "path":  "win10",
+                        "platform":  "win10",
+                        "format":  "json",
+                        "count":  15
+                    },
+                    {
+                        "path":  "win11",
+                        "platform":  "win11",
+                        "format":  "csv",
+                        "count":  15
+                    }
+                ],
+    "sample_count":  30,
+    "artifact":  "timeline_correlation_qa_performance",
+    "version":  "1.0"
+}

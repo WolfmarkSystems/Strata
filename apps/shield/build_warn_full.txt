@@ -1,0 +1,1707 @@
+   Compiling forensic_engine v0.1.0 (D:\forensic-suite\engine)
+warning: unused import: `crate::errors::ForensicError`
+ --> engine\src\analysis\hash.rs:1:5
+  |
+1 | use crate::errors::ForensicError;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `crate::errors::ForensicError`
+ --> engine\src\analysis\timeline.rs:1:5
+  |
+1 | use crate::errors::ForensicError;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `RegionSet` and `ScanRegion`
+  --> engine\src\carving\mod.rs:12:15
+   |
+12 | use regions::{RegionSet, ScanRegion};
+   |               ^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused import: `std::collections::HashMap`
+  --> engine\src\carving\mod.rs:14:5
+   |
+14 | use std::collections::HashMap;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `JobParams`
+ --> engine\src\case\repository.rs:3:30
+  |
+3 | use crate::case::jobs::{Job, JobParams, JobPriority, JobStatus, JobType};
+  |                              ^^^^^^^^^
+
+warning: unused import: `std::path::PathBuf`
+ --> engine\src\classification\backup.rs:2:5
+  |
+2 | use std::path::PathBuf;
+  |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::errors::ForensicError`
+ --> engine\src\classification\triage_filter.rs:2:5
+  |
+2 | use crate::errors::ForensicError;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Seek`
+ --> engine\src\container\e01.rs:3:21
+  |
+3 | use std::io::{Read, Seek, SeekFrom};
+  |                     ^^^^
+
+warning: unused variable: `since`
+    --> engine\src\case\database.rs:2737:31
+     |
+2737 |         let sql = if let Some(since) = since {
+     |                               ^^^^^ help: if this is intentional, prefix it with an underscore: `_since`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+    --> engine\src\case\database.rs:3365:17
+     |
+3365 |             let mut conn = self.conn.lock().unwrap();
+     |                 ----^^^^
+     |                 |
+     |                 help: remove this `mut`
+     |
+     = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `params_json`
+    --> engine\src\case\database.rs:3289:9
+     |
+3289 |         params_json: &str,
+     |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_params_json`
+
+warning: unused variable: `params_json`
+    --> engine\src\case\database.rs:3405:9
+     |
+3405 |         params_json: &str,
+     |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_params_json`
+
+warning: unused variable: `params_json`
+    --> engine\src\case\database.rs:3544:9
+     |
+3544 |         params_json: &str,
+     |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_params_json`
+
+warning: unused variable: `regions`
+    --> engine\src\case\database.rs:3560:13
+     |
+3560 |         let regions = vec![crate::carving::regions::ScanRegion::new(
+     |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_regions`
+
+warning: variable does not need to be mutable
+    --> engine\src\case\database.rs:3669:13
+     |
+3669 |         let mut conn = self.conn.lock().unwrap();
+     |             ----^^^^
+     |             |
+     |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> engine\src\case\examiner_presets.rs:449:9
+    |
+449 |     let mut result = manager.start_session(
+    |         ----^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: unused variable: `created_at`
+   --> engine\src\case\exhibit_packet.rs:576:9
+    |
+576 |     let created_at = SystemTime::now()
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_created_at`
+
+warning: unused variable: `classification`
+   --> engine\src\case\exhibit_packet.rs:868:53
+    |
+868 | fn generate_item_note_summary(item: &SelectionItem, classification: &str) -> String {
+    |                                                     ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_classification`
+
+warning: unused variable: `case_id`
+    --> engine\src\case\exhibit_packet.rs:1100:5
+     |
+1100 |     case_id: &str,
+     |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_case_id`
+
+warning: unused variable: `examiner`
+    --> engine\src\case\exhibit_packet.rs:1102:5
+     |
+1102 |     examiner: &str,
+     |     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_examiner`
+
+warning: unused variable: `case_id`
+    --> engine\src\case\exhibit_packet.rs:1140:5
+     |
+1140 |     case_id: &str,
+     |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_case_id`
+
+warning: unused variable: `case_name`
+    --> engine\src\case\exhibit_packet.rs:1141:5
+     |
+1141 |     case_name: &str,
+     |     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_case_name`
+
+warning: unused variable: `examiner`
+    --> engine\src\case\exhibit_packet.rs:1142:5
+     |
+1142 |     examiner: &str,
+     |     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_examiner`
+
+warning: unused variable: `path`
+   --> engine\src\case\investigator.rs:141:19
+    |
+141 |             .map(|path| {
+    |                   ^^^^ help: if this is intentional, prefix it with an underscore: `_path`
+
+warning: unused variable: `category`
+   --> engine\src\case\investigator.rs:255:5
+    |
+255 |     category: &str,
+    |     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_category`
+
+warning: unused variable: `e`
+   --> engine\src\case\replay.rs:359:21
+    |
+359 |                 Err(e) => {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_e`
+
+warning: unused variable: `id`
+   --> engine\src\case\replay.rs:460:26
+    |
+460 |                     for (id, rowid, title, content) in notes {
+    |                          ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `id`
+   --> engine\src\case\replay.rs:484:26
+    |
+484 |                     for (id, rowid, title, description) in bookmarks {
+    |                          ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `id`
+   --> engine\src\case\replay.rs:508:26
+    |
+508 |                     for (id, rowid, name, description) in exhibits {
+    |                          ^^ help: if this is intentional, prefix it with an underscore: `_id`
+
+warning: unused variable: `id_col`
+   --> engine\src\case\replay.rs:876:25
+    |
+876 |             if let Some(ref id_col) = id_column {
+    |                         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_id_col`
+
+warning: unused variable: `stored_prev`
+   --> engine\src\case\verify.rs:461:48
+    |
+461 |             if let Ok((actual_prev_event_hash, stored_prev)) = boundary_check {
+    |                                                ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_stored_prev`
+
+warning: unused variable: `worker_id`
+   --> engine\src\case\workers.rs:132:49
+    |
+132 | pub fn create_worker_connection(db_path: &Path, worker_id: &str) -> SqliteResult<Connection> {
+    |                                                 ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_worker_id`
+
+warning: unused variable: `case_info`
+  --> engine\src\case\mod.rs:25:20
+   |
+25 | pub fn create_case(case_info: CaseInfo) -> Result<Case, ForensicError> {
+   |                    ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_case_info`
+
+warning: unused variable: `case_id`
+  --> engine\src\case\mod.rs:54:29
+   |
+54 | pub fn add_evidence_to_case(case_id: &str, evidence: Evidence) -> Result<(), ForensicError> {
+   |                             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_case_id`
+
+warning: unused variable: `evidence`
+  --> engine\src\case\mod.rs:54:44
+   |
+54 | pub fn add_evidence_to_case(case_id: &str, evidence: Evidence) -> Result<(), ForensicError> {
+   |                                            ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_evidence`
+
+warning: unused variable: `case_id`
+  --> engine\src\case\mod.rs:74:29
+   |
+74 | pub fn generate_case_report(case_id: &str) -> Result<String, ForensicError> {
+   |                             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_case_id`
+
+warning: unused variable: `case_id`
+  --> engine\src\case\mod.rs:78:20
+   |
+78 | pub fn export_case(case_id: &str, format: ExportFormat) -> Result<Vec<u8>, ForensicError> {
+   |                    ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_case_id`
+
+warning: unused variable: `format`
+  --> engine\src\case\mod.rs:78:35
+   |
+78 | pub fn export_case(case_id: &str, format: ExportFormat) -> Result<Vec<u8>, ForensicError> {
+   |                                   ^^^^^^ help: if this is intentional, prefix it with an underscore: `_format`
+
+warning: unused variable: `data`
+  --> engine\src\classification\amcache.rs:12:22
+   |
+12 | pub fn parse_amcache(data: &[u8]) -> Result<Vec<AmCacheEntry>, ForensicError> {
+   |                      ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\archive.rs:26:30
+   |
+26 | pub fn detect_archive_format(data: &[u8]) -> ArchiveFormat {
+   |                              ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\archive.rs:30:26
+   |
+30 | pub fn parse_zip_archive(data: &[u8]) -> Result<ArchiveInfo, ForensicError> {
+   |                          ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\archive.rs:34:30
+   |
+34 | pub fn list_archive_contents(data: &[u8]) -> Result<Vec<ArchiveEntry>, ForensicError> {
+   |                              ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\archive.rs:49:26
+   |
+49 | pub fn extract_zip_entry(data: &[u8], entry_name: &str) -> Result<Vec<u8>, ForensicError> {
+   |                          ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `entry_name`
+  --> engine\src\classification\archive.rs:49:39
+   |
+49 | pub fn extract_zip_entry(data: &[u8], entry_name: &str) -> Result<Vec<u8>, ForensicError> {
+   |                                       ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entry_name`
+
+warning: unused variable: `data`
+  --> engine\src\classification\archive.rs:53:34
+   |
+53 | pub fn detect_archive_encryption(data: &[u8]) -> bool {
+   |                                  ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\archive.rs:57:28
+   |
+57 | pub fn get_archive_comment(data: &[u8]) -> Option<String> {
+   |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\archive.rs:61:35
+   |
+61 | pub fn extract_archive_timestamps(data: &[u8]) -> Result<ArchiveTimestamps, ForensicError> {
+   |                                   ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\audio.rs:28:28
+   |
+28 | pub fn detect_audio_format(data: &[u8]) -> AudioFormat {
+   |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\audio.rs:32:31
+   |
+32 | pub fn extract_audio_metadata(data: &[u8]) -> Result<AudioMetadata, ForensicError> {
+   |                               ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\audio.rs:36:31
+   |
+36 | pub fn extract_audio_id3_tags(data: &[u8]) -> Result<Id3Tags, ForensicError> {
+   |                               ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\audio.rs:57:29
+   |
+57 | pub fn extract_audio_lyrics(data: &[u8]) -> Option<String> {
+   |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\audio.rs:61:32
+   |
+61 | pub fn get_audio_waveform_data(data: &[u8]) -> Option<Vec<f32>> {
+   |                                ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\certificate.rs:16:31
+   |
+16 | pub fn parse_x509_certificate(data: &[u8]) -> Result<Certificate, ForensicError> {
+   |                               ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\certificate.rs:30:34
+   |
+30 | pub fn extract_certificate_chain(data: &[u8]) -> Result<Vec<Certificate>, ForensicError> {
+   |                                  ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `cert`
+  --> engine\src\classification\certificate.rs:34:37
+   |
+34 | pub fn verify_certificate_signature(cert: &Certificate, ca_cert: &Certificate) -> bool {
+   |                                     ^^^^ help: if this is intentional, prefix it with an underscore: `_cert`
+
+warning: unused variable: `ca_cert`
+  --> engine\src\classification\certificate.rs:34:57
+   |
+34 | pub fn verify_certificate_signature(cert: &Certificate, ca_cert: &Certificate) -> bool {
+   |                                                         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_ca_cert`
+
+warning: unused variable: `cert`
+  --> engine\src\classification\certificate.rs:38:37
+   |
+38 | pub fn check_certificate_revocation(cert: &Certificate) -> Result<RevocationStatus, ForensicError> {
+   |                                     ^^^^ help: if this is intentional, prefix it with an underscore: `_cert`
+
+warning: unused variable: `cert`
+  --> engine\src\classification\certificate.rs:54:5
+   |
+54 |     cert: &Certificate,
+   |     ^^^^ help: if this is intentional, prefix it with an underscore: `_cert`
+
+warning: unused variable: `cert`
+  --> engine\src\classification\certificate.rs:67:36
+   |
+67 | pub fn get_certificate_fingerprint(cert: &Certificate) -> String {
+   |                                    ^^^^ help: if this is intentional, prefix it with an underscore: `_cert`
+
+warning: unused variable: `config_path`
+  --> engine\src\classification\dropbox.rs:62:29
+   |
+62 | pub fn parse_dropbox_config(config_path: &PathBuf) -> Result<DropboxConfig, ForensicError> {
+   |                             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_config_path`
+
+warning: unused variable: `db_path`
+  --> engine\src\classification\dropbox.rs:81:31
+   |
+81 | pub fn parse_dropbox_database(db_path: &PathBuf) -> Result<DropboxSyncState, ForensicError> {
+   |                               ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_db_path`
+
+warning: unused variable: `data`
+  --> engine\src\classification\dump.rs:20:25
+   |
+20 | pub fn detect_dump_file(data: &[u8]) -> Option<DumpType> {
+   |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\dump.rs:24:26
+   |
+24 | pub fn parse_dump_header(data: &[u8]) -> Result<DumpHeader, ForensicError> {
+   |                          ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\dump.rs:36:31
+   |
+36 | pub fn extract_dump_processes(data: &[u8]) -> Result<Vec<DumpProcess>, ForensicError> {
+   |                               ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `code`
+  --> engine\src\classification\errorcodes.rs:13:26
+   |
+13 | pub fn lookup_error_code(code: u32) -> Option<ErrorCode> {
+   |                          ^^^^ help: if this is intentional, prefix it with an underscore: `_code`
+
+warning: unused variable: `volume`
+  --> engine\src\classification\etw.rs:30:26
+   |
+30 | pub fn get_ntfs_log_info(volume: &str) -> Result<EtwLogInfo, ForensicError> {
+   |                          ^^^^^^ help: if this is intentional, prefix it with an underscore: `_volume`
+
+warning: unused variable: `etl_path`
+  --> engine\src\classification\etw.rs:60:23
+   |
+60 | pub fn parse_etl_file(etl_path: &str) -> Result<Vec<EtlEvent>, ForensicError> {
+   |                       ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_etl_path`
+
+warning: unreachable pattern
+  --> engine\src\classification\eventlog.rs:99:21
+   |
+96 |                     4624 | 4625 | 4634 | 4647 => summary.logon_events += 1,
+   |                     ------------------------- matches all the relevant values
+...
+99 |                     4625 => summary.failed_logons += 1,
+   |                     ^^^^ no value can reach this
+   |
+   = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `byte_order`
+   --> engine\src\classification\exif.rs:178:9
+    |
+178 |     let byte_order = if &data[0..2] == b"II" {
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_byte_order`
+
+warning: unused variable: `value_type`
+   --> engine\src\classification\exif.rs:222:13
+    |
+222 |         let value_type = if is_little_endian {
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_value_type`
+
+warning: unused variable: `count`
+   --> engine\src\classification\exif.rs:301:13
+    |
+301 |         let count = if is_little_endian {
+    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_count`
+
+warning: unreachable pattern
+  --> engine\src\classification\filetype.rs:35:38
+   |
+33 |             "c" | "cpp" | "h" | "hpp" | "rs" | "py" | "js" | "ts" | "java" | "cs" | "go" | "rb"
+   |                                                       ---- matches all the relevant values
+34 |             | "php" | "swift" | "kt" => FileCategory::SourceCode,
+35 |             "html" | "htm" | "css" | "js" | "json" | "xml" | "yaml" | "yml" => {
+   |                                      ^^^^ no value can reach this
+
+warning: unreachable pattern
+  --> engine\src\classification\filetype.rs:39:28
+   |
+29 |             "exe" | "dll" | "sys" | "msi" | "bat" | "cmd" | "ps1" | "sh" | "bin" => {
+   |                                                                            ----- matches all the relevant values
+...
+39 |             "img" | "dd" | "bin" | "vmdk" | "vhd" | "vhdx" | "e01" | "aff" => {
+   |                            ^^^^^ no value can reach this
+
+warning: unused variable: `log_path`
+  --> engine\src\classification\firewall.rs:57:27
+   |
+57 | pub fn parse_firewall_log(log_path: &str) -> Result<Vec<FirewallLogEntry>, ForensicError> {
+   |                           ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_log_path`
+
+warning: unused variable: `data`
+  --> engine\src\classification\font.rs:24:27
+   |
+24 | pub fn detect_font_format(data: &[u8]) -> FontType {
+   |                           ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\font.rs:28:35
+   |
+28 | pub fn parse_font_table_directory(data: &[u8]) -> Result<Vec<FontTable>, ForensicError> {
+   |                                   ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\font.rs:39:27
+   |
+39 | pub fn extract_font_names(data: &[u8]) -> Result<FontInfo, ForensicError> {
+   |                           ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\font.rs:43:36
+   |
+43 | pub fn extract_font_glyph_outlines(data: &[u8], glyph_id: u16) -> Result<Vec<u8>, ForensicError> {
+   |                                    ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `glyph_id`
+  --> engine\src\classification\font.rs:43:49
+   |
+43 | pub fn extract_font_glyph_outlines(data: &[u8], glyph_id: u16) -> Result<Vec<u8>, ForensicError> {
+   |                                                 ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_glyph_id`
+
+warning: unused variable: `data`
+  --> engine\src\classification\font.rs:47:29
+   |
+47 | pub fn analyze_font_hinting(data: &[u8]) -> Result<FontHinting, ForensicError> {
+   |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `config_path`
+  --> engine\src\classification\googledrive.rs:59:5
+   |
+59 |     config_path: &PathBuf,
+   |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_config_path`
+
+warning: unused variable: `db_path`
+  --> engine\src\classification\googledrive.rs:80:5
+   |
+80 |     db_path: &PathBuf,
+   |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_db_path`
+
+warning: unused variable: `data`
+  --> engine\src\classification\image.rs:27:29
+   |
+27 | pub fn get_image_dimensions(data: &[u8]) -> Option<(u32, u32)> {
+   |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\image.rs:31:28
+   |
+31 | pub fn detect_image_format(data: &[u8]) -> ImageFileFormat {
+   |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\image.rs:35:27
+   |
+35 | pub fn extract_image_exif(data: &[u8]) -> Result<ExifInfo, ForensicError> {
+   |                           ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\image.rs:50:32
+   |
+50 | pub fn extract_image_thumbnail(data: &[u8]) -> Option<Vec<u8>> {
+   |                                ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\image.rs:54:34
+   |
+54 | pub fn detect_image_manipulation(data: &[u8]) -> Result<ManipulationAnalysis, ForensicError> {
+   |                                  ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\image.rs:67:30
+   |
+67 | pub fn extract_image_strings(data: &[u8]) -> Vec<String> {
+   |                              ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `log_path`
+  --> engine\src\classification\installer.rs:43:28
+   |
+43 | pub fn parse_installer_log(log_path: &str) -> Result<Vec<InstallerLogEntry>, ForensicError> {
+   |                            ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_log_path`
+
+warning: unused variable: `db`
+   --> engine\src\classification\jet.rs:127:28
+    |
+127 | pub fn extract_jet_catalog(db: &JetDatabase) -> Result<Vec<JetCatalogEntry>, ForensicError> {
+    |                            ^^ help: if this is intentional, prefix it with an underscore: `_db`
+
+warning: unused variable: `record`
+   --> engine\src\classification\jet.rs:139:29
+    |
+139 | pub fn get_jet_column_value(record: &[u8], column: &JetColumn) -> Option<JetValue> {
+    |                             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_record`
+
+warning: unused variable: `column`
+   --> engine\src\classification\jet.rs:139:44
+    |
+139 | pub fn get_jet_column_value(record: &[u8], column: &JetColumn) -> Option<JetValue> {
+    |                                            ^^^^^^ help: if this is intentional, prefix it with an underscore: `_column`
+
+warning: unused variable: `db`
+   --> engine\src\classification\jet.rs:144:5
+    |
+144 |     db: &JetDatabase,
+    |     ^^ help: if this is intentional, prefix it with an underscore: `_db`
+
+warning: unused variable: `page_numbers`
+   --> engine\src\classification\jet.rs:145:5
+    |
+145 |     page_numbers: &[u32],
+    |     ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_page_numbers`
+
+warning: value assigned to `local_base_path_offset` is never read
+   --> engine\src\classification\lnk.rs:204:50
+    |
+204 |                 let mut local_base_path_offset = 0;
+    |                                                  ^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `length`
+   --> engine\src\classification\metadata.rs:134:17
+    |
+134 |             let length = u16::from_be_bytes([data[offset + 2], data[offset + 3]]) as usize;
+    |                 ^^^^^^ help: if this is intentional, prefix it with an underscore: `_length`
+
+warning: unused variable: `data`
+ --> engine\src\classification\mftparse.rs:7:25
+  |
+7 | pub fn parse_mft_record(data: &[u8]) -> Result<MftRecord, ForensicError> {
+  |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\mftparse.rs:18:31
+   |
+18 | pub fn extract_mft_attributes(data: &[u8]) -> Vec<MftAttribute> {
+   |                               ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `backup_path`
+   --> engine\src\classification\mobile.rs:119:5
+    |
+119 |     backup_path: &PathBuf,
+    |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_backup_path`
+
+warning: unused variable: `backup_path`
+   --> engine\src\classification\mobile.rs:132:25
+    |
+132 | pub fn extract_contacts(backup_path: &PathBuf) -> Result<Vec<Contact>, ForensicError> {
+    |                         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_backup_path`
+
+warning: unused variable: `backup_path`
+   --> engine\src\classification\mobile.rs:136:20
+    |
+136 | pub fn extract_sms(backup_path: &PathBuf) -> Result<Vec<SmsMessage>, ForensicError> {
+    |                    ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_backup_path`
+
+warning: unused variable: `backup_path`
+   --> engine\src\classification\mobile.rs:140:26
+    |
+140 | pub fn extract_call_logs(backup_path: &PathBuf) -> Result<Vec<CallLog>, ForensicError> {
+    |                          ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_backup_path`
+
+warning: unused variable: `backup_path`
+   --> engine\src\classification\mobile.rs:144:25
+    |
+144 | pub fn extract_calendar(backup_path: &PathBuf) -> Result<Vec<CalendarEvent>, ForensicError> {
+    |                         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_backup_path`
+
+warning: unused variable: `backup_path`
+   --> engine\src\classification\mobile.rs:149:5
+    |
+149 |     backup_path: &PathBuf,
+    |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_backup_path`
+
+warning: unused variable: `backup_path`
+   --> engine\src\classification\mobile.rs:163:5
+    |
+163 |     backup_path: &PathBuf,
+    |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_backup_path`
+
+warning: unused variable: `backup_path`
+   --> engine\src\classification\mobile.rs:176:31
+    |
+176 | pub fn extract_installed_apps(backup_path: &PathBuf) -> Result<Vec<InstalledApp>, ForensicError> {
+    |                               ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_backup_path`
+
+warning: unused variable: `backup_path`
+   --> engine\src\classification\mobile.rs:189:27
+    |
+189 | pub fn extract_voicemails(backup_path: &PathBuf) -> Result<Vec<Voicemail>, ForensicError> {
+    |                           ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_backup_path`
+
+warning: unused variable: `backup_path`
+   --> engine\src\classification\mobile.rs:203:24
+    |
+203 | pub fn get_device_info(backup_path: &PathBuf) -> Result<HashMap<String, String>, ForensicError> {
+    |                        ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_backup_path`
+
+warning: variable does not need to be mutable
+  --> engine\src\classification\network.rs:71:9
+   |
+71 |     let mut key_material = None;
+   |         ----^^^^^^^^^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> engine\src\classification\network.rs:72:9
+   |
+72 |     let mut last_updated = None;
+   |         ----^^^^^^^^^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: unused variable: `data`
+  --> engine\src\classification\notifications.rs:15:34
+   |
+15 | pub fn parse_toast_notifications(data: &[u8]) -> Result<Vec<WindowsNotification>, ForensicError> {
+   |                                  ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\office.rs:34:29
+   |
+34 | pub fn detect_office_format(data: &[u8]) -> OfficeFormat {
+   |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\office.rs:38:32
+   |
+38 | pub fn parse_office_properties(data: &[u8]) -> Result<OfficeDocument, ForensicError> {
+   |                                ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `file_path`
+  --> engine\src\classification\office.rs:42:32
+   |
+42 | pub fn extract_office_metadata(file_path: &str) -> Result<OfficeDocument, ForensicError> {
+   |                                ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_file_path`
+
+warning: unused variable: `data`
+  --> engine\src\classification\office.rs:46:41
+   |
+46 | pub fn extract_office_custom_properties(data: &[u8]) -> Result<Vec<CustomProperty>, ForensicError> {
+   |                                         ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `file_path`
+  --> engine\src\classification\office.rs:57:35
+   |
+57 | pub fn get_office_version_history(file_path: &str) -> Result<Vec<VersionEntry>, ForensicError> {
+   |                                   ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_file_path`
+
+warning: unused variable: `data`
+  --> engine\src\classification\office.rs:70:5
+   |
+70 |     data: &[u8],
+   |     ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `config_path`
+  --> engine\src\classification\onedrive.rs:61:5
+   |
+61 |     config_path: &PathBuf,
+   |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_config_path`
+
+warning: unused variable: `db_path`
+  --> engine\src\classification\onedrive.rs:70:30
+   |
+70 | pub fn scan_onedrive_sync_db(db_path: &PathBuf) -> Result<OneDriveSyncState, ForensicError> {
+   |                              ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_db_path`
+
+warning: unused variable: `log_path`
+  --> engine\src\classification\onedrive.rs:85:27
+   |
+85 | pub fn parse_onedrive_log(log_path: &PathBuf) -> Result<Vec<OneDriveLogEntry>, ForensicError> {
+   |                           ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_log_path`
+
+warning: unused variable: `file_path`
+  --> engine\src\classification\onedrive.rs:97:30
+   |
+97 | pub fn get_onedrive_versions(file_path: &str) -> Result<Vec<OneDriveVersion>, ForensicError> {
+   |                              ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_file_path`
+
+warning: unused variable: `data`
+  --> engine\src\classification\pdf.rs:26:25
+   |
+26 | pub fn parse_pdf_header(data: &[u8]) -> Result<PdfDocument, ForensicError> {
+   |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\pdf.rs:30:29
+   |
+30 | pub fn extract_pdf_metadata(data: &[u8]) -> Result<PdfMetadata, ForensicError> {
+   |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\pdf.rs:55:28
+   |
+55 | pub fn extract_pdf_objects(data: &[u8]) -> Result<Vec<PdfObject>, ForensicError> {
+   |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\pdf.rs:71:29
+   |
+71 | pub fn extract_pdf_outlines(data: &[u8]) -> Result<Vec<PdfOutline>, ForensicError> {
+   |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\pdf.rs:82:35
+   |
+82 | pub fn extract_pdf_embedded_files(data: &[u8]) -> Result<Vec<EmbeddedFile>, ForensicError> {
+   |                                   ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\prefetchdata.rs:12:28
+   |
+12 | pub fn parse_prefetch_info(data: &[u8]) -> Result<PrefetchInfo, ForensicError> {
+   |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\prefetchdata.rs:16:27
+   |
+16 | pub fn get_prefetch_times(data: &[u8]) -> Vec<u64> {
+   |                           ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\prefetchdata.rs:20:33
+   |
+20 | pub fn extract_prefetch_strings(data: &[u8]) -> Vec<String> {
+   |                                 ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `link_info_size`
+   --> engine\src\classification\recentdocs.rs:116:29
+    |
+116 |                         let link_info_size = u32::from_le_bytes([
+    |                             ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_link_info_size`
+
+warning: unused variable: `volume_id_offset`
+   --> engine\src\classification\recentdocs.rs:123:33
+    |
+123 | ...                   let volume_id_offset = u32::from_le_bytes([
+    |                           ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_volume_id_offset`
+
+warning: unused variable: `data`
+  --> engine\src\classification\registryhive.rs:24:28
+   |
+24 | pub fn parse_registry_hive(data: &[u8]) -> Result<RegistryHive, ForensicError> {
+   |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `hive`
+  --> engine\src\classification\registryhive.rs:28:32
+   |
+28 | pub fn enumerate_registry_keys(hive: &RegistryHive) -> Result<Vec<RegKey>, ForensicError> {
+   |                                ^^^^ help: if this is intentional, prefix it with an underscore: `_hive`
+
+warning: unused variable: `hive`
+  --> engine\src\classification\registryhive.rs:43:5
+   |
+43 |     hive: &RegistryHive,
+   |     ^^^^ help: if this is intentional, prefix it with an underscore: `_hive`
+
+warning: unused variable: `key_offset`
+  --> engine\src\classification\registryhive.rs:44:5
+   |
+44 |     key_offset: u32,
+   |     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_key_offset`
+
+warning: unused variable: `data`
+  --> engine\src\classification\registryhive.rs:69:33
+   |
+69 | pub fn parse_registry_timestamp(data: &[u8]) -> Option<u64> {
+   |                                 ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\registryhive.rs:74:5
+   |
+74 |     data: &[u8],
+   |     ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `restore_id`
+  --> engine\src\classification\restoration.rs:36:32
+   |
+36 | pub fn get_restore_point_files(restore_id: u32) -> Result<Vec<RestoreFileInfo>, ForensicError> {
+   |                                ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_restore_id`
+
+warning: unused variable: `restore_id`
+  --> engine\src\classification\restoration.rs:48:34
+   |
+48 | pub fn get_restore_point_changes(restore_id: u32) -> Result<RestoreChanges, ForensicError> {
+   |                                  ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_restore_id`
+
+warning: unused variable: `restore_id`
+  --> engine\src\classification\restoration.rs:63:38
+   |
+63 | pub fn check_restore_point_integrity(restore_id: u32) -> Result<bool, ForensicError> {
+   |                                      ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_restore_id`
+
+warning: unreachable pattern
+  --> engine\src\classification\triage.rs:59:13
+   |
+57 |             "html" | "htm" | "css" | "json" | "xml" => FileCategory::WebContent,
+   |             --------------------------------------- matches all the relevant values
+58 |             "msg" | "eml" | "pst" | "ost" => FileCategory::Email,
+59 |             "html" | "htm" => FileCategory::WebContent,
+   |             ^^^^^^^^^^^^^^ no value can reach this
+
+warning: unused variable: `data`
+  --> engine\src\classification\windowsimage.rs:28:25
+   |
+28 | pub fn parse_wim_header(data: &[u8]) -> Result<WimHeader, ForensicError> {
+   |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\windowsimage.rs:45:24
+   |
+45 | pub fn list_wim_images(data: &[u8]) -> Result<Vec<WimImage>, ForensicError> {
+   |                        ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\windowsimage.rs:58:26
+   |
+58 | pub fn extract_wim_image(data: &[u8], image_index: u32) -> Result<Vec<u8>, ForensicError> {
+   |                          ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `image_index`
+  --> engine\src\classification\windowsimage.rs:58:39
+   |
+58 | pub fn extract_wim_image(data: &[u8], image_index: u32) -> Result<Vec<u8>, ForensicError> {
+   |                                       ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_image_index`
+
+warning: unused variable: `data`
+  --> engine\src\classification\windowsimage.rs:62:25
+   |
+62 | pub fn get_wim_metadata(data: &[u8]) -> Result<WimMetadata, ForensicError> {
+   |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\windowsimage.rs:79:29
+   |
+79 | pub fn verify_wim_integrity(data: &[u8]) -> Result<bool, ForensicError> {
+   |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: variable does not need to be mutable
+  --> engine\src\classification\search.rs:49:9
+   |
+49 |     let mut index = WindowsSearchIndex {
+   |         ----^^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: unused variable: `index_path`
+   --> engine\src\classification\search.rs:102:29
+    |
+102 | pub fn get_index_statistics(index_path: &Path) -> Result<HashMap<String, u64>, ForensicError> {
+    |                             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_index_path`
+
+warning: unused variable: `path`
+  --> engine\src\classification\setupapi.rs:11:28
+   |
+11 | pub fn parse_setup_api_log(path: &str) -> Result<Vec<SetupApiLog>, ForensicError> {
+   |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_path`
+
+warning: unused variable: `db`
+  --> engine\src\classification\sqlite.rs:73:26
+   |
+73 | pub fn get_sqlite_schema(db: &SqliteDatabase) -> Result<String, ForensicError> {
+   |                          ^^ help: if this is intentional, prefix it with an underscore: `_db`
+
+warning: unused variable: `data`
+   --> engine\src\classification\sqlite.rs:137:31
+    |
+137 | pub fn extract_sqlite_strings(data: &[u8], min_len: usize) -> Vec<String> {
+    |                               ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `min_len`
+   --> engine\src\classification\sqlite.rs:137:44
+    |
+137 | pub fn extract_sqlite_strings(data: &[u8], min_len: usize) -> Vec<String> {
+    |                                            ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_min_len`
+
+warning: unused variable: `link_info_size`
+   --> engine\src\classification\startup.rs:316:29
+    |
+316 |                         let link_info_size = u32::from_le_bytes([
+    |                             ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_link_info_size`
+
+warning: unused variable: `db_path`
+  --> engine\src\classification\stickynotes.rs:24:5
+   |
+24 |     db_path: &str,
+   |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_db_path`
+
+warning: unused variable: `note_id`
+  --> engine\src\classification\stickynotes.rs:29:35
+   |
+29 | pub fn get_sticky_note_timestamps(note_id: &str) -> Result<NoteTimestamps, ForensicError> {
+   |                                   ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_note_id`
+
+warning: variable does not need to be mutable
+   --> engine\src\classification\taskbar.rs:135:9
+    |
+135 |     let mut all_entries = vec![];
+    |         ----^^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: unused variable: `path`
+ --> engine\src\classification\taskxml.rs:3:32
+  |
+3 | pub fn get_scheduled_tasks_xml(path: &str) -> Result<Vec<TaskXml>, ForensicError> {
+  |                                ^^^^ help: if this is intentional, prefix it with an underscore: `_path`
+
+warning: unused variable: `file_size`
+  --> engine\src\classification\thumbcache.rs:97:13
+   |
+97 |         let file_size = u32::from_le_bytes([
+   |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_file_size`
+
+warning: unused variable: `data`
+  --> engine\src\classification\video.rs:29:28
+   |
+29 | pub fn detect_video_format(data: &[u8]) -> VideoFormat {
+   |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\video.rs:33:31
+   |
+33 | pub fn extract_video_metadata(data: &[u8]) -> Result<VideoMetadata, ForensicError> {
+   |                               ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\video.rs:37:30
+   |
+37 | pub fn extract_video_streams(data: &[u8]) -> Result<Vec<VideoStream>, ForensicError> {
+   |                              ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\video.rs:50:28
+   |
+50 | pub fn get_video_thumbnail(data: &[u8]) -> Option<Vec<u8>> {
+   |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\video.rs:54:40
+   |
+54 | pub fn extract_video_creation_software(data: &[u8]) -> Option<String> {
+   |                                        ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\classification\video.rs:58:30
+   |
+58 | pub fn check_video_integrity(data: &[u8]) -> Result<bool, ForensicError> {
+   |                              ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `start`
+  --> engine\src\classification\wintimeline.rs:18:27
+   |
+18 | pub fn get_timeline_range(start: u64, end: u64) -> Result<Vec<TimelineEntry>, ForensicError> {
+   |                           ^^^^^ help: if this is intentional, prefix it with an underscore: `_start`
+
+warning: unused variable: `end`
+  --> engine\src\classification\wintimeline.rs:18:39
+   |
+18 | pub fn get_timeline_range(start: u64, end: u64) -> Result<Vec<TimelineEntry>, ForensicError> {
+   |                                       ^^^ help: if this is intentional, prefix it with an underscore: `_end`
+
+warning: unused variable: `query`
+  --> engine\src\classification\wintimeline.rs:33:24
+   |
+33 | pub fn search_timeline(query: &str) -> Result<Vec<TimelineEntry>, ForensicError> {
+   |                        ^^^^^ help: if this is intentional, prefix it with an underscore: `_query`
+
+warning: unused variable: `group_id`
+  --> engine\src\classification\wintimeline.rs:50:27
+   |
+50 | pub fn get_timeline_group(group_id: &str) -> Result<Vec<TimelineEntry>, ForensicError> {
+   |                           ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_group_id`
+
+warning: unused variable: `offset`
+   --> engine\src\container\e01.rs:238:31
+    |
+238 |     pub fn read_at(&mut self, offset: u64, length: u64) -> Result<Vec<u8>, ForensicError> {
+    |                               ^^^^^^ help: if this is intentional, prefix it with an underscore: `_offset`
+
+warning: unused variable: `offset`
+   --> engine\src\container\e01.rs:310:27
+    |
+310 |     pub fn read_at(&self, offset: u64, length: u64) -> Result<Vec<u8>, ForensicError> {
+    |                           ^^^^^^ help: if this is intentional, prefix it with an underscore: `_offset`
+
+warning: unused variable: `case_id`
+  --> engine\src\context.rs:29:13
+   |
+29 |         let case_id = self.case_id.clone();
+   |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_case_id`
+
+warning: unused variable: `image_path`
+ --> engine\src\encryption\mod.rs:3:33
+  |
+3 | pub fn detect_encrypted_volumes(image_path: &str) -> Result<Vec<EncryptedVolume>, ForensicError> {
+  |                                 ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_image_path`
+
+warning: unused variable: `volume`
+  --> engine\src\encryption\mod.rs:24:30
+   |
+24 | pub fn extract_recovery_keys(volume: &EncryptedVolume) -> Result<Vec<RecoveryKey>, ForensicError> {
+   |                              ^^^^^^ help: if this is intentional, prefix it with an underscore: `_volume`
+
+warning: unused variable: `image_path`
+  --> engine\src\encryption\mod.rs:44:31
+   |
+44 | pub fn check_bitlocker_status(image_path: &str) -> Result<BitlockerStatus, ForensicError> {
+   |                               ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_image_path`
+
+warning: unused variable: `volume`
+   --> engine\src\filesystem\apfs.rs:195:13
+    |
+195 |         let volume = &self.volumes[volume_index];
+    |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_volume`
+
+warning: unused variable: `volume_index`
+   --> engine\src\filesystem\apfs.rs:260:9
+    |
+260 |         volume_index: usize,
+    |         ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_volume_index`
+
+warning: unused variable: `inode`
+   --> engine\src\filesystem\apfs.rs:261:9
+    |
+261 |         inode: u64,
+    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_inode`
+
+warning: unused variable: `volume_index`
+   --> engine\src\filesystem\apfs.rs:268:9
+    |
+268 |         volume_index: usize,
+    |         ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_volume_index`
+
+warning: unused variable: `inode`
+   --> engine\src\filesystem\apfs.rs:269:9
+    |
+269 |         inode: u64,
+    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_inode`
+
+warning: unused variable: `offset`
+   --> engine\src\filesystem\apfs.rs:270:9
+    |
+270 |         offset: u64,
+    |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_offset`
+
+warning: unused variable: `size`
+   --> engine\src\filesystem\apfs.rs:271:9
+    |
+271 |         size: u64,
+    |         ^^^^ help: if this is intentional, prefix it with an underscore: `_size`
+
+warning: variable does not need to be mutable
+   --> engine\src\filesystem\apfs.rs:344:9
+    |
+344 |     let mut reader = apfs_open(path)?;
+    |         ----^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: unused variable: `i`
+   --> engine\src\filesystem\ext4.rs:444:14
+    |
+444 |         for (i, &block_num) in inode.block.iter().enumerate() {
+    |              ^ help: if this is intentional, prefix it with an underscore: `_i`
+
+warning: unused variable: `block_end`
+   --> engine\src\filesystem\ext4.rs:450:17
+    |
+450 |             let block_end = block_start + self.block_size as u64;
+    |                 ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_block_end`
+
+warning: unused variable: `path`
+   --> engine\src\hashset\database.rs:139:5
+    |
+139 |     path: &std::path::Path,
+    |     ^^^^ help: if this is intentional, prefix it with an underscore: `_path`
+
+warning: unused variable: `path`
+   --> engine\src\hashset\database.rs:144:22
+    |
+144 | pub fn load_nsrl_rds(path: &std::path::Path) -> Result<HashDatabase, crate::errors::ForensicError> {
+    |                      ^^^^ help: if this is intentional, prefix it with an underscore: `_path`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:116:25
+    |
+116 | pub fn get_process_list(mem: &MemoryImage) -> Vec<Process> {
+    |                         ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:120:27
+    |
+120 | pub fn get_process_by_pid(mem: &MemoryImage, pid: u32) -> Option<Process> {
+    |                           ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `pid`
+   --> engine\src\memory\mod.rs:120:46
+    |
+120 | pub fn get_process_by_pid(mem: &MemoryImage, pid: u32) -> Option<Process> {
+    |                                              ^^^ help: if this is intentional, prefix it with an underscore: `_pid`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:124:35
+    |
+124 | pub fn get_process_memory_regions(mem: &MemoryImage, pid: u32) -> Vec<MemoryRegion> {
+    |                                   ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `pid`
+   --> engine\src\memory\mod.rs:124:54
+    |
+124 | pub fn get_process_memory_regions(mem: &MemoryImage, pid: u32) -> Vec<MemoryRegion> {
+    |                                                      ^^^ help: if this is intentional, prefix it with an underscore: `_pid`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:129:5
+    |
+129 |     mem: &MemoryImage,
+    |     ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `pid`
+   --> engine\src\memory\mod.rs:130:5
+    |
+130 |     pid: u64,
+    |     ^^^ help: if this is intentional, prefix it with an underscore: `_pid`
+
+warning: unused variable: `address`
+   --> engine\src\memory\mod.rs:131:5
+    |
+131 |     address: u64,
+    |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_address`
+
+warning: unused variable: `size`
+   --> engine\src\memory\mod.rs:132:5
+    |
+132 |     size: usize,
+    |     ^^^^ help: if this is intentional, prefix it with an underscore: `_size`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:137:30
+    |
+137 | pub fn find_string_in_memory(mem: &MemoryImage, search_string: &str) -> Vec<MemoryStringMatch> {
+    |                              ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `search_string`
+   --> engine\src\memory\mod.rs:137:49
+    |
+137 | pub fn find_string_in_memory(mem: &MemoryImage, search_string: &str) -> Vec<MemoryStringMatch> {
+    |                                                 ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_search_string`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:149:31
+    |
+149 | pub fn find_pattern_in_memory(mem: &MemoryImage, pattern: &[u8]) -> Vec<PatternMatch> {
+    |                               ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `pattern`
+   --> engine\src\memory\mod.rs:149:50
+    |
+149 | pub fn find_pattern_in_memory(mem: &MemoryImage, pattern: &[u8]) -> Vec<PatternMatch> {
+    |                                                  ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_pattern`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:161:32
+    |
+161 | pub fn extract_process_handles(mem: &MemoryImage, pid: u32) -> Vec<HandleEntry> {
+    |                                ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `pid`
+   --> engine\src\memory\mod.rs:161:51
+    |
+161 | pub fn extract_process_handles(mem: &MemoryImage, pid: u32) -> Vec<HandleEntry> {
+    |                                                   ^^^ help: if this is intentional, prefix it with an underscore: `_pid`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:172:34
+    |
+172 | pub fn extract_kernel_structures(mem: &MemoryImage) -> Result<KernelStructures, ForensicError> {
+    |                                  ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:203:32
+    |
+203 | pub fn detect_hidden_processes(mem: &MemoryImage) -> Vec<Process> {
+    |                                ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:207:27
+    |
+207 | pub fn find_injected_code(mem: &MemoryImage) -> Vec<InjectedCodeRegion> {
+    |                           ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `mem`
+   --> engine\src\memory\mod.rs:221:48
+    |
+221 | pub fn extract_network_connections_from_memory(mem: &MemoryImage) -> Vec<MemoryNetConnection> {
+    |                                                ^^^ help: if this is intentional, prefix it with an underscore: `_mem`
+
+warning: unused variable: `pcap`
+   --> engine\src\network\mod.rs:185:28
+    |
+185 | pub fn extract_tcp_streams(pcap: &PcapFile) -> Vec<TcpStream> {
+    |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_pcap`
+
+warning: unused variable: `pcap`
+   --> engine\src\network\mod.rs:199:30
+    |
+199 | pub fn extract_http_requests(pcap: &PcapFile) -> Vec<HttpRequest> {
+    |                              ^^^^ help: if this is intentional, prefix it with an underscore: `_pcap`
+
+warning: unused variable: `pcap`
+   --> engine\src\network\mod.rs:215:28
+    |
+215 | pub fn extract_dns_queries(pcap: &PcapFile) -> Vec<DnsQuery> {
+    |                            ^^^^ help: if this is intentional, prefix it with an underscore: `_pcap`
+
+warning: unused variable: `pcap`
+   --> engine\src\network\mod.rs:229:31
+    |
+229 | pub fn get_connection_summary(pcap: &PcapFile) -> Vec<ConnectionSummary> {
+    |                               ^^^^ help: if this is intentional, prefix it with an underscore: `_pcap`
+
+warning: unused variable: `pcap`
+   --> engine\src\network\mod.rs:246:29
+    |
+246 | pub fn filter_packets_by_ip(pcap: &PcapFile, ip: &str) -> Vec<Packet> {
+    |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_pcap`
+
+warning: unused variable: `ip`
+   --> engine\src\network\mod.rs:246:46
+    |
+246 | pub fn filter_packets_by_ip(pcap: &PcapFile, ip: &str) -> Vec<Packet> {
+    |                                              ^^ help: if this is intentional, prefix it with an underscore: `_ip`
+
+warning: unused variable: `pcap`
+   --> engine\src\network\mod.rs:250:31
+    |
+250 | pub fn filter_packets_by_port(pcap: &PcapFile, port: u16) -> Vec<Packet> {
+    |                               ^^^^ help: if this is intentional, prefix it with an underscore: `_pcap`
+
+warning: unused variable: `port`
+   --> engine\src\network\mod.rs:250:48
+    |
+250 | pub fn filter_packets_by_port(pcap: &PcapFile, port: u16) -> Vec<Packet> {
+    |                                                ^^^^ help: if this is intentional, prefix it with an underscore: `_port`
+
+warning: unused variable: `pcap`
+   --> engine\src\network\mod.rs:262:34
+    |
+262 | pub fn get_protocol_distribution(pcap: &PcapFile) -> Vec<(String, u64)> {
+    |                                  ^^^^ help: if this is intentional, prefix it with an underscore: `_pcap`
+
+warning: unused variable: `file_types`
+   --> engine\src\report\html.rs:146:5
+    |
+146 |     file_types: &[(String, usize)],
+    |     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_file_types`
+
+warning: unused variable: `data`
+ --> engine\src\virtualization\mod.rs:3:30
+  |
+3 | pub fn detect_virtualization(data: &[u8]) -> Result<VirtualizationInfo, ForensicError> {
+  |                              ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\virtualization\mod.rs:18:26
+   |
+18 | pub fn detect_hypervisor(data: &[u8]) -> Option<Hypervisor> {
+   |                          ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\virtualization\mod.rs:29:29
+   |
+29 | pub fn extract_vm_artifacts(data: &[u8]) -> Result<Vec<VmArtifact>, ForensicError> {
+   |                             ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: unused variable: `data`
+  --> engine\src\virtualization\mod.rs:40:26
+   |
+40 | pub fn analyze_vm_memory(data: &[u8]) -> Result<VmMemoryAnalysis, ForensicError> {
+   |                          ^^^^ help: if this is intentional, prefix it with an underscore: `_data`
+
+warning: field `current_batch` is never read
+   --> engine\src\case\database.rs:912:5
+    |
+906 | pub struct BatchInserter {
+    |            ------------- field in this struct
+...
+912 |     current_batch: Vec<String>,
+    |     ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `case_id` is never read
+   --> engine\src\case\jobs.rs:262:5
+    |
+261 | pub struct JobQueue {
+    |            -------- field in this struct
+262 |     case_id: String,
+    |     ^^^^^^^
+
+warning: field `case_id` is never read
+   --> engine\src\case\screenshots.rs:202:5
+    |
+201 | pub struct ScreenshotManager {
+    |            ----------------- field in this struct
+202 |     case_id: String,
+    |     ^^^^^^^
+
+warning: fields `pool` and `worker_id` are never read
+  --> engine\src\case\workers.rs:68:5
+   |
+67 | pub struct WorkerConnection {
+   |            ---------------- fields in this struct
+68 |     pool: WorkerConnectionPool,
+   |     ^^^^
+69 |     worker_id: String,
+   |     ^^^^^^^^^
+
+warning: field `pool` is never read
+   --> engine\src\case\workers.rs:101:5
+    |
+100 | pub struct BatchWriter {
+    |            ----------- field in this struct
+101 |     pool: WorkerConnectionPool,
+    |     ^^^^
+
+warning: field `receiver` is never read
+  --> engine\src\events\mod.rs:96:5
+   |
+94 | pub struct EventBus {
+   |            -------- field in this struct
+95 |     sender: broadcast::Sender<EngineEvent>,
+96 |     receiver: broadcast::Receiver<EngineEvent>,
+   |     ^^^^^^^^
+
+warning: function `get_dcomApplications` should have a snake case name
+ --> engine\src\classification\dcominfo.rs:2:8
+  |
+2 | pub fn get_dcomApplications() -> Vec<DcomApp> {
+  |        ^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `get_dcom_applications`
+  |
+  = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: variable `docProps` should have a snake case name
+   --> engine\src\classification\metadata.rs:202:23
+    |
+202 |         if let Ok(mut docProps) = zip.by_name("docProps/core.xml") {
+    |                       ^^^^^^^^ help: convert the identifier to snake case: `doc_props`
+
+warning: `forensic_engine` (lib) generated 228 warnings (run `cargo fix --lib -p forensic_engine` to apply 214 suggestions)
+   Compiling forensic_cli v0.1.0 (D:\forensic-suite\cli)
+warning: unused imports: `analyze_timeline` and `get_largest_files`
+ --> cli\src\main.rs:1:33
+  |
+1 | use forensic_engine::analysis::{analyze_timeline, get_largest_files};
+  |                                 ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `forensic_engine::audit::event::AuditEventType`
+ --> cli\src\main.rs:2:5
+  |
+2 | use forensic_engine::audit::event::AuditEventType;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `forensic_engine::audit::logger::AuditLogger`
+ --> cli\src\main.rs:3:5
+  |
+3 | use forensic_engine::audit::logger::AuditLogger;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `CapabilityStatus`
+ --> cli\src\main.rs:4:62
+  |
+4 | use forensic_engine::capabilities::{get_capabilities_report, CapabilityStatus};
+  |                                                              ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `CarveOptions` and `carve_by_signature`
+ --> cli\src\main.rs:5:32
+  |
+5 | use forensic_engine::carving::{carve_by_signature, CarveOptions};
+  |                                ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^
+
+warning: unused import: `replay_case`
+ --> cli\src\main.rs:7:37
+  |
+7 | use forensic_engine::case::replay::{replay_case, CaseReplay, ReplayOptions, ReplayStatus};
+  |                                     ^^^^^^^^^^^
+
+warning: unused import: `get_auto_start_preset`
+  --> cli\src\main.rs:20:5
+   |
+20 |     get_auto_start_preset, set_auto_start_preset,
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `forensic_engine::classification::signature::detect_file_type`
+  --> cli\src\main.rs:22:5
+   |
+22 | use forensic_engine::classification::signature::detect_file_type;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `extract_keywords` and `extract_strings`
+  --> cli\src\main.rs:23:48
+   |
+23 | use forensic_engine::classification::strings::{extract_keywords, extract_strings};
+   |                                                ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused imports: `AuditedContainer`, `RawContainer`, and `ReadPolicyContainer`
+  --> cli\src\main.rs:25:5
+   |
+25 |     AuditedContainer, EvidenceContainerRO, RawContainer, ReadPolicyContainer,
+   |     ^^^^^^^^^^^^^^^^                       ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `detect_disk_layout` and `list_volumes`
+  --> cli\src\main.rs:27:29
+   |
+27 | use forensic_engine::disk::{detect_disk_layout, list_volumes};
+   |                             ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^
+
+warning: unused imports: `FileSystem`, `TimelineEntry`, `detect_filesystem_at`, `enumerate_mft`, `exfat_fast_scan`, `extract_timeline`, `fat32_fast_scan`, `ntfs_fast_scan`, and `walk_directory_tree`
+  --> cli\src\main.rs:30:5
+   |
+30 |     detect_filesystem_at, enumerate_mft, exfat_fast_scan, extract_timeline, fat32_fast_scan,
+   |     ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+31 |     ntfs_fast_scan, walk_directory_tree, FileSystem, TimelineEntry,
+   |     ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: unused imports: `HashOptions` and `hash_container_audited_with_progress`
+  --> cli\src\main.rs:33:32
+   |
+33 | use forensic_engine::hashing::{hash_container_audited_with_progress, HashOptions};
+   |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashSet`
+  --> cli\src\main.rs:37:5
+   |
+37 | use std::collections::HashSet;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `File`
+  --> cli\src\main.rs:39:21
+   |
+39 | use std::fs::{self, File};
+   |                     ^^^^
+
+warning: unused import: `std::io::Write`
+  --> cli\src\main.rs:40:5
+   |
+40 | use std::io::Write;
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `std::sync::Arc`
+  --> cli\src\main.rs:42:5
+   |
+42 | use std::sync::Arc;
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `uuid::Uuid`
+  --> cli\src\main.rs:43:5
+   |
+43 | use uuid::Uuid;
+   |     ^^^^^^^^^^
+
+warning: unused import: `FileTableResult`
+    --> cli\src\main.rs:3305:42
+     |
+3305 |         FileTableFilter, FileTableQuery, FileTableResult, SortDir, SortField,
+     |                                          ^^^^^^^^^^^^^^^
+
+warning: unused import: `std::io::Read`
+    --> cli\src\main.rs:3307:9
+     |
+3307 |     use std::io::Read;
+     |         ^^^^^^^^^^^^^
+
+warning: unused import: `EvidenceContainerRO`
+  --> cli\src\main.rs:25:23
+   |
+25 |     AuditedContainer, EvidenceContainerRO, RawContainer, ReadPolicyContainer,
+   |                       ^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `case_id_val`
+    --> cli\src\main.rs:1189:33
+     |
+1189 |                     if let Some(case_id_val) = details.get("case_id") {
+     |                                 ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_case_id_val`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable `verbose` is assigned to, but never used
+    --> cli\src\main.rs:1707:9
+     |
+1707 |     let mut verbose = false;
+     |         ^^^^^^^^^^^
+     |
+     = note: consider using `_verbose` instead
+
+warning: unused variable: `result`
+    --> cli\src\main.rs:1787:23
+     |
+1787 |             if let Ok(result) = check {
+     |                       ^^^^^^ help: if this is intentional, prefix it with an underscore: `_result`
+
+warning: value assigned to `verbose` is never read
+    --> cli\src\main.rs:1722:17
+     |
+1722 |                 verbose = true;
+     |                 ^^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+     = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `entity_types_ref`
+    --> cli\src\main.rs:2810:9
+     |
+2810 |     let entity_types_ref: Option<Vec<&str>> = if entity_types.is_empty() {
+     |         ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entity_types_ref`
+
+warning: variable `inline` is assigned to, but never used
+    --> cli\src\main.rs:2918:9
+     |
+2918 |     let mut inline = false;
+     |         ^^^^^^^^^^
+     |
+     = note: consider using `_inline` instead
+
+warning: unused variable: `sha256`
+    --> cli\src\main.rs:3083:41
+     |
+3083 |                     for (file_id, path, sha256, size, extracted, flags) in results {
+     |                                         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_sha256`
+
+warning: unused variable: `flags`
+    --> cli\src\main.rs:3083:66
+     |
+3083 |                     for (file_id, path, sha256, size, extracted, flags) in results {
+     |                                                                  ^^^^^ help: if this is intentional, prefix it with an underscore: `_flags`
+
+warning: value assigned to `inline` is never read
+    --> cli\src\main.rs:2949:17
+     |
+2949 |                 inline = true;
+     |                 ^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+
+warning: variable `json_output` is assigned to, but never used
+    --> cli\src\main.rs:3107:9
+     |
+3107 |     let mut json_output = false;
+     |         ^^^^^^^^^^^^^^^
+     |
+     = note: consider using `_json_output` instead
+
+warning: value assigned to `json_output` is never read
+    --> cli\src\main.rs:3159:17
+     |
+3159 |                 json_output = true;
+     |                 ^^^^^^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+
+warning: variable `json_output` is assigned to, but never used
+    --> cli\src\main.rs:3227:9
+     |
+3227 |     let mut json_output = false;
+     |         ^^^^^^^^^^^^^^^
+     |
+     = note: consider using `_json_output` instead
+
+warning: value assigned to `json_output` is never read
+    --> cli\src\main.rs:3257:17
+     |
+3257 |                 json_output = true;
+     |                 ^^^^^^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+
+warning: variable `loop_mode` is assigned to, but never used
+    --> cli\src\main.rs:3561:9
+     |
+3561 |     let mut loop_mode = false;
+     |         ^^^^^^^^^^^^^
+     |
+     = note: consider using `_loop_mode` instead
+
+warning: value assigned to `loop_mode` is never read
+    --> cli\src\main.rs:3580:17
+     |
+3580 |                 loop_mode = true;
+     |                 ^^^^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+
+warning: struct `Args` is never constructed
+  --> cli\src\main.rs:45:8
+   |
+45 | struct Args {
+   |        ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `VerifyArgs` is never constructed
+  --> cli\src\main.rs:63:8
+   |
+63 | struct VerifyArgs {
+   |        ^^^^^^^^^^
+
+warning: struct `ExportArgs` is never constructed
+   --> cli\src\main.rs:336:8
+    |
+336 | struct ExportArgs {
+    |        ^^^^^^^^^^
+
+warning: function `parse_args` is never used
+    --> cli\src\main.rs:2163:4
+     |
+2163 | fn parse_args() -> Args {
+     |    ^^^^^^^^^^
+
+warning: function `unix_time_to_string` is never used
+    --> cli\src\main.rs:2436:4
+     |
+2436 | fn unix_time_to_string(ts: i64) -> String {
+     |    ^^^^^^^^^^^^^^^^^^^
+
+warning: `forensic_cli` (bin "forensic_cli") generated 41 warnings (run `cargo fix --bin "forensic_cli" -p forensic_cli` to apply 25 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.72s

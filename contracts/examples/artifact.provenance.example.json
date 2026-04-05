@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_id": "artifact-42",
+  "artifact_type": "browser_history",
+  "case_id": "case-2026-0001",
+  "evidence_id": "evidence-001",
+  "parser": {
+    "module": "strata-insight.browser.chrome",
+    "version": "0.1.0"
+  },
+  "source_reference": {
+    "record_id": "history-row-9931",
+    "offset_bytes": 424242,
+    "path": "/Users/alice/Library/Application Support/Google/Chrome/Default/History"
+  },
+  "extracted_at_utc": "2026-03-26T22:10:00Z"
+}

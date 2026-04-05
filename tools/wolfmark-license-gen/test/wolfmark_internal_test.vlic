@@ -1,0 +1,30 @@
+{
+  "license_id": "93193be0-d093-48c3-91d8-907a94459261",
+  "product": "vantor-tree",
+  "tier": "Trial",
+  "licensee_name": "Korbyn Randolph",
+  "licensee_org": "Wolfmark Systems",
+  "machine_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "issued_at": "2026-03-29T20:37:18.355517800Z",
+  "expires_at": "2026-05-28T20:37:18.355493100Z",
+  "features": [
+    "hex_editor",
+    "registry_viewer",
+    "timeline",
+    "browser_history",
+    "prefetch_parser",
+    "lnk_parser",
+    "shellbags",
+    "evtx_parser",
+    "content_search",
+    "file_carving",
+    "hash_sets",
+    "report_export",
+    "audit_log",
+    "plugins",
+    "forge_integration",
+    "compare",
+    "vss_access"
+  ],
+  "signature": "yTGrN4gX7wmeRSFUD/nqh2GYZ4ROTL7cbRih06hofj/BKemnIz0Jpgau/ZfKGiNsfiWx1qFHyws2sSUciPKHAg=="
+}

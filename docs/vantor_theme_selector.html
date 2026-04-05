@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vantor — Theme Selection</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #060608; color: #e2e8f0; font-size: 13px; min-height: 100vh; padding: 20px; }
+.theme-dark { --bg:#0f1117; --panel:#161b27; --card:#1e2535; --elevated:#252d3d; --border:#2a3347; --active:#7dd3fc; --text:#e2e8f0; --secondary:#8899aa; --muted:#4a5568; --suspicious:#f59e0b; --flagged:#ef4444; --clean:#22c55e; --carved:#a855f7; --pt:#0f1117; }
+.theme-crimson { --bg:#120a0a; --panel:#1a0e0e; --card:#221414; --elevated:#2c1a1a; --border:#3a2020; --active:#f87171; --text:#ffe8e8; --secondary:#aa7070; --muted:#5a3030; --suspicious:#fbbf24; --flagged:#ff4444; --clean:#34d399; --carved:#c084fc; --pt:#120a0a; }
+.theme-midnight { --bg:#0a0a0f; --panel:#101018; --card:#18181f; --elevated:#22222c; --border:#2a2a38; --active:#a78bfa; --text:#ede9fe; --secondary:#7c6faa; --muted:#3f3a58; --suspicious:#fb923c; --flagged:#f87171; --clean:#4ade80; --carved:#e879f9; --pt:#0a0a0f; }
+.theme-slate { --bg:#0f1214; --panel:#161c20; --card:#1e252a; --elevated:#252e34; --border:#2a3840; --active:#4ade80; --text:#e2ede8; --secondary:#6a8878; --muted:#3a4e44; --suspicious:#fbbf24; --flagged:#f87171; --clean:#34d399; --carved:#818cf8; --pt:#0f1214; }
+.theme-light { --bg:#f0f4f8; --panel:#ffffff; --card:#ffffff; --elevated:#e8f0f8; --border:#d0dce8; --active:#0369a1; --text:#0f1827; --secondary:#4a6480; --muted:#8aa0b8; --suspicious:#d97706; --flagged:#dc2626; --clean:#16a34a; --carved:#7c3aed; --pt:#ffffff; }
+.page-header { text-align:center; margin-bottom:24px; }
+.page-header h1 { font-size:22px; font-weight:300; letter-spacing:8px; color:#7dd3fc; text-transform:uppercase; margin-bottom:6px; }
+.page-header p { font-size:11px; letter-spacing:3px; color:#4a5568; text-transform:uppercase; }
+.themes-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:24px; }
+.theme-card { border-radius:10px; overflow:hidden; border:2px solid transparent; cursor:pointer; transition:all 0.2s; }
+.theme-card:hover { transform:translateY(-2px); }
+.theme-card.selected { border-color:#7dd3fc !important; }
+.theme-preview { height:100px; padding:8px; display:flex; flex-direction:column; gap:4px; }
+.p-toolbar { height:14px; border-radius:4px; }
+.p-body { flex:1; display:flex; gap:4px; }
+.p-sidebar { width:10px; border-radius:4px; }
+.p-content { flex:1; border-radius:4px; display:flex; flex-direction:column; gap:3px; padding:4px; }
+.p-row { height:5px; border-radius:2px; opacity:0.5; }
+.p-row.hi { opacity:1; width:65%; }
+.p-row.wn { opacity:1; width:45%; }
+.p-detail { width:35px; border-radius:4px; }
+.p-status { height:8px; border-radius:8px; width:55%; align-self:center; margin:0 auto; }
+.theme-label { padding:8px 10px; display:flex; align-items:center; justify-content:space-between; }
+.theme-name { font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; }
+.theme-sub { font-size:8px; margin-top:2px; letter-spacing:0.5px; }
+.theme-dot { width:10px; height:10px; border-radius:50%; }
+.active-badge { font-size:8px; padding:2px 6px; border-radius:10px; background:#7dd3fc; color:#0f1117; font-weight:700; }
+.preview-selector { display:flex; justify-content:center; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+.pb { padding:5px 14px; border-radius:16px; border:1px solid #2a3347; background:transparent; color:#8899aa; font-size:10px; font-weight:600; letter-spacing:0.5px; cursor:pointer; text-transform:uppercase; transition:all 0.2s; }
+.pb:hover { border-color:#7dd3fc; color:#7dd3fc; }
+.pb.active { background:#7dd3fc; border-color:#7dd3fc; color:#0f1117; }
+.preview-panel { display:none; }
+.preview-panel.active { display:block; }
+.ui-frame { border-radius:12px; overflow:hidden; border:1px solid #2a3347; }
+.vantor-ui { display:flex; flex-direction:column; height:480px; font-size:11px; }
+.ui-toolbar { padding:6px 10px; display:flex; align-items:center; gap:6px; height:40px; border-bottom:1px solid var(--border); flex-shrink:0; background:var(--panel); }
+.ui-logo { display:flex; align-items:center; gap:6px; padding-right:10px; border-right:1px solid var(--border); flex-shrink:0; }
+.ui-logo-box { width:22px; height:22px; background:var(--card); border:1px solid var(--border); border-radius:4px; display:flex; align-items:center; justify-content:center; }
+.ui-logo-text { font-size:9px; font-weight:700; letter-spacing:2px; color:var(--text); }
+.ui-logo-sub { font-size:7px; letter-spacing:1px; color:var(--muted); }
+.ui-btn { padding:3px 8px; border-radius:4px; border:1px solid var(--border); background:transparent; color:var(--secondary); font-size:9px; cursor:pointer; font-weight:600; }
+.ui-btn-p { background:var(--active); border-color:var(--active); color:var(--pt); font-weight:700; }
+.ui-meta { flex:1; display:flex; align-items:center; justify-content:center; gap:8px; font-size:9px; color:var(--secondary); }
+.ui-meta b { color:var(--text); font-weight:600; }
+.ui-mdiv { width:1px; height:10px; background:var(--border); }
+.ui-body { display:flex; flex:1; overflow:hidden; padding:6px; gap:6px; background:var(--bg); }
+.ui-sidebar { width:34px; background:var(--panel); border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; align-items:center; padding:6px 0; gap:2px; flex-shrink:0; }
+.ui-icon { width:26px; height:26px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--muted); border-left:2px solid transparent; }
+.ui-icon.on { color:var(--active); background:var(--card); border-left-color:var(--active); border-radius:0 4px 4px 0; }
+.ui-sp { flex:1; }
+.ui-ev { width:140px; background:var(--card); border-radius:8px; border:1px solid var(--border); flex-shrink:0; display:flex; flex-direction:column; overflow:hidden; }
+.ui-ch { padding:6px 8px; border-bottom:1px solid var(--border); font-size:8px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--secondary); display:flex; justify-content:space-between; }
+.ui-tree { padding:4px 0; flex:1; overflow:hidden; }
+.ui-tn { padding:3px 8px; font-size:9px; color:var(--secondary); display:flex; align-items:center; gap:4px; border-left:2px solid transparent; }
+.ui-tn.on { color:var(--active); background:var(--elevated); border-left-color:var(--active); }
+.ui-tn.r { color:var(--text); font-weight:600; }
+.ui-tn.l2 { padding-left:18px; }
+.ui-tn.l3 { padding-left:28px; }
+.ui-main { flex:1; background:var(--card); border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+.ui-th { display:grid; grid-template-columns:1fr 55px 90px 60px; padding:5px 8px; border-bottom:1px solid var(--border); gap:6px; }
+.ui-tc { font-size:8px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--secondary); }
+.ui-tb { flex:1; overflow:hidden; }
+.ui-row { display:grid; grid-template-columns:1fr 55px 90px 60px; padding:0 8px; height:22px; align-items:center; gap:6px; border-left:2px solid transparent; }
+.ui-row:hover { background:var(--elevated); }
+.ui-row.s { background:var(--elevated); border-left-color:var(--active); }
+.ui-row.su { border-left-color:var(--suspicious); }
+.ui-row.fl { border-left-color:var(--flagged); }
+.ui-fn { font-size:10px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:4px; }
+.ui-fs { font-size:9px; color:var(--secondary); text-align:right; }
+.ui-fd { font-size:9px; color:var(--muted); }
+.ui-badge { font-size:7px; font-weight:700; padding:1px 4px; border-radius:3px; text-transform:uppercase; }
+.bs { background:var(--suspicious); color:#0f1117; }
+.bf { background:var(--flagged); color:#fff; }
+.ui-det { width:160px; background:var(--card); border-radius:8px; border:1px solid var(--border); flex-shrink:0; display:flex; flex-direction:column; overflow:hidden; }
+.ui-dts { display:flex; gap:3px; padding:5px 6px 0; border-bottom:1px solid var(--border); }
+.ui-dt { padding:3px 7px; border-radius:10px; font-size:8px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--muted); margin-bottom:-1px; }
+.ui-dt.on { background:var(--active); color:var(--pt); }
+.ui-db { padding:8px; display:flex; flex-direction:column; gap:7px; flex:1; overflow:hidden; }
+.ui-mf { display:flex; flex-direction:column; gap:2px; }
+.ui-ml { font-size:7px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
+.ui-mv { font-size:9px; color:var(--text); }
+.ui-mv.ac { color:var(--active); }
+.ui-mv.wn { color:var(--suspicious); }
+.ui-mdivr { height:1px; background:var(--border); }
+.ui-hex { background:var(--panel); border-radius:4px; border:1px solid var(--border); padding:5px; font-family:monospace; font-size:7px; color:var(--active); line-height:1.6; }
+.ui-ho { color:var(--muted); }
+.ui-sw { display:flex; justify-content:center; padding:5px 0; background:var(--bg); }
+.ui-pill { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:3px 12px; display:flex; align-items:center; gap:8px; font-size:8px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; }
+.ui-stat { display:flex; align-items:center; gap:3px; color:var(--secondary); }
+.ui-sv { color:var(--text); }
+.ui-sv.wn { color:var(--suspicious); }
+.ui-sv.dg { color:var(--flagged); }
+.ui-sdiv { width:1px; height:8px; background:var(--border); }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>Vantor</h1>
+  <p>Settings → Appearance → Theme</p>
+</div>
+
+<div class="themes-grid">
+  <div class="theme-card theme-dark selected" style="background:var(--panel);">
+    <div class="theme-preview" style="background:var(--bg);">
+      <div class="p-toolbar" style="background:var(--panel);border:1px solid var(--border);"></div>
+      <div class="p-body"><div class="p-sidebar" style="background:var(--panel);border:1px solid var(--border);"></div><div class="p-content" style="background:var(--card);border:1px solid var(--border);"><div class="p-row" style="background:var(--secondary);"></div><div class="p-row hi" style="background:var(--active);"></div><div class="p-row" style="background:var(--secondary);"></div><div class="p-row wn" style="background:var(--suspicious);"></div></div><div class="p-detail" style="background:var(--card);border:1px solid var(--border);"></div></div>
+      <div class="p-status" style="background:var(--card);border:1px solid var(--border);"></div>
+    </div>
+    <div class="theme-label" style="background:var(--panel);border-top:1px solid var(--border);"><div><div class="theme-name" style="color:var(--text);">Vantor Dark</div><div class="theme-sub" style="color:var(--muted);">DEFAULT</div></div><div style="display:flex;align-items:center;gap:5px;"><div class="theme-dot" style="background:#7dd3fc;"></div><span class="active-badge">✓ Active</span></div></div>
+  </div>
+  <div class="theme-card theme-crimson" style="background:var(--panel);">
+    <div class="theme-preview" style="background:var(--bg);">
+      <div class="p-toolbar" style="background:var(--panel);border:1px solid var(--border);"></div>
+      <div class="p-body"><div class="p-sidebar" style="background:var(--panel);border:1px solid var(--border);"></div><div class="p-content" style="background:var(--card);border:1px solid var(--border);"><div class="p-row" style="background:var(--secondary);"></div><div class="p-row hi" style="background:var(--active);"></div><div class="p-row" style="background:var(--secondary);"></div><div class="p-row wn" style="background:var(--suspicious);"></div></div><div class="p-detail" style="background:var(--card);border:1px solid var(--border);"></div></div>
+      <div class="p-status" style="background:var(--card);border:1px solid var(--border);"></div>
+    </div>
+    <div class="theme-label" style="background:var(--panel);border-top:1px solid var(--border);"><div><div class="theme-name" style="color:var(--text);">Vantor Crimson</div><div class="theme-sub" style="color:var(--muted);">THREAT HUNT</div></div><div class="theme-dot" style="background:#f87171;"></div></div>
+  </div>
+  <div class="theme-card theme-midnight" style="background:var(--panel);">
+    <div class="theme-preview" style="background:var(--bg);">
+      <div class="p-toolbar" style="background:var(--panel);border:1px solid var(--border);"></div>
+      <div class="p-body"><div class="p-sidebar" style="background:var(--panel);border:1px solid var(--border);"></div><div class="p-content" style="background:var(--card);border:1px solid var(--border);"><div class="p-row" style="background:var(--secondary);"></div><div class="p-row hi" style="background:var(--active);"></div><div class="p-row" style="background:var(--secondary);"></div><div class="p-row wn" style="background:var(--suspicious);"></div></div><div class="p-detail" style="background:var(--card);border:1px solid var(--border);"></div></div>
+      <div class="p-status" style="background:var(--card);border:1px solid var(--border);"></div>
+    </div>
+    <div class="theme-label" style="background:var(--panel);border-top:1px solid var(--border);"><div><div class="theme-name" style="color:var(--text);">Vantor Midnight</div><div class="theme-sub" style="color:var(--muted);">PURPLE VOID</div></div><div class="theme-dot" style="background:#a78bfa;"></div></div>
+  </div>
+  <div class="theme-card theme-slate" style="background:var(--panel);">
+    <div class="theme-preview" style="background:var(--bg);">
+      <div class="p-toolbar" style="background:var(--panel);border:1px solid var(--border);"></div>
+      <div class="p-body"><div class="p-sidebar" style="background:var(--panel);border:1px solid var(--border);"></div><div class="p-content" style="background:var(--card);border:1px solid var(--border);"><div class="p-row" style="background:var(--secondary);"></div><div class="p-row hi" style="background:var(--active);"></div><div class="p-row" style="background:var(--secondary);"></div><div class="p-row wn" style="background:var(--suspicious);"></div></div><div class="p-detail" style="background:var(--card);border:1px solid var(--border);"></div></div>
+      <div class="p-status" style="background:var(--card);border:1px solid var(--border);"></div>
+    </div>
+    <div class="theme-label" style="background:var(--panel);border-top:1px solid var(--border);"><div><div class="theme-name" style="color:var(--text);">Vantor Slate</div><div class="theme-sub" style="color:var(--muted);">TACTICAL GREEN</div></div><div class="theme-dot" style="background:#4ade80;"></div></div>
+  </div>
+  <div class="theme-card theme-light" style="background:var(--panel);border:1px solid #d0dce8;">
+    <div class="theme-preview" style="background:var(--bg);">
+      <div class="p-toolbar" style="background:var(--panel);border:1px solid var(--border);"></div>
+      <div class="p-body"><div class="p-sidebar" style="background:var(--elevated);border:1px solid var(--border);"></div><div class="p-content" style="background:var(--panel);border:1px solid var(--border);"><div class="p-row" style="background:var(--secondary);"></div><div class="p-row hi" style="background:var(--active);"></div><div class="p-row" style="background:var(--secondary);"></div><div class="p-row wn" style="background:var(--suspicious);"></div></div><div class="p-detail" style="background:var(--panel);border:1px solid var(--border);"></div></div>
+      <div class="p-status" style="background:var(--panel);border:1px solid var(--border);"></div>
+    </div>
+    <div class="theme-label" style="background:var(--panel);border-top:1px solid var(--border);"><div><div class="theme-name" style="color:var(--text);">Vantor Light</div><div class="theme-sub" style="color:var(--muted);">COURT READY</div></div><div class="theme-dot" style="background:#0369a1;"></div></div>
+  </div>
+</div>
+
+<div class="preview-selector">
+  <button class="pb active" onclick="show('dark',this)">Vantor Dark</button>
+  <button class="pb" onclick="show('crimson',this)">Vantor Crimson</button>
+  <button class="pb" onclick="show('midnight',this)">Vantor Midnight</button>
+  <button class="pb" onclick="show('slate',this)">Vantor Slate</button>
+  <button class="pb" onclick="show('light',this)">Vantor Light</button>
+</div>
+
+<div id="previews">
+
+<!-- helper macro for file rows -->
+<template id="rows">
+  <div class="ui-row"><div class="ui-fn">📁 Windows</div><div class="ui-fs">—</div><div class="ui-fd">2023-03-22</div><div></div></div>
+  <div class="ui-row su"><div class="ui-fn">⚠️ mimikatz.exe</div><div class="ui-fs">1.2 MB</div><div class="ui-fd">2023-03-22</div><div><span class="ui-badge bs">SUSP</span></div></div>
+  <div class="ui-row s"><div class="ui-fn">💾 hiberfil.sys</div><div class="ui-fs">1.6 GB</div><div class="ui-fd">1970-01-01</div><div></div></div>
+  <div class="ui-row fl"><div class="ui-fn">🔴 procdump64.exe</div><div class="ui-fs">386 KB</div><div class="ui-fd">2023-03-22</div><div><span class="ui-badge bf">FLAG</span></div></div>
+  <div class="ui-row"><div class="ui-fn">💾 pagefile.sys</div><div class="ui-fs">744 MB</div><div class="ui-fd">1970-01-01</div><div></div></div>
+  <div class="ui-row"><div class="ui-fn">📁 Users</div><div class="ui-fs">—</div><div class="ui-fd">2023-03-22</div><div></div></div>
+  <div class="ui-row"><div class="ui-fn">📁 Program Files</div><div class="ui-fs">—</div><div class="ui-fd">2021-06-05</div><div></div></div>
+  <div class="ui-row"><div class="ui-fn">💾 swapfile.sys</div><div class="ui-fs">144 MB</div><div class="ui-fd">1970-01-01</div><div></div></div>
+</template>
+
+<script>
+function makeUI(themeClass, accentHex, extraFrameStyle) {
+  return `
+  <div class="ui-frame ${themeClass}" style="border-color:var(--border);${extraFrameStyle||''}">
+    <div class="vantor-ui" style="background:var(--bg);">
+      <div class="ui-toolbar">
+        <div class="ui-logo">
+          <div class="ui-logo-box">
+            <svg width="12" height="12" viewBox="0 0 400 400">
+              <polygon points="110,90 189,310 211,310 290,90 268,90 200,263.4 132,90" fill="${accentHex}"/>
+              <line x1="110" y1="90" x2="290" y2="90" stroke="${accentHex}" stroke-width="24" stroke-linecap="square"/>
+            </svg>
+          </div>
+          <div><div class="ui-logo-text">VANTOR</div><div class="ui-logo-sub">TREE v0.3</div></div>
+        </div>
+        <button class="ui-btn ui-btn-p">+ Open Evidence</button>
+        <button class="ui-btn">New Case</button>
+        <button class="ui-btn">Open Case</button>
+        <div class="ui-meta">
+          <span style="color:var(--secondary)">CASE:</span><b>Unsaved</b>
+          <div class="ui-mdiv"></div>
+          <span style="color:var(--secondary)">EXAMINER:</span><b>Examiner 1</b>
+          <div class="ui-mdiv"></div>
+          <span style="color:var(--secondary)">E01:</span><b>Stack001.E01</b>
+        </div>
+        <button class="ui-btn">Report</button>
+        <button class="ui-btn">Export</button>
+      </div>
+      <div class="ui-body">
+        <div class="ui-sidebar">
+          <div class="ui-icon on">📁</div>
+          <div class="ui-icon">🔖</div><div class="ui-icon">🖼</div>
+          <div class="ui-icon">⏱</div><div class="ui-icon">🗂</div>
+          <div class="ui-icon">📜</div><div class="ui-icon">🌐</div>
+          <div class="ui-icon">🔍</div><div class="ui-icon">#</div>
+          <div class="ui-sp"></div>
+          <div class="ui-icon">⚙</div>
+        </div>
+        <div class="ui-ev">
+          <div class="ui-ch"><span>Evidence Tree</span><span style="color:var(--muted)">1</span></div>
+          <div class="ui-tree">
+            <div class="ui-tn r">💿 Stack001.E01</div>
+            <div class="ui-tn l2 on">📂 NTFS Vol 1</div>
+            <div class="ui-tn l3">📁 Users</div>
+            <div class="ui-tn l3">📁 Windows</div>
+            <div class="ui-tn l3">📁 Program Files</div>
+            <div class="ui-tn l3">📁 $Recycle.Bin</div>
+          </div>
+        </div>
+        <div class="ui-main">
+          <div class="ui-ch"><span>File Listing — /ntfs_vol0</span><span style="color:var(--muted)">4,847 items</span></div>
+          <div class="ui-th">
+            <div class="ui-tc">Name</div><div class="ui-tc">Size</div>
+            <div class="ui-tc">Modified</div><div class="ui-tc">Status</div>
+          </div>
+          <div class="ui-tb" id="rows-${themeClass}"></div>
+        </div>
+        <div class="ui-det">
+          <div class="ui-dts">
+            <div class="ui-dt on">Meta</div>
+            <div class="ui-dt">Hex</div>
+            <div class="ui-dt">Text</div>
+            <div class="ui-dt">Img</div>
+          </div>
+          <div class="ui-db">
+            <div class="ui-mf"><div class="ui-ml">File Name</div><div class="ui-mv ac">hiberfil.sys</div></div>
+            <div class="ui-mf"><div class="ui-ml">Size</div><div class="ui-mv">1.6 GB</div></div>
+            <div class="ui-mf"><div class="ui-ml">Modified</div><div class="ui-mv">1970-01-01</div></div>
+            <div class="ui-mdivr"></div>
+            <div class="ui-mf"><div class="ui-ml">SHA-256</div><div class="ui-mv" style="color:var(--muted)">not computed</div></div>
+            <div class="ui-mf"><div class="ui-ml">Category</div><div class="ui-mv wn">Executable</div></div>
+            <div class="ui-mdivr"></div>
+            <div class="ui-hex">
+              <span class="ui-ho">0000</span> 50 61 67 65 46 69<br>
+              <span class="ui-ho">0006</span> 6C 65 06 00 00 00<br>
+              <span class="ui-ho">000C</span> 01 00 00 10 00 00
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ui-sw">
+        <div class="ui-pill">
+          <div class="ui-stat">FILES <span class="ui-sv">4,847</span></div>
+          <div class="ui-sdiv"></div>
+          <div class="ui-stat">SUSP <span class="ui-sv wn">20</span></div>
+          <div class="ui-sdiv"></div>
+          <div class="ui-stat">FLAG <span class="ui-sv dg">2</span></div>
+          <div class="ui-sdiv"></div>
+          <div class="ui-stat">CARVED <span class="ui-sv">0</span></div>
+          <div class="ui-sdiv"></div>
+          <div class="ui-stat" style="color:var(--muted)">v0.3.0 · WINDOWS</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+const themes = [
+  { id:'dark',    cls:'theme-dark',    hex:'#7dd3fc', extra:'' },
+  { id:'crimson', cls:'theme-crimson', hex:'#f87171', extra:'border-color:#3a2020;' },
+  { id:'midnight',cls:'theme-midnight',hex:'#a78bfa', extra:'border-color:#2a2a38;' },
+  { id:'slate',   cls:'theme-slate',   hex:'#4ade80', extra:'border-color:#2a3840;' },
+  { id:'light',   cls:'theme-light',   hex:'#0369a1', extra:'border-color:#d0dce8;' },
+];
+
+const container = document.getElementById('previews');
+const rowsTemplate = document.getElementById('rows').innerHTML;
+
+themes.forEach(t => {
+  const panel = document.createElement('div');
+  panel.className = 'preview-panel' + (t.id==='dark' ? ' active' : '');
+  panel.id = 'p-' + t.id;
+  panel.innerHTML = makeUI(t.cls, t.hex, t.extra);
+  container.appendChild(panel);
+  // inject rows
+  setTimeout(() => {
+    const tb = document.getElementById('rows-' + t.cls);
+    if (tb) tb.innerHTML = rowsTemplate;
+  }, 0);
+});
+
+function show(name, btn) {
+  document.querySelectorAll('.preview-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.pb').forEach(b => b.classList.remove('active'));
+  document.getElementById('p-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</div>
+</body>
+</html>

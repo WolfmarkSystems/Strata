@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forensic-suite.dev/schemas/cli_result_envelope.schema.json",
+  "title": "CliResultEnvelope",
+  "description": "JSON envelope format for forensic_cli command results",
+  "type": "object",
+  "required": [
+    "tool_version",
+    "timestamp_utc",
+    "platform",
+    "command",
+    "args",
+    "status",
+    "exit_code",
+    "elapsed_ms"
+  ],
+  "properties": {
+    "tool_version": {
+      "type": "string",
+      "description": "Version of the forensic_cli tool"
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "description": "ISO 8601 timestamp in UTC (RFC3339 format)"
+    },
+    "platform": {
+      "type": "string",
+      "description": "Platform where the command was executed"
+    },
+    "command": {
+      "type": "string",
+      "description": "Name of the CLI command that was executed"
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Command-line arguments passed to the command"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "warn", "error"],
+      "description": "Overall status of the command execution"
+    },
+    "exit_code": {
+      "type": "integer",
+      "description": "Process exit code (0=ok, 1=error, 2=unsupported, 3=validation)"
+    },
+    "elapsed_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Execution time in milliseconds"
+    },
+    "error": {
+      "type": ["string", "null"],
+      "description": "Error message if status is 'error'"
+    },
+    "warning": {
+      "type": ["string", "null"],
+      "description": "Warning message if status is 'warn'"
+    },
+    "error_type": {
+      "type": ["string", "null"],
+      "description": "Machine-readable error type (e.g., invalid_input, database_error)"
+    },
+    "hint": {
+      "type": ["string", "null"],
+      "description": "Hint for resolving the error"
+    },
+    "outputs": {
+      "type": ["object", "null"],
+      "additionalProperties": {
+        "type": ["string", "null"]
+      },
+      "description": "Map of output file names to their paths"
+    },
+    "sizes": {
+      "type": ["object", "null"],
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "description": "Map of output file names to their sizes in bytes"
+    },
+    "data": {
+      "type": ["object", "array", "string", "number", "boolean", "null"],
+      "description": "Command-specific data payload"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,25 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-02-27T14:22:39.225681800+00:00",
+  "platform": "windows",
+  "image_path": "D:\\forensic-suite\\evidence\\Stack001_Surface_HDD.E01",
+  "out_dir": ".exportssurface_smoke",
+  "mft_count": 50,
+  "timeline_enabled": true,
+  "audit_enabled": true,
+  "outputs": {
+    "summary_txt": ".exportssurface_smoke\\summary.txt",
+    "timeline_csv": ".exportssurface_smoke\\timeline.csv",
+    "audit_json": ".exportssurface_smoke\\audit.json",
+    "json_summary": ".exportssurface_smoke\\smoke_summary.json"
+  },
+  "sizes": {
+    "summary_txt": 146,
+    "timeline_csv": 23,
+    "audit_json": 95,
+    "json_summary": 0
+  },
+  "elapsed_ms": 2,
+  "status": "ok",
+  "error": null
+}

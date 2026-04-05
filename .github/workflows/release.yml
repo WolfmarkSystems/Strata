@@ -1,0 +1,46 @@
+name: Build Strata
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build -p strata --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: strata-macos
+          path: target/release/strata
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build -p strata --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: strata-windows
+          path: target/release/strata.exe
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev libwebkit2gtk-4.0-dev \
+            libssl-dev libayatana-appindicator3-dev \
+            librsvg2-dev
+      - run: cargo build -p strata --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: strata-linux
+          path: target/release/strata

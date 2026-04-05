@@ -1,0 +1,10 @@
+{
+  "case_id": "examine_case",
+  "started_utc": "",
+  "finished_utc": "",
+  "status": "Pass",
+  "steps": [],
+  "before": [],
+  "after": [],
+  "diffs": {}
+}

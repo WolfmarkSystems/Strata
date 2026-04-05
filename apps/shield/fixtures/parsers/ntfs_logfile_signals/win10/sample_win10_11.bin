@@ -1,0 +1,1 @@
+txn 11 CreateFile C:\\Temp\\a11.txt Rename $MFT $UsnJrnl

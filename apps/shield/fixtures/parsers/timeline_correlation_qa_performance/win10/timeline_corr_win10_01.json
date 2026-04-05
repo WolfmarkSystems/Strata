@@ -1,0 +1,11 @@
+﻿{
+    "events":  [
+                   {
+                       "severity":  "info",
+                       "timestamp_unix":  1700600030,
+                       "event_type":  "prefetch-run",
+                       "source":  "execution",
+                       "executable_name":  "cmd.exe"
+                   }
+               ]
+}

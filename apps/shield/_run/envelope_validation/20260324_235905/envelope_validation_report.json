@@ -1,0 +1,62 @@
+﻿[
+    {
+        "Command":  "doctor --quiet --json-result D:\\forensic-suite\\_run\\envelope_validation\\20260324_235905\\doctor.envelope.json",
+        "ExitCode":  0,
+        "EnvelopePath":  "D:\\forensic-suite\\_run\\envelope_validation\\20260324_235905\\doctor.envelope.json",
+        "IsValidJson":  true,
+        "HasToolVersion":  true,
+        "HasTimestamp":  true,
+        "HasCommand":  true,
+        "HasStatus":  true,
+        "HasExitCode":  true,
+        "HasOutputs":  true,
+        "HasSizes":  true,
+        "Verdict":  "PASS",
+        "Reason":  ""
+    },
+    {
+        "Command":  "capabilities --quiet --json-result D:\\forensic-suite\\_run\\envelope_validation\\20260324_235905\\capabilities.envelope.json",
+        "ExitCode":  0,
+        "EnvelopePath":  "D:\\forensic-suite\\_run\\envelope_validation\\20260324_235905\\capabilities.envelope.json",
+        "IsValidJson":  true,
+        "HasToolVersion":  true,
+        "HasTimestamp":  true,
+        "HasCommand":  true,
+        "HasStatus":  true,
+        "HasExitCode":  true,
+        "HasOutputs":  true,
+        "HasSizes":  true,
+        "Verdict":  "PASS",
+        "Reason":  ""
+    },
+    {
+        "Command":  "verify --db missing.db --quiet --json-result D:\\forensic-suite\\_run\\envelope_validation\\20260324_235905\\verify_missing_case.envelope.json",
+        "ExitCode":  3,
+        "EnvelopePath":  "D:\\forensic-suite\\_run\\envelope_validation\\20260324_235905\\verify_missing_case.envelope.json",
+        "IsValidJson":  true,
+        "HasToolVersion":  true,
+        "HasTimestamp":  true,
+        "HasCommand":  true,
+        "HasStatus":  true,
+        "HasExitCode":  true,
+        "HasOutputs":  true,
+        "HasSizes":  true,
+        "Verdict":  "PASS",
+        "Reason":  ""
+    },
+    {
+        "Command":  "verify --case demo-case --quiet --json-result D:\\forensic-suite\\_run\\envelope_validation\\20260324_235905\\verify_missing_db.envelope.json",
+        "ExitCode":  3,
+        "EnvelopePath":  "D:\\forensic-suite\\_run\\envelope_validation\\20260324_235905\\verify_missing_db.envelope.json",
+        "IsValidJson":  true,
+        "HasToolVersion":  true,
+        "HasTimestamp":  true,
+        "HasCommand":  true,
+        "HasStatus":  true,
+        "HasExitCode":  true,
+        "HasOutputs":  true,
+        "HasSizes":  true,
+        "Verdict":  "PASS",
+        "Reason":  ""
+    }
+]

@@ -1,0 +1,13 @@
+﻿{
+    "records":  [
+                    {
+                        "executable_name":  "cmd.exe",
+                        "event_type":  "runmru-command",
+                        "source":  "runmru",
+                        "mru_index":  6,
+                        "command":  "C:/Windows/System32/cmd.exe",
+                        "source_record_id":  "runmru-6",
+                        "timestamp_unix":  1700400240
+                    }
+                ]
+}

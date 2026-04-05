@@ -1,0 +1,201 @@
+    Checking forensic_engine v0.1.0 (D:\forensic-suite\engine)
+warning: this function has too many arguments (16/7)
+   --> engine\src\analysis\scoring.rs:93:5
+    |
+ 93 | /     pub fn from_row(
+ 94 | |         id: i64,
+ 95 | |         source_type: String,
+ 96 | |         source_id: String,
+...   |
+109 | |         summary_json: serde_json::Value,
+110 | |     ) -> Self {
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+    = note: `#[warn(clippy::too_many_arguments)]` on by default
+
+warning: this function has too many arguments (8/7)
+    --> engine\src\case\database.rs:1228:5
+     |
+1228 | /     pub fn add_evidence_with_detection(
+1229 | |         &self,
+1230 | |         case_id: &str,
+1231 | |         evidence_id: &str,
+...    |
+1236 | |         detection: &crate::evidence::DetectionOutput,
+1237 | |     ) -> SqliteResult<()> {
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (12/7)
+    --> engine\src\case\database.rs:1775:5
+     |
+1775 | /     pub fn upsert_global_entity(
+1776 | |         &self,
+1777 | |         case_id: &str,
+1778 | |         entity_type: &str,
+...    |
+1787 | |         json_data: &str,
+1788 | |     ) -> SqliteResult<()> {
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (12/7)
+    --> engine\src\case\database.rs:1856:5
+     |
+1856 | /     pub fn global_search(
+1857 | |         &self,
+1858 | |         case_id: &str,
+1859 | |         query: &str,
+...    |
+1868 | |         after_rowid: Option<i64>,
+1869 | |     ) -> SqliteResult<Vec<GlobalSearchHit>> {
+     | |___________________________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (12/7)
+    --> engine\src\case\database.rs:2482:5
+     |
+2482 | /     pub fn insert_file_strings(
+2483 | |         &self,
+2484 | |         case_id: &str,
+2485 | |         evidence_id: Option<&str>,
+...    |
+2494 | |         strings_json: &str,
+2495 | |     ) -> SqliteResult<()> {
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (9/7)
+    --> engine\src\case\database.rs:2612:5
+     |
+2612 | /     pub fn insert_ioc_hit(
+2613 | |         &self,
+2614 | |         case_id: &str,
+2615 | |         rule_id: i64,
+...    |
+2621 | |         context_json: &str,
+2622 | |     ) -> SqliteResult<()> {
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (13/7)
+    --> engine\src\case\database.rs:2683:5
+     |
+2683 | /     pub fn insert_carved_file(
+2684 | |         &self,
+2685 | |         case_id: &str,
+2686 | |         evidence_id: &str,
+...    |
+2696 | |         details_json: &str,
+2697 | |     ) -> SqliteResult<i64> {
+     | |__________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (23/7)
+    --> engine\src\case\database.rs:2798:5
+     |
+2798 | /     pub fn upsert_file_table_row(
+2799 | |         &self,
+2800 | |         case_id: &str,
+2801 | |         source_type: &str,
+...    |
+2821 | |         summary_json: &str,
+2822 | |     ) -> SqliteResult<()> {
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (8/7)
+  --> engine\src\case\integrity.rs:26:5
+   |
+26 | /     pub fn new(
+27 | |         event_id: &str,
+28 | |         case_id: &str,
+29 | |         user_name: &str,
+...  |
+34 | |         ts_local: &str,
+35 | |     ) -> Self {
+   | |_____________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (12/7)
+    --> engine\src\case\verify.rs:995:1
+     |
+ 995 | / fn compute_activity_event_hash(
+ 996 | |     event_id: &str,
+ 997 | |     case_id: &str,
+ 998 | |     event_type: &str,
+...    |
+1007 | |     prev_hash: Option<&str>,
+1008 | | ) -> String {
+     | |___________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (9/7)
+   --> engine\src\catalog\mod.rs:119:5
+    |
+119 | /     pub fn insert_evidence(
+120 | |         &mut self,
+121 | |         case_id: &str,
+122 | |         path: &str,
+...   |
+128 | |         disk_layout: &str,
+129 | |     ) -> SqliteResult<i64> {
+    | |__________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (9/7)
+   --> engine\src\catalog\mod.rs:159:5
+    |
+159 | /     pub fn insert_file(
+160 | |         &mut self,
+161 | |         volume_id: i64,
+162 | |         record_number: u32,
+...   |
+168 | |         modified: Option<i64>,
+169 | |     ) -> SqliteResult<i64> {
+    | |__________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (12/7)
+    --> engine\src\filesystem\ntfs.rs:1020:5
+     |
+1020 | /     fn walk_recursive<C: EvidenceContainerRO>(
+1021 | |         container: &C,
+1022 | |         volume_base_offset: u64,
+1023 | |         mft_offset: u64,
+...    |
+1032 | |         results: &mut Vec<NtfsTreeEntry>,
+1033 | |     ) -> Result<(), ForensicError> {
+     | |__________________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: items after a test module
+   --> engine\src\disk\format.rs:228:1
+    |
+228 | mod tests {
+    | ^^^^^^^^^
+...
+313 | pub fn get_image_segments(path: &Path) -> Result<Vec<ImageSegment>, ForensicError> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#items_after_test_module
+    = note: `#[warn(clippy::items_after_test_module)]` on by default
+    = help: move the items to before the test module was defined
+
+warning: `forensic_engine` (lib) generated 13 warnings
+    Checking forensic_cli v0.1.0 (D:\forensic-suite\cli)
+warning: `forensic_engine` (lib test) generated 14 warnings (13 duplicates) (run `cargo clippy --fix --lib -p forensic_engine --tests` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 17.10s

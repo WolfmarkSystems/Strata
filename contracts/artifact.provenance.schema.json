@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strata.dev/contracts/artifact.provenance.schema.json",
+  "title": "Strata Artifact Provenance",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_id",
+    "artifact_type",
+    "case_id",
+    "evidence_id",
+    "parser",
+    "source_reference",
+    "extracted_at_utc"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "artifact_id": { "type": "string", "minLength": 1 },
+    "artifact_type": { "type": "string", "minLength": 1 },
+    "case_id": { "type": "string", "minLength": 1 },
+    "evidence_id": { "type": "string", "minLength": 1 },
+    "parser": {
+      "type": "object",
+      "required": ["module", "version"],
+      "properties": {
+        "module": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "source_reference": {
+      "type": "object",
+      "properties": {
+        "record_id": { "type": "string" },
+        "offset_bytes": { "type": "integer", "minimum": 0 },
+        "path": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "extracted_at_utc": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

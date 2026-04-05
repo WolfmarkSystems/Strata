@@ -1,0 +1,479 @@
+    Checking forensic_engine v0.1.0 (D:\forensic-suite\engine)
+warning: this function has too many arguments (16/7)
+   --> engine\src\analysis\scoring.rs:93:5
+    |
+ 93 | /     pub fn from_row(
+ 94 | |         id: i64,
+ 95 | |         source_type: String,
+ 96 | |         source_id: String,
+...   |
+109 | |         summary_json: serde_json::Value,
+110 | |     ) -> Self {
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+    = note: `#[warn(clippy::too_many_arguments)]` on by default
+
+warning: this function has too many arguments (8/7)
+    --> engine\src\case\database.rs:1228:5
+     |
+1228 | /     pub fn add_evidence_with_detection(
+1229 | |         &self,
+1230 | |         case_id: &str,
+1231 | |         evidence_id: &str,
+...    |
+1236 | |         detection: &crate::evidence::DetectionOutput,
+1237 | |     ) -> SqliteResult<()> {
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (12/7)
+    --> engine\src\case\database.rs:1775:5
+     |
+1775 | /     pub fn upsert_global_entity(
+1776 | |         &self,
+1777 | |         case_id: &str,
+1778 | |         entity_type: &str,
+...    |
+1787 | |         json_data: &str,
+1788 | |     ) -> SqliteResult<()> {
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (12/7)
+    --> engine\src\case\database.rs:1856:5
+     |
+1856 | /     pub fn global_search(
+1857 | |         &self,
+1858 | |         case_id: &str,
+1859 | |         query: &str,
+...    |
+1868 | |         after_rowid: Option<i64>,
+1869 | |     ) -> SqliteResult<Vec<GlobalSearchHit>> {
+     | |___________________________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (12/7)
+    --> engine\src\case\database.rs:2482:5
+     |
+2482 | /     pub fn insert_file_strings(
+2483 | |         &self,
+2484 | |         case_id: &str,
+2485 | |         evidence_id: Option<&str>,
+...    |
+2494 | |         strings_json: &str,
+2495 | |     ) -> SqliteResult<()> {
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (9/7)
+    --> engine\src\case\database.rs:2612:5
+     |
+2612 | /     pub fn insert_ioc_hit(
+2613 | |         &self,
+2614 | |         case_id: &str,
+2615 | |         rule_id: i64,
+...    |
+2621 | |         context_json: &str,
+2622 | |     ) -> SqliteResult<()> {
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (13/7)
+    --> engine\src\case\database.rs:2683:5
+     |
+2683 | /     pub fn insert_carved_file(
+2684 | |         &self,
+2685 | |         case_id: &str,
+2686 | |         evidence_id: &str,
+...    |
+2696 | |         details_json: &str,
+2697 | |     ) -> SqliteResult<i64> {
+     | |__________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (23/7)
+    --> engine\src\case\database.rs:2798:5
+     |
+2798 | /     pub fn upsert_file_table_row(
+2799 | |         &self,
+2800 | |         case_id: &str,
+2801 | |         source_type: &str,
+...    |
+2821 | |         summary_json: &str,
+2822 | |     ) -> SqliteResult<()> {
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (8/7)
+  --> engine\src\case\integrity.rs:26:5
+   |
+26 | /     pub fn new(
+27 | |         event_id: &str,
+28 | |         case_id: &str,
+29 | |         user_name: &str,
+...  |
+34 | |         ts_local: &str,
+35 | |     ) -> Self {
+   | |_____________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (12/7)
+    --> engine\src\case\verify.rs:995:1
+     |
+ 995 | / fn compute_activity_event_hash(
+ 996 | |     event_id: &str,
+ 997 | |     case_id: &str,
+ 998 | |     event_type: &str,
+...    |
+1007 | |     prev_hash: Option<&str>,
+1008 | | ) -> String {
+     | |___________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (9/7)
+   --> engine\src\catalog\mod.rs:119:5
+    |
+119 | /     pub fn insert_evidence(
+120 | |         &mut self,
+121 | |         case_id: &str,
+122 | |         path: &str,
+...   |
+128 | |         disk_layout: &str,
+129 | |     ) -> SqliteResult<i64> {
+    | |__________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this function has too many arguments (9/7)
+   --> engine\src\catalog\mod.rs:159:5
+    |
+159 | /     pub fn insert_file(
+160 | |         &mut self,
+161 | |         volume_id: i64,
+162 | |         record_number: u32,
+...   |
+168 | |         modified: Option<i64>,
+169 | |     ) -> SqliteResult<i64> {
+    | |__________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: this expression creates a reference which is immediately dereferenced by the compiler
+   --> engine\src\classification\errorreporting.rs:220:44
+    |
+220 |     let data = super::scalpel::read_prefix(&path, super::scalpel::DEFAULT_BINARY_MAX_BYTES)?;
+    |                                            ^^^^^ help: change this to: `path`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#needless_borrow
+    = note: `#[warn(clippy::needless_borrow)]` on by default
+
+warning: this `if` statement can be collapsed
+   --> engine\src\classification\errorreporting.rs:242:5
+    |
+242 | /     if &data[0..4] == b"MDMP" {
+243 | |         if data.len() > 24 {
+244 | |             let dump_time = u32::from_le_bytes([data[12], data[13], data[14], data[15]]);
+245 | |             if dump_time > 0 {
+...   |
+249 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#collapsible_if
+    = note: `#[warn(clippy::collapsible_if)]` on by default
+help: collapse nested if block
+    |
+242 ~     if &data[0..4] == b"MDMP"
+243 ~         && data.len() > 24 {
+244 |             let dump_time = u32::from_le_bytes([data[12], data[13], data[14], data[15]]);
+...
+247 |             }
+248 ~         }
+    |
+
+warning: manual `RangeInclusive::contains` implementation
+   --> engine\src\classification\exif.rs:138:19
+    |
+138 |           } else if marker >= 0xC0
+    |  ___________________^
+139 | |             && marker <= 0xCF
+    | |_____________________________^ help: use: `(0xC0..=0xCF).contains(&marker)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#manual_range_contains
+    = note: `#[warn(clippy::manual_range_contains)]` on by default
+
+warning: this manual char comparison can be written more succinctly
+   --> engine\src\classification\exif.rs:382:16
+    |
+382 |         .split(|c| c == ' ' || c == ':' || c == '-')
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using an array of `char`: `[' ', ':', '-']`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#manual_pattern_char_comparison
+    = note: `#[warn(clippy::manual_pattern_char_comparison)]` on by default
+
+warning: this `impl` can be derived
+  --> engine\src\classification\lnk.rs:49:1
+   |
+49 | / impl Default for LnkFlags {
+50 | |     fn default() -> Self {
+51 | |         Self {
+52 | |             has_link_target_id_list: false,
+...  |
+75 | | }
+   | |_^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#derivable_impls
+   = note: `#[warn(clippy::derivable_impls)]` on by default
+help: replace the manual implementation with a derive attribute
+   |
+25 + #[derive(Default)]
+26 | pub struct LnkFlags {
+   |
+
+warning: this `if` statement can be collapsed
+   --> engine\src\classification\lnk.rs:162:5
+    |
+162 | /     if lnk.flags.has_link_target_id_list {
+163 | |         if offset + 2 <= data.len() {
+164 | |             let id_list_size = u16::from_le_bytes([data[offset], data[offset + 1]]) as usize;
+165 | |             offset += 2;
+...   |
+185 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+162 ~     if lnk.flags.has_link_target_id_list
+163 ~         && offset + 2 <= data.len() {
+164 |             let id_list_size = u16::from_le_bytes([data[offset], data[offset + 1]]) as usize;
+...
+183 |             }
+184 ~         }
+    |
+
+warning: this `if` statement can be collapsed
+   --> engine\src\classification\lnk.rs:187:5
+    |
+187 | /     if lnk.flags.has_link_info {
+188 | |         if offset + 4 <= data.len() {
+189 | |             let link_info_size = u32::from_le_bytes([
+190 | |                 data[offset],
+...   |
+263 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+187 ~     if lnk.flags.has_link_info
+188 ~         && offset + 4 <= data.len() {
+189 |             let link_info_size = u32::from_le_bytes([
+...
+261 |             offset += link_info_size;
+262 ~         }
+    |
+
+warning: this `if` statement can be collapsed
+   --> engine\src\classification\lnk.rs:265:5
+    |
+265 | /     if lnk.flags.has_name {
+266 | |         if offset + 2 <= data.len() {
+267 | |             let name_size = u16::from_le_bytes([data[offset], data[offset + 1]]) as usize;
+268 | |             offset += 2;
+...   |
+281 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+265 ~     if lnk.flags.has_name
+266 ~         && offset + 2 <= data.len() {
+267 |             let name_size = u16::from_le_bytes([data[offset], data[offset + 1]]) as usize;
+...
+279 |             offset += name_size;
+280 ~         }
+    |
+
+warning: this `if` statement can be collapsed
+   --> engine\src\classification\lnk.rs:283:5
+    |
+283 | /     if lnk.flags.has_working_dir {
+284 | |         if offset + 2 <= data.len() {
+285 | |             let dir_size = u16::from_le_bytes([data[offset], data[offset + 1]]) as usize;
+286 | |             offset += 2;
+...   |
+297 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+283 ~     if lnk.flags.has_working_dir
+284 ~         && offset + 2 <= data.len() {
+285 |             let dir_size = u16::from_le_bytes([data[offset], data[offset + 1]]) as usize;
+...
+295 |             offset += dir_size;
+296 ~         }
+    |
+
+warning: this `if` statement can be collapsed
+   --> engine\src\classification\lnk.rs:299:5
+    |
+299 | /     if lnk.flags.has_arguments {
+300 | |         if offset + 2 <= data.len() {
+301 | |             let args_size = u16::from_le_bytes([data[offset], data[offset + 1]]) as usize;
+302 | |             offset += 2;
+...   |
+313 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+299 ~     if lnk.flags.has_arguments
+300 ~         && offset + 2 <= data.len() {
+301 |             let args_size = u16::from_le_bytes([data[offset], data[offset + 1]]) as usize;
+...
+311 |             offset += args_size;
+312 ~         }
+    |
+
+warning: this `if` statement can be collapsed
+   --> engine\src\classification\lnk.rs:315:5
+    |
+315 | /     if lnk.flags.has_icon_location {
+316 | |         if offset + 2 <= data.len() {
+317 | |             let icon_size = u16::from_le_bytes([data[offset], data[offset + 1]]) as usize;
+318 | |             offset += 2;
+...   |
+328 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+315 ~     if lnk.flags.has_icon_location
+316 ~         && offset + 2 <= data.len() {
+317 |             let icon_size = u16::from_le_bytes([data[offset], data[offset + 1]]) as usize;
+...
+326 |             }
+327 ~         }
+    |
+
+warning: this `if` has identical blocks
+   --> engine\src\classification\lnk.rs:437:32
+    |
+437 |               if data.len() > 18 {
+    |  ________________________________^
+438 | |                 Some("Network Share".to_string())
+439 | |             } else {
+    | |_____________^
+    |
+note: same as this
+   --> engine\src\classification\lnk.rs:439:20
+    |
+439 |               } else {
+    |  ____________________^
+440 | |                 Some("Network Share".to_string())
+441 | |             }
+    | |_____________^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#if_same_then_else
+    = note: `#[warn(clippy::if_same_then_else)]` on by default
+
+warning: very complex type used. Consider factoring parts into `type` definitions
+   --> engine\src\classification\macos_artifacts.rs:102:13
+    |
+102 |     parser: fn(&str) -> Vec<(String, Option<u64>)>,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#type_complexity
+    = note: `#[warn(clippy::type_complexity)]` on by default
+
+warning: this function has too many arguments (12/7)
+    --> engine\src\filesystem\ntfs.rs:1020:5
+     |
+1020 | /     fn walk_recursive<C: EvidenceContainerRO>(
+1021 | |         container: &C,
+1022 | |         volume_base_offset: u64,
+1023 | |         mft_offset: u64,
+...    |
+1032 | |         results: &mut Vec<NtfsTreeEntry>,
+1033 | |     ) -> Result<(), ForensicError> {
+     | |__________________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#too_many_arguments
+
+warning: redundant pattern matching, consider using `is_err()`
+    --> engine\src\filesystem\ntfs.rs:1053:16
+     |
+1053 |         if let Err(_) = apply_usa_fixup(&mut data, 512) {
+     |         -------^^^^^^---------------------------------- help: try: `if apply_usa_fixup(&mut data, 512).is_err()`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#redundant_pattern_matching
+     = note: `#[warn(clippy::redundant_pattern_matching)]` on by default
+
+warning: parameter is only used in recursion
+    --> engine\src\filesystem\ntfs.rs:1025:9
+     |
+1025 |         cluster_size: u32,
+     |         ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cluster_size`
+     |
+note: parameter used here
+    --> engine\src\filesystem\ntfs.rs:1180:25
+     |
+1180 |                         cluster_size,
+     |                         ^^^^^^^^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#only_used_in_recursion
+     = note: `#[warn(clippy::only_used_in_recursion)]` on by default
+
+warning: this multiplication by -1 can be written more succinctly
+  --> engine\src\hashset\bloom.rs:15:21
+   |
+15 |         let size = (-1.0 * (expected_items as f64) * false_positive_rate.ln()
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider using: `-(expected_items as f64)`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#neg_multiply
+   = note: `#[warn(clippy::neg_multiply)]` on by default
+
+warning: items after a test module
+   --> engine\src\disk\format.rs:228:1
+    |
+228 | mod tests {
+    | ^^^^^^^^^
+...
+313 | pub fn get_image_segments(path: &Path) -> Result<Vec<ImageSegment>, ForensicError> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#items_after_test_module
+    = note: `#[warn(clippy::items_after_test_module)]` on by default
+    = help: move the items to before the test module was defined
+
+warning: module has the same name as its containing module
+  --> engine\src\tests\mod.rs:2:1
+   |
+ 2 | / mod tests {
+ 3 | |     use crate::hashing::{HashOptions, HashResults};
+ 4 | |
+ 5 | |     #[test]
+...  |
+23 | | }
+   | |_^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.92.0/index.html#module_inception
+   = note: `#[warn(clippy::module_inception)]` on by default
+
+warning: `forensic_engine` (lib) generated 29 warnings (run `cargo clippy --fix --lib -p forensic_engine` to apply 13 suggestions)
+    Checking forensic_cli v0.1.0 (D:\forensic-suite\cli)
+warning: `forensic_engine` (lib test) generated 31 warnings (29 duplicates) (run `cargo clippy --fix --lib -p forensic_engine --tests` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.38s

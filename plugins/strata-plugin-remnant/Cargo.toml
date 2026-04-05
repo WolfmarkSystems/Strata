@@ -1,0 +1,17 @@
+[package]
+name = "strata-plugin-remnant"
+version = "2.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+strata-plugin-sdk = { path = "../../crates/strata-plugin-sdk" }
+strata-core = { path = "../../crates/strata-core" }
+strata-fs = { path = "../../crates/strata-fs" }
+strata-artifacts = { path = "../../crates/strata-artifacts" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { workspace = true }
+anyhow = "1.0"

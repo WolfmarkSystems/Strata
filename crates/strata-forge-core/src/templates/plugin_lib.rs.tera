@@ -1,0 +1,45 @@
+use plugin_sdk::{VantorPlugin, PluginContext, PluginResult, Artifact};
+
+pub struct {{ name | capitalize }}Plugin {
+    name: String,
+    version: String,
+}
+
+impl {{ name | capitalize }}Plugin {
+    pub fn new() -> Self {
+        Self {
+            name: "{{ name }}".to_string(),
+            version: "{{ version }}".to_string(),
+        }
+    }
+}
+
+impl VantorPlugin for {{ name | capitalize }}Plugin {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn version(&self) -> &str {
+        &self.version
+    }
+
+    fn supported_inputs(&self) -> Vec<String> {
+        vec!["*".to_string()]
+    }
+
+    fn run(&self, _ctx: PluginContext) -> PluginResult {
+        let mut results = Vec::new();
+        
+        // Example artifact
+        let mut artifact = Artifact::new("system", "forge_generated");
+        artifact.add_field("description", "{{ description }}");
+        results.push(artifact);
+
+        Ok(results)
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn create_plugin() -> Box<dyn VantorPlugin> {
+    Box::new({{ name | capitalize }}Plugin::new())
+}

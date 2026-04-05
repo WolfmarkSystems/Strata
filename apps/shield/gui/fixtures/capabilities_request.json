@@ -1,0 +1,4 @@
+{
+  "command": "capabilities",
+  "args": ["--json-result", "gui/runs/capabilities_result.json", "--quiet"]
+}

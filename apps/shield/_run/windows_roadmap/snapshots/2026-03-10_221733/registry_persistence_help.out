@@ -1,0 +1,8 @@
+Registry-Persistence Command
+  --autorun-reg <path> Path to autorun .reg export
+  --bam-reg <path>     Path to BAM/DAM .reg export
+  --tasks-root <path>  Root directory for task XML files
+  --limit <N>          Limit rows (default: 200, max: 5000)
+  --json               Print data payload JSON to stdout
+  --json-result <file> Write envelope JSON to file
+  --quiet              Suppress console summary output

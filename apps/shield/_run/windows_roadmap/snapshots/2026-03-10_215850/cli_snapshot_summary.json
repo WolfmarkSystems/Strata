@@ -1,0 +1,41 @@
+﻿{
+    "timestamp_utc":  "2026-03-10T21:58:52.804Z",
+    "out_dir":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_215850",
+    "runs":  [
+                 {
+                     "name":  "capabilities_json",
+                     "args":  "capabilities --json",
+                     "exit_code":  0,
+                     "output_file":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_215850\\capabilities_json.out",
+                     "sha256":  "67C2E0075AE9F0F7DB9A21ED5980AD3E07D936A48F6668BBB0547B4D0D931578"
+                 },
+                 {
+                     "name":  "doctor_json",
+                     "args":  "doctor --json",
+                     "exit_code":  0,
+                     "output_file":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_215850\\doctor_json.out",
+                     "sha256":  "4B0F9EB9A8DA6A8D5281B9610F7364FC798A1172CB9611832F84B8E4A630739D"
+                 },
+                 {
+                     "name":  "timeline_help",
+                     "args":  "timeline --help",
+                     "exit_code":  0,
+                     "output_file":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_215850\\timeline_help.out",
+                     "sha256":  "AAAC418285744023B58B62AF986E96175DD2FB39F31174255FC9F559EE00FE65"
+                 },
+                 {
+                     "name":  "registry_persistence_help",
+                     "args":  "registry-persistence --help",
+                     "exit_code":  0,
+                     "output_file":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_215850\\registry_persistence_help.out",
+                     "sha256":  "CC5DEA4F716685CC756CB8D8159109FBC8A37BD80CF6D5706631C6F67A16BCA5"
+                 },
+                 {
+                     "name":  "violations_help",
+                     "args":  "violations --help",
+                     "exit_code":  0,
+                     "output_file":  "D:\\forensic-suite\\_run\\windows_roadmap\\snapshots\\2026-03-10_215850\\violations_help.out",
+                     "sha256":  "AAAC418285744023B58B62AF986E96175DD2FB39F31174255FC9F559EE00FE65"
+                 }
+             ]
+}

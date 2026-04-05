@@ -1,0 +1,61 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-01T19:52:34.021646900+00:00",
+  "platform": "windows",
+  "command": "smoke-test",
+  "args": [
+    "smoke-test",
+    "--image",
+    "D:\\forensic-suite\\evidence\\Stack001_Surface_HDD.E01",
+    "--out",
+    ".\\exports\\smoke\\surface_smoke",
+    "--mft",
+    "50",
+    "--quiet",
+    "--json-result",
+    ".\\gui\\runs\\smoke_surface_result.json"
+  ],
+  "status": "error",
+  "exit_code": 2,
+  "error": "EVF decompression not supported",
+  "warning": "EVF format detected but decompression is not supported. Cannot perform disk analysis.",
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 0,
+  "data": {
+    "analysis_mode": "container_only",
+    "analysis_valid": false,
+    "audit_enabled": true,
+    "bytes_actually_read": 64,
+    "container_type": "EVF",
+    "did_open_image": true,
+    "elapsed_ms": 0,
+    "error": "EVF decompression not supported",
+    "evidence_size_bytes": 16387865678,
+    "filesystem_detected": null,
+    "image_path": "D:\\forensic-suite\\evidence\\Stack001_Surface_HDD.E01",
+    "mft_count": 50,
+    "mft_records_attempted": 0,
+    "mft_records_emitted": 0,
+    "out_dir": ".\\exports\\smoke\\surface_smoke",
+    "outputs": {
+      "audit_json": null,
+      "json_summary": ".\\exports\\smoke\\surface_smoke\\smoke_summary.json",
+      "summary_txt": null,
+      "timeline_csv": null
+    },
+    "platform": "windows",
+    "sample_sha256": null,
+    "sizes": {
+      "audit_json": 0,
+      "json_summary": 0,
+      "summary_txt": 0,
+      "timeline_csv": 0
+    },
+    "status": "error",
+    "timeline_enabled": true,
+    "timestamp_utc": "2026-03-01T19:52:34.021384100+00:00",
+    "tool_version": "0.1.0",
+    "warning": "EVF format detected but decompression is not supported. Cannot perform disk analysis."
+  }
+}

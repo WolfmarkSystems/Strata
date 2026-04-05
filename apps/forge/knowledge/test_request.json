@@ -1,0 +1,8 @@
+﻿{
+  "messages": [
+    { "role": "system", "content": "You are DFIR Coding AI." },
+    { "role": "user", "content": "Search my vault for the word sha256 and cite files/lines if found." }
+  ],
+  "temperature": 0.2,
+  "max_tokens": 250
+}

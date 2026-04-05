@@ -1,0 +1,40 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-13T02:11:51.244278100+00:00",
+  "platform": "windows",
+  "command": "examine",
+  "args": [
+    "--json-result",
+    "tests_temp_examine_json_success_1773367909858308000\\examine_result.json",
+    "--quiet",
+    "--case",
+    "examine_case",
+    "--db",
+    "tests_temp_examine_json_success_1773367909858308000\\case.sqlite"
+  ],
+  "status": "error",
+  "exit_code": 1,
+  "error": "Examination failed",
+  "warning": null,
+  "outputs": {
+    "bundle_zip": "exports/defensibility\\examine_case\\20260313_021151"
+  },
+  "sizes": {
+    "bundle_zip": 4096
+  },
+  "elapsed_ms": 66,
+  "data": {
+    "case_id": "examine_case",
+    "db_path": "tests_temp_examine_json_success_1773367909858308000\\case.sqlite",
+    "invoked": "triage_session",
+    "override_json_path": null,
+    "preset_name": "Standard Examiner",
+    "result": {
+      "bundle_hash_sha256": "c95778b0cf7e303e4d4d71d6219f9e6e0612b330d4388553b22b9e7fa920b7c9",
+      "bundle_path": "exports/defensibility\\examine_case\\20260313_021151",
+      "session_id": 1,
+      "status": "Fail",
+      "violations_count": 0
+    }
+  }
+}

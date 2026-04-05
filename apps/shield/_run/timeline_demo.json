@@ -1,0 +1,27 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-08T02:22:14.050010700+00:00",
+  "platform": "windows",
+  "command": "timeline",
+  "args": [
+    "--case",
+    "demo_case",
+    "--db",
+    ".\\cases\\demo_case.sqlite",
+    "--limit",
+    "5",
+    "--json",
+    "--quiet",
+    "--json-result",
+    ".\\_run\\timeline_demo.json"
+  ],
+  "status": "error",
+  "exit_code": 1,
+  "error": "Error querying activity_log: no such table: activity_log",
+  "warning": null,
+  "error_type": "database_error",
+  "hint": "Check activity_log table availability",
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 17
+}

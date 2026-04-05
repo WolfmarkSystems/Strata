@@ -1,0 +1,4 @@
+﻿[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Drv08]
+"DisplayName"="Driver 08"
+"ImagePath"="\\SystemRoot\\System32\\drivers\\drv08.sys"
+"Start"=dword:00000003

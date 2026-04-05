@@ -1,0 +1,4 @@
+﻿[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Drv06]
+"DisplayName"="Driver 06"
+"ImagePath"="\\SystemRoot\\System32\\drivers\\drv06.sys"
+"Start"=dword:00000003

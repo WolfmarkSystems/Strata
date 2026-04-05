@@ -1,0 +1,378 @@
+﻿cargo : warning: profiles for the non root 
+package will be ignored, specify profiles at the 
+workspace root:
+At line:1 char:1
++ cargo check 2>&1 | Out-File compile_errors.txt 
+-Encoding utf8
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (war 
+   ning: profil...workspace root::String) [], R  
+  emoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+package:   D:\forensic-suite\engine\plugins\examp
+le\Cargo.toml
+workspace: D:\forensic-suite\Cargo.toml
+    Checking forensic_engine v0.1.0 
+(D:\forensic-suite\engine)
+error[E0432]: unresolved import 
+`crate::memory::MemoryParser`
+  --> engine\src\evidence\mod.rs:17:5
+   |
+17 | use crate::memory::MemoryParser;
+   |     ^^^^^^^^^^^^^^^------------
+   |     |              |
+   |     |              help: a similar name 
+exists in the module: `MemoryPage`
+   |     no `MemoryParser` in `memory`
+
+error[E0432]: unresolved import `log`
+ --> engine\src\parsers\cloud\platforms.rs:1:5
+  |
+1 | use log::{debug, error};
+  |     ^^^ use of unresolved module or unlinked 
+crate `log`
+  |
+  = help: if you wanted to use a crate named 
+`log`, use `cargo add log` to add it to your 
+`Cargo.toml`
+
+error[E0432]: unresolved import `log`
+ --> engine\src\parsers\mobile\chat.rs:1:5
+  |
+1 | use log::{debug, error};
+  |     ^^^ use of unresolved module or unlinked 
+crate `log`
+  |
+  = help: if you wanted to use a crate named 
+`log`, use `cargo add log` to add it to your 
+`Cargo.toml`
+
+error[E0432]: unresolved import `log`
+ --> engine\src\parsers\mobile\activity.rs:1:5
+  |
+1 | use log::{debug, error};
+  |     ^^^ use of unresolved module or unlinked 
+crate `log`
+  |
+  = help: if you wanted to use a crate named 
+`log`, use `cargo add log` to add it to your 
+`Cargo.toml`
+
+error[E0432]: unresolved import `log`
+ --> engine\src\parsers\mobile\finance.rs:1:5
+  |
+1 | use log::{debug, error};
+  |     ^^^ use of unresolved module or unlinked 
+crate `log`
+  |
+  = help: if you wanted to use a crate named 
+`log`, use `cargo add log` to add it to your 
+`Cargo.toml`
+
+error[E0433]: failed to resolve: use of 
+undeclared type `VhdVfs`
+   --> engine\src\container\mod.rs:146:31
+    |
+146 |                 let vhd_vfs = 
+VhdVfs::new(path)?;
+    |                               ^^^^^^ use 
+of undeclared type `VhdVfs`
+    |
+help: consider importing this struct through its 
+public re-export
+    |
+ 18 + use crate::virtualization::VhdVfs;
+    |
+
+warning: unused import: `BufReader`
+ --> engine\src\container\vmdk.rs:2:24
+  |
+2 | use std::io::{BufRead, BufReader};
+  |                        ^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of 
+`#[warn(unused)]`) on by default
+
+warning: unused imports: `Connection`, 
+`OpenFlags`, and `params`
+ --> engine\src\parsers\ios\knowledgec.rs:2:16
+  |
+2 | use rusqlite::{params, Connection, 
+OpenFlags};
+  |                ^^^^^^  ^^^^^^^^^^  ^^^^^^^^^
+
+warning: unused import: `serde_json::Value`
+ --> engine\src\parsers\mobile\chat.rs:2:5
+  |
+2 | use serde_json::Value;
+  |     ^^^^^^^^^^^^^^^^^
+
+error[E0599]: no variant or associated item 
+named `MalformedData` found for enum 
+`ForensicError` in the current scope
+  --> engine\src\analysis\sqlite_viewer.rs:57:40
+   |
+57 |             None => Err(ForensicError::Malfo
+rmedData(String::from("Value does not 
+immediately map to a known forensic epoch.")))
+   |                                        
+^^^^^^^^^^^^^ variant or associated item not 
+found in `ForensicError`
+   |
+  ::: engine\src\errors.rs:4:1
+   |
+ 4 | pub enum ForensicError {
+   | ---------------------- variant or 
+associated item `MalformedData` not found for 
+this enum
+
+error[E0599]: no variant or associated item 
+named `UnsupportedParser` found for enum 
+`ForensicError` in the current scope
+  --> engine\src\parsers\cloud\platforms.rs:27:37
+   |
+27 |             _ => Err(ForensicError::Unsuppor
+tedParser(format!("Unknown cloud log target: 
+{}", log_type))),
+   |                                     
+^^^^^^^^^^^^^^^^^ variant or associated item not 
+found in `ForensicError`
+   |
+  ::: engine\src\errors.rs:4:1
+   |
+ 4 | pub enum ForensicError {
+   | ---------------------- variant or 
+associated item `UnsupportedParser` not found 
+for this enum
+
+error[E0599]: no variant or associated item 
+named `UnsupportedParser` found for enum 
+`ForensicError` in the current scope
+  --> engine\src\parsers\mobile\chat.rs:34:37
+   |
+34 |             _ => Err(ForensicError::Unsuppor
+tedParser(format!("Unknown chat domain: {}", 
+app_domain))),
+   |                                     
+^^^^^^^^^^^^^^^^^ variant or associated item not 
+found in `ForensicError`
+   |
+  ::: engine\src\errors.rs:4:1
+   |
+ 4 | pub enum ForensicError {
+   | ---------------------- variant or 
+associated item `UnsupportedParser` not found 
+for this enum
+
+error[E0599]: no variant or associated item 
+named `UnsupportedParser` found for enum 
+`ForensicError` in the current scope
+  --> engine\src\parsers\mobile\activity.rs:26:37
+   |
+26 |             _ => Err(ForensicError::Unsuppor
+tedParser(format!("Unknown activity domain: {}", 
+app_domain))),
+   |                                     
+^^^^^^^^^^^^^^^^^ variant or associated item not 
+found in `ForensicError`
+   |
+  ::: engine\src\errors.rs:4:1
+   |
+ 4 | pub enum ForensicError {
+   | ---------------------- variant or 
+associated item `UnsupportedParser` not found 
+for this enum
+
+error[E0599]: no variant or associated item 
+named `UnsupportedParser` found for enum 
+`ForensicError` in the current scope
+  --> engine\src\parsers\mobile\finance.rs:23:37
+   |
+23 |             _ => Err(ForensicError::Unsuppor
+tedParser(format!("Unknown finance domain: {}", 
+app_domain))),
+   |                                     
+^^^^^^^^^^^^^^^^^ variant or associated item not 
+found in `ForensicError`
+   |
+  ::: engine\src\errors.rs:4:1
+   |
+ 4 | pub enum ForensicError {
+   | ---------------------- variant or 
+associated item `UnsupportedParser` not found 
+for this enum
+
+error[E0061]: this function takes 3 arguments 
+but 1 argument was supplied
+  --> engine\src\virtualization\vhd.rs:60:9
+   |
+60 |         
+crate::disk::detect_disk_layout(&self.container)
+   |         
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----------------- 
+two arguments of type `Uuid` and 
+`Arc<AuditLogger>` are missing
+   |
+note: function defined here
+  --> engine\src\disk\mod.rs:53:8
+   |
+53 | pub fn detect_disk_layout<C: 
+EvidenceContainerRO>(
+   |        ^^^^^^^^^^^^^^^^^^
+54 |     container: &C,
+55 |     case_id: Uuid,
+   |     -------------
+56 |     audit: Arc<AuditLogger>,
+   |     -----------------------
+help: provide the arguments
+   |
+60 |         
+crate::disk::detect_disk_layout(&self.container, 
+/* Uuid */, /* Arc<AuditLogger> */)
+   |                                             
+           ++++++++++++++++++++++++++++++++++++
+
+error[E0308]: mismatched types
+  --> engine\src\virtualization\vhd.rs:60:9
+   |
+58 |     fn get_volumes(&self) -> 
+Vec<VolumeInfo> {
+   |                              
+--------------- expected 
+`Vec<virtualization::VolumeInfo>` because of 
+return type
+59 |         // Delegate to the universal disk 
+detector using our EvidenceContainerRO impl
+60 |         
+crate::disk::detect_disk_layout(&self.container)
+   |         
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
+expected `Vec<VolumeInfo>`, found 
+`Result<DiskLayout, ForensicError>`
+   |
+   = note: expected struct 
+`Vec<virtualization::VolumeInfo>`
+                found enum 
+`Result<disk::DiskLayout, ForensicError>`
+
+warning: unused import: `BufRead`
+ --> engine\src\container\vmdk.rs:2:15
+  |
+2 | use std::io::{BufRead, BufReader};
+  |               ^^^^^^^
+
+warning: unused variable: `path`
+  --> engine\src\container\vhd.rs:17:18
+   |
+17 | pub fn open_vhdx(path: &Path) -> 
+Result<VhdxContainer, ForensicError> {
+   |                  ^^^^ help: if this is 
+intentional, prefix it with an underscore: 
+`_path`
+   |
+   = note: `#[warn(unused_variables)]` (part of 
+`#[warn(unused)]`) on by default
+
+warning: unused variable: `offset`
+  --> engine\src\container\aff4.rs:60:25
+   |
+60 |     fn read_into(&self, offset: u64, buf: 
+&mut [u8]) -> Result<(), ForensicError> {
+   |                         ^^^^^^ help: if 
+this is intentional, prefix it with an 
+underscore: `_offset`
+
+warning: unused variable: `offset`
+  --> engine\src\container\vdi.rs:71:25
+   |
+71 |     fn read_into(&self, offset: u64, buf: 
+&mut [u8]) -> Result<(), ForensicError> {
+   |                         ^^^^^^ help: if 
+this is intentional, prefix it with an 
+underscore: `_offset`
+
+warning: unused variable: `offset`
+  --> engine\src\container\l01.rs:78:25
+   |
+78 |     fn read_into(&self, offset: u64, buf: 
+&mut [u8]) -> Result<(), ForensicError> {
+   |                         ^^^^^^ help: if 
+this is intentional, prefix it with an 
+underscore: `_offset`
+
+warning: unused variable: `offset`
+  --> engine\src\container\lvm.rs:82:25
+   |
+82 |     fn read_into(&self, offset: u64, buf: 
+&mut [u8]) -> Result<(), ForensicError> {
+   |                         ^^^^^^ help: if 
+this is intentional, prefix it with an 
+underscore: `_offset`
+
+warning: unused variable: `offset`
+  --> 
+engine\src\container\storage_spaces.rs:57:25
+   |
+57 |     fn read_into(&self, offset: u64, buf: 
+&mut [u8]) -> Result<(), ForensicError> {
+   |                         ^^^^^^ help: if 
+this is intentional, prefix it with an 
+underscore: `_offset`
+
+warning: unused variable: `offset`
+  --> engine\src\container\core_storage.rs:57:25
+   |
+57 |     fn read_into(&self, offset: u64, buf: 
+&mut [u8]) -> Result<(), ForensicError> {
+   |                         ^^^^^^ help: if 
+this is intentional, prefix it with an 
+underscore: `_offset`
+
+warning: unused variable: `offset`
+  --> engine\src\container\luks.rs:63:25
+   |
+63 |     fn read_into(&self, offset: u64, buf: 
+&mut [u8]) -> Result<(), ForensicError> {
+   |                         ^^^^^^ help: if 
+this is intentional, prefix it with an 
+underscore: `_offset`
+
+warning: unused variable: `offset`
+  --> engine\src\container\filevault.rs:56:25
+   |
+56 |     fn read_into(&self, offset: u64, buf: 
+&mut [u8]) -> Result<(), ForensicError> {
+   |                         ^^^^^^ help: if 
+this is intentional, prefix it with an 
+underscore: `_offset`
+
+warning: variable does not need to be mutable
+  --> engine\src\scripting\mod.rs:11:9
+   |
+11 |     let mut parsers: Vec<Box<dyn 
+ArtifactParser>> = Vec::new();
+   |         ----^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of 
+`#[warn(unused)]`) on by default
+
+warning: unused variable: `ext_str`
+  --> engine\src\scripting\mod.rs:21:21
+   |
+21 |                 let ext_str = 
+ext.to_string_lossy().to_lowercase();
+   |                     ^^^^^^^ help: if this 
+is intentional, prefix it with an underscore: 
+`_ext_str`
+
+Some errors have detailed explanations: E0061, 
+E0308, E0432, E0433, E0599.
+For more information about an error, try `rustc 
+--explain E0061`.
+warning: `forensic_engine` (lib) generated 15 
+warnings
+error: could not compile `forensic_engine` (lib) 
+due to 13 previous errors; 15 warnings emitted

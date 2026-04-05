@@ -1,0 +1,49 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-13T02:09:54.150839300+00:00",
+  "platform": "windows",
+  "command": "triage-session",
+  "args": [
+    "--case",
+    "triage_case",
+    "--db",
+    "tests_temp_triage_session_success_1773367792767328300\\case.sqlite",
+    "--no-watchpoints",
+    "--no-replay",
+    "--no-verify",
+    "--no-bundle",
+    "--json-result",
+    "tests_temp_triage_session_success_1773367792767328300\\triage_result.json",
+    "--quiet"
+  ],
+  "status": "ok",
+  "exit_code": 0,
+  "error": null,
+  "warning": null,
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 5,
+  "data": {
+    "case_id": "triage_case",
+    "db_path": "tests_temp_triage_session_success_1773367792767328300\\case.sqlite",
+    "flags": {
+      "bundle": false,
+      "replay": false,
+      "strict": false,
+      "verify": false,
+      "watchpoints": false
+    },
+    "result": {
+      "bundle_hash_sha256": null,
+      "bundle_path": null,
+      "replay_id": null,
+      "session_id": 1,
+      "status": "Pass",
+      "verification_id": null,
+      "violations_count": 0
+    },
+    "sample": null,
+    "session_name": null,
+    "steps_run": []
+  }
+}

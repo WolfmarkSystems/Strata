@@ -1,0 +1,63 @@
+[package]
+name = "strata-shield-engine"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "forensic_engine"
+path = "src/lib.rs"
+
+[features]
+default = ["parallel"]
+parallel = ["rayon"]
+turbo = ["rayon", "parallel"]
+python-plugins = ["dep:pyo3"]
+lua-plugins = ["dep:mlua"]
+scripting = ["python-plugins", "lua-plugins"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+time = { version = "0.3", features = ["serde", "macros", "formatting", "parsing"] }
+sha2 = "0.10"
+sha1 = "0.10"
+md-5 = "0.10"
+blake3 = "1.5"
+rayon = { workspace = true, optional = true }
+rusqlite = { version = "0.30", features = ["bundled", "functions"] }
+zip = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.10"
+tokio = { version = "1.0", features = ["full"] }
+plist = "1.7"
+sysinfo = "0.33"
+memmap2 = "0.9"
+libloading = "0.8"
+libc = "0.2"
+arc-swap = "1.6"
+notify = "6.0"
+tar = "0.4"
+flate2 = "1.0"
+serde_yaml = "0.9"
+tracing = { version = "0.1", features = ["attributes"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+strata-plugin-sdk = { workspace = true }
+strata-core = { workspace = true }
+strata-fs = { workspace = true }
+strata-acquire = { workspace = true }
+strata-artifacts = { workspace = true }
+strata-insight = { workspace = true }
+pyo3 = { version = "0.22", features = ["auto-initialize"], optional = true }
+mlua = { version = "0.9", features = ["lua54", "vendored"], optional = true }
+
+[target.'cfg(windows)'.dependencies]
+ewf = { workspace = true }
+evtx = { workspace = true }
+winreg = { workspace = true }
+ntfs = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.8"

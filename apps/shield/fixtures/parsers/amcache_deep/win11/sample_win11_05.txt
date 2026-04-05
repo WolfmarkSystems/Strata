@@ -1,0 +1,4 @@
+﻿FilePath: C:\\Windows\\System32\\tool05.exe
+Sha1: sha1:00112233445566778899aabbccddeeff00112233
+ProgramId: program-05
+LastModified: 20240305

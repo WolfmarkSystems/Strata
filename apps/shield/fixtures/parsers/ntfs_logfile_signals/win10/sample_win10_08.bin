@@ -1,0 +1,1 @@
+txn 08 CreateFile C:\\Temp\\a08.txt Rename $MFT $UsnJrnl

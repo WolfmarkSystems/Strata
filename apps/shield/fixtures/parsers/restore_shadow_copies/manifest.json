@@ -1,0 +1,24 @@
+﻿{
+    "version":  "1.0",
+    "sample_count":  30,
+    "sources":  [
+                    {
+                        "path":  "win10",
+                        "platform":  "win10",
+                        "format":  "json",
+                        "count":  15
+                    },
+                    {
+                        "path":  "win11",
+                        "platform":  "win11",
+                        "format":  "csv",
+                        "count":  15
+                    }
+                ],
+    "families":  [
+                     "restore-point",
+                     "shadow-copy"
+                 ],
+    "artifact":  "restore_shadow_copies",
+    "notes":  "Synthetic fixtures for parser/contract regression only."
+}

@@ -1,0 +1,219 @@
+Forensic Analysis Engine v0.1.0
+
+Usage: forensic_cli <command> [options]
+
+Commands:
+  verify                   Run case verification
+  export                   Export case with verification guard
+  verify-export            Run verification then export in one step
+  replay                   Run case replay (stability test)
+  replay-verify            Run replay then verification
+  watchpoints              Enable/disable integrity watchpoints
+  violations               List integrity violations
+  timeline                 List merged case timeline events
+  registry-persistence    Correlate registry persistence signals
+  execution-correlation   Correlate prefetch/jumplist/shortcut execution traces
+  violations-clear        Clear integrity violations
+  triage-session          Run full triage session with defensibility bundle
+  add-to-notes            Add selection to notes (no typing required)
+  presets                 List available examiner presets
+  examine                 Run examination with preset
+  case                    Case management commands
+  capabilities            Show capability registry
+  macos-catalog          Parse/list macOS artifact catalog sources
+  doctor                  Run diagnostics and health checks
+  smoke-test              Run quick validation test on an image
+  <image>                  Analyze disk image (default command)
+
+Image Analysis Options:
+  --json <file>        Export audit log to JSON file
+  --csv <file>         Export audit log to CSV file
+  --timeline <file>   Export timeline to CSV file
+  --summary <file>    Export summary report to text file
+  --mft [count]       Enumerate NTFS MFT records (default: 1000)
+  --timeline-console  Show timeline in console (implies --mft)
+  --strings           Extract strings from image
+  --detect-types      Detect file types by signature
+  --carve            Run signature-based carving
+  --tree [depth]     Walk NTFS directory tree (default depth: 3)
+  --analysis         Show timeline analysis
+
+Verify Command Options:
+  --case <id>        Case ID to verify
+  --db <path>        Path to case database
+  --sample <N>       Sample last N events for hash chain check
+  --strict-fts       Fail if FTS queue is not empty
+  --json-result <file>  Write JSON result envelope to file
+  --quiet            Suppress console output
+
+Export Command Options:
+  --case <id>        Case ID to export
+  --db <path>        Path to case database
+  --output <dir>     Output directory (default: ./export_<case_id>)
+  --no-verify        Skip verification requirement
+  --strict           Fail on warnings
+  --max-age <sec>    Maximum age of verification report in seconds
+
+Verify-Export Command Options:
+  --case <id>        Case ID
+  --db <path>        Path to case database
+  --output <dir>     Output directory
+  --sample <N>       Sample last N events for verification
+  --strict           Fail on warnings
+  --max-age <sec>    Maximum age of verification report
+
+Replay Command Options:
+  --case <id>        Case ID
+  --db <path>        Path to case database
+  --sample <N>       Sample N rows per table for fingerprint
+  --no-fts          Skip FTS rebuild
+  --no-readmodels    Skip read model rebuild
+  --optimize         Run database optimize after replay
+  --fts-batch <N>    FTS queue batch size
+  --json-result <file>  Write JSON result envelope to file
+  --quiet            Suppress console output
+
+Replay-Verify Command Options:
+  --case <id>        Case ID
+  --db <path>        Path to case database
+  --sample <N>       Sample N rows for verification
+  --strict           Fail on verification warnings
+
+Watchpoints Command Options:
+  --case <id>        Case ID
+  --db <path>        Path to case database
+  --enable           Enable integrity watchpoints
+  --disable          Disable integrity watchpoints
+  --status           Show watchpoint status (default)
+  --json-result <file>  Write JSON result envelope to file
+  --quiet            Suppress console output
+
+Violations Command Options:
+  --case <id>        Case ID
+  --db <path>        Path to case database
+  --since <utc>      Filter violations since UTC timestamp
+  --limit <N>        Limit results (default: 50)
+  --json-result <file>  Write JSON result envelope to file
+  --quiet            Suppress console output
+
+Timeline Command Options:
+  --case <id>        Case ID
+  --db <path>        Path to case database
+  --from <utc>       Filter events at/after UTC timestamp
+  --to <utc>         Filter events at/before UTC timestamp
+  --limit <N>        Limit results (default: 200, max: 2000)
+  --source <name>    Source filter: all|activity|evidence|violations
+  --json             Print merged timeline payload as JSON
+  --json-result <file>  Write JSON result envelope to file
+  --quiet            Suppress console output
+
+Registry-Persistence Command Options:
+  --autorun-reg <path> Path to autorun .reg export (default: exports/autorun.reg)
+  --bam-reg <path>     Path to BAM/DAM .reg export (default: exports/bam.reg)
+  --amcache-reg <path> Path to Amcache .reg export (default: exports/amcache.reg)
+  --tasks-root <path>  Root directory containing task XML files
+  --limit <N>          Limit results (default: 200, max: 5000)
+  --json               Print command payload as JSON
+  --json-result <file> Write JSON result envelope to file
+  --quiet              Suppress console output
+
+Execution-Correlation Command Options:
+  --prefetch-dir <path>  Prefetch directory (default: C:\Windows\Prefetch)
+  --jumplist-path <path> Jump List source (default: %APPDATA%\Microsoft\Windows\Recent\AutomaticDestinations)
+  --shortcuts-base <path> Base user directory for .lnk traversal (default: %USERPROFILE%)
+  --limit <N>            Limit results (default: 200, max: 5000)
+  --json                 Print command payload as JSON
+  --json-result <file>   Write JSON result envelope to file
+  --quiet                Suppress console output
+
+macOS-Catalog Command Options:
+  --list             List available macOS catalog artifact keys
+  --key <id>         Parse only one artifact key
+  --limit <N>        Limit records returned (default: 200, max: 5000)
+  --json             Print command payload as JSON
+  --json-result <file>  Write JSON result envelope to file
+  --quiet            Suppress console output
+
+Violations-Clear Command Options:
+  --case <id>        Case ID
+  --db <path>        Path to case database
+  --json-result <file>  Write JSON result envelope to file
+  --quiet            Suppress console output
+
+Presets Command Options:
+  list                List all available examiner presets
+  show --name <name> Show details of a specific preset
+
+Examine Command Options:
+  --case <id>        Case ID (required)
+  --db <path>        Path to case database
+  --preset <name>   Preset name (Strict Examiner, Standard Examiner, Fast Triage)
+  --override-json <path> JSON file with option overrides
+  --json-result <file>  Write JSON result envelope to file
+  --quiet            Suppress console output
+  --help             Show this help message
+
+Case Command Options:
+  init                Initialize a new case database
+    --case <id>      Case ID (required)
+    --db <path>     Path to case database
+  set-auto-preset    Set auto-start examination preset
+    --case <id>      Case ID (required)
+    --db <path>     Path to case database
+    --preset <name> Preset name or 'none' to clear
+
+Doctor Command Options:
+  --bundle <dir>     Generate diagnostics bundle
+  --verbose          Verbose output
+
+Smoke-Test Command Options:
+  --image <path>      Path to image file (required)
+  --out <dir>         Output directory (default: .\exports\smoke_test)
+  --mft <count>       MFT record count (default: 50)
+  --no-timeline       Skip timeline CSV generation
+  --no-audit         Skip audit JSON generation
+  --quiet             Only print final one-line status
+  --json-summary <path> Path for summary JSON (default: <out>\smoke_summary.json)
+
+Triage-Session Command Options:
+  --case <id>        Case ID (required)
+  --db <path>        Path to case database
+  --name <name>      Session name (optional)
+  --no-watchpoints   Disable integrity watchpoints
+  --no-replay       Skip replay step
+  --no-verify       Skip verify step
+  --strict           Fail on warnings and violations
+  --bundle-dir <dir> Bundle output directory (default: exports/defensibility)
+  --no-bundle       Skip bundle export
+  --sample <N>       Sample size for replay/verify
+  --json-result <file>  Write JSON result envelope to file
+  --quiet            Suppress console output
+  --help             Show this help message
+
+Add-to-Notes Command Options:
+  --case <id>        Case ID (required)
+  --db <path>        Path to case database
+  --mode <mode>      Mode: note, exhibits, packet (default: note)
+  --from-json <path> JSON file with SelectionContext + items (required)
+  --screenshot <path> Optional screenshot path to link
+  --tag <tag>        Tag to add (can be repeated)
+  --explain           Run explain on created exhibits
+  --max-items <N>     Maximum items (default: 200)
+  --help             Show this help message
+
+Examples:
+  forensic_cli disk.img --json audit.json --summary report.txt --mft 5000
+  forensic_cli verify --case case123 --db ./cases/case123.sqlite
+  forensic_cli export --case case123 --db ./cases/case123.sqlite
+  forensic_cli verify-export --case case123 --db ./cases/case123.sqlite
+  forensic_cli replay --case case123 --db ./cases/case123.sqlite
+  forensic_cli replay-verify --case case123 --db ./cases/case123.sqlite
+  forensic_cli watchpoints --case case123 --db ./cases/case123.sqlite --enable
+  forensic_cli violations --case case123 --db ./cases/case123.sqlite
+  forensic_cli timeline --case case123 --db ./cases/case123.sqlite --limit 200 --json
+  forensic_cli registry-persistence --autorun-reg ./exports/autorun.reg --bam-reg ./exports/bam.reg --json
+  forensic_cli registry-persistence --autorun-reg ./exports/autorun.reg --bam-reg ./exports/bam.reg --amcache-reg ./exports/amcache.reg --json
+  forensic_cli execution-correlation --prefetch-dir C:\Windows\Prefetch --json
+  forensic_cli macos-catalog --list --json
+  forensic_cli add-to-notes --case case123 --db ./cases/case123.sqlite --mode exhibits --from-json selection.json
+  forensic_cli doctor --verbose

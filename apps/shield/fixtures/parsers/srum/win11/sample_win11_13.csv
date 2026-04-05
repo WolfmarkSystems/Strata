@@ -1,0 +1,3 @@
+﻿record_id,timestamp_utc,provider,record_type,app_name,exe_path,user_sid,bytes_in,bytes_out
+2013,2026-03-11T21:30:00Z,network,network-usage,win11app13.exe,C:/Program Files/Win11App13/win11app13.exe,S-1-5-21-2000,1950,3250
+

@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "suite": "Strata Shield",
+  "workflow_root": "workspaces/agent_runs",
+  "default_workspace": "d:/forensic-suite",
+  "agents": [
+    {
+      "id": "codegen",
+      "role": "CodeGen",
+      "owner": "rust_feature_delivery",
+      "model_hint": "qwen2.5-coder-32b",
+      "inputs": [
+        "task_brief",
+        "changed_files",
+        "target_modules",
+        "acceptance_criteria"
+      ],
+      "outputs": [
+        "draft_patch_plan",
+        "implementation_notes",
+        "test_commands"
+      ],
+      "triggers": [
+        "feature_request",
+        "stub_completion",
+        "parser_gap_detected"
+      ],
+      "handoff_to": [
+        "reviewer"
+      ]
+    },
+    {
+      "id": "reviewer",
+      "role": "Reviewer",
+      "owner": "security_integrity_gate",
+      "model_hint": "qwen2.5-coder-32b",
+      "inputs": [
+        "draft_patch_plan",
+        "implementation_notes",
+        "changed_files",
+        "test_results"
+      ],
+      "outputs": [
+        "review_findings",
+        "integrity_checklist",
+        "approval_state"
+      ],
+      "triggers": [
+        "codegen_completed",
+        "security_sensitive_change",
+        "container_parser_change"
+      ],
+      "handoff_to": [
+        "integrator"
+      ]
+    },
+    {
+      "id": "integrator",
+      "role": "Integrator",
+      "owner": "backend_frontend_merge",
+      "model_hint": "qwen2.5-coder-32b",
+      "inputs": [
+        "review_findings",
+        "approval_state",
+        "implementation_notes",
+        "release_constraints"
+      ],
+      "outputs": [
+        "merge_decision",
+        "release_notes",
+        "followup_queue"
+      ],
+      "triggers": [
+        "reviewer_approved",
+        "backend_frontend_contract_change",
+        "kb_bridge_contract_change"
+      ],
+      "handoff_to": []
+    }
+  ],
+  "communication": {
+    "transport": "shared_files",
+    "handoff_format": "json",
+    "handoff_folder": "workspaces/agent_runs/{run_id}",
+    "required_files": [
+      "task.json",
+      "{agent_id}_output.json",
+      "final_summary.json"
+    ]
+  },
+  "guards": {
+    "no_touch_evidence": true,
+    "forbid_unsafe_rust": true,
+    "require_error_handling": true,
+    "require_tests_or_explicit_gap": true
+  }
+}

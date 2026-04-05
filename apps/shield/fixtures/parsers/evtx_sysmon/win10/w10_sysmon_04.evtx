@@ -1,0 +1,1 @@
+﻿<Event><System><Provider Name="Microsoft-Windows-Sysmon"/><EventID>10</EventID><Level>4</Level><EventRecordID>3004</EventRecordID><TimeCreated SystemTime="2026-03-10T12:04:00.000Z"/><Computer>WIN10-LAB</Computer></System><EventData><Data Name="Image">C:\Windows\System32\tool4.exe</Data><Data Name="CommandLine">C:\Windows\System32\tool4.exe /run</Data></EventData></Event>

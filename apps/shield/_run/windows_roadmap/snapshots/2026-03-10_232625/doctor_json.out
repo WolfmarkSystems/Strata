@@ -1,0 +1,10 @@
+=== Forensic Suite Diagnostics ===
+
+Version: 0.1.0
+
+Platform: Windows
+WebView2: Found
+
+
+Run 'forensic_cli --help' for CLI commands.
+Run 'forensic_desktop --safe-mode' for safe mode diagnostics.

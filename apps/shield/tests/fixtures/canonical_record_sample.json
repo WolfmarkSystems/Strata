@@ -1,0 +1,9 @@
+{
+  "id": "canon-001",
+  "record_type": "SystemEvent",
+  "correlation_id": "corr-1",
+  "confidence_score": 0.85,
+  "timestamp_utc": "2026-01-01T00:00:00Z",
+  "source_module": "evtx-security",
+  "source_record_id": "evt-1"
+}

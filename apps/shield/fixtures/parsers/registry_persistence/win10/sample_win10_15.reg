@@ -1,0 +1,4 @@
+﻿[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run]
+"BadApp15"="C:\\Tools\\bad15.exe --silent"
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\bam\State\UserSettings\S-1-5-21]
+"C:\\Tools\\bad15.exe"=qword:01da1747cf5dd180

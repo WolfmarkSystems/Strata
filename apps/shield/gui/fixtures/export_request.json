@@ -1,0 +1,11 @@
+{
+  "command": "export",
+  "case_id": "demo_case_001",
+  "db_path": ".\\exports\\cases\\demo_case.sqlite",
+  "output_dir": ".\\exports\\export_demo_case_001",
+  "no_verify": true,
+  "strict": false,
+  "max_age_sec": 86400,
+  "quiet": true,
+  "json_result_path": ".\\gui\\runs\\export_result.json"
+}

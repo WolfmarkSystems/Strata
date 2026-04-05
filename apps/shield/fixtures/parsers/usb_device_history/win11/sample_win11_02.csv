@@ -1,0 +1,2 @@
+vendor_id,product_id,serial_number,friendly_name,timestamp,device_instance_id,device_class
+0792,5602,USB-SERIAL-W11-02,USB Device W11 02,1700201002,USB\\VID_0792PID_5602\\SN02,storage

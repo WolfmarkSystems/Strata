@@ -1,0 +1,397 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-06T03:05:58.284410200+00:00",
+  "platform": "windows",
+  "command": "capabilities",
+  "args": [
+    "--json-result",
+    "D:/forensic-suite/gui-tauri/gui/runs/capabilities_result.json",
+    "--quiet"
+  ],
+  "status": "ok",
+  "exit_code": 0,
+  "error": null,
+  "warning": null,
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 0,
+  "data": {
+    "capabilities": [
+      {
+        "description": "macOS browser history",
+        "name": "artifact.macos.browser",
+        "platforms": [
+          "macos"
+        ],
+        "status": "beta"
+      },
+      {
+        "description": "Windows browser history extraction",
+        "name": "artifact.windows.browser",
+        "platforms": [
+          "windows"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Windows chat/ messaging app artifacts",
+        "name": "artifact.windows.chat",
+        "platforms": [
+          "windows"
+        ],
+        "status": "experimental"
+      },
+      {
+        "description": "Windows Registry parsing",
+        "name": "artifact.windows.registry",
+        "platforms": [
+          "windows"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "AFF4 format",
+        "name": "container.aff4",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "status": "beta"
+      },
+      {
+        "description": "EnCase E01 format",
+        "name": "container.e01",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Raw disk images (dd, raw)",
+        "name": "container.raw",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Split/raw segments",
+        "name": "container.split",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Microsoft VHD/VHDX virtual disk",
+        "name": "container.vhd",
+        "platforms": [
+          "windows"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "VMware VMDK virtual disk",
+        "name": "container.vmdk",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "BitLocker encrypted volume support",
+        "name": "encryption.bitlocker",
+        "platforms": [
+          "windows"
+        ],
+        "status": "experimental"
+      },
+      {
+        "description": "macOS FileVault encrypted volume",
+        "name": "encryption.filevault",
+        "platforms": [
+          "macos"
+        ],
+        "status": "stub"
+      },
+      {
+        "description": "Linux LUKS encrypted volume",
+        "name": "encryption.luks",
+        "platforms": [
+          "linux"
+        ],
+        "status": "stub"
+      },
+      {
+        "description": "Defensibility bundle export",
+        "name": "export.defensibility",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Report generation",
+        "name": "export.report",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Apple APFS filesystem",
+        "name": "filesystem.apfs",
+        "platforms": [
+          "macos",
+          "linux"
+        ],
+        "status": "beta"
+      },
+      {
+        "description": "APFS unallocated region enumeration",
+        "name": "filesystem.apfs.unallocated_map",
+        "platforms": [
+          "macos"
+        ],
+        "status": "experimental"
+      },
+      {
+        "description": "exFAT filesystem",
+        "name": "filesystem.exfat",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "exFAT unallocated region enumeration",
+        "name": "filesystem.exfat.unallocated_map",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "status": "experimental"
+      },
+      {
+        "description": "ext4 filesystem",
+        "name": "filesystem.ext4",
+        "platforms": [
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "ext4 unallocated region enumeration via block bitmaps",
+        "name": "filesystem.ext4.unallocated_map",
+        "platforms": [
+          "linux"
+        ],
+        "status": "beta"
+      },
+      {
+        "description": "FAT12/FAT16/FAT32 filesystem",
+        "name": "filesystem.fat",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "FAT unallocated region enumeration",
+        "name": "filesystem.fat.unallocated_map",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "status": "stub"
+      },
+      {
+        "description": "HFS+ filesystem",
+        "name": "filesystem.hfsplus",
+        "platforms": [
+          "macos",
+          "linux"
+        ],
+        "status": "stub"
+      },
+      {
+        "description": "NTFS filesystem",
+        "name": "filesystem.ntfs",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "NTFS unallocated region enumeration via $Bitmap",
+        "name": "filesystem.ntfs.unallocated_map",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "XFS filesystem",
+        "name": "filesystem.xfs",
+        "platforms": [
+          "linux"
+        ],
+        "status": "stub"
+      },
+      {
+        "description": "Live memory acquisition and analysis",
+        "name": "live.memory",
+        "platforms": [
+          "windows"
+        ],
+        "status": "experimental"
+      },
+      {
+        "description": "Live Windows Registry access",
+        "name": "live.registry",
+        "platforms": [
+          "windows"
+        ],
+        "status": "stub"
+      },
+      {
+        "description": "Signature-based file carving",
+        "name": "module.carving",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "File type classification and analysis",
+        "name": "module.classification",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "beta"
+      },
+      {
+        "description": "File content preview",
+        "name": "module.preview",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "beta"
+      },
+      {
+        "description": "Timeline generation and analysis",
+        "name": "module.timeline",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "GUID Partition Table",
+        "name": "partition.gpt",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Master Boot Record",
+        "name": "partition.mbr",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "RAID detection",
+        "name": "partition.raid",
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "status": "experimental"
+      },
+      {
+        "description": "Examiner presets for defensible workflow",
+        "name": "workflow.examiner-presets",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Deterministic replay workflow",
+        "name": "workflow.replay",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Full triage session workflow",
+        "name": "workflow.triage",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Case verification workflow",
+        "name": "workflow.verify",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      },
+      {
+        "description": "Integrity watchpoints",
+        "name": "workflow.watchpoints",
+        "platforms": [
+          "windows",
+          "macos",
+          "linux"
+        ],
+        "status": "production"
+      }
+    ],
+    "generated_utc": "2026-03-06T03:05:58.284190100+00:00",
+    "tool_version": "0.1.0"
+  }
+}

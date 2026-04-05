@@ -1,0 +1,14 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.34s
+     Running unittests src\lib.rs (target\debug\deps\forensic_engine-7f13079c2a802f4f.exe)
+
+running 6 tests
+test tests::fixture_harness::fixture_harness_tests::test_fixture_parser_expectations ... ok
+test tests::fixture_harness::fixture_harness_tests::test_parser_fixture_harness ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_manifest_audit ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_kind_format_expectations ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_manifest_is_readable ... ok
+[fixture-harness] corpus run complete: exercised=14, unreadable=0
+test tests::fixture_harness::fixture_harness_tests::test_corpus_parser_harness_opt_in ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 314 filtered out; finished in 0.03s
+

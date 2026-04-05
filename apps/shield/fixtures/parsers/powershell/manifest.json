@@ -1,0 +1,217 @@
+{
+    "generated_utc":  "2026-03-11T21:50:39Z",
+    "parser":  "powershell_artifacts",
+    "count":  30,
+    "fixtures":  [
+                     {
+                         "id":  "powershell-win10-history-01",
+                         "path":  "fixtures/parsers/powershell/win10/history/w10_history_01.txt",
+                         "os":  "windows10",
+                         "kind":  "line_text_history",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-history-02",
+                         "path":  "fixtures/parsers/powershell/win10/history/w10_history_02.txt",
+                         "os":  "windows10",
+                         "kind":  "line_text_history",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-history-03",
+                         "path":  "fixtures/parsers/powershell/win10/history/w10_history_03.txt",
+                         "os":  "windows10",
+                         "kind":  "line_text_history",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-history-04",
+                         "path":  "fixtures/parsers/powershell/win10/history/w10_history_04.txt",
+                         "os":  "windows10",
+                         "kind":  "line_text_history",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-history-05",
+                         "path":  "fixtures/parsers/powershell/win10/history/w10_history_05.txt",
+                         "os":  "windows10",
+                         "kind":  "line_text_history",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-history-06",
+                         "path":  "fixtures/parsers/powershell/win10/history/w10_history_06.txt",
+                         "os":  "windows10",
+                         "kind":  "line_text_history",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-history-07",
+                         "path":  "fixtures/parsers/powershell/win10/history/w10_history_07.txt",
+                         "os":  "windows10",
+                         "kind":  "line_text_history",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-history-08",
+                         "path":  "fixtures/parsers/powershell/win10/history/w10_history_08.txt",
+                         "os":  "windows10",
+                         "kind":  "line_text_history",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-scriptlog-01",
+                         "path":  "fixtures/parsers/powershell/win10/script_log/w10_scriptlog_01.log",
+                         "os":  "windows10",
+                         "kind":  "pipe_delimited",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-scriptlog-02",
+                         "path":  "fixtures/parsers/powershell/win10/script_log/w10_scriptlog_02.log",
+                         "os":  "windows10",
+                         "kind":  "pipe_delimited",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-scriptlog-03",
+                         "path":  "fixtures/parsers/powershell/win10/script_log/w10_scriptlog_03.log",
+                         "os":  "windows10",
+                         "kind":  "pipe_delimited",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-scriptlog-04",
+                         "path":  "fixtures/parsers/powershell/win10/script_log/w10_scriptlog_04.log",
+                         "os":  "windows10",
+                         "kind":  "pipe_delimited",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-scriptlog-05",
+                         "path":  "fixtures/parsers/powershell/win10/script_log/w10_scriptlog_05.log",
+                         "os":  "windows10",
+                         "kind":  "pipe_delimited",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-scriptlog-06",
+                         "path":  "fixtures/parsers/powershell/win10/script_log/w10_scriptlog_06.log",
+                         "os":  "windows10",
+                         "kind":  "pipe_delimited",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win10-scriptlog-07",
+                         "path":  "fixtures/parsers/powershell/win10/script_log/w10_scriptlog_07.log",
+                         "os":  "windows10",
+                         "kind":  "pipe_delimited",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-events-01",
+                         "path":  "fixtures/parsers/powershell/win11/events/w11_events_01.json",
+                         "os":  "windows11",
+                         "kind":  "json_records",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-events-02",
+                         "path":  "fixtures/parsers/powershell/win11/events/w11_events_02.json",
+                         "os":  "windows11",
+                         "kind":  "json_records",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-events-03",
+                         "path":  "fixtures/parsers/powershell/win11/events/w11_events_03.json",
+                         "os":  "windows11",
+                         "kind":  "json_records",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-events-04",
+                         "path":  "fixtures/parsers/powershell/win11/events/w11_events_04.json",
+                         "os":  "windows11",
+                         "kind":  "json_records",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-events-05",
+                         "path":  "fixtures/parsers/powershell/win11/events/w11_events_05.json",
+                         "os":  "windows11",
+                         "kind":  "json_records",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-events-06",
+                         "path":  "fixtures/parsers/powershell/win11/events/w11_events_06.json",
+                         "os":  "windows11",
+                         "kind":  "json_records",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-events-07",
+                         "path":  "fixtures/parsers/powershell/win11/events/w11_events_07.json",
+                         "os":  "windows11",
+                         "kind":  "json_records",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-events-08",
+                         "path":  "fixtures/parsers/powershell/win11/events/w11_events_08.json",
+                         "os":  "windows11",
+                         "kind":  "json_records",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-transcript-01",
+                         "path":  "fixtures/parsers/powershell/win11/transcripts/w11_transcript_01.txt",
+                         "os":  "windows11",
+                         "kind":  "transcript_text",
+                         "expected_records":  1
+                     },
+                     {
+                         "id":  "powershell-win11-transcript-02",
+                         "path":  "fixtures/parsers/powershell/win11/transcripts/w11_transcript_02.txt",
+                         "os":  "windows11",
+                         "kind":  "transcript_text",
+                         "expected_records":  1
+                     },
+                     {
+                         "id":  "powershell-win11-transcript-03",
+                         "path":  "fixtures/parsers/powershell/win11/transcripts/w11_transcript_03.txt",
+                         "os":  "windows11",
+                         "kind":  "transcript_text",
+                         "expected_records":  1
+                     },
+                     {
+                         "id":  "powershell-win11-transcript-04",
+                         "path":  "fixtures/parsers/powershell/win11/transcripts/w11_transcript_04.txt",
+                         "os":  "windows11",
+                         "kind":  "transcript_text",
+                         "expected_records":  1
+                     },
+                     {
+                         "id":  "powershell-win11-modules-01",
+                         "path":  "fixtures/parsers/powershell/win11/modules/w11_modules_01.txt",
+                         "os":  "windows11",
+                         "kind":  "module_inventory",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-modules-02",
+                         "path":  "fixtures/parsers/powershell/win11/modules/w11_modules_02.txt",
+                         "os":  "windows11",
+                         "kind":  "module_inventory",
+                         "expected_records":  2
+                     },
+                     {
+                         "id":  "powershell-win11-modules-03",
+                         "path":  "fixtures/parsers/powershell/win11/modules/w11_modules_03.txt",
+                         "os":  "windows11",
+                         "kind":  "module_inventory",
+                         "expected_records":  2
+                     }
+                 ]
+}

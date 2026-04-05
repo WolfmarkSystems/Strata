@@ -1,0 +1,26 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-13T01:50:00.988858400+00:00",
+  "platform": "windows",
+  "command": "timeline",
+  "args": [
+    "--case",
+    "test_case_timeline_invalid_severity",
+    "--db",
+    "tests_temp_timeline_invalid_severity/test_case.sqlite",
+    "--severity",
+    "critical",
+    "--json-result",
+    "tests_temp_timeline_invalid_severity/timeline_invalid_severity.json",
+    "--quiet"
+  ],
+  "status": "error",
+  "exit_code": 3,
+  "error": "Error: Invalid --severity 'critical'. Use info|warn|error",
+  "warning": null,
+  "error_type": "invalid_input",
+  "hint": "Use --severity info|warn|error",
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 0
+}

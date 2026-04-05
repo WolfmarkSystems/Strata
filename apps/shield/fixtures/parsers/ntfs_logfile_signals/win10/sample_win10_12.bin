@@ -1,0 +1,1 @@
+txn 12 CreateFile C:\\Temp\\a12.txt Rename $MFT $UsnJrnl

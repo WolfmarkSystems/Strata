@@ -1,0 +1,4 @@
+﻿[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Drv13]
+"DisplayName"="Driver 13"
+"ImagePath"="\\SystemRoot\\System32\\drivers\\drv13.sys"
+"Start"=dword:00000003

@@ -1,0 +1,2 @@
+1700000004|C:\\Windows\\Temp\\run4.ps1|-enc AAAA|ok
+1700000005|C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe|-NoProfile -File C:\\Windows\\Temp\\collect.ps1|ok

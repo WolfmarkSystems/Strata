@@ -1,0 +1,12 @@
+{
+  "records": [
+    {
+      "timestamp": "1700000106",
+      "script": "C:\\Windows\\System32\\cmd.exe /c dir"
+    },
+    {
+      "occurred_utc": "2026-03-11T16:0",
+      "script_block_text": "Invoke-Expression $env:TEMP"
+    }
+  ]
+}

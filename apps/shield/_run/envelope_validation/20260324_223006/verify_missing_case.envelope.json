@@ -1,0 +1,23 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-25T02:30:06.880155600+00:00",
+  "platform": "windows",
+  "command": "verify",
+  "args": [
+    "verify",
+    "--db",
+    "missing.db",
+    "--quiet",
+    "--json-result",
+    "D:\\forensic-suite\\_run\\envelope_validation\\20260324_223006\\verify_missing_case.envelope.json"
+  ],
+  "status": "error",
+  "exit_code": 3,
+  "error": "Error: --case <id> is required",
+  "warning": null,
+  "error_type": "invalid_input",
+  "hint": "Provide --case <case_id> argument",
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 0
+}

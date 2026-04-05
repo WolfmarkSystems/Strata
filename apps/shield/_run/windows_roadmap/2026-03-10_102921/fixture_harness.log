@@ -1,0 +1,15 @@
+   Compiling forensic_engine v0.1.0 (D:\forensic-suite\engine)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.05s
+     Running unittests src\lib.rs (target\debug\deps\forensic_engine-7f13079c2a802f4f.exe)
+
+running 6 tests
+[fixture-harness] corpus harness skipped; set FORENSIC_CORPUS_HARNESS=1 to enable
+test tests::fixture_harness::fixture_harness_tests::test_corpus_parser_harness_opt_in ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_manifest_is_readable ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_manifest_audit ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_parser_expectations ... ok
+test tests::fixture_harness::fixture_harness_tests::test_fixture_kind_format_expectations ... ok
+test tests::fixture_harness::fixture_harness_tests::test_parser_fixture_harness ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 286 filtered out; finished in 0.00s
+

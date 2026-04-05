@@ -1,0 +1,6 @@
+=== Smoke Test Summary ===
+Image: D:\forensic-suite\evidence\Stack001_Surface_HDD.E01
+MFT records: 50
+Timeline: enabled
+Audit: enabled
+Status: ok

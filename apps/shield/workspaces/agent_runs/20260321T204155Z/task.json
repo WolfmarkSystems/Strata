@@ -1,0 +1,19 @@
+{
+  "run_id": "20260321T204155Z",
+  "task_brief": "Month 1 planning and AI integration execution",
+  "changed_files": [
+    "engine/src/virtualization/vhd.rs",
+    "gui/src-tauri/src/lib.rs"
+  ],
+  "acceptance_criteria": [
+    "preserve evidence integrity",
+    "emit deterministic outputs",
+    "include tests or an explicit test gap"
+  ],
+  "guards": {
+    "no_touch_evidence": true,
+    "forbid_unsafe_rust": true,
+    "require_error_handling": true,
+    "require_tests_or_explicit_gap": true
+  }
+}

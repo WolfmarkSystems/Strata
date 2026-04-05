@@ -1,0 +1,25 @@
+name: Benchmark Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  bench-smoke:
+    name: Benchmark/Release Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run benchmark smoke
+        run: bash scripts/benchmark_smoke.sh

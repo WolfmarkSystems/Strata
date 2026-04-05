@@ -1,0 +1,548 @@
+{
+  "recent-execution": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.prefetch",
+      "data.source_rows.jumplist",
+      "data.source_rows.shortcut",
+      "data.source_rows.srum",
+      "data.source_rows.evtx_security",
+      "data.source_rows.evtx_sysmon",
+      "data.source_rows.defender_artifacts",
+      "data.correlations"
+    ]
+  },
+  "registry-persistence": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.autorun",
+      "data.source_rows.scheduled_tasks",
+      "data.source_rows.bam",
+      "data.source_rows.dam",
+      "data.source_rows.amcache",
+      "data.correlations"
+    ]
+  },
+  "registry-core-user-hives": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.runmru",
+      "data.source_rows.opensave",
+      "data.source_rows.userassist",
+      "data.source_rows.recentdocs",
+      "data.quality.input_shapes.runmru",
+      "data.quality.deduped_count",
+      "data.records"
+    ]
+  },
+  "shimcache-deep": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.entries"
+    ]
+  },
+  "amcache-deep": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.summary.rows_with_sha1",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.entries"
+    ]
+  },
+  "bam-dam-activity": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.bam",
+      "data.source_rows.dam",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.entries"
+    ]
+  },
+  "services-drivers-artifacts": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.service_config",
+      "data.source_rows.service_dll",
+      "data.summary.suspicious_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "scheduled-tasks-artifacts": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "wmi-persistence-activity": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.persistence",
+      "data.source_rows.traces",
+      "data.source_rows.instances",
+      "data.quality.input_shapes.persistence",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "ntfs-mft-fidelity": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "usn-journal-fidelity": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "ntfs-logfile-signals": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "recycle-bin-artifacts": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "prefetch-fidelity": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "jumplist-fidelity": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "lnk-shortcut-fidelity": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "browser-forensics": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "rdp-remote-access": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "usb-device-history": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "restore-shadow-copies": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "user-activity-mru": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "timeline-correlation-qa": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.primary",
+      "data.source_rows.fallback",
+      "data.summary.timestamp_rows",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "timeline": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.case_id",
+      "data.source_filter",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.counts_by_source.execution",
+      "data.counts_by_source.evtx_security",
+      "data.counts_by_source.evtx_sysmon",
+      "data.counts_by_source.defender_artifacts",
+      "data.events"
+    ]
+  },
+  "srum": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.records"
+    ]
+  },
+  "evtx-security": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.summary.logon_events",
+      "data.summary.failed_logons",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.entries"
+    ]
+  },
+  "evtx-sysmon": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.input_path",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.summary.process_create_events",
+      "data.summary.network_connect_events",
+      "data.quality.input_shape",
+      "data.quality.parser_mode",
+      "data.entries"
+    ]
+  },
+  "powershell-artifacts": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.limit",
+      "data.total_returned",
+      "data.total_available",
+      "data.source_rows.history",
+      "data.source_rows.script_log",
+      "data.source_rows.events",
+      "data.source_rows.transcripts",
+      "data.source_rows.modules",
+      "data.quality.input_shapes.events",
+      "data.quality.deduped_count",
+      "data.records"
+    ]
+  },
+  "defender-artifacts": {
+    "required_paths": [
+      "tool_version",
+      "timestamp_utc",
+      "platform",
+      "command",
+      "status",
+      "exit_code",
+      "data.limit",
+      "data.source_paths.quarantine",
+      "data.status.enabled",
+      "data.status.real_time_protection",
+      "data.counts.av_products_total",
+      "data.counts.quarantine_total",
+      "data.counts.endpoint_alerts_total",
+      "data.av_products",
+      "data.quarantine_items",
+      "data.endpoint.alerts"
+    ]
+  }
+}

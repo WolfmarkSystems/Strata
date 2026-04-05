@@ -1,0 +1,10 @@
+{
+  "command": "triage-session",
+  "args": [
+    "--case", "demo_case_001",
+    "--db", "exports/cases/demo_case.sqlite",
+    "--bundle-dir", "exports/defensibility",
+    "--json-result", "gui/runs/triage_result.json",
+    "--quiet"
+  ]
+}

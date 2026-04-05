@@ -1,0 +1,2 @@
+timestamp,usn,reason,file_name,file_path
+2026-03-10T10:00:00Z,42,FILE_DELETE,cmd.exe,C:\Windows\System32\cmd.exe

@@ -1,0 +1,4 @@
+﻿[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Drv02]
+"DisplayName"="Driver 02"
+"ImagePath"="\\SystemRoot\\System32\\drivers\\drv02.sys"
+"Start"=dword:00000003

@@ -1,0 +1,1123 @@
+{
+  "tool_version": "0.1.0",
+  "generated_utc": "2026-03-10T21:58:51.107551600+00:00",
+  "capabilities": [
+    {
+      "name": "artifact.macos.browser",
+      "status": "Beta",
+      "description": "macOS browser history",
+      "limitations": [
+        "Safari, Chrome, Firefox"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume"
+      ],
+      "platforms": [
+        "macos"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.macos.catalog",
+      "status": "Experimental",
+      "description": "Expanded macOS artifact catalog parser set",
+      "limitations": [
+        "Best-effort parser set; coverage varies by artifact source availability",
+        "Some entries are text-based collectors for exported artifacts"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "macos"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.macos.downloads",
+      "status": "Beta",
+      "description": "macOS Safari download record parsing",
+      "limitations": [
+        "Depends on Safari History.db schema availability"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "macos"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.macos.quarantine",
+      "status": "Beta",
+      "description": "macOS LaunchServices quarantine event parsing",
+      "limitations": [
+        "Requires QuarantineEventsV2 SQLite artifact",
+        "Plist-heavy fallback coverage is available through macos-catalog best-effort parsing"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "macos"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.macos.shell_history",
+      "status": "Beta",
+      "description": "macOS shell history (zsh/bash) parsing",
+      "limitations": [
+        "Parses plaintext shell history files only",
+        "No binary shell-session recovery in this parser"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "macos"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.amcache",
+      "status": "Beta",
+      "description": "Windows Amcache extraction",
+      "limitations": [
+        "Primarily export/record-driven in current implementation"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.autoruns",
+      "status": "Production",
+      "description": "Windows autorun persistence extraction",
+      "limitations": [
+        "Focuses on common Run/Winlogon-style persistence locations"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.bam",
+      "status": "Production",
+      "description": "Windows BAM execution artifact extraction",
+      "limitations": [
+        "Coverage depends on SYSTEM hive and version-specific key layout"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.browser",
+      "status": "Production",
+      "description": "Windows browser history extraction",
+      "limitations": [
+        "Chrome/Edge/Firefox supported"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.chat",
+      "status": "Experimental",
+      "description": "Windows chat/ messaging app artifacts",
+      "limitations": [
+        "Telegram, Signal, WhatsApp support"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.defender",
+      "status": "Beta",
+      "description": "Windows Defender artifact extraction",
+      "limitations": [
+        "Event/configuration depth depends on available artifacts"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.eventlog",
+      "status": "Production",
+      "description": "Windows EVTX/Event Log parsing",
+      "limitations": [
+        "Semantic mapping focuses on common security/investigative event families"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.eventlog.security",
+      "status": "Production",
+      "description": "Windows Security log semantic extraction",
+      "limitations": [
+        "Coverage is strongest for common auth/process/group-change events"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.eventlog.sysmon",
+      "status": "Production",
+      "description": "Sysmon event semantic extraction",
+      "limitations": [
+        "Coverage centers on high-value process/network/registry/file events"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.iis",
+      "status": "Beta",
+      "description": "Windows IIS configuration/log parsing",
+      "limitations": [
+        "Schema/field coverage is focused on common IIS log formats"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.jumplist",
+      "status": "Production",
+      "description": "Windows Jump List parsing (DestList/entry extraction)",
+      "limitations": [
+        "Some app-specific/custom entry payloads remain best-effort"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.lnk",
+      "status": "Beta",
+      "description": "Windows shortcut (LNK) parsing",
+      "limitations": [
+        "Advanced shell item edge-cases are still being expanded"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.ntfs.mft",
+      "status": "Production",
+      "description": "NTFS MFT record parsing",
+      "limitations": [
+        "Relies on readable MFT structures; severely damaged records are best-effort"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.ntfs.timeline",
+      "status": "Beta",
+      "description": "NTFS-derived timeline signal extraction",
+      "limitations": [
+        "Timeline enrichment coverage varies by available filesystem metadata"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.powershell",
+      "status": "Beta",
+      "description": "Windows PowerShell artifact extraction",
+      "limitations": [
+        "Coverage depends on available logs/history/transcript artifacts"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.prefetch",
+      "status": "Production",
+      "description": "Windows Prefetch parsing",
+      "limitations": [
+        "Field richness depends on Prefetch format/version and data quality"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.rdp",
+      "status": "Beta",
+      "description": "Windows RDP artifact extraction",
+      "limitations": [
+        "Coverage depends on host/user artifact availability"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.recycle_bin",
+      "status": "Beta",
+      "description": "Windows Recycle Bin artifact extraction",
+      "limitations": [
+        "Coverage is strongest when $I/$R pairs are present"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.registry",
+      "status": "Production",
+      "description": "Windows Registry parsing",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image",
+        "volume"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.registry.exports",
+      "status": "Production",
+      "description": "Windows .reg export parsing",
+      "limitations": [
+        "Depends on export completeness and encoding quality"
+      ],
+      "evidence_types": [
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.registry.hive",
+      "status": "Production",
+      "description": "Windows registry hive parsing (REGF/NK/value traversal)",
+      "limitations": [
+        "Best coverage for core hive layouts; malformed hives are best-effort"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.scheduled_tasks",
+      "status": "Beta",
+      "description": "Windows scheduled task extraction",
+      "limitations": [
+        "Some XML/action edge-cases remain best-effort"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.services",
+      "status": "Beta",
+      "description": "Windows service configuration extraction",
+      "limitations": [
+        "Service metadata interpretation is still being expanded"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.shellbags",
+      "status": "Beta",
+      "description": "Windows Shellbags parsing",
+      "limitations": [
+        "Complex shell item variants remain best-effort"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.thumbcache",
+      "status": "Experimental",
+      "description": "Windows thumbnail cache extraction",
+      "limitations": [
+        "Format/version edge-cases are still being expanded"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.usb",
+      "status": "Production",
+      "description": "Windows USB device history extraction",
+      "limitations": [
+        "Data completeness depends on registry/log retention"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.userassist",
+      "status": "Production",
+      "description": "Windows UserAssist extraction",
+      "limitations": [
+        "Depends on relevant user hive availability"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "artifact.windows.wmi",
+      "status": "Experimental",
+      "description": "Windows WMI artifact extraction",
+      "limitations": [
+        "Persistence and trace coverage is best-effort in current implementation"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "container.aff4",
+      "status": "Beta",
+      "description": "AFF4 format",
+      "limitations": [
+        "Compression support limited"
+      ],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "container.e01",
+      "status": "Production",
+      "description": "EnCase E01 format",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "container.raw",
+      "status": "Production",
+      "description": "Raw disk images (dd, raw)",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "container.split",
+      "status": "Production",
+      "description": "Split/raw segments",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "container.vhd",
+      "status": "Production",
+      "description": "Microsoft VHD/VHDX virtual disk",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "container.vmdk",
+      "status": "Production",
+      "description": "VMware VMDK virtual disk",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "encryption.bitlocker",
+      "status": "Experimental",
+      "description": "BitLocker encrypted volume support",
+      "limitations": [
+        "Requires recovery password or TPM"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "encryption.filevault",
+      "status": "Stub",
+      "description": "macOS FileVault encrypted volume",
+      "limitations": [
+        "Requires recovery key"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "macos"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "encryption.luks",
+      "status": "Stub",
+      "description": "Linux LUKS encrypted volume",
+      "limitations": [
+        "Requires passphrase"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "export.defensibility",
+      "status": "Production",
+      "description": "Defensibility bundle export",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "export.report",
+      "status": "Production",
+      "description": "Report generation",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.apfs",
+      "status": "Beta",
+      "description": "Apple APFS filesystem",
+      "limitations": [
+        "Read-only; no snapshots yet",
+        "Encrypted volumes limited"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.apfs.unallocated_map",
+      "status": "Experimental",
+      "description": "APFS unallocated region enumeration",
+      "limitations": [
+        "Space manager analysis not implemented"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "macos"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.exfat",
+      "status": "Production",
+      "description": "exFAT filesystem",
+      "limitations": [],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.exfat.unallocated_map",
+      "status": "Experimental",
+      "description": "exFAT unallocated region enumeration",
+      "limitations": [
+        "Bitmap parsing not fully implemented"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.ext4",
+      "status": "Production",
+      "description": "ext4 filesystem",
+      "limitations": [],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.ext4.unallocated_map",
+      "status": "Beta",
+      "description": "ext4 unallocated region enumeration via block bitmaps",
+      "limitations": [
+        "Best-effort implementation"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.fat",
+      "status": "Production",
+      "description": "FAT12/FAT16/FAT32 filesystem",
+      "limitations": [],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.fat.unallocated_map",
+      "status": "Stub",
+      "description": "FAT unallocated region enumeration",
+      "limitations": [
+        "Not implemented"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.hfsplus",
+      "status": "Stub",
+      "description": "HFS+ filesystem",
+      "limitations": [
+        "Read-only support"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.ntfs",
+      "status": "Production",
+      "description": "NTFS filesystem",
+      "limitations": [],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.ntfs.unallocated_map",
+      "status": "Production",
+      "description": "NTFS unallocated region enumeration via $Bitmap",
+      "limitations": [],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "filesystem.xfs",
+      "status": "Stub",
+      "description": "XFS filesystem",
+      "limitations": [
+        "Limited metadata parsing"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "live.memory",
+      "status": "Experimental",
+      "description": "Live memory acquisition and analysis",
+      "limitations": [
+        "Windows only; limited volatility support"
+      ],
+      "evidence_types": [
+        "memory"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "live.registry",
+      "status": "Stub",
+      "description": "Live Windows Registry access",
+      "limitations": [
+        "Windows only; read-only"
+      ],
+      "evidence_types": [
+        "live"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "module.carving",
+      "status": "Production",
+      "description": "Signature-based file carving",
+      "limitations": [
+        "Fragmented files limited"
+      ],
+      "evidence_types": [
+        "disk_image",
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "module.classification",
+      "status": "Beta",
+      "description": "File type classification and analysis",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image",
+        "volume",
+        "file"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "module.preview",
+      "status": "Beta",
+      "description": "File content preview",
+      "limitations": [
+        "Limited format support"
+      ],
+      "evidence_types": [
+        "file"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "module.timeline",
+      "status": "Production",
+      "description": "Timeline generation and analysis",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image",
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "partition.gpt",
+      "status": "Production",
+      "description": "GUID Partition Table",
+      "limitations": [],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "partition.mbr",
+      "status": "Production",
+      "description": "Master Boot Record",
+      "limitations": [],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "partition.raid",
+      "status": "Experimental",
+      "description": "RAID detection",
+      "limitations": [
+        "RAID-0/1/5/6/10 detection only"
+      ],
+      "evidence_types": [
+        "volume"
+      ],
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "workflow.examiner-presets",
+      "status": "Production",
+      "description": "Examiner presets for defensible workflow",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "workflow.replay",
+      "status": "Production",
+      "description": "Deterministic replay workflow",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "workflow.triage",
+      "status": "Production",
+      "description": "Full triage session workflow",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "workflow.verify",
+      "status": "Production",
+      "description": "Case verification workflow",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    },
+    {
+      "name": "workflow.watchpoints",
+      "status": "Production",
+      "description": "Integrity watchpoints",
+      "limitations": [],
+      "evidence_types": [
+        "disk_image"
+      ],
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "last_updated_utc": "2024-01-01T00:00:00Z"
+    }
+  ]
+}

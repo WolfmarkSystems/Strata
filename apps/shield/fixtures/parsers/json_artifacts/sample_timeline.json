@@ -1,0 +1,29 @@
+﻿[
+  {
+    "id": "test-001",
+    "timestamp_unix": 1711234567,
+    "timestamp_utc": "2024-03-23T10:00:00Z",
+    "event_type": "file_access",
+    "source": "prefetch",
+    "summary": "NOTEPAD.EXE executed",
+    "severity": "info"
+  },
+  {
+    "id": "test-002",
+    "timestamp_unix": 1711238167,
+    "timestamp_utc": "2024-03-23T11:00:00Z",
+    "event_type": "registry_update",
+    "source": "registry",
+    "summary": "RunMRU value updated",
+    "severity": "info"
+  },
+  {
+    "id": "test-003",
+    "timestamp_unix": 1711241767,
+    "timestamp_utc": "2024-03-23T12:00:00Z",
+    "event_type": "shortcut_open",
+    "source": "lnk",
+    "summary": "Shortcut launched from desktop",
+    "severity": "warn"
+  }
+]

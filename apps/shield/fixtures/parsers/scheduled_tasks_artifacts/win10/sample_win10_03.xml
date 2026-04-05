@@ -1,0 +1,1 @@
+﻿<Task><RegistrationInfo><Author>Win10Lab</Author></RegistrationInfo><LastRunTime>2026-03-10T11:00:00</LastRunTime><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/c task_3</Arguments></Exec></Actions></Task>

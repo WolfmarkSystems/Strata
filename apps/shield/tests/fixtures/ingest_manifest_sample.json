@@ -1,0 +1,11 @@
+{
+  "id": "manifest-001",
+  "case_id": "case-demo",
+  "source_path": "evidence/sample.E01",
+  "container_type": "E01 (EnCase)",
+  "parser_name": "container::e01",
+  "parser_version": "1.0.0",
+  "ingest_status": "ok",
+  "warning_count": 1,
+  "unsupported_count": 0
+}

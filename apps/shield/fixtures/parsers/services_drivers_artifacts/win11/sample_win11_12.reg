@@ -1,0 +1,4 @@
+﻿[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Drv12]
+"DisplayName"="Driver 12"
+"ImagePath"="\\SystemRoot\\System32\\drivers\\drv12.sys"
+"Start"=dword:00000003

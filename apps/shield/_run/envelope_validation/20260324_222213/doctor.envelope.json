@@ -1,0 +1,24 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-25T02:22:13.393579800+00:00",
+  "platform": "windows",
+  "command": "doctor",
+  "args": [
+    "doctor",
+    "--quiet",
+    "--json-result",
+    "D:\\forensic-suite\\_run\\envelope_validation\\20260324_222213\\doctor.envelope.json"
+  ],
+  "status": "ok",
+  "exit_code": 0,
+  "error": null,
+  "warning": null,
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 26,
+  "data": {
+    "platform": "windows",
+    "webview2_found": true,
+    "tool_version": "0.1.0"
+  }
+}

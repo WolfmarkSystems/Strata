@@ -1,0 +1,2 @@
+target_host,client_address,timestamp,username,user_sid,session_id,source_kind,process_path
+srv-win11-08,10.11.0.8,1700101008,investigator08,S-1-5-21-2000-8,sess-win11-08,rdp,C:/Windows/System32/mstsc.exe

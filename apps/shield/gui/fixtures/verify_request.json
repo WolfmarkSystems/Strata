@@ -1,0 +1,10 @@
+{
+  "command": "verify",
+  "args": [
+    "--case", "demo_case_001",
+    "--db", "exports/cases/demo_case.sqlite",
+    "--sample", "50",
+    "--json-result", "gui/runs/verify_result.json",
+    "--quiet"
+  ]
+}

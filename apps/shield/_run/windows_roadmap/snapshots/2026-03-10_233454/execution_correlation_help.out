@@ -1,0 +1,8 @@
+Execution-Correlation Command
+  --prefetch-dir <path>  Prefetch directory
+  --jumplist-path <path> Jump List source file or directory
+  --shortcuts-base <path> Base user directory for shortcut scan
+  --limit <N>            Limit rows (default: 200, max: 5000)
+  --json                 Print data payload JSON to stdout
+  --json-result <file>   Write envelope JSON to file
+  --quiet                Suppress console summary output

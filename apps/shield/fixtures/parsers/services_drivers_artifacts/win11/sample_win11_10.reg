@@ -1,0 +1,4 @@
+﻿[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Drv10]
+"DisplayName"="Driver 10"
+"ImagePath"="\\SystemRoot\\System32\\drivers\\drv10.sys"
+"Start"=dword:00000003

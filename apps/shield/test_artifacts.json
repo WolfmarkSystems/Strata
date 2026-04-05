@@ -1,0 +1,23 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-14T19:21:29.454113200+00:00",
+  "platform": "windows",
+  "command": "artifacts",
+  "args": [
+    "--case",
+    "test",
+    "--db",
+    "./cases/test.sqlite",
+    "--json-result",
+    "D:\\forensic-suite\\test_artifacts.json",
+    "--quiet"
+  ],
+  "status": "ok",
+  "exit_code": 0,
+  "error": null,
+  "warning": null,
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 1,
+  "data": {}
+}

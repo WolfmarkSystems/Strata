@@ -1,0 +1,14 @@
+﻿{
+    "records":  [
+                    {
+                        "id":  3,
+                        "snapshot_time":  1700200180,
+                        "source":  "restore-point",
+                        "file_path":  "C:/Windows/System32/cmd.exe",
+                        "name":  "restore-point-3",
+                        "description":  "pre-update checkpoint",
+                        "event_type":  "checkpoint",
+                        "source_record_id":  "rp-3"
+                    }
+                ]
+}

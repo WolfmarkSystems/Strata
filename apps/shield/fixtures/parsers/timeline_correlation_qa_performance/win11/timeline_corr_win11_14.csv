@@ -1,0 +1,2 @@
+﻿timestamp_unix,source,event_type,severity,executable_name
+1700700000,evtx-security,process-create,info,cmd.exe

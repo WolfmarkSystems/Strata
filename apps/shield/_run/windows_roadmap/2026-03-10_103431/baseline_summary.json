@@ -1,0 +1,60 @@
+﻿{
+    "timestamp_utc":  "2026-03-10T10:34:31.219Z",
+    "repo_root":  "D:\\forensic-suite",
+    "out_dir":  "D:\\forensic-suite\\_run\\windows_roadmap\\2026-03-10_103431",
+    "corpus":  {
+                   "enabled":  false,
+                   "max_files":  50,
+                   "max_bytes":  2097152
+               },
+    "steps":  [
+                  {
+                      "name":  "build_workspace",
+                      "command":  "cargo build --workspace",
+                      "exit_code":  0,
+                      "elapsed_seconds":  3.129,
+                      "log_path":  "D:\\forensic-suite\\_run\\windows_roadmap\\2026-03-10_103431\\build_workspace.log"
+                  },
+                  {
+                      "name":  "test_workspace",
+                      "command":  "cargo test --workspace -- --nocapture",
+                      "exit_code":  0,
+                      "elapsed_seconds":  11.333,
+                      "log_path":  "D:\\forensic-suite\\_run\\windows_roadmap\\2026-03-10_103431\\test_workspace.log"
+                  },
+                  {
+                      "name":  "clippy_workspace",
+                      "command":  "cargo clippy --workspace --all-targets --all-features",
+                      "exit_code":  0,
+                      "elapsed_seconds":  24.147,
+                      "log_path":  "D:\\forensic-suite\\_run\\windows_roadmap\\2026-03-10_103431\\clippy_workspace.log"
+                  },
+                  {
+                      "name":  "fixture_harness",
+                      "command":  "cargo test -p forensic_engine fixture_harness -- --nocapture",
+                      "exit_code":  0,
+                      "elapsed_seconds":  8.534,
+                      "log_path":  "D:\\forensic-suite\\_run\\windows_roadmap\\2026-03-10_103431\\fixture_harness.log"
+                  }
+              ],
+    "metrics":  {
+                    "build_ok":  true,
+                    "tests_ok":  true,
+                    "clippy_ok":  true,
+                    "fixture_harness_ok":  true,
+                    "build_error_count":  0,
+                    "clippy_warning_count":  59,
+                    "failed_test_count":  0,
+                    "failed_tests":  [
+
+                                     ],
+                    "fixture_missing_warning_count":  0
+                },
+    "fixtures":  {
+                     "manifest_path":  "D:\\forensic-suite\\fixtures\\images\\manifest.json",
+                     "total_fixtures":  14,
+                     "windows_fixtures":  6,
+                     "total_parser_inputs":  19,
+                     "windows_parser_inputs":  8
+                 }
+}

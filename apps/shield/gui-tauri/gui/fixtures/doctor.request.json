@@ -1,0 +1,5 @@
+{
+  "command": "doctor",
+  "args": [],
+  "result_path": "gui/runs/doctor_result.json"
+}

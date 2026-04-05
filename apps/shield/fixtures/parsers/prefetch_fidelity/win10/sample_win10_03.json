@@ -1,0 +1,16 @@
+﻿[
+{
+    "program_name":  "APP03.EXE",
+    "last_run_time":  1700003003,
+    "run_count":  3,
+    "files_referenced":  [
+                             "C:/Windows/System32/app03.exe"
+                         ],
+    "directories_referenced":  [
+                                   "C:/Windows/System32"
+                               ],
+    "volumes_referenced":  [
+                               "C:"
+                           ]
+}
+]

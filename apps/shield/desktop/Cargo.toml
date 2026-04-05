@@ -1,0 +1,43 @@
+[package]
+name = "forensic_desktop"
+version = "0.1.0"
+edition = "2021"
+description = "Desktop backend for Forensic Suite"
+
+[lib]
+name = "forensic_desktop"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "forensic_desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+strata-shield-engine = { path = "../engine" }
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+rusqlite = { version = "0.30", features = ["bundled"] }
+tempfile = "3"
+reqwest = { version = "0.11", features = ["blocking"] }
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"
+
+[[example]]
+name = "smoke_test"
+path = "examples/smoke_test.rs"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"

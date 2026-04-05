@@ -1,0 +1,9 @@
+Case ID: examine_case
+Started: 
+Finished: 
+Status: Pass
+
+Steps:
+
+Fingerprints:
+  Tables fingerprinted: 0

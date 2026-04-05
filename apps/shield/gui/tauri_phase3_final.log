@@ -1,0 +1,23 @@
+
+> forensic-suite-gui@0.1.0 tauri
+> tauri dev
+
+     Running BeforeDevCommand (`npm run dev`)
+
+> forensic-suite-gui@0.1.0 dev
+> vite
+
+
+  [32m[1mVITE[22m v6.4.1[39m  [2mready in [0m[1m223[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m1420[22m/[39m
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching D:\forensic-suite\gui\src-tauri for changes...
+        Info Watching D:\forensic-suite\engine for changes...
+[1m[92m   Compiling[0m vantorshield v0.1.0 (D:\forensic-suite\gui\src-tauri)
+[1m[96m    Building[0m [=======================> ] 628/630: vantors…[1m[96m    Building[0m [=======================> ] 629/630: vantors…                                                            [1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 16.56s
+[1m[92m     Running[0m `D:\forensic-suite\target\debug\vantorshield.exe`
+[2m2026-03-25T00:19:26.587824Z[0m [32m INFO[0m ThreadId(01) [2mforensic_engine[0m[2m:[0m [2mengine\src\lib.rs[0m[2m:[0m[2m74:[0m Tracing and panic hook initialized
+[2m2026-03-25T00:19:26.588076Z[0m [32m INFO[0m ThreadId(01) [2mforensic_suite_lib[0m[2m:[0m [2mgui\src-tauri\src\lib.rs[0m[2m:[0m[2m2545:[0m Vantor Shield GUI starting with crash protection...
+[2m2026-03-25T00:19:31.341634Z[0m [34mDEBUG[0m ThreadId(25) [2mhyper_util::client::legacy::connect::http[0m[2m:[0m [2mC:\Users\korby\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hyper-util-0.1.20\src\client\legacy\connect\http.rs[0m[2m:[0m[2m767:[0m connecting to 127.0.0.1:8090
+[2m2026-03-25T00:19:33.410832Z[0m [34mDEBUG[0m ThreadId(26) [2mhyper_util::client::legacy::connect::http[0m[2m:[0m [2mC:\Users\korby\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hyper-util-0.1.20\src\client\legacy\connect\http.rs[0m[2m:[0m[2m767:[0m connecting to 127.0.0.1:8090

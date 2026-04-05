@@ -1,0 +1,70 @@
+﻿{
+    "scan_date":  "2026-03-27",
+    "dangerous_empty_returns":  [
+                                    {
+                                        "file":  "crates/strata-core/src/classification/etw.rs",
+                                        "line":  111,
+                                        "type":  "err_to_empty_vec",
+                                        "content":  "Err(e) =\u003e { warn!( \"[classification::etw] ETL file read failed, returning empty: {}\", e ); return Ok(Vec::new())"
+                                    },
+                                    {
+                                        "file":  "crates/strata-core/src/classification/etw.rs",
+                                        "line":  121,
+                                        "type":  "err_to_empty_vec",
+                                        "content":  "Err(e) =\u003e { warn!( \"[classification::etw] ETL JSON parse failed, returning empty: {}\", e ); return Ok(Vec::new())"
+                                    },
+                                    {
+                                        "file":  "crates/strata-core/src/classification/notifications.rs",
+                                        "line":  21,
+                                        "type":  "err_to_empty_vec",
+                                        "content":  "Err(e) =\u003e { warn!( \"[classification::notifications] notification history read failed, returning empty: {}\", e ); return Ok(Vec::new())"
+                                    },
+                                    {
+                                        "file":  "crates/strata-core/src/classification/setupapi.rs",
+                                        "line":  20,
+                                        "type":  "err_to_empty_vec",
+                                        "content":  "Err(e) =\u003e { warn!( \"[classification::setupapi] setupapi log read failed, returning empty: {}\", e ); return Ok(Vec::new())"
+                                    },
+                                    {
+                                        "file":  "crates/strata-fs/src/iso9660.rs",
+                                        "line":  168,
+                                        "type":  "err_catchall_ok_return",
+                                        "content":  "Err(_) =\u003e return Ok("
+                                    },
+                                    {
+                                        "file":  "crates/strata-shield-engine/src/classification/etw.rs",
+                                        "line":  110,
+                                        "type":  "err_catchall_ok_return",
+                                        "content":  "Err(_) =\u003e return Ok("
+                                    },
+                                    {
+                                        "file":  "crates/strata-shield-engine/src/classification/etw.rs",
+                                        "line":  114,
+                                        "type":  "err_catchall_ok_return",
+                                        "content":  "Err(_) =\u003e return Ok("
+                                    },
+                                    {
+                                        "file":  "crates/strata-shield-engine/src/classification/notifications.rs",
+                                        "line":  20,
+                                        "type":  "err_catchall_ok_return",
+                                        "content":  "Err(_) =\u003e return Ok("
+                                    },
+                                    {
+                                        "file":  "crates/strata-shield-engine/src/classification/setupapi.rs",
+                                        "line":  19,
+                                        "type":  "err_catchall_ok_return",
+                                        "content":  "Err(_) =\u003e return Ok("
+                                    },
+                                    {
+                                        "file":  "crates/strata-shield-engine/src/filesystem/iso9660.rs",
+                                        "line":  168,
+                                        "type":  "err_catchall_ok_return",
+                                        "content":  "Err(_) =\u003e return Ok("
+                                    }
+                                ],
+    "stub_markers":  [
+
+                     ],
+    "total_dangerous":  10,
+    "total_stubs":  0
+}

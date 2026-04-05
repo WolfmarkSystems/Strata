@@ -1,0 +1,16 @@
+﻿[
+{
+    "program_name":  "APP09.EXE",
+    "last_run_time":  1700003009,
+    "run_count":  9,
+    "files_referenced":  [
+                             "C:/Windows/System32/app09.exe"
+                         ],
+    "directories_referenced":  [
+                                   "C:/Windows/System32"
+                               ],
+    "volumes_referenced":  [
+                               "C:"
+                           ]
+}
+]

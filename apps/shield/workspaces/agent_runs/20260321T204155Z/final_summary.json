@@ -1,0 +1,15 @@
+{
+  "run_id": "20260321T204155Z",
+  "status": "completed",
+  "agents": [
+    "codegen",
+    "reviewer",
+    "integrator"
+  ],
+  "workspace": "D:\\forensic-suite",
+  "artifacts": [
+    "codegen_output.json",
+    "reviewer_output.json",
+    "integrator_output.json"
+  ]
+}

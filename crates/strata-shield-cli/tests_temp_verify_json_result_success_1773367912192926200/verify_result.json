@@ -1,0 +1,67 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-13T02:11:53.495419200+00:00",
+  "platform": "windows",
+  "command": "verify",
+  "args": [
+    "--json-result",
+    "tests_temp_verify_json_result_success_1773367912192926200\\verify_result.json",
+    "--quiet",
+    "--case",
+    "verify_case",
+    "--db",
+    "tests_temp_verify_json_result_success_1773367912192926200\\case.sqlite"
+  ],
+  "status": "error",
+  "exit_code": 1,
+  "error": null,
+  "warning": null,
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 0,
+  "data": {
+    "case_id": "verify_case",
+    "checks": [
+      {
+        "message": "Activity hash chain verified: 0 events",
+        "name": "activity_hash_chain",
+        "status": "pass"
+      },
+      {
+        "message": "Database integrity check passed",
+        "name": "db_integrity",
+        "status": "pass"
+      },
+      {
+        "message": "FTS queue check passed (depth: 0)",
+        "name": "fts_queue",
+        "status": "pass"
+      },
+      {
+        "message": "Verified 0 packets with 0 exhibits",
+        "name": "packet_manifests",
+        "status": "pass"
+      },
+      {
+        "message": "Failed to rebuild read models",
+        "name": "read_models_consistency",
+        "status": "fail"
+      },
+      {
+        "message": "Timeline idempotency verified: 0 events",
+        "name": "timeline_idempotency",
+        "status": "pass"
+      }
+    ],
+    "schema_version": "1.0",
+    "stats": {
+      "activity_events_checked": 0,
+      "exhibits_checked": 0,
+      "fts_queue_depth": 0,
+      "packets_checked": 0,
+      "timeline_events_checked": 0
+    },
+    "status": "fail",
+    "tool_version": "0.1.0"
+  }
+}

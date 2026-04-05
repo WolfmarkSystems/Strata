@@ -1,0 +1,4 @@
+Transcript started
+PS C:\\> Get-Process
+PS C:\\> Get-Service
+Transcript ended

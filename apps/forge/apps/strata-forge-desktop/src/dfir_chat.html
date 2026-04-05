@@ -1,0 +1,137 @@
+﻿<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>DFIR Coding AI (Offline)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; }
+    #wrap { max-width: 1100px; margin: 0 auto; }
+    textarea { width: 100%; box-sizing: border-box; }
+    #sysbox { height: 140px; }
+    #msg { height: 120px; }
+    pre { white-space: pre-wrap; word-wrap: break-word; padding: 12px; border: 1px solid #ccc; border-radius: 8px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    button { padding: 10px 14px; cursor: pointer; }
+    .small { font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+<div id="wrap">
+  <h2>DFIR Coding AI (Offline)</h2>
+  <div class="small">Server: <span id="srv">http://127.0.0.1:8080</span> (OpenAI-style API detected)</div>
+
+  <div class="row" style="margin-top:10px;">
+    <button id="open">Open Server UI</button>
+    <button id="clear">Clear Chat</button>
+    <button id="saveSys">Save System Prompt</button>
+    <button id="resetSys">Reset System Prompt</button>
+    <label class="small"><input type="checkbox" id="persist" checked> Persist chat in browser</label>
+  </div>
+
+  <h3>System Prompt (stored locally)</h3>
+  <textarea id="sysbox"></textarea>
+  <div class="small">
+    Tip: This is saved in your browser locally (offline). Edit it once and it will persist.
+  </div>
+
+  <h3>Chat</h3>
+  <pre id="chat"></pre>
+
+  <h3>Your message (Ctrl+Enter to send)</h3>
+  <textarea id="msg" placeholder="Type here..."></textarea>
+  <div class="row" style="margin-top:10px;">
+    <button id="send">Send</button>
+  </div>
+
+  <div class="small" style="margin-top:10px;">
+    Uses: POST /v1/chat/completions on your local llama-server.
+  </div>
+</div>
+
+<script>
+const SERVER = "http://127.0.0.1:8090";
+const chatEl = document.getElementById("chat");
+const sysBox = document.getElementById("sysbox");
+const msgEl  = document.getElementById("msg");
+const persistEl = document.getElementById("persist");
+
+const DEFAULT_SYS = `You are DFIR Coding AI.
+
+You help me write and review code for DFIR / tool-building, offline-first.
+You do NOT perform investigations, interpret evidence, or draw case conclusions.
+You focus on safe engineering, hostile-input assumptions, deterministic outputs, and reproducible tooling.
+Prefer Rust first. Avoid unsafe unless necessary and explain why.
+Ask short clarifying questions only when required.`;
+
+let messages = [];
+
+function render() {
+  chatEl.textContent = messages.map(m => `${m.role.toUpperCase()}:\n${m.content}\n`).join("\n");
+  if (persistEl.checked) localStorage.setItem("dfir_chat_msgs", JSON.stringify(messages));
+}
+
+function loadPersisted() {
+  try {
+    const raw = localStorage.getItem("dfir_chat_msgs");
+    if (raw) messages = JSON.parse(raw);
+  } catch {}
+  render();
+}
+
+function loadSystemPrompt() {
+  const saved = localStorage.getItem("dfir_sys_prompt");
+  sysBox.value = saved ? saved : DEFAULT_SYS;
+}
+
+function saveSystemPrompt() {
+  localStorage.setItem("dfir_sys_prompt", sysBox.value);
+}
+
+async function send() {
+  const user = msgEl.value.trim();
+  if (!user) return;
+  msgEl.value = "";
+
+  const sysText = sysBox.value.trim();
+  const base = sysText ? [{ role: "system", content: sysText }] : [];
+
+  messages.push({ role: "user", content: user });
+  render();
+
+  const payload = {
+    model: "local",
+    messages: base.concat(messages),
+    temperature: 0.2,
+    max_tokens: 900
+  };
+
+  try {
+    const r = await fetch(`${SERVER}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const j = await r.json();
+    const out = j?.choices?.[0]?.message?.content ?? JSON.stringify(j);
+    messages.push({ role: "assistant", content: out });
+    render();
+  } catch (e) {
+    messages.push({ role: "assistant", content: `ERROR talking to server: ${e}` });
+    render();
+  }
+}
+
+document.getElementById("open").onclick = () => window.open(SERVER, "_blank");
+document.getElementById("clear").onclick = () => { messages = []; localStorage.removeItem("dfir_chat_msgs"); render(); };
+
+document.getElementById("saveSys").onclick = () => { saveSystemPrompt(); alert("System prompt saved locally."); };
+document.getElementById("resetSys").onclick = () => { sysBox.value = DEFAULT_SYS; saveSystemPrompt(); alert("System prompt reset."); };
+
+document.getElementById("send").onclick = send;
+msgEl.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send(); });
+
+loadSystemPrompt();
+loadPersisted();
+</script>
+</body>
+</html>

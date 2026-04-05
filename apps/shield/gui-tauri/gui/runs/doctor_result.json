@@ -1,0 +1,23 @@
+{
+  "tool_version": "0.1.0",
+  "timestamp_utc": "2026-03-06T03:06:15.139760600+00:00",
+  "platform": "windows",
+  "command": "doctor",
+  "args": [
+    "--json-result",
+    "D:/forensic-suite/gui-tauri/gui/runs/doctor_result.json",
+    "--quiet"
+  ],
+  "status": "ok",
+  "exit_code": 0,
+  "error": null,
+  "warning": null,
+  "outputs": {},
+  "sizes": {},
+  "elapsed_ms": 32,
+  "data": {
+    "platform": "windows",
+    "tool_version": "0.1.0",
+    "webview2_found": true
+  }
+}

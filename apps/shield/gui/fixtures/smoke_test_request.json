@@ -1,0 +1,10 @@
+{
+  "command": "smoke-test",
+  "args": [
+    "--image", "evidence/Stack001_Surface_HDD.E01",
+    "--out", "exports/smoke/surface_smoke",
+    "--mft", "50",
+    "--json-result", "gui/runs/smoke_result.json",
+    "--quiet"
+  ]
+}

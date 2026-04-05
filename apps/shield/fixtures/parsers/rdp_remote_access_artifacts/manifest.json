@@ -1,0 +1,217 @@
+{
+    "generated_utc":  "2026-03-12T01:21:00Z",
+    "total_samples":  30,
+    "notes":  "RDP and Remote Access Artifacts fixture manifest for parser/CLI regression kickoff.",
+    "samples":  [
+                    {
+                        "id":  "rdp_remote_access_win10_json_01",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_01.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_02",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_02.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_03",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_03.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_04",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_04.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_05",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_05.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_06",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_06.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_07",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_07.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_08",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_08.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_09",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_09.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_10",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_10.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_11",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_11.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_12",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_12.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_13",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_13.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_14",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_14.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win10_json_15",
+                        "os":  "windows10",
+                        "format":  "json",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win10\\\\sample_win10_15.json",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_01",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_01.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_02",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_02.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_03",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_03.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_04",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_04.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_05",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_05.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_06",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_06.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_07",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_07.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_08",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_08.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_09",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_09.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_10",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_10.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_11",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_11.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_12",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_12.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_13",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_13.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_14",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_14.csv",
+                        "expected_records":  1
+                    },
+                    {
+                        "id":  "rdp_remote_access_win11_csv_15",
+                        "os":  "windows11",
+                        "format":  "csv",
+                        "path":  "fixtures\\\\parsers\\\\rdp_remote_access_artifacts\\\\win11\\\\sample_win11_15.csv",
+                        "expected_records":  1
+                    }
+                ]
+}

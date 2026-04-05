@@ -1,0 +1,15 @@
+﻿{
+  "records": [
+    {
+      "record_id": 1005,
+      "provider": "network",
+      "record_type": "network-usage",
+      "timestamp_utc": "2026-03-10T05:00:00Z",
+      "app_name": "app5.exe",
+      "exe_path": "C:\\Program Files\\App5\\app5.exe",
+      "user_sid": "S-1-5-21-1000",
+      "bytes_in": 500,
+      "bytes_out": 1000
+    }
+  ]
+}
