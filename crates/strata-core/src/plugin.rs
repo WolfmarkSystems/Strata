@@ -122,8 +122,14 @@ impl PluginManager {
 
         unsafe {
             let lib = Library::new(&temp_path)?;
-            let constructor: Symbol<extern "C" fn() -> *mut std::ffi::c_void> =
-                lib.get(b"create_plugin")?;
+            // Derive unique symbol name from library filename to avoid
+            // duplicate symbol conflicts (e.g. libstrata_plugin_remnant.so
+            // → create_plugin_remnant).
+            let constructor: Symbol<extern "C" fn() -> *mut std::ffi::c_void> = {
+                let sym_name = plugin_symbol_name(path);
+                lib.get(sym_name.as_bytes())
+                    .or_else(|_| lib.get(b"create_plugin"))
+            }?;
             let plugin_ptr = constructor();
             if plugin_ptr.is_null() {
                 return Err(anyhow::anyhow!("Plugin constructor returned null pointer"));
@@ -184,4 +190,21 @@ impl PluginManager {
 
         all_artifacts
     }
+}
+
+/// Derive the plugin-specific FFI symbol name from a library path.
+/// e.g. `libstrata_plugin_remnant.so` → `create_plugin_remnant`
+fn plugin_symbol_name(path: &Path) -> String {
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+    // Strip leading "lib" (Unix) and "strata_plugin_" prefix
+    let stem = stem.strip_prefix("lib").unwrap_or(stem);
+    let name = stem
+        .strip_prefix("strata_plugin_")
+        .or_else(|| stem.strip_prefix("strata-plugin-"))
+        .unwrap_or(stem)
+        .replace('-', "_");
+    format!("create_plugin_{}\0", name)
 }

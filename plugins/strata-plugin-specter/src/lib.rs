@@ -624,7 +624,7 @@ impl StrataPlugin for SpecterPlugin {
 }
 
 #[no_mangle]
-pub extern "C" fn create_plugin() -> *mut std::ffi::c_void {
+pub extern "C" fn create_plugin_specter() -> *mut std::ffi::c_void {
     let plugin: Box<dyn StrataPlugin> = Box::new(SpecterPlugin::new());
     Box::into_raw(Box::new(plugin)) as *mut std::ffi::c_void
 }

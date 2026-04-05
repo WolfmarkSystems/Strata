@@ -48,7 +48,16 @@ jobs:
             libglib2.0-dev \
             libxdo-dev \
             libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev
+            libjavascriptcoregtk-4.1-dev \
+            libx11-dev \
+            libxext-dev \
+            libxft-dev \
+            libxi-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev \
+            libxss-dev \
+            libxkbcommon-dev
       - run: cargo build -p strata --release
       - uses: actions/upload-artifact@v4
         with:

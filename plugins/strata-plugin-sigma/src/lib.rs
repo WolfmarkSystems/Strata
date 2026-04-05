@@ -285,7 +285,7 @@ impl StrataPlugin for SigmaPlugin {
 }
 
 #[no_mangle]
-pub extern "C" fn create_plugin() -> *mut std::ffi::c_void {
+pub extern "C" fn create_plugin_sigma() -> *mut std::ffi::c_void {
     let plugin: Box<dyn StrataPlugin> = Box::new(SigmaPlugin::new());
     Box::into_raw(Box::new(plugin)) as *mut std::ffi::c_void
 }

@@ -1197,7 +1197,7 @@ fn walk_dir(dir: &Path) -> Result<Vec<std::path::PathBuf>, std::io::Error> {
 }
 
 #[no_mangle]
-pub extern "C" fn create_plugin() -> *mut std::ffi::c_void {
+pub extern "C" fn create_plugin_cipher() -> *mut std::ffi::c_void {
     let plugin: Box<dyn StrataPlugin> = Box::new(CipherPlugin::new());
     let plugin_holder = Box::new(plugin);
     Box::into_raw(plugin_holder) as *mut std::ffi::c_void

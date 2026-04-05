@@ -25,6 +25,6 @@ pub extern "C" fn strata_tree_plugin_entry() -> *mut dyn TreePlugin {
 }
 
 #[no_mangle]
-pub extern "C" fn create_plugin() -> *mut std::ffi::c_void {
+pub extern "C" fn create_plugin_tree_example() -> *mut std::ffi::c_void {
     Box::into_raw(Box::new(1u8)) as *mut std::ffi::c_void
 }

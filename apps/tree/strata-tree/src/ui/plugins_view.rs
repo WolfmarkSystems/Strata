@@ -749,12 +749,15 @@ fn run_plugin_sandbox(plugin_path: &str, timeout: Duration) -> SandboxRunResult 
             let lib = unsafe { Library::new(&plugin_path_buf) }
                 .with_context(|| format!("load failed: {}", plugin_path_buf.display()))
                 .map_err(|e| e.to_string())?;
-            // SAFETY: symbol name is fixed by the plugin C-ABI contract.
+            // SAFETY: symbol name is derived from the plugin C-ABI contract.
+            // Try plugin-specific name first, then legacy fallbacks.
+            let sym_name = plugin_symbol_name(&plugin_path_buf);
             let entry: Symbol<unsafe extern "C" fn() -> *mut std::ffi::c_void> = unsafe {
-                lib.get(b"create_plugin\0")
+                lib.get(sym_name.as_bytes())
+                    .or_else(|_| lib.get(b"create_plugin\0"))
                     .or_else(|_| lib.get(b"strata_tree_plugin_entry\0"))
             }
-            .context("missing symbol: create_plugin/strata_tree_plugin_entry")
+            .context("missing symbol: create_plugin_*/create_plugin/strata_tree_plugin_entry")
             .map_err(|e| e.to_string())?;
             // SAFETY: calling plugin entrypoint is required to validate runtime contract.
             let ptr = unsafe { entry() };
@@ -788,6 +791,21 @@ fn run_plugin_sandbox(plugin_path: &str, timeout: Duration) -> SandboxRunResult 
         },
     };
     result
+}
+
+/// Derive the plugin-specific FFI symbol name from a library path.
+fn plugin_symbol_name(path: &Path) -> String {
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+    let stem = stem.strip_prefix("lib").unwrap_or(stem);
+    let name = stem
+        .strip_prefix("strata_plugin_")
+        .or_else(|| stem.strip_prefix("strata-plugin-"))
+        .unwrap_or(stem)
+        .replace('-', "_");
+    format!("create_plugin_{}\0", name)
 }
 
 fn is_dynamic_plugin_file(path: &Path) -> bool {

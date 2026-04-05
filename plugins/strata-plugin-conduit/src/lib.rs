@@ -261,7 +261,7 @@ fn walk_dir(dir: &Path) -> Result<Vec<std::path::PathBuf>, std::io::Error> {
 }
 
 #[no_mangle]
-pub extern "C" fn create_plugin() -> *mut std::ffi::c_void {
+pub extern "C" fn create_plugin_conduit() -> *mut std::ffi::c_void {
     let plugin: Box<dyn StrataPlugin> = Box::new(ConduitPlugin::new());
     Box::into_raw(Box::new(plugin)) as *mut std::ffi::c_void
 }

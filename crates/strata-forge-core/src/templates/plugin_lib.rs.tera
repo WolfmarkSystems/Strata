@@ -40,6 +40,6 @@ impl VantorPlugin for {{ name | capitalize }}Plugin {
 }
 
 #[no_mangle]
-pub extern "C" fn create_plugin() -> Box<dyn VantorPlugin> {
+pub extern "C" fn create_plugin_{{ name }}() -> Box<dyn VantorPlugin> {
     Box::new({{ name | capitalize }}Plugin::new())
 }

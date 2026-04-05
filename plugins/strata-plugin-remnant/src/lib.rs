@@ -1221,7 +1221,7 @@ impl StrataPlugin for RemnantPlugin {
 }
 
 #[no_mangle]
-pub extern "C" fn create_plugin() -> *mut std::ffi::c_void {
+pub extern "C" fn create_plugin_remnant() -> *mut std::ffi::c_void {
     let plugin: Box<dyn StrataPlugin> = Box::new(RemnantPlugin::new());
     let plugin_holder = Box::new(plugin);
     Box::into_raw(plugin_holder) as *mut std::ffi::c_void
