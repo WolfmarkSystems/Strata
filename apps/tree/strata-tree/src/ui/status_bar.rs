@@ -10,7 +10,7 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
         .frame(
             egui::Frame::none()
                 .fill(t.panel)
-                .stroke(egui::Stroke::new(1.0, t.border))
+                .stroke(egui::Stroke::NONE)
                 .inner_margin(egui::Margin::symmetric(12.0, 4.0)),
         )
         .show(ctx, |ui| {

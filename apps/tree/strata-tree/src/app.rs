@@ -32,13 +32,6 @@ impl StrataTreeApp {
         }
         cc.egui_ctx.set_fonts(fonts);
 
-        // ── Dev bypass: inject a valid Pro license so trial lockdown
-        //    doesn't block any features. Every page still shows normally. ──
-        #[cfg(feature = "dev-bypass")]
-        {
-            state.license_state = crate::license_state::AppLicenseState::dev_bypass();
-        }
-
         // Check license — show splash if no valid license
         let needs_splash = matches!(state.license_state.tier, strata_license::LicenseTier::Free)
             && !state.license_state.is_trial
@@ -48,12 +41,6 @@ impl StrataTreeApp {
         if needs_splash {
             state.log_action("LAUNCH", "No valid license — showing activation splash");
         } else {
-            #[cfg(feature = "dev-bypass")]
-            state.log_action(
-                "LAUNCH",
-                &format!("Strata v{} launched — DEV BYPASS MODE", env!("CARGO_PKG_VERSION")),
-            );
-            #[cfg(not(feature = "dev-bypass"))]
             state.log_action(
                 "LAUNCH",
                 &format!("Strata v{} launched — {}", env!("CARGO_PKG_VERSION"), state.license_state.display_status()),

@@ -92,6 +92,37 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     // Auto-open evidence dialog after examiner setup
                     state.open_ev_dlg.open = true;
                 }
+
+                // DEV SKIP button (only in dev-bypass builds)
+                #[cfg(feature = "dev-bypass")]
+                {
+                    ui.add_space(8.0);
+                    let btn = ui.add(
+                        egui::Button::new(
+                            egui::RichText::new("DEV SKIP \u{2192}")
+                                .color(egui::Color32::from_rgb(0xc8, 0x85, 0x5a))
+                                .size(9.0)
+                                .monospace(),
+                        )
+                        .fill(egui::Color32::TRANSPARENT)
+                        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(0xc8, 0x85, 0x5a)))
+                        .rounding(3.0),
+                    );
+                    if btn.clicked() {
+                        state.examiner_name = "Dev Examiner".to_string();
+                        state.examiner_setup_dlg.name = "Dev Examiner".to_string();
+                        state.examiner_setup_dlg.agency = "Wolfmark Systems".to_string();
+                        state.examiner_setup_dlg.badge = "DEV-001".to_string();
+                        state.examiner_setup_dlg.email = "dev@wolfmark.local".to_string();
+                        let _ = crate::case::profile::save_examiner_profile_full(
+                            "Dev Examiner", "Wolfmark Systems", "DEV-001",
+                            Some("dev@wolfmark.local"), Some("UTC"),
+                        );
+                        state.log_action("DEV_SKIP", "Examiner setup bypassed");
+                        state.examiner_setup_dlg.is_open = false;
+                        state.open_ev_dlg.open = true;
+                    }
+                }
             });
         });
 }

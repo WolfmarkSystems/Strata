@@ -94,13 +94,10 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
     if file.is_none() {
         ui.vertical_centered(|ui| {
             ui.add_space(ui.available_height() / 3.0);
-            // V logo placeholder
-            ui.label(egui::RichText::new("V").color(t.active).size(40.0).strong());
-            ui.add_space(8.0);
             ui.label(
                 egui::RichText::new("Select a file to preview")
                     .color(t.muted)
-                    .size(10.0),
+                    .size(12.0),
             );
         });
         return;

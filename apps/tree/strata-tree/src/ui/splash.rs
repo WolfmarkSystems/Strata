@@ -161,6 +161,37 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     .size(8.0),
                 );
             });
+
+            // DEV SKIP button — bottom left (only in dev-bypass builds)
+            #[cfg(feature = "dev-bypass")]
+            {
+                let bottom = ui.available_rect_before_wrap();
+                ui.allocate_ui_at_rect(
+                    egui::Rect::from_min_size(
+                        egui::pos2(bottom.left() + 8.0, bottom.bottom() - 30.0),
+                        egui::vec2(120.0, 24.0),
+                    ),
+                    |ui| {
+                        let btn = ui.add(
+                            egui::Button::new(
+                                egui::RichText::new("DEV SKIP \u{2192}")
+                                    .color(egui::Color32::from_rgb(0xc8, 0x85, 0x5a))
+                                    .size(9.0)
+                                    .monospace(),
+                            )
+                            .fill(egui::Color32::TRANSPARENT)
+                            .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(0xc8, 0x85, 0x5a)))
+                            .rounding(3.0),
+                        );
+                        if btn.clicked() {
+                            state.license_state = crate::license_state::AppLicenseState::dev_bypass();
+                            state.show_splash = false;
+                            state.log_action("DEV_SKIP", "License screen bypassed");
+                            advance_after_splash(state);
+                        }
+                    },
+                );
+            }
         });
 }
 

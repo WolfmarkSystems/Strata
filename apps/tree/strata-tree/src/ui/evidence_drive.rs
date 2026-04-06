@@ -477,6 +477,47 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                         }
                     }
                 });
+
+                // Cancel button — dismiss the dialog
+                if ui.add(
+                    egui::Button::new(
+                        egui::RichText::new("Cancel")
+                            .color(TEXT_MUTED)
+                            .size(10.0),
+                    )
+                    .fill(egui::Color32::TRANSPARENT)
+                ).clicked() {
+                    state.show_drive_selection = false;
+                }
+
+                // DEV SKIP button (only in dev-bypass builds)
+                #[cfg(feature = "dev-bypass")]
+                {
+                    ui.add_space(8.0);
+                    let btn = ui.add(
+                        egui::Button::new(
+                            egui::RichText::new("DEV SKIP \u{2192}")
+                                .color(egui::Color32::from_rgb(0xc8, 0x85, 0x5a))
+                                .size(9.0)
+                                .monospace(),
+                        )
+                        .fill(egui::Color32::TRANSPARENT)
+                        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(0xc8, 0x85, 0x5a)))
+                        .rounding(3.0),
+                    );
+                    if btn.clicked() {
+                        let dev_dir = std::env::var_os("HOME")
+                            .map(std::path::PathBuf::from)
+                            .unwrap_or_else(|| std::path::PathBuf::from("."))
+                            .join("Wolfmark/strata/dev-evidence");
+                        let _ = std::fs::create_dir_all(&dev_dir);
+                        state.evidence_drive_path = Some(dev_dir.clone());
+                        state.evidence_case_dir = Some(dev_dir);
+                        state.show_drive_selection = false;
+                        state.open_ev_dlg.open = true;
+                        state.log_action("DEV_SKIP", "Evidence drive bypassed");
+                    }
+                }
             });
         });
 }

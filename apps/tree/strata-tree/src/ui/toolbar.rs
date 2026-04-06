@@ -20,16 +20,10 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(6.0, 0.0);
 
-                // Wolf head mark — 28x28
-                let (wolf_rect, _) =
-                    ui.allocate_exact_size(egui::vec2(28.0, 28.0), egui::Sense::hover());
-                draw_wolf_head(ui.painter(), wolf_rect);
-                ui.add_space(4.0);
-
                 // STRATA wordmark
                 ui.label(
                     egui::RichText::new("STRATA")
-                        .color(egui::Color32::from_rgb(0xdc, 0xe6, 0xf0))
+                        .color(t.text)
                         .size(14.0)
                         .strong(),
                 );
@@ -129,12 +123,21 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
 
-                // Search bar
+                // Search bar — max 480px, centered
                 let search_border = if state.global_search_active || !state.global_search_query.is_empty() {
                     t.active
                 } else {
-                    egui::Color32::from_rgb(0x2a, 0x33, 0x47)
+                    t.border
                 };
+
+                let search_max = 480.0_f32;
+                let room_for_buttons = 280.0_f32;
+                let avail = ui.available_width() - room_for_buttons;
+                let bar_w = avail.min(search_max);
+                let left_pad = (avail - bar_w) / 2.0;
+                if left_pad > 0.0 {
+                    ui.add_space(left_pad);
+                }
 
                 egui::Frame::none()
                     .fill(t.card)
@@ -142,7 +145,7 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     .rounding(6.0)
                     .inner_margin(egui::Margin::symmetric(8.0, 4.0))
                     .show(ui, |ui| {
-                        ui.set_width(ui.available_width() - 280.0); // leave room for buttons
+                        ui.set_width(bar_w);
                         ui.horizontal(|ui| {
                             ui.label(egui::RichText::new("\u{E30C}").color(t.muted).size(14.0)); // magnifier
                             let resp = ui.add(
@@ -704,8 +707,9 @@ fn open_case_file(state: &mut AppState, path: &std::path::Path) {
     state.log_action("CASE_OPENED", &format!("path={}", path.display()));
 }
 
-/// Draw a geometric wolf head mark at any size into the given rect.
-pub fn draw_wolf_head(painter: &egui::Painter, rect: egui::Rect) {
+/// Wolf head mark — retained for future use when real PNG logo is embedded.
+#[allow(dead_code)]
+fn draw_wolf_head(painter: &egui::Painter, rect: egui::Rect) {
     let ox = rect.left();
     let oy = rect.top();
     let sx = rect.width() / 28.0;
