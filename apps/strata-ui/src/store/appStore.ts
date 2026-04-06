@@ -18,6 +18,9 @@ interface AppStore extends AppState {
   setPluginStatus: (name: string, status: PluginStatus) => void
   selectedArtifactId: string | null
   setSelectedArtifactId: (id: string | null) => void
+  taggedFiles: Record<string, string>
+  setFileTag: (fileId: string, tag: string) => void
+  removeFileTag: (fileId: string) => void
 
   setView: (v: ViewMode) => void
   setLicensed: (s: AppState['licensed']) => void
@@ -74,6 +77,20 @@ export const useAppStore = create<AppStore>((set) => ({
     })),
   selectedArtifactId: null,
   setSelectedArtifactId: (id) => set({ selectedArtifactId: id }),
+  taggedFiles: {
+    f004: 'Critical Evidence',
+    f003: 'Suspicious',
+    f010: 'Suspicious',
+    f005: 'Key Artifact',
+  },
+  setFileTag: (fileId, tag) =>
+    set((s) => ({ taggedFiles: { ...s.taggedFiles, [fileId]: tag } })),
+  removeFileTag: (fileId) =>
+    set((s) => {
+      const next = { ...s.taggedFiles }
+      delete next[fileId]
+      return { taggedFiles: next }
+    }),
 
   setView: (v) => set({ view: v }),
   setLicensed: (s) => set({ licensed: s }),

@@ -98,6 +98,86 @@ pub struct HexData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct TaggedFile {
+    pub file_id: String,
+    pub name: String,
+    pub extension: String,
+    pub size_display: String,
+    pub modified: String,
+    pub full_path: String,
+    pub tag: String,
+    pub tag_color: String,
+    pub tagged_at: String,
+    pub note: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct TagSummary {
+    pub name: String,
+    pub color: String,
+    pub count: u64,
+}
+
+static TAG_STORE: OnceLock<Arc<Mutex<HashMap<String, TaggedFile>>>> = OnceLock::new();
+
+fn get_tag_store() -> Arc<Mutex<HashMap<String, TaggedFile>>> {
+    TAG_STORE
+        .get_or_init(|| {
+            let mut map: HashMap<String, TaggedFile> = HashMap::new();
+            map.insert("f004".to_string(), TaggedFile {
+                file_id: "f004".to_string(),
+                name: "mimikatz.exe".to_string(),
+                extension: "exe".to_string(),
+                size_display: "1.2 MB".to_string(),
+                modified: "2009-11-15 14:33".to_string(),
+                full_path: "\\Windows\\Temp\\mimikatz.exe".to_string(),
+                tag: "Critical Evidence".to_string(),
+                tag_color: "#a84040".to_string(),
+                tagged_at: "2009-11-16 09:00".to_string(),
+                note: Some("Known credential dumping tool".to_string()),
+            });
+            map.insert("f003".to_string(), TaggedFile {
+                file_id: "f003".to_string(),
+                name: "svchost32.exe".to_string(),
+                extension: "exe".to_string(),
+                size_display: "892 KB".to_string(),
+                modified: "2009-11-15 14:32".to_string(),
+                full_path: "\\Windows\\System32\\svchost32.exe".to_string(),
+                tag: "Suspicious".to_string(),
+                tag_color: "#b87840".to_string(),
+                tagged_at: "2009-11-16 09:01".to_string(),
+                note: None,
+            });
+            map.insert("f010".to_string(), TaggedFile {
+                file_id: "f010".to_string(),
+                name: "cleanup.ps1".to_string(),
+                extension: "ps1".to_string(),
+                size_display: "4.8 KB".to_string(),
+                modified: "2009-11-15 14:31".to_string(),
+                full_path: "\\Windows\\Temp\\cleanup.ps1".to_string(),
+                tag: "Suspicious".to_string(),
+                tag_color: "#b87840".to_string(),
+                tagged_at: "2009-11-16 09:02".to_string(),
+                note: Some("Anti-forensic script".to_string()),
+            });
+            map.insert("f005".to_string(), TaggedFile {
+                file_id: "f005".to_string(),
+                name: "Security.evtx".to_string(),
+                extension: "evtx".to_string(),
+                size_display: "44 MB".to_string(),
+                modified: "2009-11-16 03:44".to_string(),
+                full_path: "\\Windows\\System32\\winevt\\Logs\\Security.evtx".to_string(),
+                tag: "Key Artifact".to_string(),
+                tag_color: "#4a7890".to_string(),
+                tagged_at: "2009-11-16 09:03".to_string(),
+                note: None,
+            });
+            Arc::new(Mutex::new(map))
+        })
+        .clone()
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ArtifactCategory {
     pub name: String,
     pub icon: String,
@@ -804,6 +884,81 @@ async fn search_files(query: String, _evidence_id: String) -> Result<Vec<SearchR
 }
 
 #[tauri::command]
+async fn get_tag_summaries() -> Result<Vec<TagSummary>, String> {
+    let store = get_tag_store();
+    let map = store.lock().map_err(|e| e.to_string())?;
+
+    let tag_defs = [
+        ("Critical Evidence", "#a84040"),
+        ("Suspicious",        "#b87840"),
+        ("Needs Review",      "#b8a840"),
+        ("Confirmed Clean",   "#487858"),
+        ("Key Artifact",      "#4a7890"),
+        ("Excluded",          "#3a4858"),
+    ];
+
+    let summaries = tag_defs
+        .iter()
+        .map(|(name, color)| {
+            let count = map.values().filter(|f| f.tag == *name).count() as u64;
+            TagSummary {
+                name: name.to_string(),
+                color: color.to_string(),
+                count,
+            }
+        })
+        .collect();
+
+    Ok(summaries)
+}
+
+#[tauri::command]
+async fn get_tagged_files(tag: String) -> Result<Vec<TaggedFile>, String> {
+    let store = get_tag_store();
+    let map = store.lock().map_err(|e| e.to_string())?;
+    let files: Vec<TaggedFile> = map.values().filter(|f| f.tag == tag).cloned().collect();
+    Ok(files)
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+async fn tag_file(
+    file_id: String,
+    file_name: String,
+    extension: String,
+    size_display: String,
+    modified: String,
+    full_path: String,
+    tag: String,
+    tag_color: String,
+    note: Option<String>,
+) -> Result<(), String> {
+    let store = get_tag_store();
+    let mut map = store.lock().map_err(|e| e.to_string())?;
+    map.insert(file_id.clone(), TaggedFile {
+        file_id,
+        name: file_name,
+        extension,
+        size_display,
+        modified,
+        full_path,
+        tag,
+        tag_color,
+        tagged_at: "2009-11-16 09:00".to_string(),
+        note,
+    });
+    Ok(())
+}
+
+#[tauri::command]
+async fn untag_file(file_id: String) -> Result<(), String> {
+    let store = get_tag_store();
+    let mut map = store.lock().map_err(|e| e.to_string())?;
+    map.remove(&file_id);
+    Ok(())
+}
+
+#[tauri::command]
 async fn get_artifact_categories(
     _evidence_id: String,
 ) -> Result<Vec<ArtifactCategory>, String> {
@@ -1022,6 +1177,10 @@ pub fn run() {
             run_all_plugins,
             get_artifact_categories,
             get_artifacts,
+            get_tag_summaries,
+            get_tagged_files,
+            tag_file,
+            untag_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

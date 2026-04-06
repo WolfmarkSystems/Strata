@@ -35,6 +35,25 @@ export interface HexData {
   offset: number
 }
 
+export interface TagSummary {
+  name: string
+  color: string
+  count: number
+}
+
+export interface TaggedFile {
+  file_id: string
+  name: string
+  extension: string
+  size_display: string
+  modified: string
+  full_path: string
+  tag: string
+  tag_color: string
+  tagged_at: string
+  note: string | null
+}
+
 export interface ArtifactCategory {
   name: string
   icon: string
@@ -230,6 +249,128 @@ export async function searchFiles(
     return await invoke('search_files', { query, evidenceId })
   } catch {
     return []
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Tag commands
+// ──────────────────────────────────────────────────────────────────────────────
+
+const TAG_DEFS: Array<[string, string]> = [
+  ['Critical Evidence', '#a84040'],
+  ['Suspicious',        '#b87840'],
+  ['Needs Review',      '#b8a840'],
+  ['Confirmed Clean',   '#487858'],
+  ['Key Artifact',      '#4a7890'],
+  ['Excluded',          '#3a4858'],
+]
+
+// Mock in-memory tag store (browser preview mode)
+const mockTagStore = new Map<string, TaggedFile>([
+  ['f004', {
+    file_id: 'f004', name: 'mimikatz.exe', extension: 'exe',
+    size_display: '1.2 MB', modified: '2009-11-15 14:33',
+    full_path: '\\Windows\\Temp\\mimikatz.exe',
+    tag: 'Critical Evidence', tag_color: '#a84040',
+    tagged_at: '2009-11-16 09:00',
+    note: 'Known credential dumping tool',
+  }],
+  ['f003', {
+    file_id: 'f003', name: 'svchost32.exe', extension: 'exe',
+    size_display: '892 KB', modified: '2009-11-15 14:32',
+    full_path: '\\Windows\\System32\\svchost32.exe',
+    tag: 'Suspicious', tag_color: '#b87840',
+    tagged_at: '2009-11-16 09:01',
+    note: null,
+  }],
+  ['f010', {
+    file_id: 'f010', name: 'cleanup.ps1', extension: 'ps1',
+    size_display: '4.8 KB', modified: '2009-11-15 14:31',
+    full_path: '\\Windows\\Temp\\cleanup.ps1',
+    tag: 'Suspicious', tag_color: '#b87840',
+    tagged_at: '2009-11-16 09:02',
+    note: 'Anti-forensic script',
+  }],
+  ['f005', {
+    file_id: 'f005', name: 'Security.evtx', extension: 'evtx',
+    size_display: '44 MB', modified: '2009-11-16 03:44',
+    full_path: '\\Windows\\System32\\winevt\\Logs\\Security.evtx',
+    tag: 'Key Artifact', tag_color: '#4a7890',
+    tagged_at: '2009-11-16 09:03',
+    note: null,
+  }],
+])
+
+export async function getTagSummaries(): Promise<TagSummary[]> {
+  if (!IN_TAURI) {
+    return TAG_DEFS.map(([name, color]) => ({
+      name,
+      color,
+      count: Array.from(mockTagStore.values()).filter((f) => f.tag === name).length,
+    }))
+  }
+  try {
+    return await invoke('get_tag_summaries')
+  } catch {
+    return TAG_DEFS.map(([name, color]) => ({ name, color, count: 0 }))
+  }
+}
+
+export async function getTaggedFiles(tag: string): Promise<TaggedFile[]> {
+  if (!IN_TAURI) {
+    return Array.from(mockTagStore.values()).filter((f) => f.tag === tag)
+  }
+  try {
+    return await invoke('get_tagged_files', { tag })
+  } catch {
+    return []
+  }
+}
+
+export async function tagFile(
+  fileId: string,
+  fileName: string,
+  extension: string,
+  sizeDisplay: string,
+  modified: string,
+  fullPath: string,
+  tag: string,
+  tagColor: string,
+  note?: string,
+): Promise<void> {
+  if (!IN_TAURI) {
+    mockTagStore.set(fileId, {
+      file_id: fileId,
+      name: fileName,
+      extension,
+      size_display: sizeDisplay,
+      modified,
+      full_path: fullPath,
+      tag,
+      tag_color: tagColor,
+      tagged_at: new Date().toISOString().slice(0, 16).replace('T', ' '),
+      note: note ?? null,
+    })
+    return
+  }
+  try {
+    await invoke('tag_file', {
+      fileId, fileName, extension, sizeDisplay, modified, fullPath, tag, tagColor, note,
+    })
+  } catch (e) {
+    console.error('Tag failed:', e)
+  }
+}
+
+export async function untagFile(fileId: string): Promise<void> {
+  if (!IN_TAURI) {
+    mockTagStore.delete(fileId)
+    return
+  }
+  try {
+    await invoke('untag_file', { fileId })
+  } catch (e) {
+    console.error('Untag failed:', e)
   }
 }
 

@@ -1,10 +1,28 @@
 import { useState, useMemo } from 'react'
 import type { FileEntry } from '../types'
+import { useAppStore } from '../store/appStore'
+import { tagFile, untagFile } from '../ipc'
+import ContextMenu from './ContextMenu'
 
 interface Props {
   files: FileEntry[]
   selectedFileId: string | null
   onFileSelect: (file: FileEntry) => void
+}
+
+const TAG_COLOR_MAP: Record<string, string> = {
+  'Critical Evidence': '#a84040',
+  'Suspicious':        '#b87840',
+  'Needs Review':      '#b8a840',
+  'Confirmed Clean':   '#487858',
+  'Key Artifact':      '#4a7890',
+  'Excluded':          '#3a4858',
+}
+
+interface ContextMenuState {
+  x: number
+  y: number
+  file: FileEntry
 }
 
 type SortCol = 'name' | 'size' | 'modified' | 'created' | 'sha256'
@@ -20,6 +38,10 @@ const COLS: { id: SortCol; label: string; flex: number }[] = [
 export default function FileListing({ files, selectedFileId, onFileSelect }: Props) {
   const [sortCol, setSortCol] = useState<SortCol>('name')
   const [sortAsc, setSortAsc] = useState(true)
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const taggedFiles = useAppStore((s) => s.taggedFiles)
+  const setFileTag = useAppStore((s) => s.setFileTag)
+  const removeFileTag = useAppStore((s) => s.removeFileTag)
 
   const sorted = useMemo(() => {
     const arr = [...files]
@@ -112,11 +134,47 @@ export default function FileListing({ files, selectedFileId, onFileSelect }: Pro
               key={file.id}
               file={file}
               selected={selectedFileId === file.id}
+              tagName={taggedFiles[file.id] ?? null}
               onClick={() => onFileSelect(file)}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setContextMenu({ x: e.clientX, y: e.clientY, file })
+              }}
             />
           ))
         )}
       </div>
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          fileId={contextMenu.file.id}
+          fileName={contextMenu.file.name}
+          currentTag={taggedFiles[contextMenu.file.id] ?? null}
+          onTag={async (tag, color) => {
+            const f = contextMenu.file
+            await tagFile(
+              f.id,
+              f.name,
+              f.extension,
+              f.size_display,
+              f.modified,
+              f.name, // full_path placeholder — FileEntry doesn't carry full path
+              tag,
+              color,
+            )
+            setFileTag(f.id, tag)
+            setContextMenu(null)
+          }}
+          onUntag={async () => {
+            await untagFile(contextMenu.file.id)
+            removeFileTag(contextMenu.file.id)
+            setContextMenu(null)
+          }}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   )
 }
@@ -124,11 +182,15 @@ export default function FileListing({ files, selectedFileId, onFileSelect }: Pro
 function FileRow({
   file,
   selected,
+  tagName,
   onClick,
+  onContextMenu,
 }: {
   file: FileEntry
   selected: boolean
+  tagName: string | null
   onClick: () => void
+  onContextMenu: (e: React.MouseEvent) => void
 }) {
   const [hover, setHover] = useState(false)
 
@@ -144,16 +206,22 @@ function FileRow({
   if (selected) bg = '#0f1e30'
   else if (hover) bg = '#0f1420'
 
+  // Tag dot color: use store-based tagName first, fall back to file.tag_color
+  const tagDotColor = tagName ? TAG_COLOR_MAP[tagName] : file.tag_color
+
   return (
     <div
       onClick={onClick}
+      onContextMenu={onContextMenu}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
         display: 'flex',
         alignItems: 'center',
         minHeight: 28,
-        borderBottom: '1px solid #0d1018',
+        borderBottomStyle: 'solid',
+        borderBottomWidth: 1,
+        borderBottomColor: '#0d1018',
         cursor: 'pointer',
         background: bg,
         transition: 'background 0.1s',
@@ -170,13 +238,13 @@ function FileRow({
           overflow: 'hidden',
         }}
       >
-        {file.tag_color && (
+        {tagDotColor && (
           <span
             style={{
-              width: 6,
-              height: 6,
+              width: 7,
+              height: 7,
               borderRadius: '50%',
-              background: file.tag_color,
+              background: tagDotColor,
               flexShrink: 0,
             }}
           />
