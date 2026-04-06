@@ -9,6 +9,10 @@ interface AppStore extends AppState {
   evidenceLoaded: boolean
   selectedNodeId: string | null
   treeExpanded: Set<string>
+  searchQuery: string
+  searchActive: boolean
+  setSearchQuery: (q: string) => void
+  setSearchActive: (v: boolean) => void
 
   setView: (v: ViewMode) => void
   setLicensed: (s: AppState['licensed']) => void
@@ -54,6 +58,10 @@ export const useAppStore = create<AppStore>((set) => ({
   evidenceLoaded: false,
   selectedNodeId: null,
   treeExpanded: new Set<string>(),
+  searchQuery: '',
+  searchActive: false,
+  setSearchQuery: (q) => set({ searchQuery: q }),
+  setSearchActive: (v) => set({ searchActive: v }),
 
   setView: (v) => set({ view: v }),
   setLicensed: (s) => set({ licensed: s }),

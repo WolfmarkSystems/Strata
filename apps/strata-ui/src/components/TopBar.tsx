@@ -14,6 +14,7 @@ export default function TopBar() {
   const setStats = useAppStore((s) => s.setStats)
   const setSelectedNode = useAppStore((s) => s.setSelectedNode)
   const setCase = useAppStore((s) => s.setCase)
+  const setSearchActive = useAppStore((s) => s.setSearchActive)
 
   const handleOpenEvidence = async () => {
     const path = await openEvidenceDialog()
@@ -207,6 +208,9 @@ export default function TopBar() {
           <input
             type="text"
             placeholder="Search files, paths, extensions..."
+            readOnly
+            onFocus={() => setSearchActive(true)}
+            onClick={() => setSearchActive(true)}
             style={{
               width: 440,
               maxWidth: '100%',
@@ -216,6 +220,7 @@ export default function TopBar() {
               padding: '5px 10px',
               color: 'var(--text-2)',
               fontSize: 12,
+              cursor: 'pointer',
             }}
           />
           <button

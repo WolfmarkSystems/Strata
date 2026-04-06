@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { getFileMetadata } from '../ipc'
 import type { FileMetadata } from '../types'
+import HexViewer from './HexViewer'
+import TextViewer from './TextViewer'
 
 interface Props {
   fileId: string | null
@@ -79,7 +81,7 @@ export default function DetailPane({ fileId }: Props) {
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {!fileId ? (
           <div
             style={{
@@ -96,32 +98,29 @@ export default function DetailPane({ fileId }: Props) {
             Select a file to preview
           </div>
         ) : tab === 'meta' ? (
-          <MetaContent meta={meta} loading={loading} />
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <MetaContent meta={meta} loading={loading} />
+          </div>
         ) : tab === 'hex' ? (
-          <Placeholder text="Hex viewer — Day 4" />
+          <HexViewer fileId={fileId} />
         ) : tab === 'text' ? (
-          <Placeholder text="Text viewer — Day 4" />
+          <TextViewer fileId={fileId} extension={meta?.extension} />
         ) : (
-          <Placeholder text="Image preview — Day 4" />
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
+            <div style={{ fontSize: 24 }}>{'\u{1F5BC}'}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Not an image file</div>
+          </div>
         )}
       </div>
-    </div>
-  )
-}
-
-function Placeholder({ text }: { text: string }) {
-  return (
-    <div
-      style={{
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 12,
-        color: 'var(--text-muted)',
-      }}
-    >
-      {text}
     </div>
   )
 }
@@ -156,12 +155,13 @@ function MetaContent({ meta, loading }: { meta: FileMetadata | null; loading: bo
   const deletedColor = meta.is_deleted ? 'var(--flag)' : 'var(--clean)'
   const deletedText = meta.is_deleted ? 'Yes' : 'No'
 
+  const showFlags = meta.is_flagged || meta.is_suspicious || meta.is_deleted
+
   return (
     <div style={{ padding: 10 }}>
       <Row k="Name" v={meta.name} />
       <Row k="Category" v={meta.category} valueColor={categoryColor} />
       <Row k="Size" v={meta.size_display} />
-      <Row k="Path" v={meta.full_path} />
       <Row k="Modified" v={meta.modified} />
       <Row k="Created" v={meta.created} />
       <Row k="Accessed" v={meta.accessed} />
@@ -170,6 +170,73 @@ function MetaContent({ meta, loading }: { meta: FileMetadata | null; loading: bo
       {meta.mft_entry !== null && <Row k="MFT Entry" v={String(meta.mft_entry)} />}
       {meta.permissions && <Row k="Perms" v={meta.permissions} />}
       <Row k="Deleted" v={deletedText} valueColor={deletedColor} />
+
+      {/* Full path — monospace, separate row for word-break */}
+      <div
+        style={{
+          fontSize: 10,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          marginTop: 4,
+          marginBottom: 2,
+        }}
+      >
+        Full Path
+      </div>
+      <div
+        style={{
+          fontFamily: 'monospace',
+          fontSize: 10,
+          color: 'var(--text-2)',
+          wordBreak: 'break-all',
+          marginBottom: 6,
+        }}
+      >
+        {meta.full_path}
+      </div>
+
+      {showFlags && (
+        <div
+          style={{
+            background: 'rgba(168,64,64,0.08)',
+            border: '1px solid rgba(168,64,64,0.2)',
+            borderRadius: 4,
+            padding: '8px 10px',
+            margin: '8px 0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 9,
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              marginBottom: 2,
+            }}
+          >
+            Forensic Flags
+          </div>
+          {meta.is_flagged && (
+            <div style={{ color: 'var(--flag)', fontSize: 11, fontWeight: 700 }}>
+              ⚠ FLAGGED — Known threat indicator
+            </div>
+          )}
+          {meta.is_suspicious && (
+            <div style={{ color: 'var(--sus)', fontSize: 11 }}>
+              ◈ SUSPICIOUS — Requires investigation
+            </div>
+          )}
+          {meta.is_deleted && (
+            <div style={{ color: 'var(--flag)', fontSize: 11 }}>
+              ✗ DELETED — File was removed from filesystem. Recovery may be possible.
+            </div>
+          )}
+        </div>
+      )}
 
       <Sep />
 

@@ -78,6 +78,8 @@ export interface FileMetadata {
   md5: string | null
   category: string
   is_deleted: boolean
+  is_suspicious: boolean
+  is_flagged: boolean
   mft_entry: number | null
   extension: string
   mime_type: string | null

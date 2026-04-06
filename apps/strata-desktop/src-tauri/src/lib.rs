@@ -51,6 +51,8 @@ pub struct FileMetadata {
     pub md5: Option<String>,
     pub category: String,
     pub is_deleted: bool,
+    pub is_suspicious: bool,
+    pub is_flagged: bool,
     pub mft_entry: Option<u64>,
     pub extension: String,
     pub mime_type: Option<String>,
@@ -76,6 +78,35 @@ pub struct Stats {
     pub carved: u64,
     pub hashed: u64,
     pub artifacts: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct HexLine {
+    pub offset: String,
+    pub hex: String,
+    pub ascii: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct HexData {
+    pub lines: Vec<HexLine>,
+    pub total_size: u64,
+    pub offset: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SearchResult {
+    pub id: String,
+    pub name: String,
+    pub full_path: String,
+    pub extension: String,
+    pub size_display: String,
+    pub modified: String,
+    pub is_deleted: bool,
+    pub is_flagged: bool,
+    pub is_suspicious: bool,
+    pub match_field: String,
+    pub match_value: String,
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -442,11 +473,34 @@ async fn get_file_metadata(file_id: String) -> Result<FileMetadata, String> {
             md5: Some("5f4dcc3b5aa765d61d8327deb882cf99".to_string()),
             category: "Registry Hive".to_string(),
             is_deleted: false,
+            is_suspicious: false,
+            is_flagged: false,
             mft_entry: Some(4922),
             extension: "dat".to_string(),
             mime_type: Some("application/octet-stream".to_string()),
             inode: None,
             permissions: Some("rw-r--r--".to_string()),
+        },
+        "f003" => FileMetadata {
+            id: "f003".to_string(),
+            name: "svchost32.exe".to_string(),
+            full_path: "\\Windows\\System32\\svchost32.exe".to_string(),
+            size: 913408,
+            size_display: "892 KB".to_string(),
+            modified: "2009-11-15 14:32:00".to_string(),
+            created: "2009-11-15 14:32:00".to_string(),
+            accessed: "2009-11-15 14:32:00".to_string(),
+            sha256: None,
+            md5: None,
+            category: "Executable".to_string(),
+            is_deleted: false,
+            is_suspicious: true,
+            is_flagged: false,
+            mft_entry: Some(6101),
+            extension: "exe".to_string(),
+            mime_type: Some("application/x-msdownload".to_string()),
+            inode: None,
+            permissions: Some("rwxr-xr-x".to_string()),
         },
         "f004" => FileMetadata {
             id: "f004".to_string(),
@@ -461,11 +515,55 @@ async fn get_file_metadata(file_id: String) -> Result<FileMetadata, String> {
             md5: None,
             category: "Known Malware Tool".to_string(),
             is_deleted: false,
+            is_suspicious: false,
+            is_flagged: true,
             mft_entry: Some(7745),
             extension: "exe".to_string(),
             mime_type: Some("application/x-msdownload".to_string()),
             inode: None,
             permissions: Some("rwxr-xr-x".to_string()),
+        },
+        "f007" => FileMetadata {
+            id: "f007".to_string(),
+            name: "evidence_backup.zip".to_string(),
+            full_path: "\\Users\\Admin\\Desktop\\evidence_backup.zip".to_string(),
+            size: 23068672,
+            size_display: "22 MB".to_string(),
+            modified: "2009-11-14 22:11:00".to_string(),
+            created: "2009-11-14 22:10:00".to_string(),
+            accessed: "2009-11-14 22:11:00".to_string(),
+            sha256: None,
+            md5: None,
+            category: "Archive".to_string(),
+            is_deleted: true,
+            is_suspicious: false,
+            is_flagged: false,
+            mft_entry: Some(8210),
+            extension: "zip".to_string(),
+            mime_type: Some("application/zip".to_string()),
+            inode: None,
+            permissions: Some("rw-r--r--".to_string()),
+        },
+        "f010" => FileMetadata {
+            id: "f010".to_string(),
+            name: "cleanup.ps1".to_string(),
+            full_path: "\\Windows\\Temp\\cleanup.ps1".to_string(),
+            size: 4915,
+            size_display: "4.8 KB".to_string(),
+            modified: "2009-11-15 14:31:00".to_string(),
+            created: "2009-11-15 14:31:00".to_string(),
+            accessed: "2009-11-15 14:31:00".to_string(),
+            sha256: None,
+            md5: None,
+            category: "PowerShell Script".to_string(),
+            is_deleted: false,
+            is_suspicious: true,
+            is_flagged: false,
+            mft_entry: Some(7720),
+            extension: "ps1".to_string(),
+            mime_type: Some("text/x-powershell".to_string()),
+            inode: None,
+            permissions: Some("rw-r--r--".to_string()),
         },
         _ => FileMetadata {
             id: file_id.clone(),
@@ -473,13 +571,15 @@ async fn get_file_metadata(file_id: String) -> Result<FileMetadata, String> {
             full_path: "\\Unknown".to_string(),
             size: 0,
             size_display: "0 B".to_string(),
-            modified: "—".to_string(),
-            created: "—".to_string(),
-            accessed: "—".to_string(),
+            modified: "\u{2014}".to_string(),
+            created: "\u{2014}".to_string(),
+            accessed: "\u{2014}".to_string(),
             sha256: None,
             md5: None,
             category: "Unknown".to_string(),
             is_deleted: false,
+            is_suspicious: false,
+            is_flagged: false,
             mft_entry: None,
             extension: "".to_string(),
             mime_type: None,
@@ -488,6 +588,145 @@ async fn get_file_metadata(file_id: String) -> Result<FileMetadata, String> {
         },
     };
     Ok(meta)
+}
+
+#[tauri::command]
+async fn get_file_hex(
+    _file_id: String,
+    offset: u64,
+    _length: u64,
+) -> Result<HexData, String> {
+    let bytes: Vec<u8> = vec![
+        0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+        0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
+        0x0E, 0x1F, 0xBA, 0x0E, 0x00, 0xB4, 0x09, 0xCD, 0x21, 0x8C, 0x00, 0x00, 0x54, 0x68, 0x69, 0x73,
+        0x20, 0x70, 0x72, 0x6F, 0x67, 0x72, 0x61, 0x6D, 0x20, 0x63, 0x61, 0x6E, 0x6E, 0x6F, 0x74, 0x20,
+        0x62, 0x65, 0x20, 0x72, 0x75, 0x6E, 0x20, 0x69, 0x6E, 0x20, 0x44, 0x4F, 0x53, 0x20, 0x6D, 0x6F,
+        0x64, 0x65, 0x2E, 0x0D, 0x0D, 0x0A, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+
+    let mut lines = Vec::new();
+    for (i, chunk) in bytes.chunks(16).enumerate() {
+        let off = offset + (i as u64 * 16);
+        let hex_str = chunk
+            .iter()
+            .map(|b| format!("{:02X}", b))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let ascii_str: String = chunk
+            .iter()
+            .map(|&b| if (0x20..0x7F).contains(&b) { b as char } else { '.' })
+            .collect();
+        lines.push(HexLine {
+            offset: format!("{:08X}", off),
+            hex: hex_str,
+            ascii: ascii_str,
+        });
+    }
+
+    Ok(HexData {
+        lines,
+        total_size: 1258291,
+        offset,
+    })
+}
+
+#[tauri::command]
+async fn get_file_text(file_id: String, _offset: u64) -> Result<String, String> {
+    let content = match file_id.as_str() {
+        "f010" => "# Cleanup script\n\
+                   # Remove evidence files\n\
+                   \n\
+                   Remove-Item -Path C:\\Windows\\Temp\\mimikatz.exe -Force\n\
+                   Remove-Item -Path C:\\Windows\\Temp\\lsass.dmp -Force\n\
+                   Clear-EventLog -LogName Security\n\
+                   Clear-EventLog -LogName System\n\
+                   wevtutil cl Security\n\
+                   wevtutil cl System\n\
+                   # Delete VSS snapshots\n\
+                   vssadmin delete shadows /all /quiet\n\
+                   Write-Host 'Cleanup complete'"
+            .to_string(),
+        "f008" => "[Binary file - use HEX tab to view]".to_string(),
+        _ => "[Text content not available for this file type.\nUse HEX tab to view raw bytes.]"
+            .to_string(),
+    };
+    Ok(content)
+}
+
+#[tauri::command]
+async fn search_files(query: String, _evidence_id: String) -> Result<Vec<SearchResult>, String> {
+    if query.is_empty() {
+        return Ok(vec![]);
+    }
+    let q = query.to_lowercase();
+    let all = vec![
+        SearchResult {
+            id: "f004".to_string(),
+            name: "mimikatz.exe".to_string(),
+            full_path: "\\Windows\\Temp\\mimikatz.exe".to_string(),
+            extension: "exe".to_string(),
+            size_display: "1.2 MB".to_string(),
+            modified: "2009-11-15 14:33".to_string(),
+            is_deleted: false,
+            is_flagged: true,
+            is_suspicious: false,
+            match_field: "filename".to_string(),
+            match_value: "mimikatz.exe".to_string(),
+        },
+        SearchResult {
+            id: "f003".to_string(),
+            name: "svchost32.exe".to_string(),
+            full_path: "\\Windows\\System32\\svchost32.exe".to_string(),
+            extension: "exe".to_string(),
+            size_display: "892 KB".to_string(),
+            modified: "2009-11-15 14:32".to_string(),
+            is_deleted: false,
+            is_flagged: false,
+            is_suspicious: true,
+            match_field: "filename".to_string(),
+            match_value: "svchost32.exe".to_string(),
+        },
+        SearchResult {
+            id: "f010".to_string(),
+            name: "cleanup.ps1".to_string(),
+            full_path: "\\Windows\\Temp\\cleanup.ps1".to_string(),
+            extension: "ps1".to_string(),
+            size_display: "4.8 KB".to_string(),
+            modified: "2009-11-15 14:31".to_string(),
+            is_deleted: false,
+            is_flagged: false,
+            is_suspicious: true,
+            match_field: "content".to_string(),
+            match_value: "Remove-Item mimikatz.exe".to_string(),
+        },
+        SearchResult {
+            id: "f007".to_string(),
+            name: "evidence_backup.zip".to_string(),
+            full_path: "\\Users\\Admin\\Desktop\\evidence_backup.zip".to_string(),
+            extension: "zip".to_string(),
+            size_display: "22 MB".to_string(),
+            modified: "2009-11-14 22:11".to_string(),
+            is_deleted: true,
+            is_flagged: false,
+            is_suspicious: false,
+            match_field: "filename".to_string(),
+            match_value: "evidence_backup.zip".to_string(),
+        },
+    ];
+
+    let results: Vec<SearchResult> = all
+        .into_iter()
+        .filter(|r| {
+            r.name.to_lowercase().contains(&q)
+                || r.full_path.to_lowercase().contains(&q)
+                || r.match_value.to_lowercase().contains(&q)
+        })
+        .collect();
+
+    Ok(results)
 }
 
 #[tauri::command]
@@ -528,6 +767,9 @@ pub fn run() {
             get_files,
             get_file_metadata,
             get_stats,
+            get_file_hex,
+            get_file_text,
+            search_files,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

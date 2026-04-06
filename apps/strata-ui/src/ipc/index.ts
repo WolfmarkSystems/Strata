@@ -22,6 +22,32 @@ export interface StatsResult {
   artifacts: number
 }
 
+export interface HexLine {
+  offset: string
+  hex: string
+  ascii: string
+}
+
+export interface HexData {
+  lines: HexLine[]
+  total_size: number
+  offset: number
+}
+
+export interface SearchResult {
+  id: string
+  name: string
+  full_path: string
+  extension: string
+  size_display: string
+  modified: string
+  is_deleted: boolean
+  is_flagged: boolean
+  is_suspicious: boolean
+  match_field: string
+  match_value: string
+}
+
 export async function getAppVersion(): Promise<string> {
   try {
     return await invoke('get_app_version')
@@ -128,6 +154,40 @@ export async function getFileMetadata(fileId: string): Promise<FileMetadata | nu
   }
 }
 
+export async function getFileHex(
+  fileId: string,
+  offset: number = 0,
+  length: number = 512,
+): Promise<HexData> {
+  if (!IN_TAURI) return mockHexData(offset)
+  try {
+    return await invoke('get_file_hex', { fileId, offset, length })
+  } catch {
+    return { lines: [], total_size: 0, offset: 0 }
+  }
+}
+
+export async function getFileText(fileId: string, offset: number = 0): Promise<string> {
+  if (!IN_TAURI) return mockTextContent(fileId)
+  try {
+    return await invoke('get_file_text', { fileId, offset })
+  } catch {
+    return '[Error loading text content]'
+  }
+}
+
+export async function searchFiles(
+  query: string,
+  evidenceId: string,
+): Promise<SearchResult[]> {
+  if (!IN_TAURI) return mockSearch(query)
+  try {
+    return await invoke('search_files', { query, evidenceId })
+  } catch {
+    return []
+  }
+}
+
 export async function getStats(evidenceId: string): Promise<StatsResult> {
   if (!IN_TAURI) {
     return { files: 26235, suspicious: 8993, flagged: 12, carved: 0, hashed: 0, artifacts: 0 }
@@ -212,6 +272,8 @@ function mockDefaultMeta(id: string): FileMetadata {
     md5: null,
     category: 'Unknown',
     is_deleted: false,
+    is_suspicious: false,
+    is_flagged: false,
     mft_entry: null,
     extension: '',
     mime_type: null,
@@ -234,11 +296,34 @@ const MOCK_METADATA: Record<string, FileMetadata> = {
     md5: '5f4dcc3b5aa765d61d8327deb882cf99',
     category: 'Registry Hive',
     is_deleted: false,
+    is_suspicious: false,
+    is_flagged: false,
     mft_entry: 4922,
     extension: 'dat',
     mime_type: 'application/octet-stream',
     inode: null,
     permissions: 'rw-r--r--',
+  },
+  f003: {
+    id: 'f003',
+    name: 'svchost32.exe',
+    full_path: '\\Windows\\System32\\svchost32.exe',
+    size: 913408,
+    size_display: '892 KB',
+    modified: '2009-11-15 14:32:00',
+    created: '2009-11-15 14:32:00',
+    accessed: '2009-11-15 14:32:00',
+    sha256: null,
+    md5: null,
+    category: 'Executable',
+    is_deleted: false,
+    is_suspicious: true,
+    is_flagged: false,
+    mft_entry: 6101,
+    extension: 'exe',
+    mime_type: 'application/x-msdownload',
+    inode: null,
+    permissions: 'rwxr-xr-x',
   },
   f004: {
     id: 'f004',
@@ -253,10 +338,170 @@ const MOCK_METADATA: Record<string, FileMetadata> = {
     md5: null,
     category: 'Known Malware Tool',
     is_deleted: false,
+    is_suspicious: false,
+    is_flagged: true,
     mft_entry: 7745,
     extension: 'exe',
     mime_type: 'application/x-msdownload',
     inode: null,
     permissions: 'rwxr-xr-x',
   },
+  f007: {
+    id: 'f007',
+    name: 'evidence_backup.zip',
+    full_path: '\\Users\\Admin\\Desktop\\evidence_backup.zip',
+    size: 23068672,
+    size_display: '22 MB',
+    modified: '2009-11-14 22:11:00',
+    created: '2009-11-14 22:10:00',
+    accessed: '2009-11-14 22:11:00',
+    sha256: null,
+    md5: null,
+    category: 'Archive',
+    is_deleted: true,
+    is_suspicious: false,
+    is_flagged: false,
+    mft_entry: 8210,
+    extension: 'zip',
+    mime_type: 'application/zip',
+    inode: null,
+    permissions: 'rw-r--r--',
+  },
+  f010: {
+    id: 'f010',
+    name: 'cleanup.ps1',
+    full_path: '\\Windows\\Temp\\cleanup.ps1',
+    size: 4915,
+    size_display: '4.8 KB',
+    modified: '2009-11-15 14:31:00',
+    created: '2009-11-15 14:31:00',
+    accessed: '2009-11-15 14:31:00',
+    sha256: null,
+    md5: null,
+    category: 'PowerShell Script',
+    is_deleted: false,
+    is_suspicious: true,
+    is_flagged: false,
+    mft_entry: 7720,
+    extension: 'ps1',
+    mime_type: 'text/x-powershell',
+    inode: null,
+    permissions: 'rw-r--r--',
+  },
+}
+
+function mockHexData(offset: number): HexData {
+  const bytes = [
+    0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00,
+    0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
+    0x0e, 0x1f, 0xba, 0x0e, 0x00, 0xb4, 0x09, 0xcd, 0x21, 0x8c, 0x00, 0x00, 0x54, 0x68, 0x69, 0x73,
+    0x20, 0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x20, 0x63, 0x61, 0x6e, 0x6e, 0x6f, 0x74, 0x20,
+    0x62, 0x65, 0x20, 0x72, 0x75, 0x6e, 0x20, 0x69, 0x6e, 0x20, 0x44, 0x4f, 0x53, 0x20, 0x6d, 0x6f,
+    0x64, 0x65, 0x2e, 0x0d, 0x0d, 0x0a, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ]
+  const lines: HexLine[] = []
+  for (let i = 0; i < bytes.length; i += 16) {
+    const chunk = bytes.slice(i, i + 16)
+    const off = offset + i
+    const hex = chunk.map((b) => b.toString(16).padStart(2, '0').toUpperCase()).join(' ')
+    const ascii = chunk
+      .map((b) => (b >= 0x20 && b < 0x7f ? String.fromCharCode(b) : '.'))
+      .join('')
+    lines.push({
+      offset: off.toString(16).padStart(8, '0').toUpperCase(),
+      hex,
+      ascii,
+    })
+  }
+  return { lines, total_size: 1258291, offset }
+}
+
+function mockTextContent(fileId: string): string {
+  if (fileId === 'f010') {
+    return [
+      '# Cleanup script',
+      '# Remove evidence files',
+      '',
+      'Remove-Item -Path C:\\Windows\\Temp\\mimikatz.exe -Force',
+      'Remove-Item -Path C:\\Windows\\Temp\\lsass.dmp -Force',
+      'Clear-EventLog -LogName Security',
+      'Clear-EventLog -LogName System',
+      'wevtutil cl Security',
+      'wevtutil cl System',
+      '# Delete VSS snapshots',
+      'vssadmin delete shadows /all /quiet',
+      "Write-Host 'Cleanup complete'",
+    ].join('\n')
+  }
+  if (fileId === 'f008') {
+    return '[Binary file - use HEX tab to view]'
+  }
+  return '[Text content not available for this file type.\nUse HEX tab to view raw bytes.]'
+}
+
+function mockSearch(query: string): SearchResult[] {
+  if (!query) return []
+  const q = query.toLowerCase()
+  const all: SearchResult[] = [
+    {
+      id: 'f004',
+      name: 'mimikatz.exe',
+      full_path: '\\Windows\\Temp\\mimikatz.exe',
+      extension: 'exe',
+      size_display: '1.2 MB',
+      modified: '2009-11-15 14:33',
+      is_deleted: false,
+      is_flagged: true,
+      is_suspicious: false,
+      match_field: 'filename',
+      match_value: 'mimikatz.exe',
+    },
+    {
+      id: 'f003',
+      name: 'svchost32.exe',
+      full_path: '\\Windows\\System32\\svchost32.exe',
+      extension: 'exe',
+      size_display: '892 KB',
+      modified: '2009-11-15 14:32',
+      is_deleted: false,
+      is_flagged: false,
+      is_suspicious: true,
+      match_field: 'filename',
+      match_value: 'svchost32.exe',
+    },
+    {
+      id: 'f010',
+      name: 'cleanup.ps1',
+      full_path: '\\Windows\\Temp\\cleanup.ps1',
+      extension: 'ps1',
+      size_display: '4.8 KB',
+      modified: '2009-11-15 14:31',
+      is_deleted: false,
+      is_flagged: false,
+      is_suspicious: true,
+      match_field: 'content',
+      match_value: 'Remove-Item mimikatz.exe',
+    },
+    {
+      id: 'f007',
+      name: 'evidence_backup.zip',
+      full_path: '\\Users\\Admin\\Desktop\\evidence_backup.zip',
+      extension: 'zip',
+      size_display: '22 MB',
+      modified: '2009-11-14 22:11',
+      is_deleted: true,
+      is_flagged: false,
+      is_suspicious: false,
+      match_field: 'filename',
+      match_value: 'evidence_backup.zip',
+    },
+  ]
+  return all.filter(
+    (r) =>
+      r.name.toLowerCase().includes(q) ||
+      r.full_path.toLowerCase().includes(q) ||
+      r.match_value.toLowerCase().includes(q),
+  )
 }
