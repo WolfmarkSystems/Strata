@@ -8,15 +8,15 @@ use std::collections::{HashSet, VecDeque};
 // ─── Design constants ─────────────────────────────────────────────────────────
 pub mod colors {
     use egui::Color32;
-    pub const SURFACE_EL: Color32 = Color32::from_rgb(0x08, 0x0f, 0x1e);
-    pub const BORDER_SUBTLE: Color32 = Color32::from_rgb(0x0a, 0x15, 0x25);
-    pub const ACCENT: Color32 = Color32::from_rgb(0x7d, 0xd3, 0xfc);
-    pub const TEXT_PRI: Color32 = Color32::from_rgb(0xe2, 0xe8, 0xf0);
-    pub const TEXT_SEC: Color32 = Color32::from_rgb(0xc8, 0xd6, 0xe5);
-    pub const TEXT_MUTED: Color32 = Color32::from_rgb(0x2d, 0x5a, 0x8a);
-    pub const DANGER: Color32 = Color32::from_rgb(0xe2, 0x4b, 0x4a);
-    pub const AMBER: Color32 = Color32::from_rgb(0xef, 0x9f, 0x27);
-    pub const GREEN_OK: Color32 = Color32::from_rgb(0x4a, 0xde, 0x80);
+    pub const SURFACE_EL: Color32 = Color32::from_rgb(0x11, 0x16, 0x22);
+    pub const BORDER_SUBTLE: Color32 = Color32::from_rgb(0x14, 0x1c, 0x28);
+    pub const ACCENT: Color32 = Color32::from_rgb(0xdc, 0xe6, 0xf0);
+    pub const TEXT_PRI: Color32 = Color32::from_rgb(0xdc, 0xe6, 0xf0);
+    pub const TEXT_SEC: Color32 = Color32::from_rgb(0x8f, 0xa8, 0xc0);
+    pub const TEXT_MUTED: Color32 = Color32::from_rgb(0x3d, 0x50, 0x66);
+    pub const DANGER: Color32 = Color32::from_rgb(0xb8, 0x50, 0x50);
+    pub const AMBER: Color32 = Color32::from_rgb(0xc8, 0x85, 0x5a);
+    pub const GREEN_OK: Color32 = Color32::from_rgb(0x5a, 0x90, 0x68);
 }
 
 // ─── Core types ───────────────────────────────────────────────────────────────

@@ -511,6 +511,8 @@ pub fn export_case_html(state: &AppState, out_path: &Path) -> Result<()> {
         ));
     }
 
+    let wolf_svg = wolf_head_svg_inline();
+
     let html = format!(
         r#"<!doctype html>
 <html lang="en">
@@ -518,20 +520,33 @@ pub fn export_case_html(state: &AppState, out_path: &Path) -> Result<()> {
   <meta charset="utf-8"/>
   <title>Strata Case Report</title>
   <style>
-    body {{ font-family: Consolas, "Courier New", monospace; margin: 18px; color: #1b1f24; background: #ffffff; }}
+    body {{ font-family: Consolas, "Courier New", monospace; margin: 18px; color: #111622; background: #ffffff; }}
     h1, h2 {{ margin: 0 0 10px 0; }}
-    h1 {{ font-size: 20px; }}
-    h2 {{ font-size: 16px; margin-top: 20px; border-top: 2px solid #c9d1d9; padding-top: 8px; }}
+    h1 {{ font-size: 20px; color: #1a2e44; }}
+    h2 {{ font-size: 16px; margin-top: 20px; border-top: 2px solid #8fa8c0; padding-top: 8px; color: #1a2e44; }}
     .meta {{ margin-bottom: 14px; }}
     .meta div {{ margin: 3px 0; }}
     table {{ border-collapse: collapse; width: 100%; margin-top: 8px; }}
-    th, td {{ border: 1px solid #c9d1d9; padding: 6px 8px; text-align: left; vertical-align: top; font-size: 12px; }}
-    th {{ background: #f6f8fa; }}
-    .appendix {{ border: 2px solid #1b1f24; padding: 10px; margin-top: 20px; }}
+    th, td {{ border: 1px solid #8fa8c0; padding: 6px 8px; text-align: left; vertical-align: top; font-size: 12px; }}
+    th {{ background: #eef2f7; color: #1a2e44; }}
+    .appendix {{ border: 2px solid #1a2e44; padding: 10px; margin-top: 20px; }}
+    .report-header {{ display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #8fa8c0; }}
+    .report-header svg {{ flex-shrink: 0; }}
+    .report-header-text h1 {{ margin: 0; font-size: 20px; color: #1a2e44; }}
+    .report-header-text p {{ margin: 2px 0 0; font-size: 12px; color: #4a6080; }}
+    .badge-critical {{ color: #b85050; font-weight: bold; }}
+    .badge-warning {{ color: #c8855a; font-weight: bold; }}
+    .badge-clean {{ color: #5a9068; font-weight: bold; }}
   </style>
 </head>
 <body>
-  <h1>STRATA - EXAMINATION REPORT</h1>
+  <div class="report-header">
+    {}
+    <div class="report-header-text">
+      <h1>STRATA</h1>
+      <p>Wolfmark Systems &middot; Forensic Analysis Report</p>
+    </div>
+  </div>
 
   <h2>Section 1 - Case Header</h2>
   <div class="meta">
@@ -604,6 +619,7 @@ pub fn export_case_html(state: &AppState, out_path: &Path) -> Result<()> {
   </div>
 </body>
 </html>"#,
+        wolf_svg,
         esc(case_name),
         esc(case_id),
         esc(&state.examiner_name),
@@ -856,6 +872,25 @@ fn paginate_pdf_lines(
     }
 
     pages
+}
+
+/// Inline SVG wolf head mark for HTML reports.
+fn wolf_head_svg_inline() -> &'static str {
+    r##"<svg width="40" height="40" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="4,14 7,3 11,11" fill="#8fa8c0" opacity="0.9"/>
+      <polygon points="5,13 7,5 10,11" fill="#1a2e44"/>
+      <polygon points="24,14 21,3 17,11" fill="#8fa8c0" opacity="0.9"/>
+      <polygon points="23,13 21,5 18,11" fill="#1a2e44"/>
+      <polygon points="14,2 22,8 24,15 20,22 14,26 8,22 4,15 6,8" fill="#1a2e44" stroke="#8fa8c0" stroke-width="0.8"/>
+      <polygon points="14,4 18,8 14,11 10,8" fill="#2a3a55" stroke="#8fa8c0" stroke-width="0.4"/>
+      <polygon points="8,11 10,10 12,12 10,14 7,13" fill="#111622"/>
+      <polygon points="9,11 10,10 11,12 10,13 8,12" fill="#4a6080"/>
+      <polygon points="20,11 18,10 16,12 18,14 21,13" fill="#111622"/>
+      <polygon points="19,11 18,10 17,12 18,13 20,12" fill="#4a6080"/>
+      <polygon points="13,16 14,14 15,16 14,18" fill="#8fa8c0" opacity="0.7"/>
+      <polygon points="10,21 14,19 18,21 16,25 12,25" fill="#2a3a55" stroke="#8fa8c0" stroke-width="0.4"/>
+      <line x1="14" y1="4" x2="14" y2="14" stroke="#8fa8c0" stroke-width="0.3" opacity="0.25"/>
+    </svg>"##
 }
 
 #[cfg(test)]

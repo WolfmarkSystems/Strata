@@ -72,12 +72,15 @@ pub fn generate_html_report(report: &ForensicReport) -> String {
     <meta charset="UTF-8">
     <title>Forensic Analysis Report</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 5px; }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; color: #111622; }
+        .report-banner { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .report-banner h1 { margin: 0; font-size: 20px; color: #1a2e44; }
+        .report-banner p { margin: 2px 0 0; font-size: 12px; color: #4a6080; }
+        .header { background: #1a2e44; color: white; padding: 20px; border-radius: 5px; }
         .section { background: white; margin: 20px 0; padding: 20px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .section h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .section h2 { color: #1a2e44; border-bottom: 2px solid #8fa8c0; padding-bottom: 10px; }
         table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-        th { background: #3498db; color: white; padding: 10px; text-align: left; }
+        th { background: #1a2e44; color: white; padding: 10px; text-align: left; }
         td { padding: 8px; border-bottom: 1px solid #ddd; }
         tr:hover { background: #f5f5f5; }
         .badge { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 12px; }
@@ -89,6 +92,29 @@ pub fn generate_html_report(report: &ForensicReport) -> String {
 </head>
 <body>
 "#);
+
+    html.push_str(r##"
+    <div class="report-banner">
+      <svg width="40" height="40" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="4,14 7,3 11,11" fill="#8fa8c0" opacity="0.9"/>
+        <polygon points="5,13 7,5 10,11" fill="#1a2e44"/>
+        <polygon points="24,14 21,3 17,11" fill="#8fa8c0" opacity="0.9"/>
+        <polygon points="23,13 21,5 18,11" fill="#1a2e44"/>
+        <polygon points="14,2 22,8 24,15 20,22 14,26 8,22 4,15 6,8" fill="#1a2e44" stroke="#8fa8c0" stroke-width="0.8"/>
+        <polygon points="14,4 18,8 14,11 10,8" fill="#2a3a55" stroke="#8fa8c0" stroke-width="0.4"/>
+        <polygon points="8,11 10,10 12,12 10,14 7,13" fill="#111622"/>
+        <polygon points="9,11 10,10 11,12 10,13 8,12" fill="#4a6080"/>
+        <polygon points="20,11 18,10 16,12 18,14 21,13" fill="#111622"/>
+        <polygon points="19,11 18,10 17,12 18,13 20,12" fill="#4a6080"/>
+        <polygon points="13,16 14,14 15,16 14,18" fill="#8fa8c0" opacity="0.7"/>
+        <polygon points="10,21 14,19 18,21 16,25 12,25" fill="#2a3a55" stroke="#8fa8c0" stroke-width="0.4"/>
+      </svg>
+      <div>
+        <h1 style="margin:0;font-size:20px;color:#1a2e44;">STRATA</h1>
+        <p style="margin:2px 0 0;font-size:12px;color:#4a6080;">Wolfmark Systems &middot; Forensic Analysis Report</p>
+      </div>
+    </div>
+"##);
 
     html.push_str(&format!(
         r#"

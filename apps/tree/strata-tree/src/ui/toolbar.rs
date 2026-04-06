@@ -20,26 +20,19 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(6.0, 0.0);
 
-                // Logo placeholder — 32x32 strata layers
-                let (logo_rect, _) =
-                    ui.allocate_exact_size(egui::vec2(32.0, 32.0), egui::Sense::hover());
-                ui.painter()
-                    .rect_filled(logo_rect, 6.0, egui::Color32::from_rgb(0x1e, 0x25, 0x35));
-                ui.painter()
-                    .rect_stroke(logo_rect, 6.0, egui::Stroke::new(1.0, egui::Color32::from_rgb(0x2a, 0x33, 0x47)));
-                // 3 stacked lines (strata layers)
-                let lx = logo_rect.left() + 7.0;
-                let rx = logo_rect.right() - 7.0;
-                let cy = logo_rect.center().y;
-                for (dy, alpha) in [(-6.0f32, 255u8), (0.0, 180), (6.0, 100)] {
-                    let color = egui::Color32::from_rgba_unmultiplied(
-                        t.active.r(), t.active.g(), t.active.b(), alpha,
-                    );
-                    ui.painter().line_segment(
-                        [egui::pos2(lx, cy + dy), egui::pos2(rx, cy + dy)],
-                        egui::Stroke::new(2.5, color),
-                    );
-                }
+                // Wolf head mark — 28x28
+                let (wolf_rect, _) =
+                    ui.allocate_exact_size(egui::vec2(28.0, 28.0), egui::Sense::hover());
+                draw_wolf_head(ui.painter(), wolf_rect);
+                ui.add_space(4.0);
+
+                // STRATA wordmark
+                ui.label(
+                    egui::RichText::new("STRATA")
+                        .color(egui::Color32::from_rgb(0xdc, 0xe6, 0xf0))
+                        .size(14.0)
+                        .strong(),
+                );
 
                 ui.add_space(8.0);
 
@@ -691,6 +684,136 @@ fn open_case_file(state: &mut AppState, path: &std::path::Path) {
 
     state.status = status;
     state.log_action("CASE_OPENED", &format!("path={}", path.display()));
+}
+
+/// Draw a geometric wolf head mark at any size into the given rect.
+pub fn draw_wolf_head(painter: &egui::Painter, rect: egui::Rect) {
+    let ox = rect.left();
+    let oy = rect.top();
+    let sx = rect.width() / 28.0;
+    let sy = rect.height() / 28.0;
+
+    let p = |x: f32, y: f32| egui::pos2(ox + x * sx, oy + y * sy);
+
+    let poly = |points: &[(f32, f32)], fill: egui::Color32| {
+        let pts: Vec<egui::Pos2> = points.iter().map(|&(x, y)| p(x, y)).collect();
+        painter.add(egui::Shape::convex_polygon(
+            pts,
+            fill,
+            egui::Stroke::NONE,
+        ));
+    };
+
+    let poly_stroke = |points: &[(f32, f32)], fill: egui::Color32, stroke: egui::Stroke| {
+        let pts: Vec<egui::Pos2> = points.iter().map(|&(x, y)| p(x, y)).collect();
+        painter.add(egui::Shape::convex_polygon(pts, fill, stroke));
+    };
+
+    let bg = egui::Color32::from_rgb(0x08, 0x09, 0x0d);
+
+    // Left ear outer
+    poly(
+        &[(4.0, 14.0), (7.0, 3.0), (11.0, 11.0)],
+        egui::Color32::from_rgba_unmultiplied(0xb8, 0xc8, 0xd8, 230),
+    );
+    // Left ear inner
+    poly(&[(5.0, 13.0), (7.0, 5.0), (10.0, 11.0)], bg);
+
+    // Right ear outer
+    poly(
+        &[(24.0, 14.0), (21.0, 3.0), (17.0, 11.0)],
+        egui::Color32::from_rgba_unmultiplied(0xb8, 0xc8, 0xd8, 230),
+    );
+    // Right ear inner
+    poly(&[(23.0, 13.0), (21.0, 5.0), (18.0, 11.0)], bg);
+
+    // Main head octagon
+    poly_stroke(
+        &[
+            (14.0, 2.0),
+            (22.0, 8.0),
+            (24.0, 15.0),
+            (20.0, 22.0),
+            (14.0, 26.0),
+            (8.0, 22.0),
+            (4.0, 15.0),
+            (6.0, 8.0),
+        ],
+        egui::Color32::from_rgb(0x11, 0x1e, 0x2e),
+        egui::Stroke::new(0.8 * sx.min(sy), egui::Color32::from_rgb(0x8f, 0xa8, 0xc0)),
+    );
+
+    // Forehead center plate
+    poly_stroke(
+        &[(14.0, 4.0), (18.0, 8.0), (14.0, 11.0), (10.0, 8.0)],
+        egui::Color32::from_rgb(0x1a, 0x2e, 0x44),
+        egui::Stroke::new(0.4 * sx.min(sy), egui::Color32::from_rgb(0x8f, 0xa8, 0xc0)),
+    );
+
+    // Left face plate
+    poly(
+        &[(6.0, 8.0), (10.0, 8.0), (9.0, 15.0), (5.0, 14.0)],
+        egui::Color32::from_rgba_unmultiplied(0x16, 0x20, 0x30, 204),
+    );
+    // Right face plate
+    poly(
+        &[(22.0, 8.0), (18.0, 8.0), (19.0, 15.0), (23.0, 14.0)],
+        egui::Color32::from_rgba_unmultiplied(0x16, 0x20, 0x30, 204),
+    );
+
+    // Left eye socket
+    poly(
+        &[(8.0, 11.0), (10.0, 10.0), (12.0, 12.0), (10.0, 14.0), (7.0, 13.0)],
+        egui::Color32::from_rgb(0x08, 0x0c, 0x10),
+    );
+    // Left eye glow
+    poly(
+        &[(8.0, 11.0), (10.0, 10.0), (12.0, 12.0), (10.0, 13.0), (8.0, 12.0)],
+        egui::Color32::from_rgba_unmultiplied(0x4a, 0x7f, 0xc1, 128),
+    );
+    // Left eye bright
+    poly(
+        &[(9.0, 11.0), (10.0, 10.0), (11.0, 12.0), (10.0, 13.0), (8.0, 12.0)],
+        egui::Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 230),
+    );
+
+    // Right eye socket
+    poly(
+        &[(20.0, 11.0), (18.0, 10.0), (16.0, 12.0), (18.0, 14.0), (21.0, 13.0)],
+        egui::Color32::from_rgb(0x08, 0x0c, 0x10),
+    );
+    // Right eye glow
+    poly(
+        &[(20.0, 11.0), (18.0, 10.0), (16.0, 12.0), (18.0, 13.0), (20.0, 12.0)],
+        egui::Color32::from_rgba_unmultiplied(0x4a, 0x7f, 0xc1, 128),
+    );
+    // Right eye bright
+    poly(
+        &[(19.0, 11.0), (18.0, 10.0), (17.0, 12.0), (18.0, 13.0), (20.0, 12.0)],
+        egui::Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 230),
+    );
+
+    // Nose
+    poly(
+        &[(13.0, 16.0), (14.0, 14.0), (15.0, 16.0), (14.0, 18.0)],
+        egui::Color32::from_rgba_unmultiplied(0x8f, 0xa8, 0xc0, 179),
+    );
+
+    // Chin plate
+    poly_stroke(
+        &[(10.0, 21.0), (14.0, 19.0), (18.0, 21.0), (16.0, 25.0), (12.0, 25.0)],
+        egui::Color32::from_rgb(0x1a, 0x2e, 0x44),
+        egui::Stroke::new(0.4 * sx.min(sy), egui::Color32::from_rgb(0x8f, 0xa8, 0xc0)),
+    );
+
+    // Center line
+    painter.line_segment(
+        [p(14.0, 4.0), p(14.0, 14.0)],
+        egui::Stroke::new(
+            0.3 * sx.min(sy),
+            egui::Color32::from_rgba_unmultiplied(0x8f, 0xa8, 0xc0, 64),
+        ),
+    );
 }
 
 fn license_indicator(state: &AppState) -> (egui::Color32, String) {

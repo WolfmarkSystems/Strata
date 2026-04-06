@@ -39,10 +39,28 @@ const SUSPICIOUS: Color32 = Color32::from_rgb(0xf5, 0x9e, 0x0b);
 const FLAGGED: Color32 = Color32::from_rgb(0xef, 0x44, 0x44);
 const CLEAN: Color32 = Color32::from_rgb(0x22, 0xc5, 0x5e);
 
-// ── Theme 1: Midnight (DEFAULT) ──────────────────────────────────────────────
+// ── Theme 0: Iron Wolf (DEFAULT) ─────────────────────────────────────────────
+pub const THEME_IRON_WOLF: StrataTheme = StrataTheme {
+    name: "Iron Wolf",
+    subtitle: "DEFAULT",
+    bg:       Color32::from_rgb(0x08, 0x09, 0x0d),
+    panel:    Color32::from_rgb(0x0c, 0x0f, 0x16),
+    card:     Color32::from_rgb(0x11, 0x16, 0x22),
+    elevated: Color32::from_rgb(0x1c, 0x22, 0x35),
+    border:   Color32::from_rgb(0x1c, 0x22, 0x35),
+    active:   Color32::from_rgb(0xdc, 0xe6, 0xf0),
+    text:     Color32::from_rgb(0xdc, 0xe6, 0xf0),
+    secondary:Color32::from_rgb(0x8f, 0xa8, 0xc0),
+    muted:    Color32::from_rgb(0x3d, 0x50, 0x66),
+    suspicious: Color32::from_rgb(0xc8, 0x85, 0x5a),
+    flagged:    Color32::from_rgb(0xb8, 0x50, 0x50),
+    clean:      Color32::from_rgb(0x5a, 0x90, 0x68),
+};
+
+// ── Theme 1: Midnight ───────────────────────────────────────────────────────
 pub const THEME_MIDNIGHT: StrataTheme = StrataTheme {
     name: "Midnight",
-    subtitle: "DEFAULT",
+    subtitle: "DEEP BLUE",
     bg: Color32::from_rgb(0x0f, 0x11, 0x17),
     panel: Color32::from_rgb(0x16, 0x1b, 0x27),
     card: Color32::from_rgb(0x1e, 0x25, 0x35),
@@ -147,8 +165,9 @@ pub const THEME_HIGH_CONTRAST: StrataTheme = StrataTheme {
     clean: Color32::from_rgb(0x00, 0xff, 0x00),
 };
 
-/// All available themes, indexed 0..5.
+/// All available themes, indexed 0..6.
 pub const THEMES: &[StrataTheme] = &[
+    THEME_IRON_WOLF,
     THEME_MIDNIGHT,
     THEME_VOID,
     THEME_TACTICAL,

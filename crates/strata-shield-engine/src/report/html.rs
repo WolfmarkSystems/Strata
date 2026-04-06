@@ -47,12 +47,12 @@ pub fn generate_html_report(report: &ForensicReport) -> String {
     <meta charset="UTF-8">
     <title>Forensic Analysis Report</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 5px; }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; color: #111622; }
+        .header { background: #1a2e44; color: white; padding: 20px; border-radius: 5px; }
         .section { background: white; margin: 20px 0; padding: 20px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .section h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .section h2 { color: #1a2e44; border-bottom: 2px solid #8fa8c0; padding-bottom: 10px; }
         table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-        th { background: #3498db; color: white; padding: 10px; text-align: left; }
+        th { background: #1a2e44; color: white; padding: 10px; text-align: left; }
         td { padding: 8px; border-bottom: 1px solid #ddd; }
         tr:hover { background: #f5f5f5; }
         .badge { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 12px; }

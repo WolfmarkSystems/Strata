@@ -136,10 +136,68 @@ fn render_license_tab(ui: &mut egui::Ui, state: &mut AppState) {
 }
 
 fn render_about_tab(ui: &mut egui::Ui, _state: &mut AppState) {
-    ui.label(egui::RichText::new("Strata").color(TEXT_PRI).size(16.0).strong());
-    ui.label(egui::RichText::new("Every layer. Every artifact. Every platform.").color(TEXT_SEC).size(10.0));
-    ui.label(egui::RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).color(TEXT_MUTED).size(9.5));
-    ui.add_space(4.0);
-    ui.label(egui::RichText::new("Wolfmark Systems LLC").color(TEXT_MUTED).size(9.0));
-    ui.label(egui::RichText::new("Court-defensible digital forensic examination platform.").color(TEXT_MUTED).size(9.0));
+    ui.vertical_centered(|ui| {
+        // Chevron stack mark — 60x52
+        let (chevron_rect, _) =
+            ui.allocate_exact_size(egui::vec2(60.0, 52.0), egui::Sense::hover());
+        crate::ui::splash::draw_chevron_stack(ui.painter(), chevron_rect);
+        ui.add_space(8.0);
+
+        ui.label(
+            egui::RichText::new("S T R A T A")
+                .color(egui::Color32::from_rgb(0xdc, 0xe6, 0xf0))
+                .size(28.0)
+                .strong(),
+        );
+        ui.add_space(6.0);
+        ui.label(
+            egui::RichText::new("Every layer. Every artifact. Every platform.")
+                .color(egui::Color32::from_rgb(0x3d, 0x50, 0x66))
+                .size(12.0)
+                .italics(),
+        );
+        ui.add_space(16.0);
+
+        // Thin divider
+        let rect = ui.available_rect_before_wrap();
+        let cx = rect.center().x;
+        ui.painter().line_segment(
+            [egui::pos2(cx - 120.0, rect.top()), egui::pos2(cx + 120.0, rect.top())],
+            egui::Stroke::new(1.0, egui::Color32::from_rgb(0x14, 0x1c, 0x28)),
+        );
+        ui.add_space(12.0);
+
+        ui.label(
+            egui::RichText::new(format!("Version  {}", env!("CARGO_PKG_VERSION")))
+                .color(egui::Color32::from_rgb(0x8f, 0xa8, 0xc0))
+                .size(11.0),
+        );
+        ui.label(
+            egui::RichText::new(format!(
+                "Platform  {} {}",
+                std::env::consts::OS,
+                std::env::consts::ARCH
+            ))
+            .color(egui::Color32::from_rgb(0x8f, 0xa8, 0xc0))
+            .size(11.0),
+        );
+        ui.add_space(16.0);
+
+        ui.label(
+            egui::RichText::new("Wolfmark Systems")
+                .color(egui::Color32::from_rgb(0xdc, 0xe6, 0xf0))
+                .size(12.0),
+        );
+        ui.label(
+            egui::RichText::new("wolfmarksystems@proton.me")
+                .color(egui::Color32::from_rgb(0x3d, 0x50, 0x66))
+                .size(10.0),
+        );
+        ui.add_space(8.0);
+        ui.label(
+            egui::RichText::new("\u{00A9} 2026 Wolfmark Systems \u{00B7} All Rights Reserved")
+                .color(egui::Color32::from_rgb(0x1c, 0x26, 0x38))
+                .size(9.0),
+        );
+    });
 }
