@@ -32,57 +32,45 @@ impl StrataTreeApp {
         }
         cc.egui_ctx.set_fonts(fonts);
 
-        // ── Dev bypass: skip all gates, populate dev data ───────────
+        // ── Dev bypass: inject a valid Pro license so trial lockdown
+        //    doesn't block any features. Every page still shows normally. ──
         #[cfg(feature = "dev-bypass")]
         {
-            state.show_splash = false;
             state.license_state = crate::license_state::AppLicenseState::dev_bypass();
-            state.examiner_name = "Dev Examiner".to_string();
-            state.examiner_setup_dlg.name = "Dev Examiner".to_string();
-            state.examiner_setup_dlg.agency = "Wolfmark Systems".to_string();
-            state.examiner_setup_dlg.badge = "DEV-001".to_string();
-            state.examiner_setup_dlg.is_open = false;
-            state.case = Some(crate::state::ActiveCase {
-                name: "Development Test Case".to_string(),
-                id: "DEV-2026-001".to_string(),
-                agency: "Wolfmark Systems".to_string(),
-                path: String::new(),
-            });
+        }
+
+        // Check license — show splash if no valid license
+        let needs_splash = matches!(state.license_state.tier, strata_license::LicenseTier::Free)
+            && !state.license_state.is_trial
+            && state.license_state.days_remaining.is_none();
+        state.show_splash = needs_splash;
+
+        if needs_splash {
+            state.log_action("LAUNCH", "No valid license — showing activation splash");
+        } else {
+            #[cfg(feature = "dev-bypass")]
             state.log_action(
                 "LAUNCH",
                 &format!("Strata v{} launched — DEV BYPASS MODE", env!("CARGO_PKG_VERSION")),
             );
+            #[cfg(not(feature = "dev-bypass"))]
+            state.log_action(
+                "LAUNCH",
+                &format!("Strata v{} launched — {}", env!("CARGO_PKG_VERSION"), state.license_state.display_status()),
+            );
         }
 
-        // ── Production: normal license + examiner flow ─────────────
-        #[cfg(not(feature = "dev-bypass"))]
-        {
-            let needs_splash = matches!(state.license_state.tier, strata_license::LicenseTier::Free)
-                && !state.license_state.is_trial
-                && state.license_state.days_remaining.is_none();
-            state.show_splash = needs_splash;
-
-            if needs_splash {
-                state.log_action("LAUNCH", "No valid license — showing activation splash");
-            } else {
-                state.log_action(
-                    "LAUNCH",
-                    &format!("Strata v{} launched — {}", env!("CARGO_PKG_VERSION"), state.license_state.display_status()),
-                );
-            }
-
-            if let Some(profile) = crate::case::profile::load_examiner_profile() {
-                if profile.name.trim().len() >= 2 {
-                    state.examiner_name = profile.name.clone();
-                    state.examiner_setup_dlg.name = profile.name;
-                    state.examiner_setup_dlg.agency = profile.agency;
-                    state.examiner_setup_dlg.badge = profile.badge_number;
-                    state.examiner_setup_dlg.email = profile.email.unwrap_or_default();
-                    state.examiner_setup_dlg.timezone = profile.timezone;
-                    state.examiner_setup_dlg.is_open = false;
-                    if !needs_splash {
-                        state.open_ev_dlg.open = true;
-                    }
+        if let Some(profile) = crate::case::profile::load_examiner_profile() {
+            if profile.name.trim().len() >= 2 {
+                state.examiner_name = profile.name.clone();
+                state.examiner_setup_dlg.name = profile.name;
+                state.examiner_setup_dlg.agency = profile.agency;
+                state.examiner_setup_dlg.badge = profile.badge_number;
+                state.examiner_setup_dlg.email = profile.email.unwrap_or_default();
+                state.examiner_setup_dlg.timezone = profile.timezone;
+                state.examiner_setup_dlg.is_open = false;
+                if !needs_splash {
+                    state.open_ev_dlg.open = true;
                 }
             }
         }
