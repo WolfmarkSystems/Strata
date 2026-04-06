@@ -72,13 +72,11 @@ export default function EvidenceTree() {
   return (
     <div
       style={{
-        width: 220,
-        minWidth: 220,
-        background: '#0a0c12',
-        borderRight: '1px solid var(--border-sub)',
+        height: '100%',
+        width: '100%',
+        background: 'var(--bg-panel)',
         display: 'flex',
         flexDirection: 'column',
-        flexShrink: 0,
         overflow: 'hidden',
       }}
     >
@@ -150,6 +148,20 @@ export default function EvidenceTree() {
             onSelect={() => setSelectedNode(node.id)}
           />
         ))}
+
+        {evidenceId && visibleNodes.length > 0 && (
+          <div
+            style={{
+              fontSize: 11,
+              color: 'var(--text-muted)',
+              padding: '8px 12px',
+              fontStyle: 'italic',
+              lineHeight: 1.5,
+            }}
+          >
+            Evidence loaded. Filesystem parsing requires Strata v0.5.0 engine.
+          </div>
+        )}
       </div>
     </div>
   )

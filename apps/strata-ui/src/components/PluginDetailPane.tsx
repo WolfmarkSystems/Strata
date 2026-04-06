@@ -42,18 +42,14 @@ export default function PluginDetailPane({
     return (
       <div
         style={{
-          width: 300,
-          minWidth: 300,
-          background: '#0a0c12',
-          borderLeftStyle: 'solid',
-          borderLeftWidth: 1,
-          borderLeftColor: 'var(--border-sub)',
+          height: '100%',
+          width: '100%',
+          background: 'var(--bg-panel)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: 13,
           color: 'var(--text-muted)',
-          flexShrink: 0,
           padding: 12,
           textAlign: 'center',
         }}
@@ -74,16 +70,12 @@ export default function PluginDetailPane({
   return (
     <div
       style={{
-        width: 300,
-        minWidth: 300,
-        background: '#0a0c12',
-        borderLeftStyle: 'solid',
-        borderLeftWidth: 1,
-        borderLeftColor: 'var(--border-sub)',
+        height: '100%',
+        width: '100%',
+        background: 'var(--bg-panel)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        flexShrink: 0,
       }}
     >
       {/* Accent bar */}

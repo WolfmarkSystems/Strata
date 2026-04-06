@@ -1,6 +1,7 @@
 import { useAppStore } from '../store/appStore'
 import { useWindowSize } from '../hooks/useWindowSize'
-import { openEvidenceDialog, loadEvidence, getStats } from '../ipc'
+import { openEvidenceDialog, loadEvidence, getStats, generateReport } from '../ipc'
+import WolfMark from './WolfMark'
 
 export default function TopBar() {
   const stats = useAppStore((s) => s.stats)
@@ -15,6 +16,10 @@ export default function TopBar() {
   const setSelectedNode = useAppStore((s) => s.setSelectedNode)
   const setCase = useAppStore((s) => s.setCase)
   const setSearchActive = useAppStore((s) => s.setSearchActive)
+  const licenseResult = useAppStore((s) => s.licenseResult)
+  const examinerProfile = useAppStore((s) => s.examinerProfile)
+  const setReportHtml = useAppStore((s) => s.setReportHtml)
+  const setReportVisible = useAppStore((s) => s.setReportVisible)
 
   const handleOpenEvidence = async () => {
     const path = await openEvidenceDialog()
@@ -33,6 +38,22 @@ export default function TopBar() {
     setStats(stats)
 
     setSelectedNode('vol-ntfs')
+  }
+
+  const handleReport = async () => {
+    const result = await generateReport({
+      case_number: 'STRATA-2026-001',
+      case_name: caseName ?? 'Unsaved Session',
+      examiner_name: examinerProfile?.name ?? 'Dev Examiner',
+      examiner_agency: examinerProfile?.agency ?? 'Wolfmark Systems',
+      examiner_badge: examinerProfile?.badge ?? 'DEV-001',
+      include_artifacts: true,
+      include_tagged: true,
+      include_mitre: true,
+      include_timeline: true,
+    })
+    setReportHtml(result.html)
+    setReportVisible(true)
   }
 
   const { width } = useWindowSize()
@@ -61,24 +82,9 @@ export default function TopBar() {
             flexShrink: 0,
           }}
         >
-          {/* Wolf placeholder */}
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              border: '1px dashed #1a2030',
-              borderRadius: 4,
-              background: '#0b0c0f',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 11,
-              color: '#1a2030',
-              marginRight: 8,
-              flexShrink: 0,
-            }}
-          >
-            W
+          {/* Wolf mark */}
+          <div style={{ marginRight: 10, display: 'flex', alignItems: 'center' }}>
+            <WolfMark size={28} />
           </div>
 
           {/* STRATA wordmark */}
@@ -141,21 +147,14 @@ export default function TopBar() {
               color: 'var(--text-2)',
             }}
           >
-            {caseName ?? 'Unsaved Session'}
+            {examinerProfile?.name
+              ? `${shortName(examinerProfile.name)} \u00B7 ${caseName ?? 'Unsaved Session'}`
+              : (caseName ?? 'Unsaved Session')}
           </span>
 
           <div className="vdiv" />
 
-          <span
-            className="badge"
-            style={{
-              background: '#0f1c2e',
-              border: '1px solid #1c3050',
-              color: '#8fa8c0',
-            }}
-          >
-            Pro
-          </span>
+          <LicenseBadge tier={licenseResult?.tier ?? 'pro'} days={licenseResult?.days_remaining ?? 999} />
 
           {isDev && (
             <span
@@ -306,10 +305,12 @@ export default function TopBar() {
           </button>
           <button
             className="btn-action"
+            onClick={handleReport}
             style={{
               color: 'var(--hashed)',
               border: '1px solid #142018',
               background: '#0a1410',
+              cursor: 'pointer',
             }}
           >
             REPORT
@@ -344,5 +345,54 @@ function Stat({ label, value, color }: { label: string; value: number; color: st
       <span style={{ color: 'var(--text-muted)' }}>{label}</span>
       <span style={{ color }}>{value}</span>
     </div>
+  )
+}
+
+function shortName(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0]
+  return `${parts[0][0]}. ${parts[parts.length - 1]}`
+}
+
+function LicenseBadge({ tier, days }: { tier: string; days: number }) {
+  if (tier === 'trial') {
+    return (
+      <span
+        className="badge"
+        style={{
+          background: '#2a1a00',
+          border: '1px solid var(--sus)',
+          color: 'var(--sus)',
+        }}
+      >
+        Trial {'\u2014'} {days}d
+      </span>
+    )
+  }
+  if (tier === 'none') {
+    return (
+      <span
+        className="badge"
+        style={{
+          background: '#2a0a0a',
+          border: '1px solid var(--flag)',
+          color: 'var(--flag)',
+        }}
+      >
+        No License
+      </span>
+    )
+  }
+  return (
+    <span
+      className="badge"
+      style={{
+        background: '#0f1c2e',
+        border: '1px solid #1c3050',
+        color: '#8fa8c0',
+      }}
+    >
+      Pro
+    </span>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react'
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { useAppStore } from '../store/appStore'
 import PluginCard from '../components/PluginCard'
 import PluginDetailPane from '../components/PluginDetailPane'
@@ -123,38 +124,40 @@ export default function PluginsView() {
       </div>
 
       {/* Body: grid + detail */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Plugin Grid */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 10,
-            }}
-          >
-            {PLUGIN_DATA.map((plugin) => (
-              <PluginCard
-                key={plugin.name}
-                plugin={plugin}
-                status={pluginStatuses[plugin.name]}
-                isSelected={selectedPlugin === plugin.name}
-                onSelect={() => setSelectedPlugin(plugin.name)}
-                onRun={() => handleRun(plugin.name)}
-                evidenceLoaded={evidenceLoaded}
-              />
-            ))}
+      <PanelGroup direction="horizontal" style={{ flex: 1, overflow: 'hidden' }}>
+        <Panel defaultSize={65} minSize={40}>
+          <div style={{ height: '100%', overflowY: 'auto', padding: 12 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 10,
+              }}
+            >
+              {PLUGIN_DATA.map((plugin) => (
+                <PluginCard
+                  key={plugin.name}
+                  plugin={plugin}
+                  status={pluginStatuses[plugin.name]}
+                  isSelected={selectedPlugin === plugin.name}
+                  onSelect={() => setSelectedPlugin(plugin.name)}
+                  onRun={() => handleRun(plugin.name)}
+                  evidenceLoaded={evidenceLoaded}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* Detail Pane */}
-        <PluginDetailPane
-          plugin={selectedPluginData}
-          status={selectedStatus}
-          onRun={() => selectedPlugin && handleRun(selectedPlugin)}
-          evidenceLoaded={evidenceLoaded}
-        />
-      </div>
+        </Panel>
+        <PanelResizeHandle className="resize-handle" />
+        <Panel defaultSize={35} minSize={20} maxSize={60}>
+          <PluginDetailPane
+            plugin={selectedPluginData}
+            status={selectedStatus}
+            onRun={() => selectedPlugin && handleRun(selectedPlugin)}
+            evidenceLoaded={evidenceLoaded}
+          />
+        </Panel>
+      </PanelGroup>
     </div>
   )
 }

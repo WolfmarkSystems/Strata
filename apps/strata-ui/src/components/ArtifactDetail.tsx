@@ -11,15 +11,11 @@ export default function ArtifactDetail({ artifact }: Props) {
   return (
     <div
       style={{
-        width: 260,
-        minWidth: 260,
-        background: '#0a0c12',
-        borderLeftStyle: 'solid',
-        borderLeftWidth: 1,
-        borderLeftColor: 'var(--border-sub)',
+        height: '100%',
+        width: '100%',
+        background: 'var(--bg-panel)',
         display: 'flex',
         flexDirection: 'column',
-        flexShrink: 0,
         overflow: 'hidden',
       }}
     >

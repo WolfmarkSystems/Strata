@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { useAppStore } from '../store/appStore'
 import EvidenceTree from '../components/EvidenceTree'
 import FileListing from '../components/FileListing'
@@ -36,21 +37,29 @@ export default function FileExplorer() {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flex: 1,
-        overflow: 'hidden',
-        background: 'var(--bg-base)',
-      }}
+    <PanelGroup
+      direction="horizontal"
+      style={{ flex: 1, overflow: 'hidden', background: 'var(--bg-base)' }}
     >
-      <EvidenceTree />
-      <FileListing
-        files={files}
-        selectedFileId={selectedFileId}
-        onFileSelect={(f) => setSelectedFile(f.id)}
-      />
-      <DetailPane fileId={selectedFileId} />
-    </div>
+      <Panel defaultSize={18} minSize={12} maxSize={35}>
+        <EvidenceTree />
+      </Panel>
+
+      <PanelResizeHandle className="resize-handle" />
+
+      <Panel defaultSize={55} minSize={25}>
+        <FileListing
+          files={files}
+          selectedFileId={selectedFileId}
+          onFileSelect={(f) => setSelectedFile(f.id)}
+        />
+      </Panel>
+
+      <PanelResizeHandle className="resize-handle" />
+
+      <Panel defaultSize={27} minSize={18} maxSize={50}>
+        <DetailPane fileId={selectedFileId} />
+      </Panel>
+    </PanelGroup>
   )
 }

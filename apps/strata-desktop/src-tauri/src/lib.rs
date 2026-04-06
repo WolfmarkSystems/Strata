@@ -272,23 +272,355 @@ fn get_app_version() -> String {
     "0.3.0".to_string()
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct LicenseResult {
+    pub valid: bool,
+    pub tier: String,
+    pub licensee: String,
+    pub org: String,
+    pub days_remaining: i32,
+    pub machine_id: String,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ExaminerProfile {
+    pub name: String,
+    pub agency: String,
+    pub badge: String,
+    pub email: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DriveInfo {
+    pub id: String,
+    pub name: String,
+    pub mount_point: String,
+    pub total_gb: f64,
+    pub free_gb: f64,
+    pub is_system: bool,
+    pub is_permitted: bool,
+    pub reason: Option<String>,
+}
+
 #[tauri::command]
-fn check_license() -> serde_json::Value {
-    json!({
-        "status": "dev",
-        "days": 999,
-        "licensee": "Dev Mode",
-        "tier": "pro"
+async fn check_license() -> Result<LicenseResult, String> {
+    Ok(LicenseResult {
+        valid: true,
+        tier: "pro".to_string(),
+        licensee: "Dev Mode".to_string(),
+        org: "Wolfmark Systems".to_string(),
+        days_remaining: 999,
+        machine_id: "DEV-MACHINE-001".to_string(),
+        error: None,
     })
 }
 
 #[tauri::command]
-fn get_examiner_profile() -> serde_json::Value {
-    json!({
-        "name": "Dev Examiner",
-        "agency": "Wolfmark Systems",
-        "badge": "DEV-001"
+async fn activate_license(key: String) -> Result<LicenseResult, String> {
+    if key.starts_with("STRATA-") {
+        Ok(LicenseResult {
+            valid: true,
+            tier: "pro".to_string(),
+            licensee: "Test Examiner".to_string(),
+            org: "Test Agency".to_string(),
+            days_remaining: 30,
+            machine_id: "DEV-MACHINE-001".to_string(),
+            error: None,
+        })
+    } else {
+        Ok(LicenseResult {
+            valid: false,
+            tier: "none".to_string(),
+            licensee: String::new(),
+            org: String::new(),
+            days_remaining: 0,
+            machine_id: "DEV-MACHINE-001".to_string(),
+            error: Some("Invalid license key format".to_string()),
+        })
+    }
+}
+
+#[tauri::command]
+async fn start_trial() -> Result<LicenseResult, String> {
+    Ok(LicenseResult {
+        valid: true,
+        tier: "trial".to_string(),
+        licensee: "Trial User".to_string(),
+        org: String::new(),
+        days_remaining: 30,
+        machine_id: "DEV-MACHINE-001".to_string(),
+        error: None,
     })
+}
+
+#[tauri::command]
+async fn get_examiner_profile() -> Result<ExaminerProfile, String> {
+    Ok(ExaminerProfile {
+        name: String::new(),
+        agency: String::new(),
+        badge: String::new(),
+        email: String::new(),
+    })
+}
+
+#[tauri::command]
+async fn save_examiner_profile(profile: ExaminerProfile) -> Result<(), String> {
+    println!("Saving examiner: {:?}", profile.name);
+    Ok(())
+}
+
+#[tauri::command]
+async fn list_drives() -> Result<Vec<DriveInfo>, String> {
+    use sysinfo::Disks;
+
+    let disks = Disks::new_with_refreshed_list();
+    let mut drives: Vec<DriveInfo> = Vec::new();
+    let mut seen_mounts: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    for disk in disks.list() {
+        let mount = disk.mount_point().to_string_lossy().to_string();
+        if !seen_mounts.insert(mount.clone()) {
+            continue;
+        }
+
+        // Skip macOS system read-only volumes and ephemeral mounts we don't care about.
+        if mount.starts_with("/System/Volumes/")
+            || mount.starts_with("/dev")
+            || mount.starts_with("/private/var/vm")
+        {
+            continue;
+        }
+
+        let is_system = mount == "/"
+            || mount == "/System"
+            || mount.starts_with("/System")
+            || mount == "/private/var";
+
+        let total_gb = disk.total_space() as f64 / 1_073_741_824.0;
+        let free_gb = disk.available_space() as f64 / 1_073_741_824.0;
+
+        let name = disk.name().to_string_lossy().to_string();
+        let display_name = if name.is_empty() {
+            mount.clone()
+        } else {
+            name
+        };
+
+        let id = {
+            let mut cleaned = mount.replace('/', "-");
+            while cleaned.starts_with('-') {
+                cleaned.remove(0);
+            }
+            if cleaned.is_empty() {
+                "drive-root".to_string()
+            } else {
+                format!("drive-{cleaned}")
+            }
+        };
+
+        drives.push(DriveInfo {
+            id,
+            name: display_name,
+            mount_point: mount,
+            total_gb,
+            free_gb,
+            is_system,
+            is_permitted: !is_system,
+            reason: if is_system {
+                Some("System volume — not permitted for evidence storage".to_string())
+            } else {
+                None
+            },
+        });
+    }
+
+    // Sort: permitted first, then by mount point
+    drives.sort_by(|a, b| {
+        b.is_permitted
+            .cmp(&a.is_permitted)
+            .then(a.mount_point.cmp(&b.mount_point))
+    });
+
+    Ok(drives)
+}
+
+#[tauri::command]
+async fn select_evidence_drive(_drive_id: String) -> Result<String, String> {
+    Ok("/Volumes/Wolfmark Systems Backup/cases/new-case".to_string())
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ReportOptions {
+    pub case_number: String,
+    pub case_name: String,
+    pub examiner_name: String,
+    pub examiner_agency: String,
+    pub examiner_badge: String,
+    pub include_artifacts: bool,
+    pub include_tagged: bool,
+    pub include_mitre: bool,
+    pub include_timeline: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ReportResult {
+    pub html: String,
+    pub path: Option<String>,
+}
+
+#[tauri::command]
+async fn generate_report(options: ReportOptions) -> Result<ReportResult, String> {
+    let html = build_report_html(&options);
+    Ok(ReportResult { html, path: None })
+}
+
+fn build_report_html(o: &ReportOptions) -> String {
+    let css = include_str!("report_css.css");
+    let chevron_svg = r##"<svg class="logo-chevron" viewBox="0 0 40 35" xmlns="http://www.w3.org/2000/svg">
+<polygon points="20,2 34,10 20,18 6,10" fill="#1a2e44" opacity="0.95"/>
+<polygon points="34,10 34,14 20,22 20,18" fill="#4a6890"/>
+<polygon points="6,10 6,14 20,22 20,18" fill="#8fa8c0"/>
+<line x1="6" y1="18" x2="34" y2="18" stroke="#1a2e44" stroke-width="0.5" opacity="0.4"/>
+<polygon points="34,14 36,15 36,19 34,18" fill="#2a4060"/>
+<polygon points="6,14 4,15 4,19 6,18" fill="#6a8aaa"/>
+<polygon points="34,18 36,19 36,23 34,22" fill="#1a2e44"/>
+<polygon points="6,18 4,19 4,23 6,22" fill="#4a6890"/>
+<polygon points="6,22 4,23 18,30 20,29 20,25" fill="#1a2e44" opacity="0.9"/>
+<polygon points="34,22 36,23 22,30 20,29 20,25" fill="#0f1c2e" opacity="0.9"/>
+<polyline points="6,10 20,2 34,10" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.6"/>
+</svg>"##;
+
+    format!(
+        r##"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Strata Forensic Report</title>
+<style>{css}</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="report-header">
+    <div class="report-logo">
+      {chevron}
+      <div>
+        <div class="logo-text">STRATA</div>
+        <div class="logo-sub">Wolfmark Systems</div>
+      </div>
+    </div>
+    <div class="report-meta">
+      <div><strong>Forensic Analysis Report</strong></div>
+      <div>Case: {case_number}</div>
+      <div>Generated: 2026-04-06 09:00</div>
+      <div>Examiner: {examiner_name}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Case Information</h2>
+    <div class="info-grid">
+      <div class="info-row"><span class="info-key">Case No.</span><span class="info-val">{case_number}</span></div>
+      <div class="info-row"><span class="info-key">Case Name</span><span class="info-val">{case_name}</span></div>
+      <div class="info-row"><span class="info-key">Examiner</span><span class="info-val">{examiner_name}</span></div>
+      <div class="info-row"><span class="info-key">Agency</span><span class="info-val">{examiner_agency}</span></div>
+      <div class="info-row"><span class="info-key">Badge</span><span class="info-val">{examiner_badge}</span></div>
+      <div class="info-row"><span class="info-key">Platform</span><span class="info-val">Strata v0.3.0</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Executive Summary</h2>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Files</div><div class="stat-value">26,235</div></div>
+      <div class="stat-card"><div class="stat-label">Suspicious</div><div class="stat-value sus">8,993</div></div>
+      <div class="stat-card"><div class="stat-label">Flagged</div><div class="stat-value flag">12</div></div>
+      <div class="stat-card"><div class="stat-label">Artifacts</div><div class="stat-value">403</div></div>
+      <div class="stat-card"><div class="stat-label">Tagged</div><div class="stat-value">4</div></div>
+      <div class="stat-card"><div class="stat-label">Plugins Run</div><div class="stat-value">11</div></div>
+    </div>
+    <p style="margin-top:12px; font-size:12px; color:#4a5568; line-height:1.7;">
+      Examination of the submitted evidence image revealed indicators of credential dumping activity, anti-forensic tool usage, and attempted evidence destruction. The presence of mimikatz.exe, a known credential dumping tool, combined with evidence of scheduled task persistence and deliberate event log clearing suggests a targeted intrusion with post-exploitation activity.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>Critical Findings</h2>
+    <table>
+      <thead><tr><th>Finding</th><th>Value</th><th>Timestamp</th><th>MITRE</th><th>Severity</th></tr></thead>
+      <tbody>
+        <tr><td>mimikatz.exe execution</td><td>3 executions recorded</td><td style="font-family:monospace;font-size:10px;">2009-11-15 14:33:05</td><td><span class="badge badge-mitre">T1003</span></td><td><span class="badge badge-high">HIGH</span></td></tr>
+        <tr><td>Anti-forensic script executed</td><td>Event logs cleared, VSS deleted</td><td style="font-family:monospace;font-size:10px;">2009-11-15 14:31:05</td><td><span class="badge badge-mitre">T1070.001</span></td><td><span class="badge badge-high">HIGH</span></td></tr>
+        <tr><td>Scheduled task persistence</td><td>svchost32.exe as WindowsUpdate</td><td style="font-family:monospace;font-size:10px;">2009-11-14 03:00:00</td><td><span class="badge badge-mitre">T1053.005</span></td><td><span class="badge badge-high">HIGH</span></td></tr>
+        <tr><td>Credential dump deleted</td><td>lsass.dmp sent to Recycle Bin</td><td style="font-family:monospace;font-size:10px;">2009-11-15 14:45:00</td><td><span class="badge badge-mitre">T1003.001</span></td><td><span class="badge badge-high">HIGH</span></td></tr>
+        <tr><td>RDP lateral movement</td><td>Connection to 192.168.1.50</td><td style="font-family:monospace;font-size:10px;">2009-11-15 13:45:00</td><td><span class="badge badge-mitre">T1021.001</span></td><td><span class="badge badge-medium">MEDIUM</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Tagged Evidence</h2>
+    <table>
+      <thead><tr><th>File</th><th>Tag</th><th>Path</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td style="font-weight:700">mimikatz.exe</td><td><span class="tag-critical">Critical Evidence</span></td><td style="font-family:monospace;font-size:10px;">\Windows\Temp\mimikatz.exe</td><td>Known credential dumping tool</td></tr>
+        <tr><td style="font-weight:700">cleanup.ps1</td><td><span class="tag-suspicious">Suspicious</span></td><td style="font-family:monospace;font-size:10px;">\Windows\Temp\cleanup.ps1</td><td>Anti-forensic script</td></tr>
+        <tr><td style="font-weight:700">svchost32.exe</td><td><span class="tag-suspicious">Suspicious</span></td><td style="font-family:monospace;font-size:10px;">\Windows\System32\svchost32.exe</td><td>&mdash;</td></tr>
+        <tr><td style="font-weight:700">Security.evtx</td><td><span class="tag-key">Key Artifact</span></td><td style="font-family:monospace;font-size:10px;">\Windows\System32\winevt\Logs\Security.evtx</td><td>&mdash;</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>MITRE ATT&amp;CK Coverage</h2>
+    <div class="mitre-grid">
+      <span class="mitre-pill">T1003</span>
+      <span class="mitre-pill">T1003.001</span>
+      <span class="mitre-pill">T1021.001</span>
+      <span class="mitre-pill">T1053.005</span>
+      <span class="mitre-pill">T1057</span>
+      <span class="mitre-pill">T1059.001</span>
+      <span class="mitre-pill">T1070.001</span>
+      <span class="mitre-pill">T1070.004</span>
+      <span class="mitre-pill">T1083</span>
+      <span class="mitre-pill">T1087.001</span>
+      <span class="mitre-pill">T1197</span>
+      <span class="mitre-pill">T1204</span>
+      <span class="mitre-pill">T1552.001</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Examiner Certification</h2>
+    <div class="cert-block">
+      I, {examiner_name}, of {examiner_agency}, badge number {examiner_badge}, certify that the forensic examination described in this report was conducted in accordance with accepted digital forensic practices. The findings contained herein are accurate and complete to the best of my knowledge. This report was generated by Strata v0.3.0, a Wolfmark Systems forensic intelligence platform.
+    </div>
+    <div class="sig-line">
+      <span>Examiner: {examiner_name}</span>
+      <span>Agency: {examiner_agency}</span>
+      <span>Date: ___________________</span>
+      <span>Signature: _______________</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Strata v0.3.0 &mdash; Wolfmark Systems</span>
+    <span>Case: {case_number}</span>
+    <span>CONFIDENTIAL &mdash; FORENSIC REPORT</span>
+  </div>
+
+</div>
+</body>
+</html>"##,
+        css = css,
+        chevron = chevron_svg,
+        case_number = o.case_number,
+        case_name = o.case_name,
+        examiner_name = o.examiner_name,
+        examiner_agency = o.examiner_agency,
+        examiner_badge = o.examiner_badge,
+    )
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -296,8 +628,24 @@ fn get_examiner_profile() -> serde_json::Value {
 // ──────────────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-async fn open_evidence_dialog(_app: tauri::AppHandle) -> Result<Option<String>, String> {
-    Ok(Some("/mock/evidence/jo-2009-11-16.E01".to_string()))
+async fn open_evidence_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.dialog()
+        .file()
+        .add_filter(
+            "Evidence Images",
+            &["E01", "e01", "dd", "img", "raw", "vmdk", "vhd", "vhdx"],
+        )
+        .add_filter("All Files", &["*"])
+        .set_title("Open Evidence Image")
+        .pick_file(move |path| {
+            let _ = tx.send(path);
+        });
+
+    let picked = rx.recv().map_err(|e| e.to_string())?;
+    Ok(picked.map(|p| p.to_string()))
 }
 
 #[tauri::command]
@@ -317,127 +665,31 @@ async fn load_evidence(path: String) -> Result<EvidenceLoadResult, String> {
 }
 
 #[tauri::command]
-async fn get_tree_root(_evidence_id: String) -> Result<Vec<TreeNode>, String> {
+async fn get_tree_root(evidence_id: String) -> Result<Vec<TreeNode>, String> {
+    // Real tree parsing requires the strata-engine-adapter crate (v0.5.0).
+    // Return just the evidence root node, no children.
     Ok(vec![TreeNode {
         id: "node-root".to_string(),
-        name: "jo-2009-11-16.E01 (9.8 GB)".to_string(),
+        name: format!("{} \u{2014} Parsing...", evidence_id),
         node_type: "evidence".to_string(),
-        count: 26235,
+        count: 0,
         is_deleted: false,
         is_flagged: false,
         is_suspicious: false,
-        has_children: true,
+        has_children: false,
         parent_id: None,
         depth: 0,
     }])
 }
 
 #[tauri::command]
-async fn get_tree_children(node_id: String) -> Result<Vec<TreeNode>, String> {
-    let children = match node_id.as_str() {
-        "node-root" => vec![TreeNode {
-            id: "vol-ntfs".to_string(),
-            name: "[NTFS NTFS] (26235)".to_string(),
-            node_type: "volume".to_string(),
-            count: 26235,
-            is_deleted: false,
-            is_flagged: false,
-            is_suspicious: false,
-            has_children: true,
-            parent_id: Some("node-root".to_string()),
-            depth: 1,
-        }],
-        "vol-ntfs" => vec![
-            TreeNode {
-                id: "folder-docs".to_string(),
-                name: "Documents and Settings".to_string(),
-                node_type: "folder".to_string(),
-                count: 2050,
-                is_deleted: false,
-                is_flagged: false,
-                is_suspicious: false,
-                has_children: true,
-                parent_id: Some("vol-ntfs".to_string()),
-                depth: 2,
-            },
-            TreeNode {
-                id: "folder-prog".to_string(),
-                name: "Program Files".to_string(),
-                node_type: "folder".to_string(),
-                count: 4890,
-                is_deleted: false,
-                is_flagged: false,
-                is_suspicious: false,
-                has_children: true,
-                parent_id: Some("vol-ntfs".to_string()),
-                depth: 2,
-            },
-            TreeNode {
-                id: "folder-recycler".to_string(),
-                name: "RECYCLER".to_string(),
-                node_type: "folder".to_string(),
-                count: 3,
-                is_deleted: false,
-                is_flagged: false,
-                is_suspicious: false,
-                has_children: true,
-                parent_id: Some("vol-ntfs".to_string()),
-                depth: 2,
-            },
-            TreeNode {
-                id: "folder-sysinfo".to_string(),
-                name: "System Volume Information".to_string(),
-                node_type: "folder".to_string(),
-                count: 1481,
-                is_deleted: false,
-                is_flagged: false,
-                is_suspicious: false,
-                has_children: true,
-                parent_id: Some("vol-ntfs".to_string()),
-                depth: 2,
-            },
-            TreeNode {
-                id: "folder-windows".to_string(),
-                name: "Windows".to_string(),
-                node_type: "folder".to_string(),
-                count: 8200,
-                is_deleted: false,
-                is_flagged: false,
-                is_suspicious: false,
-                has_children: true,
-                parent_id: Some("vol-ntfs".to_string()),
-                depth: 2,
-            },
-            TreeNode {
-                id: "folder-ie8".to_string(),
-                name: "ie8".to_string(),
-                node_type: "folder".to_string(),
-                count: 740,
-                is_deleted: false,
-                is_flagged: true,
-                is_suspicious: true,
-                has_children: true,
-                parent_id: Some("vol-ntfs".to_string()),
-                depth: 2,
-            },
-            TreeNode {
-                id: "folder-users".to_string(),
-                name: "Users".to_string(),
-                node_type: "folder".to_string(),
-                count: 1200,
-                is_deleted: false,
-                is_flagged: false,
-                is_suspicious: false,
-                has_children: true,
-                parent_id: Some("vol-ntfs".to_string()),
-                depth: 2,
-            },
-        ],
-        _ => vec![],
-    };
-    Ok(children)
+async fn get_tree_children(_node_id: String) -> Result<Vec<TreeNode>, String> {
+    // Real filesystem enumeration requires the strata-engine-adapter crate (v0.5.0).
+    // Return empty until wired.
+    Ok(vec![])
 }
 
+#[allow(dead_code)]
 #[tauri::command]
 async fn get_files(
     _node_id: String,
@@ -445,304 +697,15 @@ async fn get_files(
     _sort_col: Option<String>,
     _sort_asc: Option<bool>,
 ) -> Result<Vec<FileEntry>, String> {
-    Ok(vec![
-        FileEntry {
-            id: "f001".to_string(),
-            name: "ntuser.dat".to_string(),
-            extension: "dat".to_string(),
-            size: 2516582,
-            size_display: "2.4 MB".to_string(),
-            modified: "2009-11-14 09:22".to_string(),
-            created: "2009-10-01 00:00".to_string(),
-            sha256: Some("a3f9c2d8e1b447f6...".to_string()),
-            is_deleted: false,
-            is_suspicious: false,
-            is_flagged: false,
-            category: "Registry Hive".to_string(),
-            tag: None,
-            tag_color: None,
-        },
-        FileEntry {
-            id: "f002".to_string(),
-            name: "setupapi.log".to_string(),
-            extension: "log".to_string(),
-            size: 1258291,
-            size_display: "1.2 MB".to_string(),
-            modified: "2009-11-10 14:00".to_string(),
-            created: "2009-10-01 00:00".to_string(),
-            sha256: None,
-            is_deleted: false,
-            is_suspicious: false,
-            is_flagged: false,
-            category: "System Log".to_string(),
-            tag: None,
-            tag_color: None,
-        },
-        FileEntry {
-            id: "f003".to_string(),
-            name: "svchost32.exe".to_string(),
-            extension: "exe".to_string(),
-            size: 913408,
-            size_display: "892 KB".to_string(),
-            modified: "2009-11-15 14:32".to_string(),
-            created: "2009-11-15 14:32".to_string(),
-            sha256: None,
-            is_deleted: false,
-            is_suspicious: true,
-            is_flagged: false,
-            category: "Executable".to_string(),
-            tag: Some("Suspicious".to_string()),
-            tag_color: Some("#b87840".to_string()),
-        },
-        FileEntry {
-            id: "f004".to_string(),
-            name: "mimikatz.exe".to_string(),
-            extension: "exe".to_string(),
-            size: 1258291,
-            size_display: "1.2 MB".to_string(),
-            modified: "2009-11-15 14:33".to_string(),
-            created: "2009-11-15 14:33".to_string(),
-            sha256: None,
-            is_deleted: false,
-            is_suspicious: false,
-            is_flagged: true,
-            category: "Known Malware Tool".to_string(),
-            tag: Some("Critical Evidence".to_string()),
-            tag_color: Some("#a84040".to_string()),
-        },
-        FileEntry {
-            id: "f005".to_string(),
-            name: "Security.evtx".to_string(),
-            extension: "evtx".to_string(),
-            size: 46137344,
-            size_display: "44 MB".to_string(),
-            modified: "2009-11-16 03:44".to_string(),
-            created: "2009-10-01 00:00".to_string(),
-            sha256: None,
-            is_deleted: false,
-            is_suspicious: false,
-            is_flagged: false,
-            category: "Event Log".to_string(),
-            tag: None,
-            tag_color: None,
-        },
-        FileEntry {
-            id: "f006".to_string(),
-            name: "SYSTEM".to_string(),
-            extension: "".to_string(),
-            size: 19083264,
-            size_display: "18.2 MB".to_string(),
-            modified: "2009-11-01 00:00".to_string(),
-            created: "2009-10-01 00:00".to_string(),
-            sha256: None,
-            is_deleted: false,
-            is_suspicious: false,
-            is_flagged: false,
-            category: "Registry Hive".to_string(),
-            tag: None,
-            tag_color: None,
-        },
-        FileEntry {
-            id: "f007".to_string(),
-            name: "evidence_backup.zip".to_string(),
-            extension: "zip".to_string(),
-            size: 23068672,
-            size_display: "22 MB".to_string(),
-            modified: "2009-11-14 22:11".to_string(),
-            created: "2009-11-14 22:10".to_string(),
-            sha256: None,
-            is_deleted: true,
-            is_suspicious: false,
-            is_flagged: false,
-            category: "Archive".to_string(),
-            tag: None,
-            tag_color: None,
-        },
-        FileEntry {
-            id: "f008".to_string(),
-            name: "cmd.lnk".to_string(),
-            extension: "lnk".to_string(),
-            size: 2150,
-            size_display: "2.1 KB".to_string(),
-            modified: "2009-11-15 14:35".to_string(),
-            created: "2009-11-15 14:35".to_string(),
-            sha256: None,
-            is_deleted: false,
-            is_suspicious: true,
-            is_flagged: false,
-            category: "Shell Link".to_string(),
-            tag: None,
-            tag_color: None,
-        },
-        FileEntry {
-            id: "f009".to_string(),
-            name: "WebCacheV01.dat".to_string(),
-            extension: "dat".to_string(),
-            size: 12582912,
-            size_display: "12 MB".to_string(),
-            modified: "2009-11-16 03:40".to_string(),
-            created: "2009-10-01 00:00".to_string(),
-            sha256: None,
-            is_deleted: false,
-            is_suspicious: false,
-            is_flagged: false,
-            category: "Browser Cache".to_string(),
-            tag: None,
-            tag_color: None,
-        },
-        FileEntry {
-            id: "f010".to_string(),
-            name: "cleanup.ps1".to_string(),
-            extension: "ps1".to_string(),
-            size: 4915,
-            size_display: "4.8 KB".to_string(),
-            modified: "2009-11-15 14:31".to_string(),
-            created: "2009-11-15 14:31".to_string(),
-            sha256: None,
-            is_deleted: false,
-            is_suspicious: true,
-            is_flagged: false,
-            category: "PowerShell Script".to_string(),
-            tag: None,
-            tag_color: None,
-        },
-    ])
+    // Real file listing requires the strata-engine-adapter crate (v0.5.0).
+    Ok(vec![])
 }
 
 #[tauri::command]
-async fn get_file_metadata(file_id: String) -> Result<FileMetadata, String> {
-    let meta = match file_id.as_str() {
-        "f001" => FileMetadata {
-            id: "f001".to_string(),
-            name: "ntuser.dat".to_string(),
-            full_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(),
-            size: 2516582,
-            size_display: "2.4 MB".to_string(),
-            modified: "2009-11-14 09:22:14".to_string(),
-            created: "2009-10-01 00:00:00".to_string(),
-            accessed: "2009-11-16 03:44:00".to_string(),
-            sha256: Some(
-                "a3f9c2d8e1b447f609c382da554f1b9e7d2ca3f8b4e601d288f5a29c3e7b1d4f".to_string(),
-            ),
-            md5: Some("5f4dcc3b5aa765d61d8327deb882cf99".to_string()),
-            category: "Registry Hive".to_string(),
-            is_deleted: false,
-            is_suspicious: false,
-            is_flagged: false,
-            mft_entry: Some(4922),
-            extension: "dat".to_string(),
-            mime_type: Some("application/octet-stream".to_string()),
-            inode: None,
-            permissions: Some("rw-r--r--".to_string()),
-        },
-        "f003" => FileMetadata {
-            id: "f003".to_string(),
-            name: "svchost32.exe".to_string(),
-            full_path: "\\Windows\\System32\\svchost32.exe".to_string(),
-            size: 913408,
-            size_display: "892 KB".to_string(),
-            modified: "2009-11-15 14:32:00".to_string(),
-            created: "2009-11-15 14:32:00".to_string(),
-            accessed: "2009-11-15 14:32:00".to_string(),
-            sha256: None,
-            md5: None,
-            category: "Executable".to_string(),
-            is_deleted: false,
-            is_suspicious: true,
-            is_flagged: false,
-            mft_entry: Some(6101),
-            extension: "exe".to_string(),
-            mime_type: Some("application/x-msdownload".to_string()),
-            inode: None,
-            permissions: Some("rwxr-xr-x".to_string()),
-        },
-        "f004" => FileMetadata {
-            id: "f004".to_string(),
-            name: "mimikatz.exe".to_string(),
-            full_path: "\\Windows\\Temp\\mimikatz.exe".to_string(),
-            size: 1258291,
-            size_display: "1.2 MB".to_string(),
-            modified: "2009-11-15 14:33:02".to_string(),
-            created: "2009-11-15 14:33:02".to_string(),
-            accessed: "2009-11-15 14:33:05".to_string(),
-            sha256: None,
-            md5: None,
-            category: "Known Malware Tool".to_string(),
-            is_deleted: false,
-            is_suspicious: false,
-            is_flagged: true,
-            mft_entry: Some(7745),
-            extension: "exe".to_string(),
-            mime_type: Some("application/x-msdownload".to_string()),
-            inode: None,
-            permissions: Some("rwxr-xr-x".to_string()),
-        },
-        "f007" => FileMetadata {
-            id: "f007".to_string(),
-            name: "evidence_backup.zip".to_string(),
-            full_path: "\\Users\\Admin\\Desktop\\evidence_backup.zip".to_string(),
-            size: 23068672,
-            size_display: "22 MB".to_string(),
-            modified: "2009-11-14 22:11:00".to_string(),
-            created: "2009-11-14 22:10:00".to_string(),
-            accessed: "2009-11-14 22:11:00".to_string(),
-            sha256: None,
-            md5: None,
-            category: "Archive".to_string(),
-            is_deleted: true,
-            is_suspicious: false,
-            is_flagged: false,
-            mft_entry: Some(8210),
-            extension: "zip".to_string(),
-            mime_type: Some("application/zip".to_string()),
-            inode: None,
-            permissions: Some("rw-r--r--".to_string()),
-        },
-        "f010" => FileMetadata {
-            id: "f010".to_string(),
-            name: "cleanup.ps1".to_string(),
-            full_path: "\\Windows\\Temp\\cleanup.ps1".to_string(),
-            size: 4915,
-            size_display: "4.8 KB".to_string(),
-            modified: "2009-11-15 14:31:00".to_string(),
-            created: "2009-11-15 14:31:00".to_string(),
-            accessed: "2009-11-15 14:31:00".to_string(),
-            sha256: None,
-            md5: None,
-            category: "PowerShell Script".to_string(),
-            is_deleted: false,
-            is_suspicious: true,
-            is_flagged: false,
-            mft_entry: Some(7720),
-            extension: "ps1".to_string(),
-            mime_type: Some("text/x-powershell".to_string()),
-            inode: None,
-            permissions: Some("rw-r--r--".to_string()),
-        },
-        _ => FileMetadata {
-            id: file_id.clone(),
-            name: "Unknown".to_string(),
-            full_path: "\\Unknown".to_string(),
-            size: 0,
-            size_display: "0 B".to_string(),
-            modified: "\u{2014}".to_string(),
-            created: "\u{2014}".to_string(),
-            accessed: "\u{2014}".to_string(),
-            sha256: None,
-            md5: None,
-            category: "Unknown".to_string(),
-            is_deleted: false,
-            is_suspicious: false,
-            is_flagged: false,
-            mft_entry: None,
-            extension: "".to_string(),
-            mime_type: None,
-            inode: None,
-            permissions: None,
-        },
-    };
-    Ok(meta)
+async fn get_file_metadata(_file_id: String) -> Result<FileMetadata, String> {
+    Err("File metadata requires engine adapter \u{2014} coming in v0.5.0".to_string())
 }
+
 
 #[tauri::command]
 async fn get_file_hex(
@@ -1147,8 +1110,13 @@ async fn get_stats(_evidence_id: String) -> Result<Stats, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    eprintln!("[STRATA] Starting v0.4.0 — debug_assertions={}", cfg!(debug_assertions));
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            use tauri::Manager;
+            let labels: Vec<String> = app.webview_windows().keys().cloned().collect();
+            eprintln!("[STRATA] Setup phase — webview windows: {:?}", labels);
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -1161,7 +1129,12 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_app_version,
             check_license,
+            activate_license,
+            start_trial,
             get_examiner_profile,
+            save_examiner_profile,
+            list_drives,
+            select_evidence_drive,
             open_evidence_dialog,
             load_evidence,
             get_tree_root,
@@ -1181,6 +1154,7 @@ pub fn run() {
             get_tagged_files,
             tag_file,
             untag_file,
+            generate_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

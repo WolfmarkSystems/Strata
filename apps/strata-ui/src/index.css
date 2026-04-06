@@ -3,25 +3,38 @@
 @tailwind utilities;
 
 :root {
-  --bg-base:      #070809;
-  --bg-surface:   #0b0c0f;
-  --bg-elevated:  #0f1014;
-  --bg-panel:     #0d0e12;
-  --accent-1:     #d8e2ec;
-  --accent-2:     #8a9aaa;
-  --accent-muted: #3a4858;
-  --border:       #181c24;
-  --border-sub:   #121620;
-  --text-1:       #d8e2ec;
-  --text-2:       #8a9aaa;
-  --text-muted:   #3a4858;
-  --text-off:     #1a2030;
-  --sus:          #b87840;
-  --flag:         #a84040;
-  --carved:       #4a7890;
-  --hashed:       #487858;
-  --artifact:     #605878;
-  --clean:        #487858;
+  --bg-base:      #0a0a0a;
+  --bg-surface:   #111111;
+  --bg-elevated:  #1a1a1a;
+  --bg-panel:     #141414;
+  --bg-input:     #0f0f0f;
+
+  --accent-1:     #e8e8e8;
+  --accent-2:     #a8a8a8;
+  --accent-muted: #585858;
+  --accent-dim:   #303030;
+
+  --border:       #282828;
+  --border-sub:   #1e1e1e;
+  --border-hi:    #383838;
+
+  --text-1:       #f0f0f0;
+  --text-2:       #b0b0b0;
+  --text-muted:   #606060;
+  --text-off:     #303030;
+
+  --sus:          #c87830;
+  --flag:         #b84040;
+  --carved:       #5888a0;
+  --hashed:       #508060;
+  --artifact:     #706878;
+  --clean:        #508060;
+
+  --radius-sm:    8px;
+  --radius-md:    12px;
+  --radius-lg:    14px;
+  --radius-xl:    20px;
+  --radius-pill:  999px;
 }
 
 * {
@@ -52,7 +65,7 @@ html, body, #root {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -60,9 +73,9 @@ html, body, #root {
 }
 
 input, textarea {
-  background: var(--bg-elevated);
+  background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   color: var(--text-2);
   font-family: 'Courier New', monospace;
   font-size: 12px;
@@ -94,8 +107,8 @@ button:active {
   color: var(--bg-base);
   font-weight: 700;
   border: none;
-  border-radius: 5px;
-  padding: 5px 14px;
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
   font-size: 12px;
   font-family: 'Courier New', monospace;
   cursor: pointer;
@@ -108,8 +121,8 @@ button:active {
   background: var(--bg-elevated);
   color: var(--text-2);
   border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
   font-size: 12px;
   font-family: 'Courier New', monospace;
   cursor: pointer;
@@ -119,8 +132,8 @@ button:active {
 
 .btn-action {
   background: var(--bg-elevated);
-  border-radius: 4px;
-  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
   font-size: 10px;
   font-weight: 700;
   font-family: 'Courier New', monospace;
@@ -139,12 +152,65 @@ button:active {
   margin: 0 6px;
 }
 
+/* ── Gate flow animations ─────────────────────────────── */
+@keyframes gateFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes gateFadeUp {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes wolfPulse {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 /* ── Badge ────────────────────────────────────────────── */
 .badge {
   padding: 2px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   font-size: 10px;
   font-weight: 700;
   font-family: 'Courier New', monospace;
   flex-shrink: 0;
+}
+
+/* ── Resize handle ────────────────────────────────────── */
+.resize-handle {
+  position: relative;
+  background: var(--bg-base);
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  width: 3px;
+}
+
+.resize-handle:hover {
+  background: var(--border);
+}
+
+.resize-handle[data-resize-handle-active] {
+  background: var(--accent-muted);
+}
+
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  background: var(--border-hi);
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.resize-handle:hover::before,
+.resize-handle[data-resize-handle-active]::before {
+  opacity: 1;
 }

@@ -27,15 +27,11 @@ export default function ArtifactCategories({ categories, selectedCat, onSelect }
   return (
     <div
       style={{
-        width: 200,
-        minWidth: 200,
-        background: '#0a0c12',
-        borderRightStyle: 'solid',
-        borderRightWidth: 1,
-        borderRightColor: 'var(--border-sub)',
+        height: '100%',
+        width: '100%',
+        background: 'var(--bg-panel)',
         display: 'flex',
         flexDirection: 'column',
-        flexShrink: 0,
         overflow: 'hidden',
       }}
     >

@@ -3,6 +3,7 @@ import { getFileMetadata } from '../ipc'
 import type { FileMetadata } from '../types'
 import HexViewer from './HexViewer'
 import TextViewer from './TextViewer'
+import { lookupKnowledge, type KnowledgeEntry } from '../data/knowledgeBank'
 
 interface Props {
   fileId: string | null
@@ -37,15 +38,11 @@ export default function DetailPane({ fileId }: Props) {
   return (
     <div
       style={{
-        width: 260,
-        minWidth: 260,
-        background: '#0a0c12',
-        borderLeftStyle: 'solid',
-        borderLeftWidth: 1,
-        borderLeftColor: 'var(--border-sub)',
+        height: '100%',
+        width: '100%',
+        background: 'var(--bg-panel)',
         display: 'flex',
         flexDirection: 'column',
-        flexShrink: 0,
         overflow: 'hidden',
       }}
     >
@@ -292,6 +289,194 @@ function MetaContent({ meta, loading }: { meta: FileMetadata | null; loading: bo
           </div>
         </>
       )}
+
+      <KnowledgeBankSection
+        entry={lookupKnowledge(meta.name, meta.extension)}
+      />
+    </div>
+  )
+}
+
+function KnowledgeBankSection({ entry }: { entry: KnowledgeEntry | null }) {
+  if (!entry) return null
+
+  const titleColor =
+    entry.forensic_value === 'critical'
+      ? 'var(--flag)'
+      : entry.forensic_value === 'high'
+        ? 'var(--sus)'
+        : entry.forensic_value === 'medium'
+          ? 'var(--text-2)'
+          : 'var(--text-muted)'
+
+  return (
+    <>
+      <Sep />
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 10,
+        }}
+      >
+        <span style={{ fontSize: 14 }}>{'\u{1F4DA}'}</span>
+        <span
+          style={{
+            fontSize: 9,
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+          }}
+        >
+          Knowledge Bank
+        </span>
+      </div>
+
+      <div
+        style={{
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '10px 12px',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: titleColor,
+            marginBottom: 6,
+          }}
+        >
+          {entry.title}
+        </div>
+
+        <div
+          style={{
+            fontSize: 11,
+            color: 'var(--text-2)',
+            lineHeight: 1.6,
+            marginBottom: 10,
+          }}
+        >
+          {entry.summary}
+        </div>
+
+        {entry.artifact_types.length > 0 && (
+          <>
+            <KbLabel>ARTIFACTS</KbLabel>
+            <div style={{ marginBottom: 4 }}>
+              {entry.artifact_types.map((t) => (
+                <div
+                  key={t}
+                  style={{
+                    fontSize: 10,
+                    color: 'var(--text-muted)',
+                    paddingLeft: 8,
+                    lineHeight: 1.7,
+                  }}
+                >
+                  {'\u00B7'} {t}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {entry.mitre_techniques.length > 0 && (
+          <>
+            <KbLabel style={{ marginTop: 8 }}>MITRE</KbLabel>
+            <div style={{ marginBottom: 4 }}>
+              {entry.mitre_techniques.map((m) => (
+                <span
+                  key={m}
+                  style={{
+                    display: 'inline-block',
+                    background: 'rgba(88,136,160,0.15)',
+                    border: '1px solid rgba(88,136,160,0.3)',
+                    color: 'var(--carved)',
+                    fontSize: 9,
+                    fontFamily: 'monospace',
+                    padding: '1px 6px',
+                    borderRadius: 'var(--radius-pill)',
+                    margin: '2px 2px',
+                  }}
+                >
+                  {m}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+
+        {entry.threat_indicators && entry.threat_indicators.length > 0 && (
+          <>
+            <div
+              style={{
+                fontSize: 9,
+                color: 'var(--flag)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                marginTop: 8,
+                marginBottom: 4,
+              }}
+            >
+              THREAT INDICATORS
+            </div>
+            {entry.threat_indicators.map((ti) => (
+              <div
+                key={ti}
+                style={{
+                  fontSize: 10,
+                  color: 'var(--sus)',
+                  paddingLeft: 8,
+                  lineHeight: 1.7,
+                }}
+              >
+                {'\u26A0'} {ti}
+              </div>
+            ))}
+          </>
+        )}
+
+        <KbLabel style={{ marginTop: 8 }}>EXAMINER NOTES</KbLabel>
+        <div
+          style={{
+            fontSize: 11,
+            color: 'var(--text-muted)',
+            fontStyle: 'italic',
+            lineHeight: 1.6,
+            marginTop: 2,
+          }}
+        >
+          {entry.examiner_notes}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function KbLabel({
+  children,
+  style,
+}: {
+  children: React.ReactNode
+  style?: React.CSSProperties
+}) {
+  return (
+    <div
+      style={{
+        fontSize: 9,
+        color: 'var(--text-muted)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        marginBottom: 4,
+        ...style,
+      }}
+    >
+      {children}
     </div>
   )
 }

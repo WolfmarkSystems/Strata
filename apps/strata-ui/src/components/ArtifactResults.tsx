@@ -67,7 +67,8 @@ export default function ArtifactResults({
   return (
     <div
       style={{
-        flex: 1,
+        height: '100%',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',

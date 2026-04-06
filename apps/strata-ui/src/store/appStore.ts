@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import type { AppState, ViewMode, Stats } from '../types'
-import type { PluginStatus } from '../ipc'
+import type { PluginStatus, LicenseResult, ExaminerProfile } from '../ipc'
+import { applyTheme, getTheme } from '../themes'
+
+export type AppGate = 'splash' | 'examiner' | 'drive' | 'main'
 
 interface AppStore extends AppState {
   metadataSearch: boolean
@@ -21,6 +24,20 @@ interface AppStore extends AppState {
   taggedFiles: Record<string, string>
   setFileTag: (fileId: string, tag: string) => void
   removeFileTag: (fileId: string) => void
+  gate: AppGate
+  licenseResult: LicenseResult | null
+  examinerProfile: ExaminerProfile | null
+  selectedDriveId: string | null
+  evidencePath: string | null
+  isDevMode: boolean
+  setGate: (g: AppGate) => void
+  setLicenseResult: (r: LicenseResult) => void
+  setExaminerProfile: (p: ExaminerProfile) => void
+  setSelectedDrive: (id: string, path: string) => void
+  reportVisible: boolean
+  reportHtml: string | null
+  setReportVisible: (v: boolean) => void
+  setReportHtml: (h: string | null) => void
 
   setView: (v: ViewMode) => void
   setLicensed: (s: AppState['licensed']) => void
@@ -37,6 +54,12 @@ interface AppStore extends AppState {
   setEvidenceLoaded: (v: boolean) => void
   setSelectedNode: (id: string | null) => void
   toggleTreeNode: (id: string) => void
+}
+
+// Apply the default theme immediately so CSS variables match the active theme
+// before any component mounts.
+if (typeof document !== 'undefined') {
+  applyTheme(getTheme('Iron Wolf'))
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -58,7 +81,7 @@ export const useAppStore = create<AppStore>((set) => ({
   selectedPluginId: null,
   selectedArtifactCat: null,
   selectedTag: null,
-  activeTheme: 'iron-wolf',
+  activeTheme: 'Iron Wolf',
   metadataSearch: false,
   fulltextSearch: false,
   evidenceId: null,
@@ -91,6 +114,22 @@ export const useAppStore = create<AppStore>((set) => ({
       delete next[fileId]
       return { taggedFiles: next }
     }),
+  gate: 'splash',
+  licenseResult: null,
+  examinerProfile: null,
+  selectedDriveId: null,
+  evidencePath: null,
+  isDevMode: true,
+  setGate: (g) => set({ gate: g }),
+  setLicenseResult: (r) => set({ licenseResult: r }),
+  setExaminerProfile: (p) =>
+    set({ examinerProfile: p, examinerName: p.name || 'Examiner' }),
+  setSelectedDrive: (id, path) =>
+    set({ selectedDriveId: id, evidencePath: path }),
+  reportVisible: false,
+  reportHtml: null,
+  setReportVisible: (v) => set({ reportVisible: v }),
+  setReportHtml: (h) => set({ reportHtml: h }),
 
   setView: (v) => set({ view: v }),
   setLicensed: (s) => set({ licensed: s }),
@@ -101,7 +140,11 @@ export const useAppStore = create<AppStore>((set) => ({
   setSelectedPlugin: (id) => set({ selectedPluginId: id }),
   setSelectedArtifactCat: (c) => set({ selectedArtifactCat: c }),
   setSelectedTag: (t) => set({ selectedTag: t }),
-  setTheme: (t) => set({ activeTheme: t }),
+  setTheme: (t) => {
+    const theme = getTheme(t)
+    applyTheme(theme)
+    set({ activeTheme: t })
+  },
   toggleMetadata: () => set((s) => ({ metadataSearch: !s.metadataSearch })),
   toggleFulltext: () => set((s) => ({ fulltextSearch: !s.fulltextSearch })),
   setEvidence: (id, name) =>

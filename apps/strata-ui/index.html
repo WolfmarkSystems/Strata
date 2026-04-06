@@ -4,10 +4,71 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>strata-ui</title>
+    <title>Strata</title>
+    <style>
+      html, body, #root {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        background: #0a0a0a !important;
+        color: #f0f0f0;
+        font-family: 'Courier New', monospace;
+        overflow: hidden;
+      }
+      #boot-msg {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+        color: #606060;
+        font-size: 12px;
+        letter-spacing: 0.2em;
+        z-index: 0;
+      }
+      #boot-msg .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #585858;
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.3; transform: scale(0.85); }
+        50% { opacity: 1; transform: scale(1.1); }
+      }
+    </style>
   </head>
   <body>
+    <div id="boot-msg">
+      <div class="dot"></div>
+      <div>STRATA BOOTING...</div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // If React hasn't mounted in 4 seconds, show the fallback error screen.
+      setTimeout(function () {
+        var root = document.getElementById('root');
+        var boot = document.getElementById('boot-msg');
+        if (root && root.childElementCount === 0) {
+          if (boot) {
+            boot.innerHTML =
+              '<div style="color:#b84040;font-size:13px;font-weight:700;letter-spacing:0.15em;">' +
+              'STRATA FAILED TO BOOT' +
+              '</div>' +
+              '<div style="color:#606060;font-size:11px;max-width:480px;text-align:center;line-height:1.6;">' +
+              'The React runtime did not mount. Open devtools (right-click &rarr; Inspect Element) ' +
+              'and check the Console tab for the underlying error.' +
+              '</div>';
+          }
+        } else if (boot) {
+          boot.style.display = 'none';
+        }
+      }, 4000);
+    </script>
   </body>
 </html>

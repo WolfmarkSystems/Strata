@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { useAppStore } from '../store/appStore'
 import ArtifactCategories from '../components/ArtifactCategories'
 import ArtifactResults from '../components/ArtifactResults'
@@ -57,27 +58,31 @@ export default function ArtifactsView() {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flex: 1,
-        overflow: 'hidden',
-        background: 'var(--bg-base)',
-      }}
+    <PanelGroup
+      direction="horizontal"
+      style={{ flex: 1, overflow: 'hidden', background: 'var(--bg-base)' }}
     >
-      <ArtifactCategories
-        categories={categories}
-        selectedCat={selectedArtifactCat}
-        onSelect={setSelectedArtifactCat}
-      />
-      <ArtifactResults
-        category={selectedCategory}
-        artifacts={artifacts}
-        selectedId={selectedArtifactId}
-        onSelect={(a) => setSelectedArtifactId(a.id)}
-        loading={loading}
-      />
-      <ArtifactDetail artifact={selectedArtifact} />
-    </div>
+      <Panel defaultSize={18} minSize={12} maxSize={35}>
+        <ArtifactCategories
+          categories={categories}
+          selectedCat={selectedArtifactCat}
+          onSelect={setSelectedArtifactCat}
+        />
+      </Panel>
+      <PanelResizeHandle className="resize-handle" />
+      <Panel defaultSize={52} minSize={25}>
+        <ArtifactResults
+          category={selectedCategory}
+          artifacts={artifacts}
+          selectedId={selectedArtifactId}
+          onSelect={(a) => setSelectedArtifactId(a.id)}
+          loading={loading}
+        />
+      </Panel>
+      <PanelResizeHandle className="resize-handle" />
+      <Panel defaultSize={30} minSize={18} maxSize={55}>
+        <ArtifactDetail artifact={selectedArtifact} />
+      </Panel>
+    </PanelGroup>
   )
 }

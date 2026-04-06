@@ -70,7 +70,8 @@ export default function FileListing({ files, selectedFileId, onFileSelect }: Pro
   return (
     <div
       style={{
-        flex: 1,
+        height: '100%',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -119,14 +120,22 @@ export default function FileListing({ files, selectedFileId, onFileSelect }: Pro
           <div
             style={{
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
               height: '100%',
-              fontSize: 13,
-              color: 'var(--text-muted)',
+              gap: 6,
+              padding: 16,
+              textAlign: 'center',
             }}
           >
-            Select a folder in the tree
+            <div style={{ fontSize: 24 }}>{'\u{1F4C2}'}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              No files to display
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-off)' }}>
+              Select a parsed volume in the evidence tree
+            </div>
           </div>
         ) : (
           sorted.map((file) => (

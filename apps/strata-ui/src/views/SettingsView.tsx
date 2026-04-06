@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useAppStore } from '../store/appStore'
+import WolfMark from '../components/WolfMark'
+import { THEMES } from '../themes'
 
 type Tab = 'appearance' | 'examiner' | 'hashsets' | 'license' | 'about'
 
@@ -79,15 +81,6 @@ export default function SettingsView() {
 // Appearance tab
 // ──────────────────────────────────────────────────────────────────────────────
 
-const THEMES: Array<{ id: string; name: string; subtitle: string; color: string }> = [
-  { id: 'iron-wolf', name: 'Iron Wolf',  subtitle: 'DEFAULT',   color: '#d8e2ec' },
-  { id: 'midnight',  name: 'Midnight',   subtitle: 'DEEP BLUE', color: '#4a6890' },
-  { id: 'void',      name: 'Void',       subtitle: 'PURPLE',    color: '#7858a8' },
-  { id: 'tactical',  name: 'Tactical',   subtitle: 'GREEN',     color: '#487858' },
-  { id: 'wolf-gold', name: 'Wolf Gold',  subtitle: 'AMBER',     color: '#a89060' },
-  { id: 'steel-ops', name: 'Steel Ops',  subtitle: 'CHROME',    color: '#c8d8d0' },
-]
-
 function AppearanceTab() {
   const activeTheme = useAppStore((s) => s.activeTheme)
   const setTheme = useAppStore((s) => s.setTheme)
@@ -98,36 +91,64 @@ function AppearanceTab() {
       <SectionLabel>Theme</SectionLabel>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         {THEMES.map((t) => {
-          const active = activeTheme === t.id
-          const isHover = hover === t.id
+          const active = activeTheme === t.name
+          const isHover = hover === t.name
           return (
             <div
-              key={t.id}
-              onClick={() => setTheme(t.id)}
-              onMouseEnter={() => setHover(t.id)}
+              key={t.name}
+              onClick={() => setTheme(t.name)}
+              onMouseEnter={() => setHover(t.name)}
               onMouseLeave={() => setHover(null)}
               style={{
-                background: 'var(--bg-elevated)',
+                background: t.vars['--bg-elevated'],
                 borderStyle: 'solid',
                 borderWidth: active ? 2 : 1,
                 borderColor: active
-                  ? 'var(--accent-1)'
+                  ? t.vars['--accent-1']
                   : isHover
-                    ? 'var(--accent-muted)'
-                    : 'var(--border)',
-                borderRadius: 6,
+                    ? t.vars['--accent-muted']
+                    : t.vars['--border'],
+                borderRadius: 'var(--radius-md)',
                 padding: active ? '11px 17px' : '12px 18px',
                 cursor: 'pointer',
-                minWidth: 120,
+                minWidth: 140,
                 transition: 'border-color 0.15s',
                 userSelect: 'none',
               }}
             >
               <div
                 style={{
+                  display: 'flex',
+                  gap: 6,
+                  marginBottom: 8,
+                }}
+              >
+                {(
+                  [
+                    '--bg-base',
+                    '--bg-surface',
+                    '--accent-muted',
+                    '--accent-2',
+                    '--accent-1',
+                  ] as const
+                ).map((k) => (
+                  <div
+                    key={k}
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: 'var(--radius-sm)',
+                      background: t.vars[k],
+                      border: `1px solid ${t.vars['--border']}`,
+                    }}
+                  />
+                ))}
+              </div>
+              <div
+                style={{
                   fontSize: 13,
                   fontWeight: 700,
-                  color: t.color,
+                  color: t.vars['--accent-1'],
                 }}
               >
                 {t.name}
@@ -135,13 +156,13 @@ function AppearanceTab() {
               <div
                 style={{
                   fontSize: 10,
-                  color: 'var(--text-muted)',
+                  color: t.vars['--text-muted'],
                   textTransform: 'uppercase',
                   letterSpacing: '0.08em',
                   marginTop: 2,
                 }}
               >
-                {t.subtitle}
+                {active ? 'ACTIVE' : 'CLICK TO APPLY'}
               </div>
             </div>
           )
@@ -155,7 +176,7 @@ function AppearanceTab() {
           fontStyle: 'italic',
         }}
       >
-        Theme switching will be enabled in v0.5.0
+        Theme changes apply instantly across the app.
       </div>
     </div>
   )
@@ -169,7 +190,6 @@ function ExaminerTab() {
   const examinerName = useAppStore((s) => s.examinerName)
   const [name, setName] = useState(examinerName)
   const [agency, setAgency] = useState('Wolfmark Systems')
-  const [badge, setBadge] = useState('DEV-001')
   const [email, setEmail] = useState('dev@wolfmark.local')
   const [saved, setSaved] = useState(false)
 
@@ -184,7 +204,6 @@ function ExaminerTab() {
       <div style={{ maxWidth: 440, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Field label="Full Name" value={name} onChange={setName} />
         <Field label="Agency / Organization" value={agency} onChange={setAgency} />
-        <Field label="Badge / Employee ID" value={badge} onChange={setBadge} />
         <Field label="Email Address" value={email} onChange={setEmail} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
@@ -218,7 +237,6 @@ function ExaminerTab() {
       >
         <div style={{ fontWeight: 700, marginBottom: 6 }}>{name || examinerName}</div>
         <div style={{ color: 'var(--text-muted)' }}>{agency}</div>
-        <div style={{ color: 'var(--text-muted)' }}>{badge}</div>
         <div style={{ color: 'var(--text-muted)' }}>{email}</div>
         <div
           style={{
@@ -547,7 +565,7 @@ function AboutTab() {
         textAlign: 'center',
       }}
     >
-      <ChevronMark />
+      <WolfMark size={80} />
 
       <div
         style={{
@@ -618,25 +636,6 @@ function InfoLine({ k, v }: { k: string; v: string }) {
       <span style={{ color: 'var(--text-muted)' }}>{k}: </span>
       {v}
     </div>
-  )
-}
-
-function ChevronMark() {
-  // Simplified inline SVG chevron stack mark (60x52)
-  return (
-    <svg width="60" height="52" viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="40,4 68,20 40,36 12,20" fill="#d8e2ec" opacity="0.95" />
-      <polygon points="68,20 68,28 40,44 40,36" fill="#3d5878" />
-      <polygon points="12,20 12,28 40,44 40,36" fill="#8a9aaa" />
-      <polygon points="68,28 72,30 72,38 68,36" fill="#2a3a55" />
-      <polygon points="12,28 8,30 8,38 12,36" fill="#4a6880" />
-      <line x1="12" y1="36" x2="68" y2="36" stroke="#d8e2ec" strokeWidth="0.5" opacity="0.4" />
-      <polygon points="68,36 72,38 72,46 68,44" fill="#1a2840" />
-      <polygon points="12,36 8,38 8,46 12,44" fill="#3a5268" />
-      <polygon points="12,52 8,54 36,66 40,64 40,56" fill="#0f1c2e" opacity="0.9" />
-      <polygon points="68,52 72,54 44,66 40,64 40,56" fill="#080e18" opacity="0.9" />
-      <polyline points="12,20 40,4 68,20" stroke="#ffffff" strokeWidth="0.6" opacity="0.5" fill="none" />
-    </svg>
   )
 }
 
