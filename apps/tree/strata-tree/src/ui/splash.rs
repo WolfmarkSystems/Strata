@@ -39,17 +39,6 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                         .color(egui::Color32::from_rgb(0x3d, 0x50, 0x66))
                         .size(10.0),
                 );
-                ui.add_space(4.0);
-
-                // Version + company
-                ui.label(
-                    egui::RichText::new(format!(
-                        "v{}  ·  Wolfmark Systems",
-                        env!("CARGO_PKG_VERSION")
-                    ))
-                    .color(egui::Color32::from_rgb(0x1c, 0x26, 0x38))
-                    .size(9.0),
-                );
 
                 ui.add_space(24.0);
 
@@ -162,22 +151,25 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
 
                 ui.add_space(16.0);
 
-                // Copyright
+                // Version + copyright
                 ui.label(
-                    egui::RichText::new("\u{00A9} 2026 Wolfmark Systems")
-                        .color(egui::Color32::from_rgb(0x14, 0x1c, 0x28))
-                        .size(8.0),
+                    egui::RichText::new(format!(
+                        "v{} \u{00B7} \u{00A9} 2026 Wolfmark Systems",
+                        env!("CARGO_PKG_VERSION")
+                    ))
+                    .color(egui::Color32::from_rgb(0x1c, 0x26, 0x38))
+                    .size(8.0),
                 );
             });
         });
 }
 
-/// Draw the 3D chevron stack mark.
+/// Draw the 3D chevron stack mark — metallic isometric layered block.
 pub fn draw_chevron_stack(painter: &egui::Painter, rect: egui::Rect) {
     let ox = rect.left();
     let oy = rect.top();
     let sx = rect.width() / 80.0;
-    let sy = rect.height() / 70.0;
+    let sy = rect.height() / 80.0;
 
     let p = |x: f32, y: f32| egui::pos2(ox + x * sx, oy + y * sy);
 
@@ -186,52 +178,90 @@ pub fn draw_chevron_stack(painter: &egui::Painter, rect: egui::Rect) {
         painter.add(egui::Shape::convex_polygon(pts, fill, egui::Stroke::NONE));
     };
 
-    // Top face (diamond)
-    poly(
-        &[(40.0, 4.0), (68.0, 20.0), (40.0, 36.0), (12.0, 20.0)],
-        egui::Color32::from_rgba_unmultiplied(0xdc, 0xe6, 0xf0, 247),
-    );
-    // Right face
-    poly(
-        &[(68.0, 20.0), (68.0, 28.0), (40.0, 44.0), (40.0, 36.0)],
-        egui::Color32::from_rgb(0x3d, 0x58, 0x78),
-    );
-    // Left face
-    poly(
-        &[(12.0, 20.0), (12.0, 28.0), (40.0, 44.0), (40.0, 36.0)],
-        egui::Color32::from_rgb(0x8f, 0xa8, 0xc0),
-    );
+    // The block is a 3D isometric shape with a bright top and darker sides,
+    // separated by dark gap lines into 4 visible layers.
 
-    // Layer 1
-    poly(&[(68.0, 28.0), (72.0, 30.0), (72.0, 38.0), (68.0, 36.0)], egui::Color32::from_rgb(0x2a, 0x3a, 0x55));
-    poly(&[(12.0, 28.0), (8.0, 30.0), (8.0, 38.0), (12.0, 36.0)], egui::Color32::from_rgb(0x4a, 0x68, 0x80));
-    painter.line_segment([p(12.0, 36.0), p(68.0, 36.0)], egui::Stroke::new(1.0 * sx.min(sy), egui::Color32::from_rgba_unmultiplied(0xdc, 0xe6, 0xf0, 128)));
+    let bg = egui::Color32::from_rgb(0x08, 0x09, 0x0d);
 
-    // Layer 2
-    poly(&[(68.0, 36.0), (72.0, 38.0), (72.0, 46.0), (68.0, 44.0)], egui::Color32::from_rgb(0x1a, 0x28, 0x40));
-    poly(&[(12.0, 36.0), (8.0, 38.0), (8.0, 46.0), (12.0, 44.0)], egui::Color32::from_rgb(0x3a, 0x52, 0x68));
-    painter.line_segment([p(12.0, 44.0), p(68.0, 44.0)], egui::Stroke::new(1.0 * sx.min(sy), egui::Color32::from_rgba_unmultiplied(0xb8, 0xc8, 0xd8, 102)));
-
-    // Layer 3
-    poly(&[(68.0, 44.0), (72.0, 46.0), (72.0, 54.0), (68.0, 52.0)], egui::Color32::from_rgb(0x0f, 0x1c, 0x2e));
-    poly(&[(12.0, 44.0), (8.0, 46.0), (8.0, 54.0), (12.0, 52.0)], egui::Color32::from_rgb(0x28, 0x38, 0x48));
-    painter.line_segment([p(12.0, 52.0), p(68.0, 52.0)], egui::Stroke::new(1.0 * sx.min(sy), egui::Color32::from_rgba_unmultiplied(0x8f, 0xa8, 0xc0, 77)));
-
-    // Bottom faces
+    // ── Top face (bright platinum diamond) ─────────────────────────────
+    // Upper half of top face (brighter)
     poly(
-        &[(12.0, 52.0), (8.0, 54.0), (36.0, 66.0), (40.0, 64.0), (40.0, 56.0)],
-        egui::Color32::from_rgba_unmultiplied(0x0f, 0x1c, 0x2e, 230),
+        &[(40.0, 2.0), (70.0, 18.0), (40.0, 34.0), (10.0, 18.0)],
+        egui::Color32::from_rgb(0xe8, 0xef, 0xf5),
     );
+    // Subtle center highlight on top face
     poly(
-        &[(68.0, 52.0), (72.0, 54.0), (44.0, 66.0), (40.0, 64.0), (40.0, 56.0)],
-        egui::Color32::from_rgba_unmultiplied(0x08, 0x0e, 0x18, 230),
+        &[(40.0, 8.0), (58.0, 18.0), (40.0, 28.0), (22.0, 18.0)],
+        egui::Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 40),
     );
 
-    // Top highlight edge
+    // ── Layer 0 sides (directly below top face) ────────────────────────
+    // Left side
+    poly(
+        &[(10.0, 18.0), (10.0, 26.0), (40.0, 42.0), (40.0, 34.0)],
+        egui::Color32::from_rgb(0x7a, 0x90, 0xa8),
+    );
+    // Right side
+    poly(
+        &[(70.0, 18.0), (70.0, 26.0), (40.0, 42.0), (40.0, 34.0)],
+        egui::Color32::from_rgb(0x30, 0x44, 0x5e),
+    );
+
+    // ── Gap 1 (dark line) ──────────────────────────────────────────────
+    poly(&[(10.0, 26.0), (10.0, 29.0), (40.0, 45.0), (40.0, 42.0)], bg);
+    poly(&[(70.0, 26.0), (70.0, 29.0), (40.0, 45.0), (40.0, 42.0)], bg);
+
+    // ── Layer 1 ────────────────────────────────────────────────────────
+    poly(
+        &[(10.0, 29.0), (10.0, 37.0), (40.0, 53.0), (40.0, 45.0)],
+        egui::Color32::from_rgb(0x60, 0x78, 0x90),
+    );
+    poly(
+        &[(70.0, 29.0), (70.0, 37.0), (40.0, 53.0), (40.0, 45.0)],
+        egui::Color32::from_rgb(0x22, 0x34, 0x4c),
+    );
+
+    // ── Gap 2 ──────────────────────────────────────────────────────────
+    poly(&[(10.0, 37.0), (10.0, 40.0), (40.0, 56.0), (40.0, 53.0)], bg);
+    poly(&[(70.0, 37.0), (70.0, 40.0), (40.0, 56.0), (40.0, 53.0)], bg);
+
+    // ── Layer 2 ────────────────────────────────────────────────────────
+    poly(
+        &[(10.0, 40.0), (10.0, 48.0), (40.0, 64.0), (40.0, 56.0)],
+        egui::Color32::from_rgb(0x48, 0x60, 0x78),
+    );
+    poly(
+        &[(70.0, 40.0), (70.0, 48.0), (40.0, 64.0), (40.0, 56.0)],
+        egui::Color32::from_rgb(0x18, 0x28, 0x3e),
+    );
+
+    // ── Gap 3 ──────────────────────────────────────────────────────────
+    poly(&[(10.0, 48.0), (10.0, 51.0), (40.0, 67.0), (40.0, 64.0)], bg);
+    poly(&[(70.0, 48.0), (70.0, 51.0), (40.0, 67.0), (40.0, 64.0)], bg);
+
+    // ── Layer 3 (bottom) ───────────────────────────────────────────────
+    poly(
+        &[(10.0, 51.0), (10.0, 59.0), (40.0, 75.0), (40.0, 67.0)],
+        egui::Color32::from_rgb(0x30, 0x48, 0x60),
+    );
+    poly(
+        &[(70.0, 51.0), (70.0, 59.0), (40.0, 75.0), (40.0, 67.0)],
+        egui::Color32::from_rgb(0x10, 0x1e, 0x30),
+    );
+
+    // ── Top edge highlight (bright line along top diamond edges) ───────
     painter.add(egui::Shape::line(
-        vec![p(12.0, 20.0), p(40.0, 4.0), p(68.0, 20.0)],
-        egui::Stroke::new(0.8 * sx.min(sy), egui::Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 128)),
+        vec![p(10.0, 18.0), p(40.0, 2.0), p(70.0, 18.0)],
+        egui::Stroke::new(1.2 * sx.min(sy), egui::Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 140)),
     ));
+
+    // Subtle front edge highlights on each layer
+    for &y in &[34.0, 45.0, 56.0, 67.0] {
+        painter.line_segment(
+            [p(10.0, y - 8.0), p(10.0, y)],
+            egui::Stroke::new(0.5 * sx.min(sy), egui::Color32::from_rgba_unmultiplied(0xb8, 0xc8, 0xd8, 50)),
+        );
+    }
 }
 
 /// After license is activated, advance to the next step in the flow:
