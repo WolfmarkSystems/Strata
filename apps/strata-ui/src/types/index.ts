@@ -38,12 +38,14 @@ export interface Stats {
 export interface TreeNode {
   id: string
   name: string
-  node_type: 'evidence' | 'volume' | 'folder' | 'file'
+  node_type: 'evidence' | 'volume' | 'folder' | 'file' | string
   count: number
   is_deleted: boolean
   is_flagged: boolean
   is_suspicious: boolean
   has_children: boolean
+  parent_id: string | null
+  depth: number
 }
 
 export interface FileEntry {
@@ -79,6 +81,8 @@ export interface FileMetadata {
   mft_entry: number | null
   extension: string
   mime_type: string | null
+  inode: number | null
+  permissions: string | null
 }
 
 export interface PluginInfo {

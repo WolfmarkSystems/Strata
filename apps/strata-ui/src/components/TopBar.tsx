@@ -1,5 +1,6 @@
 import { useAppStore } from '../store/appStore'
 import { useWindowSize } from '../hooks/useWindowSize'
+import { openEvidenceDialog, loadEvidence, getStats } from '../ipc'
 
 export default function TopBar() {
   const stats = useAppStore((s) => s.stats)
@@ -9,6 +10,29 @@ export default function TopBar() {
   const fulltextSearch = useAppStore((s) => s.fulltextSearch)
   const toggleMetadata = useAppStore((s) => s.toggleMetadata)
   const toggleFulltext = useAppStore((s) => s.toggleFulltext)
+  const setEvidence = useAppStore((s) => s.setEvidence)
+  const setStats = useAppStore((s) => s.setStats)
+  const setSelectedNode = useAppStore((s) => s.setSelectedNode)
+  const setCase = useAppStore((s) => s.setCase)
+
+  const handleOpenEvidence = async () => {
+    const path = await openEvidenceDialog()
+    if (!path) return
+
+    const result = await loadEvidence(path)
+    if (!result.success) {
+      console.error('Failed to load evidence:', result.error)
+      return
+    }
+
+    setEvidence(result.evidence_id, result.name)
+    setCase(result.evidence_id, result.name)
+
+    const stats = await getStats(result.evidence_id)
+    setStats(stats)
+
+    setSelectedNode('vol-ntfs')
+  }
 
   const { width } = useWindowSize()
   const narrow = width < 900
@@ -81,7 +105,7 @@ export default function TopBar() {
             gap: 8,
           }}
         >
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={handleOpenEvidence}>
             {narrow ? '+' : '+ Open Evidence'}
           </button>
           <button className="btn-secondary">
