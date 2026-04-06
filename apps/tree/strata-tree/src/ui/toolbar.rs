@@ -13,29 +13,34 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
             egui::Frame::none()
                 .fill(t.panel)
                 .inner_margin(egui::Margin::symmetric(10.0, 4.0))
-                .stroke(egui::Stroke::new(1.0, t.border)),
+                .stroke(egui::Stroke::NONE),
         )
         .show(ctx, |ui| {
-            // ═══ ROW 1: Logo + nav + case info + trial badge ═══
+            // ═══ ROW 1: STRATA wordmark + nav + case info + badges ═══
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(6.0, 0.0);
 
-                // STRATA wordmark
+                // TODO: embed wolf_mark.png here
+                // use include_bytes! when PNG ready
+                // icon_data: load_image_bytes(...)
+                let (_wolf_slot, _) = ui.allocate_exact_size(egui::vec2(32.0, 32.0), egui::Sense::hover());
+
+                // STRATA wordmark — 18px bold, letter spacing via spaces
                 ui.label(
-                    egui::RichText::new("STRATA")
-                        .color(t.text)
-                        .size(14.0)
+                    egui::RichText::new("S T R A T A")
+                        .color(egui::Color32::from_rgb(0xd8, 0xe2, 0xec))
+                        .size(18.0)
                         .strong(),
                 );
 
-                ui.add_space(8.0);
+                ui.add_space(16.0);
 
-                // + Open Evidence (accent button)
+                // + Open Evidence (primary accent button)
                 let ev_btn = ui.add(
                     egui::Button::new(
                         egui::RichText::new("+ Open Evidence")
-                            .color(egui::Color32::from_rgb(0x0a, 0x0d, 0x14))
-                            .size(12.0)
+                            .color(t.bg)
+                            .size(11.0)
                             .strong(),
                     )
                     .fill(t.active)
@@ -58,9 +63,9 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     }
                 }
 
-                // Right-aligned: case info + trial badge
+                // Right-aligned: case info + badges
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    // DEV mode badge (only present in dev-bypass builds)
+                    // DEV badge (only in dev-bypass builds)
                     #[cfg(feature = "dev-bypass")]
                     {
                         ui.add(
@@ -78,24 +83,24 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                         ui.add_space(4.0);
                     }
 
-                    // Trial badge
+                    // License badge
                     let (license_color, license_label) = license_indicator(state);
                     let badge = ui.add(
                         egui::Button::new(
-                            egui::RichText::new(format!("\u{23F1} {}", license_label))
+                            egui::RichText::new(license_label)
                                 .color(license_color)
-                                .size(10.0)
+                                .size(9.0)
                                 .strong(),
                         )
-                        .fill(egui::Color32::from_rgb(0x1a, 0x2a, 0x45))
-                        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(0x4a, 0x7f, 0xc1)))
+                        .fill(t.card)
+                        .stroke(egui::Stroke::new(1.0, t.border))
                         .rounding(4.0),
                     );
                     if badge.clicked() {
                         state.show_license_panel = true;
                     }
 
-                    ui.add_space(8.0);
+                    ui.add_space(6.0);
 
                     // Case name
                     let case_name = state
@@ -106,90 +111,89 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     ui.label(
                         egui::RichText::new(case_name)
                             .color(t.text)
-                            .size(11.0)
+                            .size(10.0)
                             .strong(),
                     );
                     ui.label(
                         egui::RichText::new("CASE")
-                            .color(egui::Color32::from_rgb(0x4a, 0x55, 0x68))
-                            .size(9.0),
+                            .color(egui::Color32::from_rgb(0x1c, 0x26, 0x38))
+                            .size(8.0),
                     );
                 });
             });
 
-            ui.add_space(3.0);
+            ui.add_space(2.0);
 
-            // ═══ ROW 2: Search bar + action buttons ═══
+            // ═══ ROW 2: Search + stats + action buttons ═══
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
 
-                // Search bar — max 480px, centered
+                // Search bar — max 480px
                 let search_border = if state.global_search_active || !state.global_search_query.is_empty() {
                     t.active
                 } else {
                     t.border
                 };
 
-                let search_max = 480.0_f32;
-                let room_for_buttons = 280.0_f32;
-                let avail = ui.available_width() - room_for_buttons;
-                let bar_w = avail.min(search_max);
-                let left_pad = (avail - bar_w) / 2.0;
-                if left_pad > 0.0 {
-                    ui.add_space(left_pad);
-                }
-
                 egui::Frame::none()
                     .fill(t.card)
                     .stroke(egui::Stroke::new(1.0, search_border))
                     .rounding(6.0)
-                    .inner_margin(egui::Margin::symmetric(8.0, 4.0))
+                    .inner_margin(egui::Margin::symmetric(8.0, 3.0))
                     .show(ui, |ui| {
-                        ui.set_width(bar_w);
+                        ui.set_width(480.0_f32.min(ui.available_width() * 0.35));
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("\u{E30C}").color(t.muted).size(14.0)); // magnifier
+                            ui.label(egui::RichText::new("\u{E30C}").color(t.muted).size(12.0));
                             let resp = ui.add(
                                 egui::TextEdit::singleline(&mut state.global_search_query)
-                                    .desired_width(ui.available_width() - 24.0)
-                                    .hint_text("Search files, paths, extensions...")
+                                    .desired_width(ui.available_width() - 20.0)
+                                    .hint_text("Search files, paths...")
                                     .frame(false),
                             );
-
-                            // Enter activates search mode
                             if resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                                 activate_search_mode(state);
                             }
-
-                            // X button to exit search
                             if state.global_search_active
-                                && ui
-                                    .button(egui::RichText::new("\u{2715}").color(t.muted).size(12.0))
-                                    .clicked()
+                                && ui.button(egui::RichText::new("\u{2715}").color(t.muted).size(10.0)).clicked()
                             {
                                 exit_search_mode(state);
                             }
                         });
                     });
 
-                // Search mode tabs
-                if state.global_search_active {
-                    ui.add_space(4.0);
-                    let tab_labels = ["Files", "Artifacts", "Bookmarks"];
-                    for (i, label) in tab_labels.iter().enumerate() {
-                        let selected = state.global_search_tab == i as u8;
-                        let resp = ui.selectable_label(
-                            selected,
-                            egui::RichText::new(*label)
-                                .color(if selected { t.active } else { t.muted })
-                                .size(10.0),
-                        );
-                        if resp.clicked() {
-                            state.global_search_tab = i as u8;
-                        }
-                    }
-                }
+                ui.add_space(8.0);
 
-                // Spacer
+                // ── Inline stats ────────────────────────────────────────
+                let label_c = egui::Color32::from_rgb(0x1c, 0x26, 0x38);
+                let sep_c = label_c;
+                let total_files = state.total_files_count;
+                let suspicious = state.suspicious_event_count;
+                let flagged = state.file_index.iter().filter(|f| f.hash_flag.as_deref() == Some("KnownBad")).count();
+                let carved = state.file_index.iter().filter(|f| f.is_carved).count();
+                let hashed = state.file_index.iter().filter(|f| f.sha256.is_some()).count();
+                let artifacts = state.artifact_total;
+
+                let stat = |ui: &mut egui::Ui, name: &str, val: usize, val_color: egui::Color32| {
+                    ui.label(egui::RichText::new(name).color(label_c).size(8.0));
+                    ui.label(egui::RichText::new(format_count(val)).color(val_color).size(8.5).strong());
+                };
+                let sep = |ui: &mut egui::Ui| {
+                    ui.label(egui::RichText::new("|").color(sep_c).size(8.0));
+                };
+
+                stat(ui, "FILES", total_files, egui::Color32::from_rgb(0x4a, 0x60, 0x80));
+                sep(ui);
+                stat(ui, "SUSPICIOUS", suspicious, egui::Color32::from_rgb(0xb8, 0x78, 0x40));
+                sep(ui);
+                stat(ui, "FLAGGED", flagged, egui::Color32::from_rgb(0xa8, 0x40, 0x40));
+                sep(ui);
+                stat(ui, "CARVED", carved, egui::Color32::from_rgb(0x4a, 0x78, 0x90));
+                sep(ui);
+                stat(ui, "HASHED", hashed, egui::Color32::from_rgb(0x48, 0x78, 0x58));
+                sep(ui);
+                stat(ui, "ARTIFACTS", artifacts, egui::Color32::from_rgb(0x60, 0x58, 0x78));
+
+                // ── Action buttons (right-aligned) ─────────────────────
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
 
@@ -200,10 +204,12 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     let can_html_report = !matches!(state.license_state.tier, LicenseTier::Free)
                         && !state.license_state.is_trial_expired();
 
-                    // Export (amber)
+                    // Export
                     ui.add_enabled_ui(has_case, |ui| {
-                        let resp = action_btn(ui, "EXPORT", egui::Color32::from_rgb(0xf5, 0x9e, 0x0b),
-                            egui::Color32::from_rgb(0x3a, 0x2a, 0x10), egui::Color32::from_rgb(0x1a, 0x14, 0x08));
+                        let resp = action_btn(ui, "EXPORT",
+                            egui::Color32::from_rgb(0xb8, 0x78, 0x40),
+                            egui::Color32::from_rgb(0x38, 0x20, 0x10),
+                            egui::Color32::from_rgb(0x0f, 0x10, 0x14));
                         if resp.clicked() {
                             if let Some(dir) = rfd::FileDialog::new().pick_folder() {
                                 match crate::ui::export::export_bundle(state, &dir) {
@@ -217,10 +223,12 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                         }
                     });
 
-                    // Report (green)
+                    // Report
                     ui.add_enabled_ui(has_case && can_report_export, |ui| {
-                        let resp = action_btn(ui, "REPORT", egui::Color32::from_rgb(0x4a, 0xde, 0x80),
-                            egui::Color32::from_rgb(0x1a, 0x3a, 0x2a), egui::Color32::from_rgb(0x0f, 0x1f, 0x18));
+                        let resp = action_btn(ui, "REPORT",
+                            egui::Color32::from_rgb(0x48, 0x78, 0x58),
+                            egui::Color32::from_rgb(0x14, 0x20, 0x18),
+                            egui::Color32::from_rgb(0x0f, 0x10, 0x14));
                         if resp.clicked() {
                             if let Some(path) = rfd::FileDialog::new()
                                 .add_filter("HTML", &["html"])
@@ -241,10 +249,12 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                         }
                     });
 
-                    // Carve (neutral)
+                    // Carve
                     ui.add_enabled_ui(has_files && can_file_carve, |ui| {
-                        let resp = action_btn(ui, "CARVE", egui::Color32::from_rgb(0x88, 0x99, 0xaa),
-                            egui::Color32::from_rgb(0x2a, 0x33, 0x47), egui::Color32::from_rgb(0x16, 0x1b, 0x27));
+                        let resp = action_btn(ui, "CARVE",
+                            egui::Color32::from_rgb(0x3a, 0x48, 0x58),
+                            egui::Color32::from_rgb(0x18, 0x1c, 0x24),
+                            egui::Color32::from_rgb(0x0f, 0x10, 0x14));
                         if resp.clicked() && !state.carve_active {
                             if state.carve_target_evidence_id.is_none() {
                                 if let Some(first) = state.evidence_sources.first() {
@@ -255,10 +265,12 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                         }
                     });
 
-                    // Hash All (blue)
+                    // Hash All
                     ui.add_enabled_ui(has_files, |ui| {
-                        let resp = action_btn(ui, "HASH ALL", egui::Color32::from_rgb(0x7d, 0xd3, 0xfc),
-                            egui::Color32::from_rgb(0x1e, 0x30, 0x50), egui::Color32::from_rgb(0x11, 0x18, 0x27));
+                        let resp = action_btn(ui, "HASH ALL",
+                            egui::Color32::from_rgb(0x8a, 0x9a, 0xaa),
+                            egui::Color32::from_rgb(0x1a, 0x28, 0x40),
+                            egui::Color32::from_rgb(0x0f, 0x10, 0x14));
                         if resp.clicked() && !state.hashing_active {
                             let files: Vec<crate::state::FileEntry> = state.file_index.iter()
                                 .filter(|f| !f.is_dir && f.sha256.is_none()).cloned().collect();
@@ -273,19 +285,6 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     });
                 });
             });
-
-            // Search mode indicator bar
-            if state.global_search_active {
-                let rect = ui.available_rect_before_wrap();
-                ui.painter().rect_filled(
-                    egui::Rect::from_min_size(
-                        egui::pos2(rect.left(), rect.top()),
-                        egui::vec2(rect.width(), 2.0),
-                    ),
-                    0.0,
-                    t.active,
-                );
-            }
         });
 
     // Handle Escape to exit search mode
@@ -347,6 +346,16 @@ fn exit_search_mode(state: &mut AppState) {
     state.file_filter.clear();
     state.mark_filter_dirty();
     state.status = "Search mode exited.".to_string();
+}
+
+fn format_count(n: usize) -> String {
+    if n >= 1_000_000 {
+        format!("{:.1}M", n as f64 / 1_000_000.0)
+    } else if n >= 1_000 {
+        format!("{},{:03}", n / 1000, n % 1000)
+    } else {
+        n.to_string()
+    }
 }
 
 fn action_btn(

@@ -47,8 +47,6 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
     handle_keyboard_navigation(ctx, state);
     toolbar::render(ctx, state);
     layout::render(ctx, state);
-    // Status pill renders AFTER layout as a floating overlay
-    status_bar::render(ctx, state);
     log_view_mode_transition(state);
 }
 

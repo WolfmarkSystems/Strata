@@ -477,6 +477,7 @@ pub struct AppState {
     pub global_search_query: String,
     pub global_search_active: bool,
     pub global_search_results: Vec<usize>, // indices into file_index
+    #[allow(dead_code)]
     pub global_search_tab: u8, // 0=Files, 1=Artifacts, 2=Bookmarks
 
     // ── Advanced search fields ──
@@ -501,6 +502,7 @@ pub struct AppState {
     // ── Artifact counts (populated by plugins) ──
     pub artifact_counts: std::collections::HashMap<String, usize>,
     pub artifact_total: usize,
+    pub selected_artifact_idx: Option<usize>,
     pub plugin_results: Vec<strata_plugin_sdk::PluginOutput>,
     pub plugin_host: crate::plugin_host::PluginHost,
 
@@ -680,6 +682,7 @@ impl Default for AppState {
             gallery_max_size: 0,
             artifact_counts: std::collections::HashMap::new(),
             artifact_total: 0,
+            selected_artifact_idx: None,
             plugin_results: Vec::new(),
             plugin_host: crate::plugin_host::PluginHost::new(),
             show_splash: false, // Set to true in app.rs if no valid license

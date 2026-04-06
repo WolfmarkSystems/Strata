@@ -7,6 +7,7 @@ use std::path::Path;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct PluginInfo {
     name: String,
@@ -114,8 +115,9 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                 for row_plugins in plugin_infos.chunks(col_count) {
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
-                        for (name, version, _description, plugin_type) in row_plugins {
+                        for (name, version, description, plugin_type) in row_plugins {
                             let accent = plugin_accent_color(name);
+                            let icon = plugin_icon(name);
                             let is_selected = state.selected_plugin.as_deref() == Some(name.as_str());
                             let border = if is_selected { accent } else { t.border };
                             let fill = if is_selected { t.elevated } else { t.card };
@@ -126,26 +128,30 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                 .fill(fill)
                                 .stroke(egui::Stroke::new(1.0, border))
                                 .rounding(crate::theme::RADIUS_MD)
-                                .inner_margin(egui::Margin::symmetric(10.0, 8.0))
+                                .inner_margin(egui::Margin::symmetric(12.0, 10.0))
                                 .show(ui, |ui| {
-                                    ui.set_width(card_w - 28.0);
-                                    ui.set_height(60.0);
-                                    // Row 1: name + version + type
+                                    ui.set_width(card_w - 32.0);
+                                    ui.set_min_height(100.0);
+                                    // Row 1: icon + name + version + type
                                     ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new(name.as_str()).color(accent).size(10.0).strong());
-                                        ui.label(egui::RichText::new(format!("v{}", version)).color(t.muted).size(8.0));
+                                        ui.label(egui::RichText::new(icon).size(18.0).color(accent));
+                                        ui.label(egui::RichText::new(name.as_str()).color(accent).size(12.0).strong());
+                                        ui.label(egui::RichText::new(format!("v{}", version)).color(t.muted).size(9.0));
                                     });
-                                    ui.label(egui::RichText::new(format!("[{}]", plugin_type)).color(t.muted).size(7.5));
+                                    ui.label(egui::RichText::new(format!("[{}]", plugin_type)).color(t.muted).size(8.0));
+                                    ui.add_space(2.0);
+                                    // Row 2: description (truncated)
+                                    let desc_short = if description.len() > 80 { &description[..80] } else { description.as_str() };
+                                    ui.label(egui::RichText::new(desc_short).color(t.secondary).size(9.0));
+                                    ui.add_space(4.0);
                                     // Row 3: RUN button
-                                    ui.horizontal(|ui| {
-                                        let run_clicked = ui.add_enabled(has_evidence, egui::Button::new(
-                                            egui::RichText::new(if already_ran { "RE-RUN" } else { "RUN" })
-                                                .color(t.text).size(8.5).strong(),
-                                        ).fill(t.bg).rounding(3.0)).clicked();
-                                        if run_clicked {
-                                            state.run_plugin(name);
-                                        }
-                                    });
+                                    let run_clicked = ui.add_enabled(has_evidence, egui::Button::new(
+                                        egui::RichText::new(if already_ran { "RE-RUN" } else { "RUN" })
+                                            .color(t.text).size(8.5).strong(),
+                                    ).fill(t.bg).rounding(3.0)).clicked();
+                                    if run_clicked {
+                                        state.run_plugin(name);
+                                    }
                                 });
 
                             // Paint accent left border
@@ -193,168 +199,6 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         state.selected_plugin = Some(name);
     }
 
-    ui.add_space(12.0);
-    ui.separator();
-    ui.add_space(8.0);
-
-    // ── Dynamic Plugins ─────────────────────────────────────────────────────
-    ui.horizontal(|ui| {
-        ui.label(
-            egui::RichText::new("DYNAMIC PLUGINS")
-                .color(t.active)
-                .size(11.0)
-                .strong(),
-        );
-        ui.separator();
-        let count = PLUGINS.with(|p| p.borrow().len());
-        ui.label(
-            egui::RichText::new(format!("{} available", count))
-                .color(t.muted)
-                .size(9.5),
-        );
-    });
-    ui.add_space(4.0);
-
-    if ui.button("Load Plugin...").clicked() {
-        let ext: &[&str] = if cfg!(target_os = "windows") {
-            &["dll"]
-        } else if cfg!(target_os = "macos") {
-            &["dylib"]
-        } else {
-            &["so"]
-        };
-        if let Some(path) = rfd::FileDialog::new().add_filter("Plugin", ext).pick_file() {
-            let path_s = path.to_string_lossy().to_string();
-            let stem = path
-                .file_stem()
-                .map(|s| s.to_string_lossy().to_string())
-                .unwrap_or_else(|| "unknown".to_string());
-            let already_loaded = PLUGINS.with(|p| {
-                p.borrow()
-                    .iter()
-                    .any(|it| it.path.eq_ignore_ascii_case(&path_s))
-            });
-            if already_loaded {
-                state.status = format!("Plugin already loaded: {}", stem);
-                return;
-            }
-            let plugin_type = infer_plugin_type(&stem);
-            let (signature_verified, signature_status) = verify_plugin_signature(&path);
-            PLUGINS.with(|p| {
-                p.borrow_mut().push(PluginInfo {
-                    name: stem.clone(),
-                    version: "0.1".to_string(),
-                    plugin_type,
-                    description: "Loaded dynamic plugin".to_string(),
-                    path: path_s.clone(),
-                    formats: "*".to_string(),
-                    author: "Unknown".to_string(),
-                    processed: 0,
-                    elapsed_ms: 0,
-                    log: vec![format!(
-                        "{} INFO Loaded plugin {}",
-                        chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                        path_s
-                    )],
-                    last_result: None,
-                    last_success: None,
-                    last_run_utc: None,
-                    signature_status: signature_status.clone(),
-                    signature_verified,
-                });
-            });
-            state.plugin_enabled.insert(stem.clone(), true);
-            state.selected_plugin = Some(stem.clone());
-            state.status = format!("Plugin loaded: {} ({})", stem, signature_status);
-            state.mark_case_dirty();
-            save_plugin_config(state);
-            state.log_action("PLUGIN_LOAD", &format!("name={} path={}", stem, path_s));
-        }
-    }
-
-    ui.separator();
-    ui.label(
-        egui::RichText::new("NAME | VERSION | TYPE | STATUS | DESCRIPTION")
-            .color(TEXT_MUTED)
-            .size(8.5)
-            .strong(),
-    );
-    ui.separator();
-
-    let mut clicked_name: Option<String> = None;
-    PLUGINS.with(|plugins| {
-        for plugin in plugins.borrow().iter() {
-            ui.horizontal(|ui| {
-                let row_resp = ui.selectable_label(
-                    state.selected_plugin.as_deref() == Some(plugin.name.as_str()),
-                    egui::RichText::new(&plugin.name).color(ACCENT),
-                );
-                row_resp.context_menu(|ui| {
-                    if ui.button("Copy Plugin Path").clicked() {
-                        ui.ctx().copy_text(plugin.path.clone());
-                        ui.close_menu();
-                    }
-                    if ui.button("Copy Plugin Name").clicked() {
-                        ui.ctx().copy_text(plugin.name.clone());
-                        ui.close_menu();
-                    }
-                });
-                if row_resp.clicked() {
-                    clicked_name = Some(plugin.name.clone());
-                }
-                ui.separator();
-                ui.label(plugin.version.as_str());
-                ui.separator();
-                ui.label(plugin.plugin_type.as_str());
-                ui.separator();
-                let enabled = state
-                    .plugin_enabled
-                    .get(&plugin.name)
-                    .copied()
-                    .unwrap_or(true);
-                let mut enabled_mut = enabled;
-                if ui
-                    .checkbox(
-                        &mut enabled_mut,
-                        if enabled { "Enabled" } else { "Disabled" },
-                    )
-                    .changed()
-                {
-                    state
-                        .plugin_enabled
-                        .insert(plugin.name.clone(), enabled_mut);
-                    save_plugin_config(state);
-                    state.log_action(
-                        "PLUGIN_TOGGLE",
-                        &format!(
-                            "{}={}",
-                            plugin.name,
-                            if enabled_mut { "enabled" } else { "disabled" }
-                        ),
-                    );
-                }
-                ui.separator();
-                let sig_color = if plugin.signature_verified {
-                    GREEN_OK
-                } else {
-                    AMBER
-                };
-                ui.label(
-                    egui::RichText::new(plugin.signature_status.as_str())
-                        .color(sig_color)
-                        .size(8.0),
-                );
-                ui.separator();
-                ui.label(plugin.description.as_str());
-            });
-        }
-    });
-    if let Some(name) = clicked_name {
-        state.selected_plugin = Some(name);
-    }
-
-    ui.separator();
-    render_plugin_detail(ui, state);
 }
 
 fn render_builtin_detail(
@@ -371,7 +215,7 @@ fn render_builtin_detail(
         return;
     };
 
-    let Some((name, version, description, plugin_type)) = plugin_infos.iter().find(|(n, ..)| n == selected) else {
+    let Some((name, version, _description, plugin_type)) = plugin_infos.iter().find(|(n, ..)| n == selected) else {
         ui.label(egui::RichText::new("Select a plugin to view details").color(t.muted).size(12.0));
         return;
     };
@@ -395,10 +239,32 @@ fn render_builtin_detail(
     ui.add_space(8.0);
 
     egui::ScrollArea::vertical().show(ui, |ui| {
-        // Description
+        // Full description
         ui.label(egui::RichText::new("\u{2500}\u{2500} WHAT IT DOES \u{2500}\u{2500}").color(t.muted).size(9.0));
         ui.add_space(2.0);
-        ui.label(egui::RichText::new(description.as_str()).color(t.secondary).size(10.0));
+        ui.label(egui::RichText::new(plugin_full_description(name)).color(t.secondary).size(10.0));
+        ui.add_space(10.0);
+
+        // Categories
+        let (categories, mitre) = plugin_categories_mitre(name);
+        ui.label(egui::RichText::new("\u{2500}\u{2500} FORENSIC CATEGORIES \u{2500}\u{2500}").color(t.muted).size(9.0));
+        ui.add_space(2.0);
+        ui.label(egui::RichText::new(categories).color(t.secondary).size(9.5));
+        ui.add_space(10.0);
+
+        // MITRE
+        ui.label(egui::RichText::new("\u{2500}\u{2500} MITRE COVERAGE \u{2500}\u{2500}").color(t.muted).size(9.0));
+        ui.add_space(2.0);
+        ui.horizontal_wrapped(|ui| {
+            for technique in mitre.split(", ") {
+                ui.label(
+                    egui::RichText::new(technique)
+                        .color(accent)
+                        .size(8.5)
+                        .background_color(t.bg),
+                );
+            }
+        });
         ui.add_space(10.0);
 
         // Results if already ran
@@ -517,6 +383,7 @@ fn plugin_changelog(name: &str) -> Vec<&'static str> {
     }
 }
 
+#[allow(dead_code)]
 fn render_plugin_detail(ui: &mut egui::Ui, state: &mut AppState) {
     let Some(selected) = state.selected_plugin.clone() else {
         ui.label(egui::RichText::new("Select a plugin for details.").color(TEXT_MUTED));
@@ -628,6 +495,7 @@ fn render_plugin_detail(ui: &mut egui::Ui, state: &mut AppState) {
     });
 }
 
+#[allow(dead_code)]
 fn infer_plugin_type(name: &str) -> String {
     let n = name.to_lowercase();
     if n.contains("parser") {
@@ -645,6 +513,7 @@ fn infer_plugin_type(name: &str) -> String {
     }
 }
 
+#[allow(dead_code)]
 fn save_plugin_config(state: &AppState) {
     let Some(case_path) = state.case.as_ref().map(|c| c.path.clone()) else {
         return;
@@ -677,19 +546,71 @@ fn load_plugin_config(state: &mut AppState) {
 }
 
 fn plugin_accent_color(name: &str) -> egui::Color32 {
-    let lower = name.to_lowercase();
-    if lower.contains("remnant") { egui::Color32::from_rgb(0x81, 0x8c, 0xf8) }
-    else if lower.contains("chronicle") { egui::Color32::from_rgb(0xfb, 0xbf, 0x24) }
-    else if lower.contains("cipher") { egui::Color32::from_rgb(0xf4, 0x3f, 0x5e) }
-    else if lower.contains("trace") { egui::Color32::from_rgb(0x4a, 0xde, 0x80) }
-    else if lower.contains("specter") { egui::Color32::from_rgb(0x38, 0xbd, 0xf8) }
-    else if lower.contains("conduit") { egui::Color32::from_rgb(0x22, 0xd3, 0xee) }
-    else if lower.contains("nimbus") { egui::Color32::from_rgb(0x7c, 0x3a, 0xed) }
-    else if lower.contains("wraith") { egui::Color32::from_rgb(0x94, 0xa3, 0xb8) }
-    else if lower.contains("vector") { egui::Color32::from_rgb(0xf9, 0x73, 0x16) }
-    else if lower.contains("recon") { egui::Color32::from_rgb(0xa3, 0xe6, 0x35) }
-    else if lower.contains("sigma") { egui::Color32::from_rgb(0xe8, 0x79, 0xf9) }
-    else { egui::Color32::from_rgb(0x88, 0x99, 0xaa) }
+    match name {
+        "Remnant"   => egui::Color32::from_rgb(0x4a, 0x90, 0x60),
+        "Chronicle" => egui::Color32::from_rgb(0xc8, 0xa0, 0x40),
+        "Cipher"    => egui::Color32::from_rgb(0xc0, 0x50, 0x50),
+        "Trace"     => egui::Color32::from_rgb(0x4a, 0x70, 0xc0),
+        "Specter"   => egui::Color32::from_rgb(0x80, 0x50, 0xc0),
+        "Conduit"   => egui::Color32::from_rgb(0x40, 0xa0, 0xa0),
+        "Nimbus"    => egui::Color32::from_rgb(0x60, 0x90, 0xd0),
+        "Wraith"    => egui::Color32::from_rgb(0x80, 0x90, 0xa0),
+        "Vector"    => egui::Color32::from_rgb(0xc0, 0x70, 0x40),
+        "Recon"     => egui::Color32::from_rgb(0xa0, 0xa0, 0x40),
+        "Sigma"     => egui::Color32::from_rgb(0xc0, 0x40, 0x80),
+        _ => egui::Color32::from_rgb(0x88, 0x99, 0xaa),
+    }
+}
+
+fn plugin_icon(name: &str) -> &'static str {
+    match name {
+        "Remnant"   => "\u{1F5D1}",  // 🗑
+        "Chronicle" => "\u{23F1}",   // ⏱
+        "Cipher"    => "\u{1F511}",  // 🔑
+        "Trace"     => "\u{1F43E}",  // 🐾
+        "Specter"   => "\u{1F4F1}",  // 📱
+        "Conduit"   => "\u{1F517}",  // 🔗
+        "Nimbus"    => "\u{2601}",   // ☁
+        "Wraith"    => "\u{1F4BE}",  // 💾
+        "Vector"    => "\u{1F6E1}",  // 🛡
+        "Recon"     => "\u{1F3AF}",  // 🎯
+        "Sigma"     => "\u{03A3}",   // Σ
+        _ => "\u{2699}",             // ⚙
+    }
+}
+
+fn plugin_full_description(name: &str) -> &'static str {
+    match name {
+        "Remnant" => "Remnant recovers what investigators were never supposed to find. It parses the Windows Recycle Bin metadata to reconstruct deleted file paths and exact deletion timestamps, reads the NTFS change journal to surface every file operation ever recorded on the volume, and identifies the fingerprints of secure deletion tools like SDelete, CCleaner, and Eraser. When evidence has been deliberately destroyed, Remnant finds the proof it existed.",
+        "Chronicle" => "Chronicle rebuilds the complete story of what a user did on a system. It decodes the UserAssist registry to reveal every GUI application launched with run counts and timestamps, reconstructs the recent documents list in access order, parses Jump Lists to show which files each application opened, and surfaces typed paths and search terms that prove what the user was looking for.",
+        "Cipher" => "Cipher finds everything that was hidden, saved, or sent. It extracts saved browser credentials, identifies Windows Credential Manager entries encrypted with DPAPI, parses WiFi profile XML files for network history, finds TeamViewer and AnyDesk remote access session logs, and recovers FTP credentials from FileZilla. When data left the building, Cipher proves how and where it went.",
+        "Trace" => "Trace answers the two most important questions in any investigation: what ran on this system, and what will keep running after a reboot. It parses the Windows Background Activity Monitor for precise execution timestamps, decodes scheduled task XML files for hidden persistence mechanisms, scans autorun registry keys, and detects BITS job abuse for stealthy downloads.",
+        "Specter" => "Specter reaches into the digital lives stored on mobile devices. It queries the iOS KnowledgeC database for precise application usage timelines, parses DataUsage records for per-app network activity, and extracts message data from WhatsApp, Signal, Telegram, Snapchat, Instagram, and Discord databases on both iOS and Android.",
+        "Conduit" => "Conduit maps every network connection a system made. It reconstructs the complete WiFi and wired network connection history from the Windows registry, identifies VPN configuration artifacts, extracts Remote Desktop connection history, and flags non-standard hosts file entries that could indicate DNS manipulation.",
+        "Nimbus" => "Nimbus uncovers what lived in the cloud. It parses OneDrive synchronization logs to identify uploaded and downloaded files, examines Google DriveFS and Dropbox activity databases, and detects Microsoft Teams, Slack, and Zoom usage through their local application artifacts and log files.",
+        "Wraith" => "Wraith examines the ghosts of running processes. It detects and profiles hibernation files containing compressed snapshots of RAM, identifies crash dump files that may contain process memory snapshots, and extracts suspicious strings including URLs, IP addresses, and known malware signatures from page files.",
+        "Vector" => "Vector answers the question every investigator asks when they find a suspicious file: is this malicious? It analyzes PE executable headers for anomalous compilation timestamps, detects VBA macros in Office documents, identifies obfuscated PowerShell, and scans file content against a library of known malware tool signatures.",
+        "Recon" => "Recon connects the artifacts to real people. It harvests system usernames from multiple sources, extracts email addresses from documents and log files, identifies public IP addresses in scripts and configuration files, and detects cloud API credentials including AWS access keys. All analysis is completely offline.",
+        "Sigma" => "Sigma runs last because it needs everything the other plugins found. It reads every artifact record produced by all ten preceding plugins and maps them against the MITRE ATT&CK framework to build a kill chain coverage map, detects known attack sequences, assigns confidence scores, and produces a threat assessment summary.",
+        _ => "Plugin description unavailable.",
+    }
+}
+
+fn plugin_categories_mitre(name: &str) -> (&'static str, &'static str) {
+    match name {
+        "Remnant"   => ("Deleted Files, File System, Anti-Forensics Detection", "T1070.004, T1485, T1083"),
+        "Chronicle" => ("User Activity, Application Execution, Timeline", "T1204, T1547, T1083"),
+        "Cipher"    => ("Credentials, Remote Access, Cloud Sync, Exfiltration", "T1552, T1078, T1567, T1021.001"),
+        "Trace"     => ("Execution History, Persistence, Anti-Forensics, Scheduled Tasks", "T1053, T1547, T1070.006, T1197"),
+        "Specter"   => ("Mobile Devices, Social Media, Communications, Messaging", "T1636, T1430, T1409"),
+        "Conduit"   => ("Network History, Remote Access, VPN, RDP, DNS", "T1021.001, T1071, T1090, T1018"),
+        "Nimbus"    => ("Cloud Storage, Enterprise Comms, File Uploads, Collaboration", "T1567, T1213, T1530"),
+        "Wraith"    => ("Memory Artifacts, Hibernation, Crash Dumps, Volatile Evidence", "T1005, T1212, T1083"),
+        "Vector"    => ("Malware Detection, Static Analysis, Indicators of Compromise", "T1059, T1027, T1055, T1566.001"),
+        "Recon"     => ("Identity, Account Artifacts, Infrastructure, Credentials", "T1087, T1589, T1552.001"),
+        "Sigma"     => ("Threat Intelligence, Kill Chain, ATT&CK Mapping, Correlation", "Cross-tactic correlation"),
+        _ => ("Unknown", "N/A"),
+    }
 }
 
 fn run_all_plugins(state: &mut crate::state::AppState) {
@@ -788,6 +709,7 @@ fn ensure_builtin_integrations() {
     });
 }
 
+#[allow(dead_code)]
 fn verify_plugin_signature(path: &std::path::Path) -> (bool, String) {
     use sha2::Digest;
 
@@ -826,6 +748,7 @@ fn verify_plugin_signature(path: &std::path::Path) -> (bool, String) {
     }
 }
 
+#[allow(dead_code)]
 fn run_plugin_sandbox(plugin_path: &str, timeout: Duration) -> SandboxRunResult {
     let started = Instant::now();
     let path = Path::new(plugin_path);
@@ -898,6 +821,7 @@ fn run_plugin_sandbox(plugin_path: &str, timeout: Duration) -> SandboxRunResult 
 }
 
 /// Derive the plugin-specific FFI symbol name from a library path.
+#[allow(dead_code)]
 fn plugin_symbol_name(path: &Path) -> String {
     let stem = path
         .file_stem()
@@ -912,6 +836,7 @@ fn plugin_symbol_name(path: &Path) -> String {
     format!("create_plugin_{}\0", name)
 }
 
+#[allow(dead_code)]
 fn is_dynamic_plugin_file(path: &Path) -> bool {
     let ext = path
         .extension()

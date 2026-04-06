@@ -50,7 +50,7 @@ fn entries() -> Vec<SidebarEntry> {
         },
         SidebarEntry {
             icon: ph::BOOKMARK_SIMPLE,
-            tooltip: "Bookmarks",
+            tooltip: "Tagged Evidence",
             mode: ViewMode::Bookmarks,
             color: c(0xfb, 0xbf, 0x24),
         },
