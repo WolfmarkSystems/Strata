@@ -51,6 +51,9 @@ strata-plugin-recon = { path = "../../../plugins/strata-plugin-recon" }
 strata-plugin-sigma = { path = "../../../plugins/strata-plugin-sigma" }
 egui-phosphor = "0.11"
 
+[features]
+dev-bypass = []
+
 [target.'cfg(windows)'.dependencies]
 evtx = "0.11.2"
 

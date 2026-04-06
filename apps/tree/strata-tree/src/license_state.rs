@@ -90,6 +90,31 @@ impl AppLicenseState {
         }
     }
 
+    /// Create a dev-bypass license state (compile-time only, never in release).
+    #[cfg(feature = "dev-bypass")]
+    pub fn dev_bypass() -> Self {
+        Self {
+            tier: LicenseTier::Professional,
+            features: vec![
+                "file_carving".to_string(),
+                "report_export".to_string(),
+                "hash_sets".to_string(),
+                "plugins".to_string(),
+                "timeline".to_string(),
+                "content_search".to_string(),
+            ],
+            days_remaining: Some(999),
+            license_path: None,
+            is_trial: false,
+            trial_days_remaining: None,
+            licensee_name: Some("DEV MODE".to_string()),
+            licensee_org: Some("Wolfmark Systems".to_string()),
+            expires_at: None,
+            machine_id: None,
+            validation_error: None,
+        }
+    }
+
     pub fn has_feature(&self, _feature: &str) -> bool {
         // During development: all features unlocked.
         // TODO: restore feature gating when licensing is shipped.

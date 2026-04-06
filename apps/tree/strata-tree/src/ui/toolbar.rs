@@ -66,6 +66,24 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
 
                 // Right-aligned: case info + trial badge
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    // DEV mode badge (only present in dev-bypass builds)
+                    #[cfg(feature = "dev-bypass")]
+                    {
+                        ui.add(
+                            egui::Button::new(
+                                egui::RichText::new("DEV")
+                                    .color(egui::Color32::from_rgb(0xc8, 0x85, 0x5a))
+                                    .size(9.0)
+                                    .strong()
+                                    .monospace(),
+                            )
+                            .fill(egui::Color32::from_rgb(0x2a, 0x1a, 0x00))
+                            .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(0xc8, 0x85, 0x5a)))
+                            .rounding(3.0),
+                        );
+                        ui.add_space(4.0);
+                    }
+
                     // Trial badge
                     let (license_color, license_label) = license_indicator(state);
                     let badge = ui.add(
