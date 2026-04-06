@@ -27,7 +27,7 @@ fn paint_panel(ui: &mut egui::Ui, t: &crate::theme::StrataTheme) {
         rect,
         crate::theme::RADIUS_LG,
         t.panel,
-        egui::Stroke::new(1.0, t.border),
+        egui::Stroke::NONE,
     );
     ui.set_clip_rect(rect);
 }

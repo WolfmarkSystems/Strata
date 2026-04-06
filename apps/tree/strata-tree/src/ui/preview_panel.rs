@@ -97,7 +97,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
             ui.label(
                 egui::RichText::new("Select a file to preview")
                     .color(t.muted)
-                    .size(12.0),
+                    .size(13.0),
             );
         });
         return;

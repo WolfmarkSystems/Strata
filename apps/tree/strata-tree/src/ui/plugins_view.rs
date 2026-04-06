@@ -107,7 +107,8 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         // ── LEFT: Plugin grid ──────────────────────────────────────────
         ui.vertical(|ui| {
             ui.set_width(grid_w);
-            egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.set_min_height(500.0);
+            egui::ScrollArea::vertical().id_source("plugin_grid_scroll").show(ui, |ui| {
                 let col_count = 3usize;
                 let card_w = (grid_w - 16.0) / col_count as f32;
 
@@ -131,23 +132,23 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                 .inner_margin(egui::Margin::symmetric(12.0, 10.0))
                                 .show(ui, |ui| {
                                     ui.set_width(card_w - 32.0);
-                                    ui.set_min_height(100.0);
+                                    ui.set_min_height(120.0);
                                     // Row 1: icon + name + version + type
                                     ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new(icon).size(18.0).color(accent));
-                                        ui.label(egui::RichText::new(name.as_str()).color(accent).size(12.0).strong());
-                                        ui.label(egui::RichText::new(format!("v{}", version)).color(t.muted).size(9.0));
+                                        ui.label(egui::RichText::new(icon).size(20.0).color(accent));
+                                        ui.label(egui::RichText::new(name.as_str()).color(accent).size(14.0).strong());
+                                        ui.label(egui::RichText::new(format!("v{}", version)).color(t.muted).size(11.0));
                                     });
-                                    ui.label(egui::RichText::new(format!("[{}]", plugin_type)).color(t.muted).size(8.0));
-                                    ui.add_space(2.0);
+                                    ui.label(egui::RichText::new(format!("[{}]", plugin_type)).color(t.muted).size(10.0));
+                                    ui.add_space(4.0);
                                     // Row 2: description (truncated)
                                     let desc_short = if description.len() > 80 { &description[..80] } else { description.as_str() };
-                                    ui.label(egui::RichText::new(desc_short).color(t.secondary).size(9.0));
-                                    ui.add_space(4.0);
+                                    ui.label(egui::RichText::new(desc_short).color(t.secondary).size(12.0));
+                                    ui.add_space(6.0);
                                     // Row 3: RUN button
                                     let run_clicked = ui.add_enabled(has_evidence, egui::Button::new(
                                         egui::RichText::new(if already_ran { "RE-RUN" } else { "RUN" })
-                                            .color(t.text).size(8.5).strong(),
+                                            .color(t.text).size(12.0).strong(),
                                     ).fill(t.bg).rounding(3.0)).clicked();
                                     if run_clicked {
                                         state.run_plugin(name);
@@ -240,20 +241,20 @@ fn render_builtin_detail(
 
     egui::ScrollArea::vertical().show(ui, |ui| {
         // Full description
-        ui.label(egui::RichText::new("\u{2500}\u{2500} WHAT IT DOES \u{2500}\u{2500}").color(t.muted).size(9.0));
+        ui.label(egui::RichText::new("WHAT IT DOES").color(t.muted).size(10.0));
         ui.add_space(2.0);
         ui.label(egui::RichText::new(plugin_full_description(name)).color(t.secondary).size(10.0));
         ui.add_space(10.0);
 
         // Categories
         let (categories, mitre) = plugin_categories_mitre(name);
-        ui.label(egui::RichText::new("\u{2500}\u{2500} FORENSIC CATEGORIES \u{2500}\u{2500}").color(t.muted).size(9.0));
+        ui.label(egui::RichText::new("FORENSIC CATEGORIES").color(t.muted).size(10.0));
         ui.add_space(2.0);
         ui.label(egui::RichText::new(categories).color(t.secondary).size(9.5));
         ui.add_space(10.0);
 
         // MITRE
-        ui.label(egui::RichText::new("\u{2500}\u{2500} MITRE COVERAGE \u{2500}\u{2500}").color(t.muted).size(9.0));
+        ui.label(egui::RichText::new("MITRE COVERAGE").color(t.muted).size(10.0));
         ui.add_space(2.0);
         ui.horizontal_wrapped(|ui| {
             for technique in mitre.split(", ") {
@@ -285,7 +286,7 @@ fn render_builtin_detail(
         }
 
         // Changelog
-        ui.label(egui::RichText::new("\u{2500}\u{2500} CHANGELOG \u{2500}\u{2500}").color(t.muted).size(9.0));
+        ui.label(egui::RichText::new("CHANGELOG").color(t.muted).size(10.0));
         ui.add_space(2.0);
         for line in plugin_changelog(name) {
             ui.label(egui::RichText::new(line).color(t.secondary).size(9.0));
@@ -307,7 +308,7 @@ fn render_builtin_detail(
 }
 
 fn plugin_changelog(name: &str) -> Vec<&'static str> {
-    match name {
+    match plugin_short_name(name) {
         "Remnant" => vec![
             "v2.0.0 — Full $I Recycle Bin binary parse",
             "  $UsnJrnl complete reason flag decode",
@@ -545,8 +546,13 @@ fn load_plugin_config(state: &mut AppState) {
     }
 }
 
+/// Strip "Strata " prefix for metadata lookup — plugins report as "Strata Remnant" etc.
+fn plugin_short_name(name: &str) -> &str {
+    name.strip_prefix("Strata ").unwrap_or(name)
+}
+
 fn plugin_accent_color(name: &str) -> egui::Color32 {
-    match name {
+    match plugin_short_name(name) {
         "Remnant"   => egui::Color32::from_rgb(0x4a, 0x90, 0x60),
         "Chronicle" => egui::Color32::from_rgb(0xc8, 0xa0, 0x40),
         "Cipher"    => egui::Color32::from_rgb(0xc0, 0x50, 0x50),
@@ -563,7 +569,7 @@ fn plugin_accent_color(name: &str) -> egui::Color32 {
 }
 
 fn plugin_icon(name: &str) -> &'static str {
-    match name {
+    match plugin_short_name(name) {
         "Remnant"   => "\u{1F5D1}",  // 🗑
         "Chronicle" => "\u{23F1}",   // ⏱
         "Cipher"    => "\u{1F511}",  // 🔑
@@ -580,7 +586,7 @@ fn plugin_icon(name: &str) -> &'static str {
 }
 
 fn plugin_full_description(name: &str) -> &'static str {
-    match name {
+    match plugin_short_name(name) {
         "Remnant" => "Remnant recovers what investigators were never supposed to find. It parses the Windows Recycle Bin metadata to reconstruct deleted file paths and exact deletion timestamps, reads the NTFS change journal to surface every file operation ever recorded on the volume, and identifies the fingerprints of secure deletion tools like SDelete, CCleaner, and Eraser. When evidence has been deliberately destroyed, Remnant finds the proof it existed.",
         "Chronicle" => "Chronicle rebuilds the complete story of what a user did on a system. It decodes the UserAssist registry to reveal every GUI application launched with run counts and timestamps, reconstructs the recent documents list in access order, parses Jump Lists to show which files each application opened, and surfaces typed paths and search terms that prove what the user was looking for.",
         "Cipher" => "Cipher finds everything that was hidden, saved, or sent. It extracts saved browser credentials, identifies Windows Credential Manager entries encrypted with DPAPI, parses WiFi profile XML files for network history, finds TeamViewer and AnyDesk remote access session logs, and recovers FTP credentials from FileZilla. When data left the building, Cipher proves how and where it went.",
@@ -597,7 +603,7 @@ fn plugin_full_description(name: &str) -> &'static str {
 }
 
 fn plugin_categories_mitre(name: &str) -> (&'static str, &'static str) {
-    match name {
+    match plugin_short_name(name) {
         "Remnant"   => ("Deleted Files, File System, Anti-Forensics Detection", "T1070.004, T1485, T1083"),
         "Chronicle" => ("User Activity, Application Execution, Timeline", "T1204, T1547, T1083"),
         "Cipher"    => ("Credentials, Remote Access, Cloud Sync, Exfiltration", "T1552, T1078, T1567, T1021.001"),

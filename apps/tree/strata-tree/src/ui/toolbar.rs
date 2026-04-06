@@ -40,7 +40,7 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     egui::Button::new(
                         egui::RichText::new("+ Open Evidence")
                             .color(t.bg)
-                            .size(11.0)
+                            .size(13.0)
                             .strong(),
                     )
                     .fill(t.active)
@@ -111,24 +111,31 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     ui.label(
                         egui::RichText::new(case_name)
                             .color(t.text)
-                            .size(10.0)
+                            .size(12.0)
                             .strong(),
                     );
                     ui.label(
                         egui::RichText::new("CASE")
                             .color(egui::Color32::from_rgb(0x1c, 0x26, 0x38))
-                            .size(8.0),
+                            .size(10.0),
                     );
                 });
             });
 
             ui.add_space(2.0);
 
-            // ═══ ROW 2: Search + stats + action buttons ═══
+            // ═══ ROW 2: Search (centered) + stats + action buttons ═══
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
 
-                // Search bar — max 480px
+                // Center the search bar: add left spacer
+                let total_avail = ui.available_width();
+                let search_w = 480.0_f32.min(total_avail * 0.4);
+                let left_pad = (total_avail - search_w) / 2.0 - 200.0; // offset for stats+buttons
+                if left_pad > 0.0 {
+                    ui.add_space(left_pad);
+                }
+
                 let search_border = if state.global_search_active || !state.global_search_query.is_empty() {
                     t.active
                 } else {
@@ -139,29 +146,31 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     .fill(t.card)
                     .stroke(egui::Stroke::new(1.0, search_border))
                     .rounding(6.0)
-                    .inner_margin(egui::Margin::symmetric(8.0, 3.0))
+                    .inner_margin(egui::Margin::symmetric(10.0, 4.0))
                     .show(ui, |ui| {
-                        ui.set_width(480.0_f32.min(ui.available_width() * 0.35));
+                        ui.set_width(search_w);
+                        ui.set_height(22.0);
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("\u{E30C}").color(t.muted).size(12.0));
+                            ui.label(egui::RichText::new("\u{E30C}").color(t.muted).size(14.0));
                             let resp = ui.add(
                                 egui::TextEdit::singleline(&mut state.global_search_query)
-                                    .desired_width(ui.available_width() - 20.0)
-                                    .hint_text("Search files, paths...")
+                                    .desired_width(ui.available_width() - 24.0)
+                                    .hint_text("Search files, paths, extensions...")
+                                    .font(egui::TextStyle::Body)
                                     .frame(false),
                             );
                             if resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                                 activate_search_mode(state);
                             }
                             if state.global_search_active
-                                && ui.button(egui::RichText::new("\u{2715}").color(t.muted).size(10.0)).clicked()
+                                && ui.button(egui::RichText::new("\u{2715}").color(t.muted).size(11.0)).clicked()
                             {
                                 exit_search_mode(state);
                             }
                         });
                     });
 
-                ui.add_space(8.0);
+                ui.add_space(12.0);
 
                 // ── Inline stats ────────────────────────────────────────
                 let label_c = egui::Color32::from_rgb(0x1c, 0x26, 0x38);
@@ -174,11 +183,11 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                 let artifacts = state.artifact_total;
 
                 let stat = |ui: &mut egui::Ui, name: &str, val: usize, val_color: egui::Color32| {
-                    ui.label(egui::RichText::new(name).color(label_c).size(8.0));
-                    ui.label(egui::RichText::new(format_count(val)).color(val_color).size(8.5).strong());
+                    ui.label(egui::RichText::new(name).color(label_c).size(11.0));
+                    ui.label(egui::RichText::new(format_count(val)).color(val_color).size(12.0).strong());
                 };
                 let sep = |ui: &mut egui::Ui| {
-                    ui.label(egui::RichText::new("|").color(sep_c).size(8.0));
+                    ui.label(egui::RichText::new("|").color(sep_c).size(10.0));
                 };
 
                 stat(ui, "FILES", total_files, egui::Color32::from_rgb(0x4a, 0x60, 0x80));
@@ -369,7 +378,7 @@ fn action_btn(
         egui::Button::new(
             egui::RichText::new(label)
                 .color(text_color)
-                .size(10.0)
+                .size(12.0)
                 .strong(),
         )
         .fill(bg_color)
@@ -390,7 +399,7 @@ fn primary_btn(ui: &mut egui::Ui, t: &crate::theme::StrataTheme, label: &str) ->
 
 fn sec_btn(ui: &mut egui::Ui, t: &crate::theme::StrataTheme, label: &str) -> egui::Response {
     ui.add(
-        egui::Button::new(egui::RichText::new(label).color(t.secondary).size(10.0))
+        egui::Button::new(egui::RichText::new(label).color(t.secondary).size(13.0))
             .fill(egui::Color32::TRANSPARENT)
             .stroke(egui::Stroke::new(1.0, t.border))
             .rounding(crate::theme::RADIUS_MD),

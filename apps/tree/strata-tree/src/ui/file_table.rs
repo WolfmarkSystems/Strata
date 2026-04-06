@@ -129,7 +129,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         state.file_table_state.sort_dirty = false;
     }
 
-    let row_height = 22.0;
+    let row_height = 28.0;
     let selected_id = state.selected_file_id.clone();
     let total_rows = state.filtered_file_indices.len();
     state.file_table_state.total_rows = total_rows;

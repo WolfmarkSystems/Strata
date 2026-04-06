@@ -325,9 +325,13 @@ pub fn apply_theme(ctx: &egui::Context, theme: &StrataTheme) {
 
     let mut style = (*ctx.style()).clone();
     style.spacing.item_spacing = egui::vec2(6.0, 4.0);
-    style.spacing.button_padding = egui::vec2(10.0, 4.0);
+    style.spacing.button_padding = egui::vec2(10.0, 5.0);
     style.spacing.window_margin = egui::Margin::same(0.0);
     style.spacing.menu_margin = egui::Margin::same(4.0);
     style.interaction.selectable_labels = false;
+    // Global font size: body=13px, small=11px for forensic examiner readability
+    style.text_styles.insert(egui::TextStyle::Body, egui::FontId::proportional(13.0));
+    style.text_styles.insert(egui::TextStyle::Small, egui::FontId::proportional(11.0));
+    style.text_styles.insert(egui::TextStyle::Button, egui::FontId::proportional(13.0));
     ctx.set_style(style);
 }

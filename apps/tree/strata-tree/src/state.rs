@@ -751,9 +751,10 @@ impl AppState {
 
     /// Current theme.
     pub fn theme(&self) -> &crate::theme::StrataTheme {
-        &crate::theme::THEMES[self
-            .theme_index
-            .min(crate::theme::THEMES.len().saturating_sub(1))]
+        // Iron Wolf is always the active render theme. Theme selector stores
+        // preference but does not change rendering until theme switching is
+        // fully implemented and tested across all panels.
+        &crate::theme::THEMES[0] // Iron Wolf
     }
 
     /// Switch theme and save.
