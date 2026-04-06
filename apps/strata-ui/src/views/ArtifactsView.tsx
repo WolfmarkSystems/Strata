@@ -1,28 +1,11 @@
+import EmptyState from '../components/EmptyState'
+
 export default function ArtifactsView() {
   return (
-    <div
-      style={{
-        flex: 1,
-        background: 'var(--bg-base)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <div
-        style={{
-          color: 'var(--text-1)',
-          fontSize: 28,
-          fontWeight: 700,
-          letterSpacing: '0.1em',
-        }}
-      >
-        Artifacts
-      </div>
-      <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 8 }}>
-        Coming in Day 6
-      </div>
-    </div>
+    <EmptyState
+      icon={"\u{1F5C2}"}
+      title="Artifact Analysis"
+      subtitle="Run plugins to discover artifacts"
+    />
   )
 }

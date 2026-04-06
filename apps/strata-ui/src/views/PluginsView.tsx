@@ -1,28 +1,12 @@
+import EmptyState from '../components/EmptyState'
+
 export default function PluginsView() {
   return (
-    <div
-      style={{
-        flex: 1,
-        background: 'var(--bg-base)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <div
-        style={{
-          color: 'var(--text-1)',
-          fontSize: 28,
-          fontWeight: 700,
-          letterSpacing: '0.1em',
-        }}
-      >
-        Plugins
-      </div>
-      <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 8 }}>
-        Coming in Day 5
-      </div>
-    </div>
+    <EmptyState
+      icon={"\u{1F50C}"}
+      title="Analysis Plugins"
+      subtitle="11 plugins ready"
+      hint="Load evidence to enable plugins"
+    />
   )
 }

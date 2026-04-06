@@ -13,11 +13,12 @@ export default function App() {
   return (
     <div
       style={{
+        height: '100vh',
+        width: '100vw',
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
-        background: 'var(--bg-base)',
         overflow: 'hidden',
+        background: 'var(--bg-base)',
       }}
     >
       <TopBar />
@@ -29,11 +30,13 @@ export default function App() {
         }}
       >
         <Sidebar />
-        {view === 'files' && <FileExplorer />}
-        {view === 'artifacts' && <ArtifactsView />}
-        {view === 'tags' && <TaggedView />}
-        {view === 'plugins' && <PluginsView />}
-        {view === 'settings' && <SettingsView />}
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+          {view === 'files' && <FileExplorer />}
+          {view === 'artifacts' && <ArtifactsView />}
+          {view === 'tags' && <TaggedView />}
+          {view === 'plugins' && <PluginsView />}
+          {view === 'settings' && <SettingsView />}
+        </div>
       </div>
     </div>
   )

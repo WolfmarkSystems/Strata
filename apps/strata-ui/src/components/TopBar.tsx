@@ -1,128 +1,144 @@
 import { useAppStore } from '../store/appStore'
+import { useWindowSize } from '../hooks/useWindowSize'
 
 export default function TopBar() {
   const stats = useAppStore((s) => s.stats)
   const caseName = useAppStore((s) => s.caseName)
   const isDev = useAppStore((s) => s.isDev)
+  const metadataSearch = useAppStore((s) => s.metadataSearch)
+  const fulltextSearch = useAppStore((s) => s.fulltextSearch)
+  const toggleMetadata = useAppStore((s) => s.toggleMetadata)
+  const toggleFulltext = useAppStore((s) => s.toggleFulltext)
+
+  const { width } = useWindowSize()
+  const narrow = width < 900
+  const veryNarrow = width < 1280
 
   return (
-    <div
-      style={{
-        background: 'var(--bg-panel)',
-        borderBottom: '1px solid var(--border)',
-        padding: '6px 12px',
-        flexShrink: 0,
-      }}
-    >
-      {/* ── Row 1: Logo + nav + case info + badges ─────────── */}
+    <div style={{ flexShrink: 0 }}>
+      {/* ═══ ROW 1 ═══ */}
       <div
         style={{
+          height: 44,
+          background: 'var(--bg-surface)',
+          borderBottom: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
-          marginBottom: 8,
+          padding: '0 14px',
+          gap: 8,
         }}
       >
-        {/* Wolf PNG slot */}
+        {/* LEFT */}
         <div
           style={{
-            width: 32,
-            height: 32,
-            marginRight: 8,
-            border: '1px dashed #181c24',
-            borderRadius: 4,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 10,
-            color: '#1a2030',
+            flexShrink: 0,
           }}
         >
-          WLF
+          {/* Wolf placeholder */}
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              border: '1px dashed #1a2030',
+              borderRadius: 4,
+              background: '#0b0c0f',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 11,
+              color: '#1a2030',
+              marginRight: 8,
+              flexShrink: 0,
+            }}
+          >
+            W
+          </div>
+
+          {/* STRATA wordmark */}
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              letterSpacing: '0.18em',
+              color: 'var(--text-1)',
+              marginRight: 12,
+            }}
+          >
+            STRATA
+          </div>
+
+          <div className="vdiv" />
         </div>
 
-        {/* STRATA wordmark */}
+        {/* CENTER nav */}
         <div
           style={{
-            color: 'var(--text-1)',
-            fontSize: 18,
-            fontWeight: 700,
-            letterSpacing: '0.18em',
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 8,
           }}
         >
-          STRATA
-        </div>
-
-        {/* Center nav buttons */}
-        <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', marginRight: 'auto' }}>
-          <button
-            style={{
-              background: 'var(--accent-1)',
-              color: 'var(--bg-base)',
-              border: 'none',
-              borderRadius: 6,
-              padding: '6px 14px',
-              fontSize: 13,
-              fontWeight: 700,
-            }}
-          >
-            + Open Evidence
+          <button className="btn-primary">
+            {narrow ? '+' : '+ Open Evidence'}
           </button>
-          <button
-            style={{
-              background: 'transparent',
-              color: 'var(--text-2)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '6px 14px',
-              fontSize: 13,
-            }}
-          >
-            New Case
+          <button className="btn-secondary">
+            {narrow ? 'New' : 'New Case'}
           </button>
-          <button
-            style={{
-              background: 'transparent',
-              color: 'var(--text-2)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '6px 14px',
-              fontSize: 13,
-            }}
-          >
-            Open Case
+          <button className="btn-secondary">
+            {narrow ? 'Open' : 'Open Case'}
           </button>
         </div>
 
-        {/* Right: case info + badges */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>CASE</span>
-          <span style={{ color: 'var(--text-1)', fontSize: 12, fontWeight: 700 }}>
-            {caseName ?? 'Unsaved Session'}
+        {/* RIGHT */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              color: 'var(--text-muted)',
+              letterSpacing: '0.08em',
+            }}
+          >
+            CASE
           </span>
           <span
             style={{
-              background: 'var(--bg-elevated)',
-              color: 'var(--clean)',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              padding: '2px 6px',
-              fontSize: 10,
-              fontWeight: 700,
+              fontSize: 11,
+              color: 'var(--text-2)',
+            }}
+          >
+            {caseName ?? 'Unsaved Session'}
+          </span>
+
+          <div className="vdiv" />
+
+          <span
+            className="badge"
+            style={{
+              background: '#0f1c2e',
+              border: '1px solid #1c3050',
+              color: '#8fa8c0',
             }}
           >
             Pro
           </span>
+
           {isDev && (
             <span
+              className="badge"
               style={{
                 background: '#2a1a00',
-                color: '#c8855a',
-                border: '1px solid #c8855a',
-                borderRadius: 3,
-                padding: '2px 6px',
-                fontSize: 10,
-                fontWeight: 700,
+                border: '1px solid var(--sus)',
+                color: 'var(--sus)',
               }}
             >
               DEV
@@ -131,77 +147,154 @@ export default function TopBar() {
         </div>
       </div>
 
-      {/* ── Row 2: Search + stats + action buttons ─────────── */}
+      {/* ═══ ROW 2 ═══ */}
       <div
         style={{
+          height: 36,
+          background: '#090a0e',
+          borderBottom: '1px solid var(--border-sub)',
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
+          padding: '0 14px',
+          gap: 8,
         }}
       >
-        {/* Left spacer to center search */}
+        {/* LEFT spacer for centering */}
         <div style={{ flex: 1 }} />
 
-        {/* Search bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {/* Search group */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 13,
+              color: 'var(--text-muted)',
+              flexShrink: 0,
+            }}
+          >
+            ⌕
+          </span>
           <input
             type="text"
             placeholder="Search files, paths, extensions..."
             style={{
-              width: 480,
-              fontSize: 13,
-              padding: '7px 12px',
+              width: 440,
+              maxWidth: '100%',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 4,
+              padding: '5px 10px',
+              color: 'var(--text-2)',
+              fontSize: 12,
             }}
           />
           <button
+            onClick={toggleMetadata}
             style={{
-              background: 'var(--bg-elevated)',
-              color: 'var(--text-2)',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              padding: '6px 10px',
-              fontSize: 11,
+              padding: '3px 8px',
+              borderRadius: 3,
+              fontSize: 10,
+              border: `1px solid ${metadataSearch ? '#1c3050' : 'var(--border)'}`,
+              background: metadataSearch ? '#0f1e30' : 'var(--bg-elevated)',
+              color: metadataSearch ? 'var(--text-2)' : 'var(--text-muted)',
+              fontFamily: 'monospace',
             }}
-            title="Metadata search"
           >
-            META
+            Metadata
           </button>
           <button
+            onClick={toggleFulltext}
             style={{
-              background: 'var(--bg-elevated)',
-              color: 'var(--text-2)',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              padding: '6px 10px',
-              fontSize: 11,
+              padding: '3px 8px',
+              borderRadius: 3,
+              fontSize: 10,
+              border: `1px solid ${fulltextSearch ? '#1c3050' : 'var(--border)'}`,
+              background: fulltextSearch ? '#0f1e30' : 'var(--bg-elevated)',
+              color: fulltextSearch ? 'var(--text-2)' : 'var(--text-muted)',
+              fontFamily: 'monospace',
             }}
-            title="Full-text search"
           >
-            TEXT
+            Full-text
           </button>
         </div>
 
-        {/* Inline stats */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Stat label="FILES" value={stats.files} color="#4a6080" />
-          <Sep />
+        <div style={{ flex: 1 }} />
+
+        <div className="vdiv" />
+
+        {/* Stats */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexShrink: 0,
+          }}
+        >
+          {!veryNarrow && <Stat label="FILES" value={stats.files} color="#4a6080" />}
           <Stat label="SUSPICIOUS" value={stats.suspicious} color="var(--sus)" />
-          <Sep />
           <Stat label="FLAGGED" value={stats.flagged} color="var(--flag)" />
-          <Sep />
-          <Stat label="CARVED" value={stats.carved} color="var(--carved)" />
-          <Sep />
-          <Stat label="HASHED" value={stats.hashed} color="var(--hashed)" />
-          <Sep />
-          <Stat label="ARTIFACTS" value={stats.artifacts} color="var(--artifact)" />
+          {!veryNarrow && <Stat label="CARVED" value={stats.carved} color="var(--carved)" />}
+          {!veryNarrow && <Stat label="HASHED" value={stats.hashed} color="var(--hashed)" />}
+          {!narrow && <Stat label="ARTIFACTS" value={stats.artifacts} color="var(--artifact)" />}
         </div>
 
+        <div className="vdiv" />
+
         {/* Action buttons */}
-        <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
-          <ActionBtn label="HASH ALL" textColor="#8a9aaa" borderColor="#1a2840" />
-          <ActionBtn label="CARVE" textColor="#3a4858" borderColor="#181c24" />
-          <ActionBtn label="REPORT" textColor="#487858" borderColor="#142018" />
-          <ActionBtn label="EXPORT" textColor="#b87840" borderColor="#382010" />
+        <div
+          style={{
+            display: 'flex',
+            gap: 6,
+            flexShrink: 0,
+          }}
+        >
+          <button
+            className="btn-action"
+            style={{
+              color: 'var(--text-2)',
+              border: '1px solid #1a2840',
+              background: 'var(--bg-elevated)',
+            }}
+          >
+            HASH ALL
+          </button>
+          <button
+            className="btn-action"
+            style={{
+              color: 'var(--text-muted)',
+              border: '1px solid var(--border)',
+              background: '#0c0e12',
+            }}
+          >
+            CARVE
+          </button>
+          <button
+            className="btn-action"
+            style={{
+              color: 'var(--hashed)',
+              border: '1px solid #142018',
+              background: '#0a1410',
+            }}
+          >
+            REPORT
+          </button>
+          <button
+            className="btn-action"
+            style={{
+              color: 'var(--sus)',
+              border: '1px solid #382010',
+              background: '#140e08',
+            }}
+          >
+            EXPORT
+          </button>
         </div>
       </div>
     </div>
@@ -210,39 +303,17 @@ export default function TopBar() {
 
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div style={{ display: 'flex', gap: 4, alignItems: 'baseline' }}>
-      <span style={{ color: '#1c2638', fontSize: 11 }}>{label}</span>
-      <span style={{ color, fontSize: 12, fontWeight: 700 }}>{value}</span>
-    </div>
-  )
-}
-
-function Sep() {
-  return <span style={{ color: '#1c2638', fontSize: 11 }}>|</span>
-}
-
-function ActionBtn({
-  label,
-  textColor,
-  borderColor,
-}: {
-  label: string
-  textColor: string
-  borderColor: string
-}) {
-  return (
-    <button
+    <div
       style={{
-        background: 'var(--bg-elevated)',
-        color: textColor,
-        border: `1px solid ${borderColor}`,
-        borderRadius: 6,
-        padding: '6px 12px',
-        fontSize: 12,
+        display: 'flex',
+        gap: 4,
+        alignItems: 'baseline',
+        fontSize: 11,
         fontWeight: 700,
       }}
     >
-      {label}
-    </button>
+      <span style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <span style={{ color }}>{value}</span>
+    </div>
   )
 }

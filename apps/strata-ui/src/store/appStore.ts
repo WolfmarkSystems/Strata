@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import type { AppState, ViewMode, Stats } from '../types'
 
 interface AppStore extends AppState {
+  metadataSearch: boolean
+  fulltextSearch: boolean
   setView: (v: ViewMode) => void
   setLicensed: (s: AppState['licensed']) => void
   setCase: (id: string, name: string) => void
@@ -11,6 +13,8 @@ interface AppStore extends AppState {
   setSelectedArtifactCat: (c: string | null) => void
   setSelectedTag: (t: string | null) => void
   setTheme: (t: string) => void
+  toggleMetadata: () => void
+  toggleFulltext: () => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -33,6 +37,8 @@ export const useAppStore = create<AppStore>((set) => ({
   selectedArtifactCat: null,
   selectedTag: null,
   activeTheme: 'iron-wolf',
+  metadataSearch: false,
+  fulltextSearch: false,
 
   setView: (v) => set({ view: v }),
   setLicensed: (s) => set({ licensed: s }),
@@ -43,4 +49,6 @@ export const useAppStore = create<AppStore>((set) => ({
   setSelectedArtifactCat: (c) => set({ selectedArtifactCat: c }),
   setSelectedTag: (t) => set({ selectedTag: t }),
   setTheme: (t) => set({ activeTheme: t }),
+  toggleMetadata: () => set((s) => ({ metadataSearch: !s.metadataSearch })),
+  toggleFulltext: () => set((s) => ({ fulltextSearch: !s.fulltextSearch })),
 }))

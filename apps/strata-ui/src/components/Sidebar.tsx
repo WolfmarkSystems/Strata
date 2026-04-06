@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import type { ViewMode } from '../types'
 
@@ -10,7 +11,7 @@ interface NavItem {
 const TOP_ITEMS: NavItem[] = [
   { id: 'files',     icon: '\u{1F4C1}', label: 'Files' },
   { id: 'artifacts', icon: '\u{1F5C2}', label: 'Artifacts' },
-  { id: 'tags',      icon: '\u{1F3F7}', label: 'Tagged Evidence' },
+  { id: 'tags',      icon: '\u{1F3F7}', label: 'Tags' },
   { id: 'plugins',   icon: '\u{1F50C}', label: 'Plugins' },
 ]
 
@@ -25,12 +26,14 @@ export default function Sidebar() {
   return (
     <div
       style={{
-        width: 48,
-        background: 'var(--bg-panel)',
+        width: 42,
+        background: '#090a0d',
         borderRight: '1px solid var(--border-sub)',
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
         padding: '8px 0',
+        gap: 4,
         flexShrink: 0,
       }}
     >
@@ -66,28 +69,30 @@ function SidebarIcon({
   active: boolean
   onClick: () => void
 }) {
+  const [hover, setHover] = useState(false)
+
+  const bg = active ? '#0f1e30' : hover ? '#111622' : 'transparent'
+  const color = active ? '#8fa8c0' : hover ? 'var(--text-2)' : 'var(--text-muted)'
+
   return (
     <button
       onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
       title={item.label}
       style={{
-        width: 32,
-        height: 32,
-        margin: '4px auto',
-        background: active ? '#0f1e30' : 'transparent',
-        color: active ? '#8fa8c0' : 'var(--text-muted)',
-        border: 'none',
-        borderRadius: 6,
-        fontSize: 18,
+        width: 30,
+        height: 30,
+        borderRadius: 5,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-      }}
-      onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = 'var(--bg-elevated)'
-      }}
-      onMouseLeave={(e) => {
-        if (!active) e.currentTarget.style.background = 'transparent'
+        fontSize: 15,
+        cursor: 'pointer',
+        border: 'none',
+        background: bg,
+        color,
+        transition: 'all 0.15s',
       }}
     >
       {item.icon}

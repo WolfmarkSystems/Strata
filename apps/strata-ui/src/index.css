@@ -87,3 +87,64 @@ button:hover {
 button:active {
   transform: scale(0.98);
 }
+
+/* ── Button utilities ─────────────────────────────────── */
+.btn-primary {
+  background: var(--accent-1);
+  color: var(--bg-base);
+  font-weight: 700;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-secondary {
+  background: var(--bg-elevated);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-secondary:hover { opacity: 0.85; }
+
+.btn-action {
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  letter-spacing: 0.04em;
+}
+.btn-action:hover { opacity: 0.8; }
+
+/* ── Vertical divider ─────────────────────────────────── */
+.vdiv {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex-shrink: 0;
+  margin: 0 6px;
+}
+
+/* ── Badge ────────────────────────────────────────────── */
+.badge {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  flex-shrink: 0;
+}
