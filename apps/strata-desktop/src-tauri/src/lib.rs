@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
+use tauri::Emitter;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -92,6 +95,53 @@ pub struct HexData {
     pub lines: Vec<HexLine>,
     pub total_size: u64,
     pub offset: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct PluginRunResult {
+    pub plugin_name: String,
+    pub success: bool,
+    pub artifact_count: u64,
+    pub duration_ms: u64,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct PluginStatus {
+    pub name: String,
+    pub status: String,
+    pub progress: u8,
+    pub artifact_count: u64,
+}
+
+static PLUGIN_STATUS: OnceLock<Arc<Mutex<HashMap<String, PluginStatus>>>> = OnceLock::new();
+
+fn get_plugin_status_store() -> Arc<Mutex<HashMap<String, PluginStatus>>> {
+    PLUGIN_STATUS
+        .get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+        .clone()
+}
+
+const PLUGIN_NAMES: &[&str] = &[
+    "Remnant", "Chronicle", "Cipher", "Trace", "Specter", "Conduit", "Nimbus", "Wraith", "Vector",
+    "Recon", "Sigma",
+];
+
+fn mock_artifact_count(name: &str) -> u64 {
+    match name {
+        "Remnant" => 47,
+        "Chronicle" => 183,
+        "Cipher" => 12,
+        "Trace" => 89,
+        "Specter" => 0,
+        "Conduit" => 34,
+        "Nimbus" => 5,
+        "Wraith" => 2,
+        "Vector" => 8,
+        "Recon" => 23,
+        "Sigma" => 156,
+        _ => 0,
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -730,6 +780,114 @@ async fn search_files(query: String, _evidence_id: String) -> Result<Vec<SearchR
 }
 
 #[tauri::command]
+async fn get_plugin_statuses() -> Result<Vec<PluginStatus>, String> {
+    let store = get_plugin_status_store();
+    let map = store.lock().map_err(|e| e.to_string())?;
+
+    let statuses = PLUGIN_NAMES
+        .iter()
+        .map(|n| {
+            map.get(*n).cloned().unwrap_or(PluginStatus {
+                name: n.to_string(),
+                status: "idle".to_string(),
+                progress: 0,
+                artifact_count: 0,
+            })
+        })
+        .collect();
+
+    Ok(statuses)
+}
+
+#[tauri::command]
+async fn run_plugin(
+    plugin_name: String,
+    _evidence_id: String,
+    app: tauri::AppHandle,
+) -> Result<PluginRunResult, String> {
+    let store = get_plugin_status_store();
+
+    {
+        let mut map = store.lock().map_err(|e| e.to_string())?;
+        map.insert(
+            plugin_name.clone(),
+            PluginStatus {
+                name: plugin_name.clone(),
+                status: "running".to_string(),
+                progress: 0,
+                artifact_count: 0,
+            },
+        );
+    }
+
+    let plugin = plugin_name.clone();
+    let store2 = store.clone();
+    let app2 = app.clone();
+
+    tokio::spawn(async move {
+        let steps: [u8; 7] = [10, 25, 40, 55, 70, 85, 95];
+        for p in steps {
+            tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
+            if let Ok(mut map) = store2.lock() {
+                if let Some(s) = map.get_mut(&plugin) {
+                    s.progress = p;
+                }
+            }
+            let _ = app2.emit(
+                "plugin-progress",
+                json!({
+                    "name": plugin,
+                    "progress": p,
+                    "status": "running"
+                }),
+            );
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
+        let count = mock_artifact_count(&plugin);
+
+        if let Ok(mut map) = store2.lock() {
+            map.insert(
+                plugin.clone(),
+                PluginStatus {
+                    name: plugin.clone(),
+                    status: "complete".to_string(),
+                    progress: 100,
+                    artifact_count: count,
+                },
+            );
+        }
+
+        let _ = app2.emit(
+            "plugin-progress",
+            json!({
+                "name": plugin,
+                "progress": 100,
+                "status": "complete",
+                "artifact_count": count
+            }),
+        );
+    });
+
+    Ok(PluginRunResult {
+        plugin_name: plugin_name.clone(),
+        success: true,
+        artifact_count: 0,
+        duration_ms: 0,
+        error: None,
+    })
+}
+
+#[tauri::command]
+async fn run_all_plugins(evidence_id: String, app: tauri::AppHandle) -> Result<(), String> {
+    for plugin in PLUGIN_NAMES {
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+        let _ = run_plugin(plugin.to_string(), evidence_id.clone(), app.clone()).await;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 async fn get_stats(_evidence_id: String) -> Result<Stats, String> {
     Ok(Stats {
         files: 26235,
@@ -770,6 +928,9 @@ pub fn run() {
             get_file_hex,
             get_file_text,
             search_files,
+            get_plugin_statuses,
+            run_plugin,
+            run_all_plugins,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { AppState, ViewMode, Stats } from '../types'
+import type { PluginStatus } from '../ipc'
 
 interface AppStore extends AppState {
   metadataSearch: boolean
@@ -13,6 +14,8 @@ interface AppStore extends AppState {
   searchActive: boolean
   setSearchQuery: (q: string) => void
   setSearchActive: (v: boolean) => void
+  pluginStatuses: Record<string, PluginStatus>
+  setPluginStatus: (name: string, status: PluginStatus) => void
 
   setView: (v: ViewMode) => void
   setLicensed: (s: AppState['licensed']) => void
@@ -62,6 +65,11 @@ export const useAppStore = create<AppStore>((set) => ({
   searchActive: false,
   setSearchQuery: (q) => set({ searchQuery: q }),
   setSearchActive: (v) => set({ searchActive: v }),
+  pluginStatuses: {},
+  setPluginStatus: (name, status) =>
+    set((s) => ({
+      pluginStatuses: { ...s.pluginStatuses, [name]: status },
+    })),
 
   setView: (v) => set({ view: v }),
   setLicensed: (s) => set({ licensed: s }),

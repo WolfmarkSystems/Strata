@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import type { TreeNode, FileEntry, FileMetadata } from '../types'
 
 // Browser preview detection — Tauri injects __TAURI_INTERNALS__ at runtime
@@ -32,6 +33,28 @@ export interface HexData {
   lines: HexLine[]
   total_size: number
   offset: number
+}
+
+export interface PluginStatus {
+  name: string
+  status: 'idle' | 'running' | 'complete' | 'error'
+  progress: number
+  artifact_count: number
+}
+
+export interface PluginRunResult {
+  plugin_name: string
+  success: boolean
+  artifact_count: number
+  duration_ms: number
+  error?: string
+}
+
+export interface PluginProgressEvent {
+  name: string
+  progress: number
+  status: 'idle' | 'running' | 'complete' | 'error'
+  artifact_count?: number
 }
 
 export interface SearchResult {
@@ -186,6 +209,127 @@ export async function searchFiles(
   } catch {
     return []
   }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Plugin commands
+// ──────────────────────────────────────────────────────────────────────────────
+
+const PLUGIN_NAMES = [
+  'Remnant', 'Chronicle', 'Cipher', 'Trace', 'Specter',
+  'Conduit', 'Nimbus', 'Wraith', 'Vector', 'Recon', 'Sigma',
+] as const
+
+const MOCK_ARTIFACT_COUNTS: Record<string, number> = {
+  Remnant: 47, Chronicle: 183, Cipher: 12, Trace: 89, Specter: 0,
+  Conduit: 34, Nimbus: 5, Wraith: 2, Vector: 8, Recon: 23, Sigma: 156,
+}
+
+// Mock state for browser preview mode
+const mockStatuses: Record<string, PluginStatus> = {}
+type MockListener = (e: PluginProgressEvent) => void
+const mockListeners = new Set<MockListener>()
+
+function emitMock(e: PluginProgressEvent) {
+  mockStatuses[e.name] = {
+    name: e.name,
+    status: e.status,
+    progress: e.progress,
+    artifact_count: e.artifact_count ?? mockStatuses[e.name]?.artifact_count ?? 0,
+  }
+  mockListeners.forEach((cb) => cb(e))
+}
+
+export async function getPluginStatuses(): Promise<PluginStatus[]> {
+  if (!IN_TAURI) {
+    return PLUGIN_NAMES.map((n) =>
+      mockStatuses[n] ?? {
+        name: n,
+        status: 'idle' as const,
+        progress: 0,
+        artifact_count: 0,
+      },
+    )
+  }
+  try {
+    return await invoke('get_plugin_statuses')
+  } catch {
+    return []
+  }
+}
+
+export async function runPlugin(
+  pluginName: string,
+  evidenceId: string,
+): Promise<PluginRunResult> {
+  if (!IN_TAURI) {
+    // Simulate progress locally with setTimeout sequence
+    emitMock({ name: pluginName, progress: 0, status: 'running' })
+    const steps = [10, 25, 40, 55, 70, 85, 95]
+    let i = 0
+    const tick = () => {
+      if (i < steps.length) {
+        emitMock({ name: pluginName, progress: steps[i], status: 'running' })
+        i++
+        setTimeout(tick, 400)
+      } else {
+        const count = MOCK_ARTIFACT_COUNTS[pluginName] ?? 0
+        emitMock({
+          name: pluginName,
+          progress: 100,
+          status: 'complete',
+          artifact_count: count,
+        })
+      }
+    }
+    setTimeout(tick, 400)
+    return {
+      plugin_name: pluginName,
+      success: true,
+      artifact_count: 0,
+      duration_ms: 0,
+    }
+  }
+  try {
+    return await invoke('run_plugin', { pluginName, evidenceId })
+  } catch (e) {
+    return {
+      plugin_name: pluginName,
+      success: false,
+      artifact_count: 0,
+      duration_ms: 0,
+      error: String(e),
+    }
+  }
+}
+
+export async function runAllPlugins(evidenceId: string): Promise<void> {
+  if (!IN_TAURI) {
+    for (const name of PLUGIN_NAMES) {
+      await new Promise((r) => setTimeout(r, 200))
+      runPlugin(name, evidenceId)
+    }
+    return
+  }
+  try {
+    await invoke('run_all_plugins', { evidenceId })
+  } catch (e) {
+    console.error('Run all failed:', e)
+  }
+}
+
+export function onPluginProgress(
+  callback: (data: PluginProgressEvent) => void,
+): Promise<() => void> {
+  if (!IN_TAURI) {
+    mockListeners.add(callback)
+    return Promise.resolve(() => {
+      mockListeners.delete(callback)
+    })
+  }
+  return listen<PluginProgressEvent>('plugin-progress', (event) => {
+    callback(event.payload)
+  })
 }
 
 export async function getStats(evidenceId: string): Promise<StatsResult> {
