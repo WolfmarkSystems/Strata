@@ -35,6 +35,28 @@ export interface HexData {
   offset: number
 }
 
+export interface ArtifactCategory {
+  name: string
+  icon: string
+  count: number
+  color: string
+}
+
+export interface Artifact {
+  id: string
+  category: string
+  name: string
+  value: string
+  timestamp: string | null
+  source_file: string
+  source_path: string
+  forensic_value: 'high' | 'medium' | 'low'
+  mitre_technique: string | null
+  mitre_name: string | null
+  plugin: string
+  raw_data: string | null
+}
+
 export interface PluginStatus {
   name: string
   status: 'idle' | 'running' | 'complete' | 'error'
@@ -209,6 +231,85 @@ export async function searchFiles(
   } catch {
     return []
   }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Artifact commands
+// ──────────────────────────────────────────────────────────────────────────────
+
+export async function getArtifactCategories(
+  evidenceId: string,
+): Promise<ArtifactCategory[]> {
+  if (!IN_TAURI) return MOCK_ARTIFACT_CATEGORIES
+  try {
+    return await invoke('get_artifact_categories', { evidenceId })
+  } catch {
+    return []
+  }
+}
+
+export async function getArtifacts(
+  evidenceId: string,
+  category: string,
+): Promise<Artifact[]> {
+  if (!IN_TAURI) return MOCK_ARTIFACTS[category] ?? []
+  try {
+    return await invoke('get_artifacts', { evidenceId, category })
+  } catch {
+    return []
+  }
+}
+
+const MOCK_ARTIFACT_CATEGORIES: ArtifactCategory[] = [
+  { name: 'User Activity',       icon: '\u{1F464}', count: 183, color: '#c8a040' },
+  { name: 'Execution History',   icon: '\u{25B6}',  count: 89,  color: '#4a70c0' },
+  { name: 'Deleted & Recovered', icon: '\u{1F5D1}', count: 47,  color: '#4a9060' },
+  { name: 'Network Artifacts',   icon: '\u{1F517}', count: 34,  color: '#40a0a0' },
+  { name: 'Identity & Accounts', icon: '\u{1FAAA}', count: 23,  color: '#a0a040' },
+  { name: 'Credentials',         icon: '\u{1F511}', count: 12,  color: '#c05050' },
+  { name: 'Malware Indicators',  icon: '\u{1F6E1}', count: 8,   color: '#c07040' },
+  { name: 'Cloud & Sync',        icon: '\u{2601}',  count: 5,   color: '#6090d0' },
+  { name: 'Memory Artifacts',    icon: '\u{1F4BE}', count: 2,   color: '#8090a0' },
+  { name: 'Communications',      icon: '\u{1F4AC}', count: 0,   color: '#8050c0' },
+  { name: 'Social Media',        icon: '\u{1F4F1}', count: 0,   color: '#8050c0' },
+  { name: 'Web Activity',        icon: '\u{1F310}', count: 0,   color: '#4a7890' },
+]
+
+const MOCK_ARTIFACTS: Record<string, Artifact[]> = {
+  'User Activity': [
+    { id: 'a001', category: 'User Activity', name: 'UserAssist: cmd.exe', value: '23 executions', timestamp: '2009-11-15 14:33:01', source_file: 'NTUSER.DAT', source_path: '\\Documents and Settings\\Administrator\\ntuser.dat', forensic_value: 'high', mitre_technique: 'T1204', mitre_name: 'User Execution', plugin: 'Chronicle', raw_data: 'UEME_RUNPATH:C:\\Windows\\System32\\cmd.exe' },
+    { id: 'a002', category: 'User Activity', name: 'UserAssist: mimikatz.exe', value: '3 executions', timestamp: '2009-11-15 14:33:05', source_file: 'NTUSER.DAT', source_path: '\\Documents and Settings\\Administrator\\ntuser.dat', forensic_value: 'high', mitre_technique: 'T1003', mitre_name: 'OS Credential Dumping', plugin: 'Chronicle', raw_data: 'UEME_RUNPATH:C:\\Windows\\Temp\\mimikatz.exe' },
+    { id: 'a003', category: 'User Activity', name: 'RecentDocs: evidence_backup.zip', value: 'Last accessed', timestamp: '2009-11-14 22:10:44', source_file: 'NTUSER.DAT', source_path: '\\Documents and Settings\\Administrator\\ntuser.dat', forensic_value: 'medium', mitre_technique: 'T1083', mitre_name: 'File and Directory Discovery', plugin: 'Chronicle', raw_data: null },
+    { id: 'a004', category: 'User Activity', name: 'TypedPath: C:\\Windows\\Temp', value: 'Explorer address bar entry', timestamp: '2009-11-15 14:30:12', source_file: 'NTUSER.DAT', source_path: '\\Documents and Settings\\Administrator\\ntuser.dat', forensic_value: 'medium', mitre_technique: 'T1083', mitre_name: 'File and Directory Discovery', plugin: 'Chronicle', raw_data: null },
+    { id: 'a005', category: 'User Activity', name: 'WordWheelQuery: lsass', value: 'Start menu search term', timestamp: '2009-11-15 14:28:33', source_file: 'NTUSER.DAT', source_path: '\\Documents and Settings\\Administrator\\ntuser.dat', forensic_value: 'high', mitre_technique: 'T1057', mitre_name: 'Process Discovery', plugin: 'Chronicle', raw_data: null },
+  ],
+  'Execution History': [
+    { id: 'b001', category: 'Execution History', name: 'BAM: mimikatz.exe', value: 'Last executed', timestamp: '2009-11-15 14:33:02', source_file: 'SYSTEM', source_path: '\\Windows\\System32\\config\\SYSTEM', forensic_value: 'high', mitre_technique: 'T1003', mitre_name: 'OS Credential Dumping', plugin: 'Trace', raw_data: 'Path: C:\\Windows\\Temp\\mimikatz.exe\nSequenceNumber: 0x0000047A' },
+    { id: 'b002', category: 'Execution History', name: 'BAM: cleanup.ps1', value: 'Last executed', timestamp: '2009-11-15 14:31:00', source_file: 'SYSTEM', source_path: '\\Windows\\System32\\config\\SYSTEM', forensic_value: 'high', mitre_technique: 'T1059.001', mitre_name: 'PowerShell', plugin: 'Trace', raw_data: 'Path: C:\\Windows\\Temp\\cleanup.ps1' },
+    { id: 'b003', category: 'Execution History', name: 'Scheduled Task: WindowsUpdate', value: 'Persistence mechanism', timestamp: '2009-11-14 03:00:00', source_file: 'WindowsUpdate.xml', source_path: '\\Windows\\System32\\Tasks\\WindowsUpdate', forensic_value: 'high', mitre_technique: 'T1053.005', mitre_name: 'Scheduled Task', plugin: 'Trace', raw_data: '<Command>C:\\Windows\\Temp\\svchost32.exe</Command>' },
+    { id: 'b004', category: 'Execution History', name: 'Prefetch: MIMIKATZ.EXE-ABC123.pf', value: '3 runs', timestamp: '2009-11-15 14:33:05', source_file: 'MIMIKATZ.EXE-ABC123.pf', source_path: '\\Windows\\Prefetch\\MIMIKATZ.EXE-ABC123.pf', forensic_value: 'high', mitre_technique: 'T1003', mitre_name: 'OS Credential Dumping', plugin: 'Trace', raw_data: null },
+  ],
+  'Deleted & Recovered': [
+    { id: 'c001', category: 'Deleted & Recovered', name: 'Recycle Bin: lsass.dmp', value: 'Deleted credential dump', timestamp: '2009-11-15 14:45:00', source_file: '$I001234.dat', source_path: '\\RECYCLER\\S-1-5-21-XXX\\$I001234.dat', forensic_value: 'high', mitre_technique: 'T1003.001', mitre_name: 'LSASS Memory', plugin: 'Remnant', raw_data: 'Original path: C:\\Windows\\Temp\\lsass.dmp\nOriginal size: 44,040,192 bytes' },
+    { id: 'c002', category: 'Deleted & Recovered', name: 'USN Journal: mimikatz.exe created', value: 'File system operation', timestamp: '2009-11-15 14:32:58', source_file: '$UsnJrnl', source_path: '\\$Extend\\$UsnJrnl', forensic_value: 'high', mitre_technique: 'T1070.004', mitre_name: 'File Deletion', plugin: 'Remnant', raw_data: 'USN: 0x000000001A4F8800\nReason: FILE_CREATE | CLOSE\nFileName: mimikatz.exe' },
+    { id: 'c003', category: 'Deleted & Recovered', name: 'USN Journal: lsass.dmp deleted', value: 'File deletion event', timestamp: '2009-11-15 14:44:55', source_file: '$UsnJrnl', source_path: '\\$Extend\\$UsnJrnl', forensic_value: 'high', mitre_technique: 'T1070.004', mitre_name: 'File Deletion', plugin: 'Remnant', raw_data: 'USN: 0x000000001A512400\nReason: FILE_DELETE | CLOSE\nFileName: lsass.dmp' },
+  ],
+  'Credentials': [
+    { id: 'd001', category: 'Credentials', name: 'WiFi Profile: CorpNetwork', value: 'WPA2-Enterprise saved credential', timestamp: null, source_file: 'CorpNetwork.xml', source_path: '\\ProgramData\\Microsoft\\Wlansvc\\Profiles\\Interfaces\\', forensic_value: 'high', mitre_technique: 'T1552.001', mitre_name: 'Credentials in Files', plugin: 'Cipher', raw_data: '<SSID>CorpNetwork</SSID>\n<keyMaterial>[ENCRYPTED]</keyMaterial>' },
+    { id: 'd002', category: 'Credentials', name: 'WiFi Profile: HomeNetwork_5G', value: 'WPA2-Personal saved credential', timestamp: null, source_file: 'HomeNetwork_5G.xml', source_path: '\\ProgramData\\Microsoft\\Wlansvc\\Profiles\\', forensic_value: 'medium', mitre_technique: 'T1552.001', mitre_name: 'Credentials in Files', plugin: 'Cipher', raw_data: null },
+  ],
+  'Malware Indicators': [
+    { id: 'e001', category: 'Malware Indicators', name: 'Known Tool: mimikatz.exe', value: 'Credential dumping tool', timestamp: '2009-11-15 14:33:02', source_file: 'mimikatz.exe', source_path: '\\Windows\\Temp\\mimikatz.exe', forensic_value: 'high', mitre_technique: 'T1003', mitre_name: 'OS Credential Dumping', plugin: 'Vector', raw_data: 'PE signature match: Mimikatz v2.x\nImports: LsaOpenPolicy, SamConnect\nMD5: [not computed]' },
+    { id: 'e002', category: 'Malware Indicators', name: 'Anti-forensic: Event log cleared', value: 'Evidence destruction', timestamp: '2009-11-15 14:31:05', source_file: 'cleanup.ps1', source_path: '\\Windows\\Temp\\cleanup.ps1', forensic_value: 'high', mitre_technique: 'T1070.001', mitre_name: 'Clear Windows Event Logs', plugin: 'Vector', raw_data: 'Content: wevtutil cl Security\nContent: wevtutil cl System\nContent: vssadmin delete shadows' },
+  ],
+  'Network Artifacts': [
+    { id: 'f001', category: 'Network Artifacts', name: 'RDP Connection: 192.168.1.50', value: 'Remote Desktop target', timestamp: '2009-11-15 13:45:00', source_file: 'NTUSER.DAT', source_path: '\\Documents and Settings\\Administrator\\ntuser.dat', forensic_value: 'high', mitre_technique: 'T1021.001', mitre_name: 'Remote Desktop Protocol', plugin: 'Conduit', raw_data: 'MRU: 192.168.1.50\nUsername hint: Administrator' },
+    { id: 'f002', category: 'Network Artifacts', name: 'WiFi History: CorpNetwork', value: 'Previously connected network', timestamp: null, source_file: 'SOFTWARE', source_path: '\\Windows\\System32\\config\\SOFTWARE', forensic_value: 'medium', mitre_technique: 'T1016', mitre_name: 'System Network Config Discovery', plugin: 'Conduit', raw_data: null },
+  ],
+  'Identity & Accounts': [
+    { id: 'g001', category: 'Identity & Accounts', name: 'Local Account: Administrator', value: 'Last login: 2009-11-15 14:30', timestamp: '2009-11-15 14:30:00', source_file: 'SAM', source_path: '\\Windows\\System32\\config\\SAM', forensic_value: 'medium', mitre_technique: 'T1087.001', mitre_name: 'Local Account', plugin: 'Recon', raw_data: null },
+    { id: 'g002', category: 'Identity & Accounts', name: 'Email: admin@corpnetwork.local', value: 'Found in document metadata', timestamp: null, source_file: 'ntuser.dat', source_path: '\\Documents and Settings\\Administrator\\ntuser.dat', forensic_value: 'medium', mitre_technique: 'T1589.002', mitre_name: 'Email Addresses', plugin: 'Recon', raw_data: null },
+  ],
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

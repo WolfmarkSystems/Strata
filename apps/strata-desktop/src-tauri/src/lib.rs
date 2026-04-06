@@ -98,6 +98,30 @@ pub struct HexData {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct ArtifactCategory {
+    pub name: String,
+    pub icon: String,
+    pub count: u64,
+    pub color: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Artifact {
+    pub id: String,
+    pub category: String,
+    pub name: String,
+    pub value: String,
+    pub timestamp: Option<String>,
+    pub source_file: String,
+    pub source_path: String,
+    pub forensic_value: String,
+    pub mitre_technique: Option<String>,
+    pub mitre_name: Option<String>,
+    pub plugin: String,
+    pub raw_data: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PluginRunResult {
     pub plugin_name: String,
     pub success: bool,
@@ -780,6 +804,71 @@ async fn search_files(query: String, _evidence_id: String) -> Result<Vec<SearchR
 }
 
 #[tauri::command]
+async fn get_artifact_categories(
+    _evidence_id: String,
+) -> Result<Vec<ArtifactCategory>, String> {
+    Ok(vec![
+        ArtifactCategory { name: "User Activity".to_string(), icon: "\u{1F464}".to_string(), count: 183, color: "#c8a040".to_string() },
+        ArtifactCategory { name: "Execution History".to_string(), icon: "\u{25B6}".to_string(), count: 89, color: "#4a70c0".to_string() },
+        ArtifactCategory { name: "Deleted & Recovered".to_string(), icon: "\u{1F5D1}".to_string(), count: 47, color: "#4a9060".to_string() },
+        ArtifactCategory { name: "Network Artifacts".to_string(), icon: "\u{1F517}".to_string(), count: 34, color: "#40a0a0".to_string() },
+        ArtifactCategory { name: "Identity & Accounts".to_string(), icon: "\u{1FAAA}".to_string(), count: 23, color: "#a0a040".to_string() },
+        ArtifactCategory { name: "Credentials".to_string(), icon: "\u{1F511}".to_string(), count: 12, color: "#c05050".to_string() },
+        ArtifactCategory { name: "Malware Indicators".to_string(), icon: "\u{1F6E1}".to_string(), count: 8, color: "#c07040".to_string() },
+        ArtifactCategory { name: "Cloud & Sync".to_string(), icon: "\u{2601}".to_string(), count: 5, color: "#6090d0".to_string() },
+        ArtifactCategory { name: "Memory Artifacts".to_string(), icon: "\u{1F4BE}".to_string(), count: 2, color: "#8090a0".to_string() },
+        ArtifactCategory { name: "Communications".to_string(), icon: "\u{1F4AC}".to_string(), count: 0, color: "#8050c0".to_string() },
+        ArtifactCategory { name: "Social Media".to_string(), icon: "\u{1F4F1}".to_string(), count: 0, color: "#8050c0".to_string() },
+        ArtifactCategory { name: "Web Activity".to_string(), icon: "\u{1F310}".to_string(), count: 0, color: "#4a7890".to_string() },
+    ])
+}
+
+#[tauri::command]
+async fn get_artifacts(
+    _evidence_id: String,
+    category: String,
+) -> Result<Vec<Artifact>, String> {
+    let artifacts = match category.as_str() {
+        "User Activity" => vec![
+            Artifact { id: "a001".to_string(), category: "User Activity".to_string(), name: "UserAssist: cmd.exe".to_string(), value: "23 executions".to_string(), timestamp: Some("2009-11-15 14:33:01".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1204".to_string()), mitre_name: Some("User Execution".to_string()), plugin: "Chronicle".to_string(), raw_data: Some("UEME_RUNPATH:C:\\Windows\\System32\\cmd.exe".to_string()) },
+            Artifact { id: "a002".to_string(), category: "User Activity".to_string(), name: "UserAssist: mimikatz.exe".to_string(), value: "3 executions".to_string(), timestamp: Some("2009-11-15 14:33:05".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1003".to_string()), mitre_name: Some("OS Credential Dumping".to_string()), plugin: "Chronicle".to_string(), raw_data: Some("UEME_RUNPATH:C:\\Windows\\Temp\\mimikatz.exe".to_string()) },
+            Artifact { id: "a003".to_string(), category: "User Activity".to_string(), name: "RecentDocs: evidence_backup.zip".to_string(), value: "Last accessed".to_string(), timestamp: Some("2009-11-14 22:10:44".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1083".to_string()), mitre_name: Some("File and Directory Discovery".to_string()), plugin: "Chronicle".to_string(), raw_data: None },
+            Artifact { id: "a004".to_string(), category: "User Activity".to_string(), name: "TypedPath: C:\\Windows\\Temp".to_string(), value: "Explorer address bar entry".to_string(), timestamp: Some("2009-11-15 14:30:12".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1083".to_string()), mitre_name: Some("File and Directory Discovery".to_string()), plugin: "Chronicle".to_string(), raw_data: None },
+            Artifact { id: "a005".to_string(), category: "User Activity".to_string(), name: "WordWheelQuery: lsass".to_string(), value: "Start menu search term".to_string(), timestamp: Some("2009-11-15 14:28:33".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1057".to_string()), mitre_name: Some("Process Discovery".to_string()), plugin: "Chronicle".to_string(), raw_data: None },
+        ],
+        "Execution History" => vec![
+            Artifact { id: "b001".to_string(), category: "Execution History".to_string(), name: "BAM: mimikatz.exe".to_string(), value: "Last executed".to_string(), timestamp: Some("2009-11-15 14:33:02".to_string()), source_file: "SYSTEM".to_string(), source_path: "\\Windows\\System32\\config\\SYSTEM".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1003".to_string()), mitre_name: Some("OS Credential Dumping".to_string()), plugin: "Trace".to_string(), raw_data: Some("Path: C:\\Windows\\Temp\\mimikatz.exe\nSequenceNumber: 0x0000047A".to_string()) },
+            Artifact { id: "b002".to_string(), category: "Execution History".to_string(), name: "BAM: cleanup.ps1".to_string(), value: "Last executed".to_string(), timestamp: Some("2009-11-15 14:31:00".to_string()), source_file: "SYSTEM".to_string(), source_path: "\\Windows\\System32\\config\\SYSTEM".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1059.001".to_string()), mitre_name: Some("PowerShell".to_string()), plugin: "Trace".to_string(), raw_data: Some("Path: C:\\Windows\\Temp\\cleanup.ps1".to_string()) },
+            Artifact { id: "b003".to_string(), category: "Execution History".to_string(), name: "Scheduled Task: WindowsUpdate".to_string(), value: "Persistence mechanism".to_string(), timestamp: Some("2009-11-14 03:00:00".to_string()), source_file: "WindowsUpdate.xml".to_string(), source_path: "\\Windows\\System32\\Tasks\\WindowsUpdate".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1053.005".to_string()), mitre_name: Some("Scheduled Task".to_string()), plugin: "Trace".to_string(), raw_data: Some("<Command>C:\\Windows\\Temp\\svchost32.exe</Command>".to_string()) },
+            Artifact { id: "b004".to_string(), category: "Execution History".to_string(), name: "Prefetch: MIMIKATZ.EXE-ABC123.pf".to_string(), value: "3 runs".to_string(), timestamp: Some("2009-11-15 14:33:05".to_string()), source_file: "MIMIKATZ.EXE-ABC123.pf".to_string(), source_path: "\\Windows\\Prefetch\\MIMIKATZ.EXE-ABC123.pf".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1003".to_string()), mitre_name: Some("OS Credential Dumping".to_string()), plugin: "Trace".to_string(), raw_data: None },
+        ],
+        "Deleted & Recovered" => vec![
+            Artifact { id: "c001".to_string(), category: "Deleted & Recovered".to_string(), name: "Recycle Bin: lsass.dmp".to_string(), value: "Deleted credential dump".to_string(), timestamp: Some("2009-11-15 14:45:00".to_string()), source_file: "$I001234.dat".to_string(), source_path: "\\RECYCLER\\S-1-5-21-XXX\\$I001234.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1003.001".to_string()), mitre_name: Some("LSASS Memory".to_string()), plugin: "Remnant".to_string(), raw_data: Some("Original path: C:\\Windows\\Temp\\lsass.dmp\nOriginal size: 44,040,192 bytes".to_string()) },
+            Artifact { id: "c002".to_string(), category: "Deleted & Recovered".to_string(), name: "USN Journal: mimikatz.exe created".to_string(), value: "File system operation".to_string(), timestamp: Some("2009-11-15 14:32:58".to_string()), source_file: "$UsnJrnl".to_string(), source_path: "\\$Extend\\$UsnJrnl".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1070.004".to_string()), mitre_name: Some("File Deletion".to_string()), plugin: "Remnant".to_string(), raw_data: Some("USN: 0x000000001A4F8800\nReason: FILE_CREATE | CLOSE\nFileName: mimikatz.exe".to_string()) },
+            Artifact { id: "c003".to_string(), category: "Deleted & Recovered".to_string(), name: "USN Journal: lsass.dmp deleted".to_string(), value: "File deletion event".to_string(), timestamp: Some("2009-11-15 14:44:55".to_string()), source_file: "$UsnJrnl".to_string(), source_path: "\\$Extend\\$UsnJrnl".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1070.004".to_string()), mitre_name: Some("File Deletion".to_string()), plugin: "Remnant".to_string(), raw_data: Some("USN: 0x000000001A512400\nReason: FILE_DELETE | CLOSE\nFileName: lsass.dmp".to_string()) },
+        ],
+        "Credentials" => vec![
+            Artifact { id: "d001".to_string(), category: "Credentials".to_string(), name: "WiFi Profile: CorpNetwork".to_string(), value: "WPA2-Enterprise saved credential".to_string(), timestamp: None, source_file: "CorpNetwork.xml".to_string(), source_path: "\\ProgramData\\Microsoft\\Wlansvc\\Profiles\\Interfaces\\".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1552.001".to_string()), mitre_name: Some("Credentials in Files".to_string()), plugin: "Cipher".to_string(), raw_data: Some("<SSID>CorpNetwork</SSID>\n<keyMaterial>[ENCRYPTED]</keyMaterial>".to_string()) },
+            Artifact { id: "d002".to_string(), category: "Credentials".to_string(), name: "WiFi Profile: HomeNetwork_5G".to_string(), value: "WPA2-Personal saved credential".to_string(), timestamp: None, source_file: "HomeNetwork_5G.xml".to_string(), source_path: "\\ProgramData\\Microsoft\\Wlansvc\\Profiles\\".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1552.001".to_string()), mitre_name: Some("Credentials in Files".to_string()), plugin: "Cipher".to_string(), raw_data: None },
+        ],
+        "Malware Indicators" => vec![
+            Artifact { id: "e001".to_string(), category: "Malware Indicators".to_string(), name: "Known Tool: mimikatz.exe".to_string(), value: "Credential dumping tool".to_string(), timestamp: Some("2009-11-15 14:33:02".to_string()), source_file: "mimikatz.exe".to_string(), source_path: "\\Windows\\Temp\\mimikatz.exe".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1003".to_string()), mitre_name: Some("OS Credential Dumping".to_string()), plugin: "Vector".to_string(), raw_data: Some("PE signature match: Mimikatz v2.x\nImports: LsaOpenPolicy, SamConnect\nMD5: [not computed]".to_string()) },
+            Artifact { id: "e002".to_string(), category: "Malware Indicators".to_string(), name: "Anti-forensic: Event log cleared".to_string(), value: "Evidence destruction".to_string(), timestamp: Some("2009-11-15 14:31:05".to_string()), source_file: "cleanup.ps1".to_string(), source_path: "\\Windows\\Temp\\cleanup.ps1".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1070.001".to_string()), mitre_name: Some("Clear Windows Event Logs".to_string()), plugin: "Vector".to_string(), raw_data: Some("Content: wevtutil cl Security\nContent: wevtutil cl System\nContent: vssadmin delete shadows".to_string()) },
+        ],
+        "Network Artifacts" => vec![
+            Artifact { id: "f001".to_string(), category: "Network Artifacts".to_string(), name: "RDP Connection: 192.168.1.50".to_string(), value: "Remote Desktop target".to_string(), timestamp: Some("2009-11-15 13:45:00".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1021.001".to_string()), mitre_name: Some("Remote Desktop Protocol".to_string()), plugin: "Conduit".to_string(), raw_data: Some("MRU: 192.168.1.50\nUsername hint: Administrator".to_string()) },
+            Artifact { id: "f002".to_string(), category: "Network Artifacts".to_string(), name: "WiFi History: CorpNetwork".to_string(), value: "Previously connected network".to_string(), timestamp: None, source_file: "SOFTWARE".to_string(), source_path: "\\Windows\\System32\\config\\SOFTWARE".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1016".to_string()), mitre_name: Some("System Network Config Discovery".to_string()), plugin: "Conduit".to_string(), raw_data: None },
+        ],
+        "Identity & Accounts" => vec![
+            Artifact { id: "g001".to_string(), category: "Identity & Accounts".to_string(), name: "Local Account: Administrator".to_string(), value: "Last login: 2009-11-15 14:30".to_string(), timestamp: Some("2009-11-15 14:30:00".to_string()), source_file: "SAM".to_string(), source_path: "\\Windows\\System32\\config\\SAM".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1087.001".to_string()), mitre_name: Some("Local Account".to_string()), plugin: "Recon".to_string(), raw_data: None },
+            Artifact { id: "g002".to_string(), category: "Identity & Accounts".to_string(), name: "Email: admin@corpnetwork.local".to_string(), value: "Found in document metadata".to_string(), timestamp: None, source_file: "ntuser.dat".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1589.002".to_string()), mitre_name: Some("Email Addresses".to_string()), plugin: "Recon".to_string(), raw_data: None },
+        ],
+        _ => vec![],
+    };
+    Ok(artifacts)
+}
+
+#[tauri::command]
 async fn get_plugin_statuses() -> Result<Vec<PluginStatus>, String> {
     let store = get_plugin_status_store();
     let map = store.lock().map_err(|e| e.to_string())?;
@@ -931,6 +1020,8 @@ pub fn run() {
             get_plugin_statuses,
             run_plugin,
             run_all_plugins,
+            get_artifact_categories,
+            get_artifacts,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

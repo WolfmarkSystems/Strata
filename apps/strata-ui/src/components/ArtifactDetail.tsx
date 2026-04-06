@@ -1,0 +1,291 @@
+import { useState } from 'react'
+import type { Artifact } from '../ipc'
+
+interface Props {
+  artifact: Artifact | null
+}
+
+export default function ArtifactDetail({ artifact }: Props) {
+  const [rawExpanded, setRawExpanded] = useState(false)
+
+  return (
+    <div
+      style={{
+        width: 260,
+        minWidth: 260,
+        background: '#0a0c12',
+        borderLeftStyle: 'solid',
+        borderLeftWidth: 1,
+        borderLeftColor: 'var(--border-sub)',
+        display: 'flex',
+        flexDirection: 'column',
+        flexShrink: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          padding: '7px 10px',
+          fontSize: 9,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          borderBottomStyle: 'solid',
+          borderBottomWidth: 1,
+          borderBottomColor: 'var(--border-sub)',
+          flexShrink: 0,
+        }}
+      >
+        Artifact Detail
+      </div>
+
+      {!artifact ? (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 13,
+            color: 'var(--text-muted)',
+            padding: 12,
+            textAlign: 'center',
+          }}
+        >
+          Select an artifact to view details
+        </div>
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+          {/* Title */}
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: 'var(--text-1)',
+              marginBottom: 4,
+              lineHeight: 1.4,
+              wordBreak: 'break-word',
+            }}
+          >
+            {artifact.name}
+          </div>
+
+          {/* Category + plugin */}
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            {artifact.category} {'\u00B7'} via {artifact.plugin}
+          </div>
+
+          {/* Forensic value banner */}
+          <ForensicBanner value={artifact.forensic_value} />
+
+          <Sep />
+
+          {/* Field rows */}
+          <Row k="Value" v={artifact.value} />
+          {artifact.timestamp && <Row k="Timestamp" v={artifact.timestamp} mono />}
+          <Row k="Source File" v={artifact.source_file} mono />
+
+          <div
+            style={{
+              fontSize: 10,
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              marginTop: 4,
+              marginBottom: 2,
+            }}
+          >
+            Source Path
+          </div>
+          <div
+            style={{
+              fontFamily: 'monospace',
+              fontSize: 10,
+              color: 'var(--text-2)',
+              wordBreak: 'break-all',
+              marginBottom: 6,
+            }}
+          >
+            {artifact.source_path}
+          </div>
+
+          {artifact.mitre_technique && (
+            <>
+              <Sep />
+              <div
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  marginBottom: 6,
+                }}
+              >
+                MITRE ATT&CK
+              </div>
+              <span
+                style={{
+                  display: 'inline-block',
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  color: 'var(--carved)',
+                  background: 'rgba(74,120,144,0.1)',
+                  borderStyle: 'solid',
+                  borderWidth: 1,
+                  borderColor: 'rgba(74,120,144,0.3)',
+                  padding: '2px 8px',
+                  borderRadius: 3,
+                }}
+              >
+                {artifact.mitre_technique}
+              </span>
+              {artifact.mitre_name && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--text-muted)',
+                    marginTop: 4,
+                  }}
+                >
+                  {artifact.mitre_name}
+                </div>
+              )}
+            </>
+          )}
+
+          {artifact.raw_data && (
+            <>
+              <Sep />
+              <div
+                onClick={() => setRawExpanded((v) => !v)}
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  marginBottom: 6,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <span style={{ fontSize: 9 }}>{rawExpanded ? '\u25BC' : '\u25B6'}</span>
+                Raw Data
+              </div>
+              {rawExpanded && (
+                <div
+                  style={{
+                    background: 'var(--bg-elevated)',
+                    borderStyle: 'solid',
+                    borderWidth: 1,
+                    borderColor: 'var(--border)',
+                    borderRadius: 4,
+                    padding: '8px 10px',
+                    fontFamily: 'monospace',
+                    fontSize: 10,
+                    color: 'var(--text-muted)',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {artifact.raw_data}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ForensicBanner({ value }: { value: string }) {
+  let bg = ''
+  let border = ''
+  let color = ''
+  let label = ''
+  if (value === 'high') {
+    bg = 'rgba(168,64,64,0.1)'
+    border = 'rgba(168,64,64,0.3)'
+    color = 'var(--flag)'
+    label = '\u26A0 HIGH FORENSIC VALUE'
+  } else if (value === 'medium') {
+    bg = 'rgba(184,120,64,0.1)'
+    border = 'rgba(184,120,64,0.3)'
+    color = 'var(--sus)'
+    label = '\u25C8 MEDIUM FORENSIC VALUE'
+  } else {
+    bg = 'rgba(58,72,88,0.1)'
+    border = 'var(--border)'
+    color = 'var(--text-muted)'
+    label = '\u00B7 LOW FORENSIC VALUE'
+  }
+  return (
+    <div
+      style={{
+        margin: '10px 0',
+        padding: '6px 10px',
+        borderRadius: 4,
+        fontSize: 11,
+        fontWeight: 700,
+        background: bg,
+        borderStyle: 'solid',
+        borderWidth: 1,
+        borderColor: border,
+        color,
+      }}
+    >
+      {label}
+    </div>
+  )
+}
+
+function Row({ k, v, mono = false }: { k: string; v: string; mono?: boolean }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+        gap: 8,
+      }}
+    >
+      <span
+        style={{
+          fontSize: 10,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          flexShrink: 0,
+          marginTop: 1,
+        }}
+      >
+        {k}
+      </span>
+      <span
+        style={{
+          fontSize: mono ? 11 : 12,
+          color: 'var(--text-2)',
+          textAlign: 'right',
+          wordBreak: 'break-all',
+          fontFamily: mono ? 'monospace' : undefined,
+        }}
+      >
+        {v}
+      </span>
+    </div>
+  )
+}
+
+function Sep() {
+  return (
+    <div
+      style={{
+        height: 1,
+        background: 'var(--border-sub)',
+        margin: '10px 0',
+      }}
+    />
+  )
+}

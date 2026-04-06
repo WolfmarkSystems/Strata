@@ -16,6 +16,8 @@ interface AppStore extends AppState {
   setSearchActive: (v: boolean) => void
   pluginStatuses: Record<string, PluginStatus>
   setPluginStatus: (name: string, status: PluginStatus) => void
+  selectedArtifactId: string | null
+  setSelectedArtifactId: (id: string | null) => void
 
   setView: (v: ViewMode) => void
   setLicensed: (s: AppState['licensed']) => void
@@ -70,6 +72,8 @@ export const useAppStore = create<AppStore>((set) => ({
     set((s) => ({
       pluginStatuses: { ...s.pluginStatuses, [name]: status },
     })),
+  selectedArtifactId: null,
+  setSelectedArtifactId: (id) => set({ selectedArtifactId: id }),
 
   setView: (v) => set({ view: v }),
   setLicensed: (s) => set({ licensed: s }),
