@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base:      #070809;
+  --bg-surface:   #0b0c0f;
+  --bg-elevated:  #0f1014;
+  --bg-panel:     #0d0e12;
+  --accent-1:     #d8e2ec;
+  --accent-2:     #8a9aaa;
+  --accent-muted: #3a4858;
+  --border:       #181c24;
+  --border-sub:   #121620;
+  --text-1:       #d8e2ec;
+  --text-2:       #8a9aaa;
+  --text-muted:   #3a4858;
+  --text-off:     #1a2030;
+  --sus:          #b87840;
+  --flag:         #a84040;
+  --carved:       #4a7890;
+  --hashed:       #487858;
+  --artifact:     #605878;
+  --clean:        #487858;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg-base);
+  color: var(--text-1);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  user-select: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-muted);
+}
+
+input, textarea {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-2);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  outline: none;
+  padding: 5px 10px;
+}
+
+input:focus, textarea:focus {
+  border-color: var(--accent-muted);
+}
+
+button {
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  transition: opacity 0.15s;
+}
+
+button:hover {
+  opacity: 0.85;
+}
+
+button:active {
+  transform: scale(0.98);
+}
