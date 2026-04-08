@@ -18,6 +18,7 @@ export default function ArtifactsView() {
 
   const [categories, setCategories] = useState<ArtifactCategory[]>([])
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
+  const [pluginsNotRun, setPluginsNotRun] = useState(false)
   const [loading, setLoading] = useState(false)
 
   // Load categories when evidence loaded
@@ -33,13 +34,16 @@ export default function ArtifactsView() {
   useEffect(() => {
     if (!evidenceId || !selectedArtifactCat) {
       setArtifacts([])
+      setPluginsNotRun(false)
       return
     }
     setLoading(true)
     setArtifacts([])
+    setPluginsNotRun(false)
     setSelectedArtifactId(null)
     getArtifacts(evidenceId, selectedArtifactCat).then((data) => {
-      setArtifacts(data)
+      setArtifacts(data.artifacts)
+      setPluginsNotRun(data.plugins_not_run)
       setLoading(false)
     })
   }, [selectedArtifactCat, evidenceId, setSelectedArtifactId])
@@ -74,6 +78,7 @@ export default function ArtifactsView() {
         <ArtifactResults
           category={selectedCategory}
           artifacts={artifacts}
+          pluginsNotRun={pluginsNotRun}
           selectedId={selectedArtifactId}
           onSelect={(a) => setSelectedArtifactId(a.id)}
           loading={loading}

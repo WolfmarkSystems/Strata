@@ -145,11 +145,9 @@ pub fn get_stats(evidence_id: &str) -> AdapterResult<EngineStats> {
 }
 
 fn is_suspicious(f: &crate::store::CachedFile) -> bool {
+    const MARKERS: &[&str] = &["mimikatz", "lsass", "cleanup.ps1", "psexec", "nc.exe"];
     let lc = f.name.to_lowercase();
-    matches!(
-        lc.as_str(),
-        "mimikatz.exe" | "lsass.dmp" | "cleanup.ps1" | "psexec.exe" | "nc.exe"
-    )
+    MARKERS.iter().any(|m| lc.contains(m))
 }
 
 fn is_flagged(f: &crate::store::CachedFile) -> bool {

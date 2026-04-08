@@ -76,6 +76,11 @@ export interface Artifact {
   raw_data: string | null
 }
 
+export interface ArtifactsResponse {
+  artifacts: Artifact[]
+  plugins_not_run: boolean
+}
+
 export interface PluginStatus {
   name: string
   status: 'idle' | 'running' | 'complete' | 'error'
@@ -564,12 +569,14 @@ export async function getArtifactCategories(
 export async function getArtifacts(
   evidenceId: string,
   category: string,
-): Promise<Artifact[]> {
-  if (!IN_TAURI) return MOCK_ARTIFACTS[category] ?? []
+): Promise<ArtifactsResponse> {
+  if (!IN_TAURI) {
+    return { artifacts: MOCK_ARTIFACTS[category] ?? [], plugins_not_run: false }
+  }
   try {
-    return await invoke('get_artifacts', { evidenceId, category })
+    return await invoke<ArtifactsResponse>('get_artifacts', { evidenceId, category })
   } catch {
-    return []
+    return { artifacts: [], plugins_not_run: false }
   }
 }
 
@@ -631,12 +638,14 @@ const MOCK_ARTIFACTS: Record<string, Artifact[]> = {
 
 const PLUGIN_NAMES = [
   'Remnant', 'Chronicle', 'Cipher', 'Trace', 'Specter',
-  'Conduit', 'Nimbus', 'Wraith', 'Vector', 'Recon', 'Sigma',
+  'Conduit', 'Nimbus', 'Wraith', 'Vector', 'Recon',
+  'Phantom', 'Guardian', 'NetFlow', 'MacTrace', 'Sigma',
 ] as const
 
 const MOCK_ARTIFACT_COUNTS: Record<string, number> = {
   Remnant: 47, Chronicle: 183, Cipher: 12, Trace: 89, Specter: 0,
-  Conduit: 34, Nimbus: 5, Wraith: 2, Vector: 8, Recon: 23, Sigma: 156,
+  Conduit: 34, Nimbus: 5, Wraith: 2, Vector: 8, Recon: 23,
+  Phantom: 0, Guardian: 0, NetFlow: 0, MacTrace: 0, Sigma: 156,
 }
 
 // Mock state for browser preview mode

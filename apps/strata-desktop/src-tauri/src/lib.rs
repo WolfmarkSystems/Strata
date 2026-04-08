@@ -297,6 +297,12 @@ pub struct Artifact {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct ArtifactsResponse {
+    pub artifacts: Vec<Artifact>,
+    pub plugins_not_run: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PluginRunResult {
     pub plugin_name: String,
     pub success: bool,
@@ -323,7 +329,7 @@ fn get_plugin_status_store() -> Arc<Mutex<HashMap<String, PluginStatus>>> {
 
 const PLUGIN_NAMES: &[&str] = &[
     "Remnant", "Chronicle", "Cipher", "Trace", "Specter", "Conduit", "Nimbus", "Wraith", "Vector",
-    "Recon", "Sigma",
+    "Recon", "Phantom", "Guardian", "NetFlow", "MacTrace", "Sigma",
 ];
 
 
@@ -348,7 +354,7 @@ pub struct SearchResult {
 
 #[tauri::command]
 fn get_app_version() -> String {
-    "0.3.0".to_string()
+    env!("CARGO_PKG_VERSION").to_string()
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -1031,76 +1037,71 @@ async fn get_file_text(file_id: String, _offset: u64) -> Result<String, String> 
 }
 
 #[tauri::command]
-async fn search_files(query: String, _evidence_id: String) -> Result<Vec<SearchResult>, String> {
+async fn search_files(query: String, evidence_id: String) -> Result<Vec<SearchResult>, String> {
     if query.is_empty() {
         return Ok(vec![]);
     }
-    let q = query.to_lowercase();
-    let all = vec![
-        SearchResult {
-            id: "f004".to_string(),
-            name: "mimikatz.exe".to_string(),
-            full_path: "\\Windows\\Temp\\mimikatz.exe".to_string(),
-            extension: "exe".to_string(),
-            size_display: "1.2 MB".to_string(),
-            modified: "2009-11-15 14:33".to_string(),
-            is_deleted: false,
-            is_flagged: true,
-            is_suspicious: false,
-            match_field: "filename".to_string(),
-            match_value: "mimikatz.exe".to_string(),
-        },
-        SearchResult {
-            id: "f003".to_string(),
-            name: "svchost32.exe".to_string(),
-            full_path: "\\Windows\\System32\\svchost32.exe".to_string(),
-            extension: "exe".to_string(),
-            size_display: "892 KB".to_string(),
-            modified: "2009-11-15 14:32".to_string(),
-            is_deleted: false,
-            is_flagged: false,
-            is_suspicious: true,
-            match_field: "filename".to_string(),
-            match_value: "svchost32.exe".to_string(),
-        },
-        SearchResult {
-            id: "f010".to_string(),
-            name: "cleanup.ps1".to_string(),
-            full_path: "\\Windows\\Temp\\cleanup.ps1".to_string(),
-            extension: "ps1".to_string(),
-            size_display: "4.8 KB".to_string(),
-            modified: "2009-11-15 14:31".to_string(),
-            is_deleted: false,
-            is_flagged: false,
-            is_suspicious: true,
-            match_field: "content".to_string(),
-            match_value: "Remove-Item mimikatz.exe".to_string(),
-        },
-        SearchResult {
-            id: "f007".to_string(),
-            name: "evidence_backup.zip".to_string(),
-            full_path: "\\Users\\Admin\\Desktop\\evidence_backup.zip".to_string(),
-            extension: "zip".to_string(),
-            size_display: "22 MB".to_string(),
-            modified: "2009-11-14 22:11".to_string(),
-            is_deleted: true,
-            is_flagged: false,
-            is_suspicious: false,
-            match_field: "filename".to_string(),
-            match_value: "evidence_backup.zip".to_string(),
-        },
-    ];
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
 
-    let results: Vec<SearchResult> = all
-        .into_iter()
-        .filter(|r| {
-            r.name.to_lowercase().contains(&q)
-                || r.full_path.to_lowercase().contains(&q)
-                || r.match_value.to_lowercase().contains(&q)
-        })
-        .collect();
+    tokio::task::spawn_blocking(move || -> Result<Vec<SearchResult>, String> {
+        let arc = {
+            let store = engine::store::EVIDENCE_STORE
+                .lock()
+                .map_err(|e| e.to_string())?;
+            store
+                .get(&eid)
+                .cloned()
+                .ok_or_else(|| format!("evidence not loaded: {eid}"))?
+        };
+        let guard = arc.lock().map_err(|e| e.to_string())?;
 
-    Ok(results)
+        let q = query.to_lowercase();
+        const SUSPICIOUS_MARKERS: &[&str] =
+            &["mimikatz", "lsass", "cleanup.ps1", "psexec", "nc.exe"];
+        const FLAGGED_MARKERS: &[&str] = &["mimikatz", "lsass.dmp"];
+
+        let mut results: Vec<SearchResult> = guard
+            .files
+            .values()
+            .filter(|f| !f.is_dir)
+            .filter_map(|f| {
+                let name_lc = f.name.to_lowercase();
+                let full_path = f.vfs_path.to_string_lossy().into_owned();
+                let path_lc = full_path.to_lowercase();
+                let name_match = name_lc.contains(&q);
+                let path_match = path_lc.contains(&q);
+                if !name_match && !path_match {
+                    return None;
+                }
+                let (match_field, match_value) = if name_match {
+                    ("filename".to_string(), f.name.clone())
+                } else {
+                    ("path".to_string(), full_path.clone())
+                };
+                Some(SearchResult {
+                    id: f.id.clone(),
+                    name: f.name.clone(),
+                    full_path,
+                    extension: f.extension.clone(),
+                    size_display: engine::format_size(f.size),
+                    modified: f.modified.clone(),
+                    is_deleted: false,
+                    is_flagged: FLAGGED_MARKERS.iter().any(|m| name_lc.contains(m)),
+                    is_suspicious: SUSPICIOUS_MARKERS.iter().any(|m| name_lc.contains(m)),
+                    match_field,
+                    match_value,
+                })
+            })
+            .collect();
+        results.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        Ok(results)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -1206,19 +1207,21 @@ async fn get_artifact_categories(
 async fn get_artifacts(
     evidence_id: String,
     category: String,
-) -> Result<Vec<Artifact>, String> {
+) -> Result<ArtifactsResponse, String> {
     let eid = if evidence_id.is_empty() {
         current_evidence_id().unwrap_or_default()
     } else {
         evidence_id
     };
+    let eid_check = eid.clone();
     let cat = category.clone();
     let real = tokio::task::spawn_blocking(move || engine::get_artifacts_by_category(&eid, &cat))
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())?;
+
     if !real.is_empty() {
-        return Ok(real
+        let artifacts = real
             .into_iter()
             .map(|a| Artifact {
                 id: a.id,
@@ -1234,49 +1237,33 @@ async fn get_artifacts(
                 plugin: a.plugin,
                 raw_data: a.raw_data,
             })
-            .collect());
+            .collect();
+        return Ok(ArtifactsResponse {
+            artifacts,
+            plugins_not_run: false,
+        });
     }
-    // No real plugin results yet — fall back to the old hand-built fixtures
-    // so the Artifacts panel still has something to look at until plugins
-    // have run.
-    let artifacts = match category.as_str() {
-        "User Activity" => vec![
-            Artifact { id: "a001".to_string(), category: "User Activity".to_string(), name: "UserAssist: cmd.exe".to_string(), value: "23 executions".to_string(), timestamp: Some("2009-11-15 14:33:01".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1204".to_string()), mitre_name: Some("User Execution".to_string()), plugin: "Chronicle".to_string(), raw_data: Some("UEME_RUNPATH:C:\\Windows\\System32\\cmd.exe".to_string()) },
-            Artifact { id: "a002".to_string(), category: "User Activity".to_string(), name: "UserAssist: mimikatz.exe".to_string(), value: "3 executions".to_string(), timestamp: Some("2009-11-15 14:33:05".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1003".to_string()), mitre_name: Some("OS Credential Dumping".to_string()), plugin: "Chronicle".to_string(), raw_data: Some("UEME_RUNPATH:C:\\Windows\\Temp\\mimikatz.exe".to_string()) },
-            Artifact { id: "a003".to_string(), category: "User Activity".to_string(), name: "RecentDocs: evidence_backup.zip".to_string(), value: "Last accessed".to_string(), timestamp: Some("2009-11-14 22:10:44".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1083".to_string()), mitre_name: Some("File and Directory Discovery".to_string()), plugin: "Chronicle".to_string(), raw_data: None },
-            Artifact { id: "a004".to_string(), category: "User Activity".to_string(), name: "TypedPath: C:\\Windows\\Temp".to_string(), value: "Explorer address bar entry".to_string(), timestamp: Some("2009-11-15 14:30:12".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1083".to_string()), mitre_name: Some("File and Directory Discovery".to_string()), plugin: "Chronicle".to_string(), raw_data: None },
-            Artifact { id: "a005".to_string(), category: "User Activity".to_string(), name: "WordWheelQuery: lsass".to_string(), value: "Start menu search term".to_string(), timestamp: Some("2009-11-15 14:28:33".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1057".to_string()), mitre_name: Some("Process Discovery".to_string()), plugin: "Chronicle".to_string(), raw_data: None },
-        ],
-        "Execution History" => vec![
-            Artifact { id: "b001".to_string(), category: "Execution History".to_string(), name: "BAM: mimikatz.exe".to_string(), value: "Last executed".to_string(), timestamp: Some("2009-11-15 14:33:02".to_string()), source_file: "SYSTEM".to_string(), source_path: "\\Windows\\System32\\config\\SYSTEM".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1003".to_string()), mitre_name: Some("OS Credential Dumping".to_string()), plugin: "Trace".to_string(), raw_data: Some("Path: C:\\Windows\\Temp\\mimikatz.exe\nSequenceNumber: 0x0000047A".to_string()) },
-            Artifact { id: "b002".to_string(), category: "Execution History".to_string(), name: "BAM: cleanup.ps1".to_string(), value: "Last executed".to_string(), timestamp: Some("2009-11-15 14:31:00".to_string()), source_file: "SYSTEM".to_string(), source_path: "\\Windows\\System32\\config\\SYSTEM".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1059.001".to_string()), mitre_name: Some("PowerShell".to_string()), plugin: "Trace".to_string(), raw_data: Some("Path: C:\\Windows\\Temp\\cleanup.ps1".to_string()) },
-            Artifact { id: "b003".to_string(), category: "Execution History".to_string(), name: "Scheduled Task: WindowsUpdate".to_string(), value: "Persistence mechanism".to_string(), timestamp: Some("2009-11-14 03:00:00".to_string()), source_file: "WindowsUpdate.xml".to_string(), source_path: "\\Windows\\System32\\Tasks\\WindowsUpdate".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1053.005".to_string()), mitre_name: Some("Scheduled Task".to_string()), plugin: "Trace".to_string(), raw_data: Some("<Command>C:\\Windows\\Temp\\svchost32.exe</Command>".to_string()) },
-            Artifact { id: "b004".to_string(), category: "Execution History".to_string(), name: "Prefetch: MIMIKATZ.EXE-ABC123.pf".to_string(), value: "3 runs".to_string(), timestamp: Some("2009-11-15 14:33:05".to_string()), source_file: "MIMIKATZ.EXE-ABC123.pf".to_string(), source_path: "\\Windows\\Prefetch\\MIMIKATZ.EXE-ABC123.pf".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1003".to_string()), mitre_name: Some("OS Credential Dumping".to_string()), plugin: "Trace".to_string(), raw_data: None },
-        ],
-        "Deleted & Recovered" => vec![
-            Artifact { id: "c001".to_string(), category: "Deleted & Recovered".to_string(), name: "Recycle Bin: lsass.dmp".to_string(), value: "Deleted credential dump".to_string(), timestamp: Some("2009-11-15 14:45:00".to_string()), source_file: "$I001234.dat".to_string(), source_path: "\\RECYCLER\\S-1-5-21-XXX\\$I001234.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1003.001".to_string()), mitre_name: Some("LSASS Memory".to_string()), plugin: "Remnant".to_string(), raw_data: Some("Original path: C:\\Windows\\Temp\\lsass.dmp\nOriginal size: 44,040,192 bytes".to_string()) },
-            Artifact { id: "c002".to_string(), category: "Deleted & Recovered".to_string(), name: "USN Journal: mimikatz.exe created".to_string(), value: "File system operation".to_string(), timestamp: Some("2009-11-15 14:32:58".to_string()), source_file: "$UsnJrnl".to_string(), source_path: "\\$Extend\\$UsnJrnl".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1070.004".to_string()), mitre_name: Some("File Deletion".to_string()), plugin: "Remnant".to_string(), raw_data: Some("USN: 0x000000001A4F8800\nReason: FILE_CREATE | CLOSE\nFileName: mimikatz.exe".to_string()) },
-            Artifact { id: "c003".to_string(), category: "Deleted & Recovered".to_string(), name: "USN Journal: lsass.dmp deleted".to_string(), value: "File deletion event".to_string(), timestamp: Some("2009-11-15 14:44:55".to_string()), source_file: "$UsnJrnl".to_string(), source_path: "\\$Extend\\$UsnJrnl".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1070.004".to_string()), mitre_name: Some("File Deletion".to_string()), plugin: "Remnant".to_string(), raw_data: Some("USN: 0x000000001A512400\nReason: FILE_DELETE | CLOSE\nFileName: lsass.dmp".to_string()) },
-        ],
-        "Credentials" => vec![
-            Artifact { id: "d001".to_string(), category: "Credentials".to_string(), name: "WiFi Profile: CorpNetwork".to_string(), value: "WPA2-Enterprise saved credential".to_string(), timestamp: None, source_file: "CorpNetwork.xml".to_string(), source_path: "\\ProgramData\\Microsoft\\Wlansvc\\Profiles\\Interfaces\\".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1552.001".to_string()), mitre_name: Some("Credentials in Files".to_string()), plugin: "Cipher".to_string(), raw_data: Some("<SSID>CorpNetwork</SSID>\n<keyMaterial>[ENCRYPTED]</keyMaterial>".to_string()) },
-            Artifact { id: "d002".to_string(), category: "Credentials".to_string(), name: "WiFi Profile: HomeNetwork_5G".to_string(), value: "WPA2-Personal saved credential".to_string(), timestamp: None, source_file: "HomeNetwork_5G.xml".to_string(), source_path: "\\ProgramData\\Microsoft\\Wlansvc\\Profiles\\".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1552.001".to_string()), mitre_name: Some("Credentials in Files".to_string()), plugin: "Cipher".to_string(), raw_data: None },
-        ],
-        "Malware Indicators" => vec![
-            Artifact { id: "e001".to_string(), category: "Malware Indicators".to_string(), name: "Known Tool: mimikatz.exe".to_string(), value: "Credential dumping tool".to_string(), timestamp: Some("2009-11-15 14:33:02".to_string()), source_file: "mimikatz.exe".to_string(), source_path: "\\Windows\\Temp\\mimikatz.exe".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1003".to_string()), mitre_name: Some("OS Credential Dumping".to_string()), plugin: "Vector".to_string(), raw_data: Some("PE signature match: Mimikatz v2.x\nImports: LsaOpenPolicy, SamConnect\nMD5: [not computed]".to_string()) },
-            Artifact { id: "e002".to_string(), category: "Malware Indicators".to_string(), name: "Anti-forensic: Event log cleared".to_string(), value: "Evidence destruction".to_string(), timestamp: Some("2009-11-15 14:31:05".to_string()), source_file: "cleanup.ps1".to_string(), source_path: "\\Windows\\Temp\\cleanup.ps1".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1070.001".to_string()), mitre_name: Some("Clear Windows Event Logs".to_string()), plugin: "Vector".to_string(), raw_data: Some("Content: wevtutil cl Security\nContent: wevtutil cl System\nContent: vssadmin delete shadows".to_string()) },
-        ],
-        "Network Artifacts" => vec![
-            Artifact { id: "f001".to_string(), category: "Network Artifacts".to_string(), name: "RDP Connection: 192.168.1.50".to_string(), value: "Remote Desktop target".to_string(), timestamp: Some("2009-11-15 13:45:00".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1021.001".to_string()), mitre_name: Some("Remote Desktop Protocol".to_string()), plugin: "Conduit".to_string(), raw_data: Some("MRU: 192.168.1.50\nUsername hint: Administrator".to_string()) },
-            Artifact { id: "f002".to_string(), category: "Network Artifacts".to_string(), name: "WiFi History: CorpNetwork".to_string(), value: "Previously connected network".to_string(), timestamp: None, source_file: "SOFTWARE".to_string(), source_path: "\\Windows\\System32\\config\\SOFTWARE".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1016".to_string()), mitre_name: Some("System Network Config Discovery".to_string()), plugin: "Conduit".to_string(), raw_data: None },
-        ],
-        "Identity & Accounts" => vec![
-            Artifact { id: "g001".to_string(), category: "Identity & Accounts".to_string(), name: "Local Account: Administrator".to_string(), value: "Last login: 2009-11-15 14:30".to_string(), timestamp: Some("2009-11-15 14:30:00".to_string()), source_file: "SAM".to_string(), source_path: "\\Windows\\System32\\config\\SAM".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1087.001".to_string()), mitre_name: Some("Local Account".to_string()), plugin: "Recon".to_string(), raw_data: None },
-            Artifact { id: "g002".to_string(), category: "Identity & Accounts".to_string(), name: "Email: admin@corpnetwork.local".to_string(), value: "Found in document metadata".to_string(), timestamp: None, source_file: "ntuser.dat".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "medium".to_string(), mitre_technique: Some("T1589.002".to_string()), mitre_name: Some("Email Addresses".to_string()), plugin: "Recon".to_string(), raw_data: None },
-        ],
-        _ => vec![],
-    };
-    Ok(artifacts)
+
+    // No real artifacts for this category. Determine whether that's because
+    // plugins haven't been run yet, or because they ran and produced nothing
+    // for this category. The signal lets the frontend show a "Run plugins"
+    // hint instead of an empty grid.
+    let plugins_not_run = tokio::task::spawn_blocking(move || {
+        let store = get_plugin_status_store();
+        let map = store.lock().map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+        let any_completed = map
+            .values()
+            .any(|s| s.status == "completed" || s.status == "success");
+        Ok::<bool, String>(!any_completed)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+
+    let _ = eid_check; // evidence id reserved for future per-evidence run tracking
+    Ok(ArtifactsResponse {
+        artifacts: Vec::new(),
+        plugins_not_run,
+    })
 }
 
 #[tauri::command]
@@ -2028,10 +2015,9 @@ async fn get_sqlite_table_data(
         let row_iter = row_stmt
             .query_map([], |row| {
                 let mut cells = Vec::with_capacity(col_count);
-                for i in 0..col_count {
+                for (i, col) in columns.iter().enumerate().take(col_count) {
                     let v: Value = row.get::<_, Value>(i).unwrap_or(Value::Null);
                     let (raw, is_null, is_blob, blob_size) = format_sqlite_value(&v);
-                    let col = &columns[i];
                     let converted = if col.is_timestamp && !is_null && !is_blob {
                         convert_timestamp(&raw, col.timestamp_format.as_deref())
                     } else {

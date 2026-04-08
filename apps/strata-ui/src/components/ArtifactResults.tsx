@@ -5,6 +5,7 @@ import { useAppStore } from '../store/appStore'
 interface Props {
   category: ArtifactCategory | null
   artifacts: Artifact[]
+  pluginsNotRun: boolean
   selectedId: string | null
   onSelect: (a: Artifact) => void
   loading: boolean
@@ -57,6 +58,7 @@ function pluginFor(artifacts: Artifact[]): string {
 export default function ArtifactResults({
   category,
   artifacts,
+  pluginsNotRun,
   selectedId,
   onSelect,
   loading,
@@ -194,12 +196,18 @@ export default function ArtifactResults({
               textAlign: 'center',
             }}
           >
-            <div style={{ fontSize: 24 }}>{'\u{1F50D}'}</div>
+            <div style={{ fontSize: 24 }}>
+              {pluginsNotRun ? '\u{26A0}' : '\u{1F50D}'}
+            </div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              No {category.name} artifacts found
+              {pluginsNotRun
+                ? 'Run plugins first'
+                : `No ${category.name} artifacts found`}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-off)' }}>
-              Run analysis plugins to discover {category.name} artifacts
+              {pluginsNotRun
+                ? `No analysis plugins have been run on this evidence yet. Run plugins to discover ${category.name} artifacts.`
+                : `Run analysis plugins to discover ${category.name} artifacts`}
             </div>
             <button
               onClick={() => setView('plugins')}
