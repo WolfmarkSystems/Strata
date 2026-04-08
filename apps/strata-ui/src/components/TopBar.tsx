@@ -1,7 +1,18 @@
 import { useAppStore } from '../store/appStore'
 import { useWindowSize } from '../hooks/useWindowSize'
-import { openEvidenceDialog, loadEvidence, getStats, generateReport } from '../ipc'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import {
+  openEvidenceDialog,
+  loadEvidence,
+  getStats,
+  generateReport,
+  hashAllFiles,
+  onHashProgress,
+  openCase,
+} from '../ipc'
 import WolfMark from './WolfMark'
+import NewCaseModal from './NewCaseModal'
 
 export default function TopBar() {
   const stats = useAppStore((s) => s.stats)
@@ -20,6 +31,55 @@ export default function TopBar() {
   const examinerProfile = useAppStore((s) => s.examinerProfile)
   const setReportHtml = useAppStore((s) => s.setReportHtml)
   const setReportVisible = useAppStore((s) => s.setReportVisible)
+  const evidenceId = useAppStore((s) => s.evidenceId)
+  const caseData = useAppStore((s) => s.caseData)
+  const caseModified = useAppStore((s) => s.caseModified)
+  const setCaseData = useAppStore((s) => s.setCaseData)
+
+  const [newCaseOpen, setNewCaseOpen] = useState(false)
+
+  const handleOpenCase = async () => {
+    const result = await openCase()
+    if (result) {
+      setCaseData(result.case, result.case_path)
+    }
+  }
+
+  // Hashing progress state
+  const [hashing, setHashing] = useState(false)
+  const [hashProgress, setHashProgress] = useState<{ done: number; total: number } | null>(null)
+
+  useEffect(() => {
+    let unlisten: (() => void) | null = null
+    onHashProgress((data) => {
+      setHashProgress(data)
+      if (data.total > 0 && data.done >= data.total) {
+        setHashing(false)
+        // Refresh stats so the HASHED counter updates
+        if (evidenceId) {
+          getStats(evidenceId).then(setStats)
+        }
+      }
+    }).then((u) => {
+      unlisten = u
+    })
+    return () => {
+      if (unlisten) unlisten()
+    }
+  }, [evidenceId, setStats])
+
+  const handleHashAll = async () => {
+    if (!evidenceId || hashing) return
+    setHashing(true)
+    setHashProgress({ done: 0, total: 0 })
+    try {
+      await hashAllFiles(evidenceId)
+    } finally {
+      setHashing(false)
+      const s = await getStats(evidenceId)
+      setStats(s)
+    }
+  }
 
   const handleOpenEvidence = async () => {
     const path = await openEvidenceDialog()
@@ -61,71 +121,89 @@ export default function TopBar() {
   const veryNarrow = width < 1280
 
   return (
-    <div style={{ flexShrink: 0 }}>
-      {/* ═══ ROW 1 ═══ */}
+    <div
+      style={{
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--bg-base)',
+        padding: '8px 8px 0 8px',
+        gap: 8,
+      }}
+    >
+      {/* ─── ROW 1 — floating wolf + brand + nav + case info ─── */}
       <div
         style={{
-          height: 44,
-          background: 'var(--bg-surface)',
-          borderBottom: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
-          padding: '0 14px',
           gap: 8,
+          minWidth: 0,
+          height: 44,
         }}
       >
-        {/* LEFT */}
+        {/* Floating wolf head (no box) */}
         <div
           style={{
+            width: 44,
+            height: 44,
+            flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <WolfMark size={44} />
+        </div>
+
+        {/* STRATA wordmark bubble */}
+        <div
+          className="bubble-tight"
+          style={{
+            height: 44,
+            padding: '0 18px',
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: 18,
+            fontWeight: 700,
+            letterSpacing: '0.22em',
+            color: 'var(--text-1)',
             flexShrink: 0,
           }}
         >
-          {/* Wolf mark */}
-          <div style={{ marginRight: 10, display: 'flex', alignItems: 'center' }}>
-            <WolfMark size={28} />
-          </div>
-
-          {/* STRATA wordmark */}
-          <div
-            style={{
-              fontSize: 18,
-              fontWeight: 700,
-              letterSpacing: '0.18em',
-              color: 'var(--text-1)',
-              marginRight: 12,
-            }}
-          >
-            STRATA
-          </div>
-
-          <div className="vdiv" />
+          STRATA
         </div>
 
-        {/* CENTER nav */}
+        {/* Nav buttons bubble */}
         <div
+          className="bubble-tight"
           style={{
-            flex: 1,
+            height: 44,
+            padding: '0 8px',
             display: 'flex',
-            justifyContent: 'center',
-            gap: 8,
+            alignItems: 'center',
+            gap: 6,
+            flexShrink: 0,
           }}
         >
           <button className="btn-primary" onClick={handleOpenEvidence}>
             {narrow ? '+' : '+ Open Evidence'}
           </button>
-          <button className="btn-secondary">
+          <button className="btn-secondary" onClick={() => setNewCaseOpen(true)}>
             {narrow ? 'New' : 'New Case'}
           </button>
-          <button className="btn-secondary">
+          <button className="btn-secondary" onClick={handleOpenCase}>
             {narrow ? 'Open' : 'Open Case'}
           </button>
         </div>
 
-        {/* RIGHT */}
+        <div style={{ flex: 1 }} />
+
+        {/* Case info bubble */}
         <div
+          className="bubble-tight"
           style={{
+            height: 44,
+            padding: '0 14px',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
@@ -145,22 +223,35 @@ export default function TopBar() {
             style={{
               fontSize: 11,
               color: 'var(--text-2)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
             }}
           >
             {examinerProfile?.name
               ? `${shortName(examinerProfile.name)} \u00B7 ${caseName ?? 'Unsaved Session'}`
               : (caseName ?? 'Unsaved Session')}
+            {caseData && caseModified && (
+              <span
+                title="Unsaved changes — Cmd+S to save now"
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--sus)',
+                  display: 'inline-block',
+                  flexShrink: 0,
+                }}
+              />
+            )}
           </span>
-
           <div className="vdiv" />
-
           <LicenseBadge tier={licenseResult?.tier ?? 'pro'} days={licenseResult?.days_remaining ?? 999} />
-
           {isDev && (
             <span
               className="badge"
               style={{
-                background: '#2a1a00',
+                background: 'var(--bg-elevated)',
                 border: '1px solid var(--sus)',
                 color: 'var(--sus)',
               }}
@@ -171,28 +262,27 @@ export default function TopBar() {
         </div>
       </div>
 
-      {/* ═══ ROW 2 ═══ */}
+      {/* ─── ROW 2 — search + stats + actions, all floating bubbles ─── */}
       <div
         style={{
-          height: 36,
-          background: '#090a0e',
-          borderBottom: '1px solid var(--border-sub)',
           display: 'flex',
           alignItems: 'center',
-          padding: '0 14px',
           gap: 8,
+          minWidth: 0,
+          height: 40,
         }}
       >
-        {/* LEFT spacer for centering */}
-        <div style={{ flex: 1 }} />
-
-        {/* Search group */}
+        {/* Search bubble — flexes to fill */}
         <div
+          className="bubble-tight"
           style={{
+            flex: 1,
+            minWidth: 0,
+            height: 40,
+            padding: '0 10px',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            flexShrink: 0,
           }}
         >
           <span
@@ -211,27 +301,28 @@ export default function TopBar() {
             onFocus={() => setSearchActive(true)}
             onClick={() => setSearchActive(true)}
             style={{
-              width: 440,
-              maxWidth: '100%',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 4,
-              padding: '5px 10px',
+              flex: 1,
+              minWidth: 0,
+              background: 'transparent',
+              border: 'none',
+              padding: '4px 6px',
               color: 'var(--text-2)',
               fontSize: 12,
               cursor: 'pointer',
+              outline: 'none',
             }}
           />
           <button
             onClick={toggleMetadata}
             style={{
-              padding: '3px 8px',
-              borderRadius: 3,
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-sm)',
               fontSize: 10,
-              border: `1px solid ${metadataSearch ? '#1c3050' : 'var(--border)'}`,
-              background: metadataSearch ? '#0f1e30' : 'var(--bg-elevated)',
-              color: metadataSearch ? 'var(--text-2)' : 'var(--text-muted)',
+              border: `1px solid ${metadataSearch ? 'var(--accent-2)' : 'var(--border)'}`,
+              background: 'var(--bg-elevated)',
+              color: metadataSearch ? 'var(--text-1)' : 'var(--text-muted)',
               fontFamily: 'monospace',
+              flexShrink: 0,
             }}
           >
             Metadata
@@ -239,33 +330,33 @@ export default function TopBar() {
           <button
             onClick={toggleFulltext}
             style={{
-              padding: '3px 8px',
-              borderRadius: 3,
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-sm)',
               fontSize: 10,
-              border: `1px solid ${fulltextSearch ? '#1c3050' : 'var(--border)'}`,
-              background: fulltextSearch ? '#0f1e30' : 'var(--bg-elevated)',
-              color: fulltextSearch ? 'var(--text-2)' : 'var(--text-muted)',
+              border: `1px solid ${fulltextSearch ? 'var(--accent-2)' : 'var(--border)'}`,
+              background: 'var(--bg-elevated)',
+              color: fulltextSearch ? 'var(--text-1)' : 'var(--text-muted)',
               fontFamily: 'monospace',
+              flexShrink: 0,
             }}
           >
             Full-text
           </button>
         </div>
 
-        <div style={{ flex: 1 }} />
-
-        <div className="vdiv" />
-
-        {/* Stats */}
+        {/* Stats bubble */}
         <div
+          className="bubble-tight"
           style={{
+            height: 40,
+            padding: '0 14px',
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            gap: 12,
             flexShrink: 0,
           }}
         >
-          {!veryNarrow && <Stat label="FILES" value={stats.files} color="#4a6080" />}
+          {!veryNarrow && <Stat label="FILES" value={stats.files} color="var(--text-2)" />}
           <Stat label="SUSPICIOUS" value={stats.suspicious} color="var(--sus)" />
           <Stat label="FLAGGED" value={stats.flagged} color="var(--flag)" />
           {!veryNarrow && <Stat label="CARVED" value={stats.carved} color="var(--carved)" />}
@@ -273,32 +364,41 @@ export default function TopBar() {
           {!narrow && <Stat label="ARTIFACTS" value={stats.artifacts} color="var(--artifact)" />}
         </div>
 
-        <div className="vdiv" />
-
-        {/* Action buttons */}
+        {/* Action buttons bubble */}
         <div
+          className="bubble-tight"
           style={{
+            height: 40,
+            padding: '0 8px',
             display: 'flex',
+            alignItems: 'center',
             gap: 6,
             flexShrink: 0,
           }}
         >
           <button
             className="btn-action"
+            onClick={handleHashAll}
+            disabled={!evidenceId || hashing}
+            title={!evidenceId ? 'Load evidence first' : hashing ? 'Hashing in progress' : 'Hash every file in the evidence'}
             style={{
-              color: 'var(--text-2)',
-              border: '1px solid #1a2840',
+              color: hashing ? 'var(--sus)' : evidenceId ? 'var(--text-2)' : 'var(--text-muted)',
+              border: '1px solid var(--border)',
               background: 'var(--bg-elevated)',
+              cursor: !evidenceId || hashing ? 'not-allowed' : 'pointer',
+              opacity: !evidenceId ? 0.5 : 1,
             }}
           >
-            HASH ALL
+            {hashing && hashProgress && hashProgress.total > 0
+              ? `HASHING ${hashProgress.done}/${hashProgress.total}`
+              : 'HASH ALL'}
           </button>
           <button
             className="btn-action"
             style={{
               color: 'var(--text-muted)',
               border: '1px solid var(--border)',
-              background: '#0c0e12',
+              background: 'var(--bg-elevated)',
             }}
           >
             CARVE
@@ -308,8 +408,8 @@ export default function TopBar() {
             onClick={handleReport}
             style={{
               color: 'var(--hashed)',
-              border: '1px solid #142018',
-              background: '#0a1410',
+              border: '1px solid var(--border)',
+              background: 'var(--bg-elevated)',
               cursor: 'pointer',
             }}
           >
@@ -319,14 +419,15 @@ export default function TopBar() {
             className="btn-action"
             style={{
               color: 'var(--sus)',
-              border: '1px solid #382010',
-              background: '#140e08',
+              border: '1px solid var(--border)',
+              background: 'var(--bg-elevated)',
             }}
           >
             EXPORT
           </button>
         </div>
       </div>
+      {newCaseOpen && createPortal(<NewCaseModal onClose={() => setNewCaseOpen(false)} />, document.body)}
     </div>
   )
 }
@@ -360,7 +461,7 @@ function LicenseBadge({ tier, days }: { tier: string; days: number }) {
       <span
         className="badge"
         style={{
-          background: '#2a1a00',
+          background: 'var(--bg-elevated)',
           border: '1px solid var(--sus)',
           color: 'var(--sus)',
         }}
@@ -387,9 +488,9 @@ function LicenseBadge({ tier, days }: { tier: string; days: number }) {
     <span
       className="badge"
       style={{
-        background: '#0f1c2e',
-        border: '1px solid #1c3050',
-        color: '#8fa8c0',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--accent-2)',
+        color: 'var(--text-1)',
       }}
     >
       Pro

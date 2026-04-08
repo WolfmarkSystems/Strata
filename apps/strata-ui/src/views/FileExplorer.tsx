@@ -39,7 +39,11 @@ export default function FileExplorer() {
   return (
     <PanelGroup
       direction="horizontal"
-      style={{ flex: 1, overflow: 'hidden', background: 'var(--bg-base)' }}
+      style={{
+        flex: 1,
+        overflow: 'hidden',
+        background: 'var(--bg-base)',
+      }}
     >
       <Panel defaultSize={18} minSize={12} maxSize={35}>
         <EvidenceTree />

@@ -69,20 +69,19 @@ export default function FileListing({ files, selectedFileId, onFileSelect }: Pro
 
   return (
     <div
+      className="bubble"
       style={{
         height: '100%',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
-        background: 'var(--bg-base)',
       }}
     >
       {/* Column headers */}
       <div
         style={{
           display: 'flex',
-          background: '#0a0c12',
+          background: 'var(--bg-panel)',
           borderBottom: '1px solid var(--border-sub)',
           flexShrink: 0,
         }}
@@ -212,8 +211,8 @@ function FileRow({
     : {}
 
   let bg = 'transparent'
-  if (selected) bg = '#0f1e30'
-  else if (hover) bg = '#0f1420'
+  if (selected) bg = 'var(--bg-elevated)'
+  else if (hover) bg = 'var(--bg-elevated)'
 
   // Tag dot color: use store-based tagName first, fall back to file.tag_color
   const tagDotColor = tagName ? TAG_COLOR_MAP[tagName] : file.tag_color

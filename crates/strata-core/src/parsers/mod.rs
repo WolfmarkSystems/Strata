@@ -58,3 +58,9 @@ pub mod web3;
 pub mod windows_notifications;
 pub mod windows_search;
 pub mod wnf;
+
+// ── v0.7.0 additions (gameplan Phase 2) ────────────────────────────────────
+pub mod zone_identifier;
+pub mod setupapi_log;
+pub mod i30_index;
+pub mod ual;

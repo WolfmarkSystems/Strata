@@ -76,18 +76,18 @@ export default function PluginsView() {
         flex: 1,
         overflow: 'hidden',
         background: 'var(--bg-base)',
+        gap: 8,
       }}
     >
       {/* Header */}
       <div
+        className="bubble-tight"
         style={{
           padding: '10px 16px',
-          borderBottom: '1px solid var(--border-sub)',
           display: 'flex',
           alignItems: 'center',
           gap: 10,
           flexShrink: 0,
-          background: 'var(--bg-surface)',
         }}
       >
         <span
@@ -126,7 +126,7 @@ export default function PluginsView() {
       {/* Body: grid + detail */}
       <PanelGroup direction="horizontal" style={{ flex: 1, overflow: 'hidden' }}>
         <Panel defaultSize={65} minSize={40}>
-          <div style={{ height: '100%', overflowY: 'auto', padding: 12 }}>
+          <div className="bubble" style={{ height: '100%', overflowY: 'auto', padding: 12 }}>
             <div
               style={{
                 display: 'grid',

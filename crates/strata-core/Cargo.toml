@@ -34,9 +34,23 @@ strata-fs = { workspace = true }
 serde_yaml = { workspace = true }
 rayon = { workspace = true, optional = true }
 
+# v1.3.0 — ForensicRS ecosystem integration.
+# `forensic-rs` is the framework; `frnsc-prefetch` now powers the prefetch
+# parser. `frnsc-hive` is kept for future HiveRegistryReader integration.
+# `frnsc-amcache` 0.13.0 has a broken public API (AmCache<R> has no
+# constructor), so the nt-hive AmCache parser in strata-plugin-phantom is
+# retained until upstream fixes it. Same story for frnsc-esedb and
+# frnsc-shellbags — both unpublished as of this sprint.
+forensic-rs = "0.13"
+frnsc-hive = "0.13"
+frnsc-prefetch = "0.13"
+
+# v1.3.0 — `evtx` is cross-platform (pure Rust), so the EVTX per-event
+# parser can run on macOS and Linux when triaging Windows disk images.
+evtx = { workspace = true }
+
 [target.'cfg(windows)'.dependencies]
 ntfs = { workspace = true }
-evtx = { workspace = true }
 ewf = { workspace = true }
 winreg = { workspace = true }
 

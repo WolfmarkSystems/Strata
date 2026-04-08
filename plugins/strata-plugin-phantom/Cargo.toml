@@ -1,0 +1,17 @@
+[package]
+name = "strata-plugin-phantom"
+version = "1.0.0"
+edition = "2021"
+description = "Phantom — Registry Intelligence Engine. Owns SYSTEM/SOFTWARE/SAM/AmCache/USRCLASS hive parsing for Strata."
+license = "Proprietary"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+strata-plugin-sdk = { path = "../../crates/strata-plugin-sdk" }
+strata-fs = { path = "../../crates/strata-fs" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+nt-hive = "0.3"

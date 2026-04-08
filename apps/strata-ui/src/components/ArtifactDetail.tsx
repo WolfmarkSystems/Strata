@@ -10,13 +10,12 @@ export default function ArtifactDetail({ artifact }: Props) {
 
   return (
     <div
+      className="bubble"
       style={{
         height: '100%',
         width: '100%',
-        background: 'var(--bg-panel)',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
       }}
     >
       <div

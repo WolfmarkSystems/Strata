@@ -1,0 +1,37 @@
+//! strata-engine-adapter
+//!
+//! A thin, JSON-friendly bridge between the heavy `strata-fs` / `strata-core`
+//! / `strata-plugin-*` crates and the Tauri desktop UI. Lives inside the root
+//! Strata workspace so it can resolve `{ workspace = true }` dependency
+//! inheritance, then exposes a clean path-dep surface to the standalone
+//! `strata-desktop` Tauri crate.
+//!
+//! All commands are synchronous (the Tauri command layer wraps them in
+//! `tokio::task::spawn_blocking` if needed).
+
+pub mod evidence;
+pub mod files;
+pub mod hashing;
+pub mod plugins;
+pub mod store;
+pub mod types;
+
+// ── Public API surface ──────────────────────────────────────────────────────
+
+pub use types::{
+    format_size, AdapterError, AdapterResult, ArtifactCategoryInfo, EngineStats, EvidenceInfo,
+    FileEntry, HashResult, HexData, HexLine, PluginArtifact, TreeNode,
+};
+
+pub use evidence::{
+    close_evidence, get_files, get_stats, get_tree_children, get_tree_root, parse_evidence,
+};
+
+pub use files::{get_file_hex, get_file_metadata, get_file_text};
+
+pub use hashing::{hash_all_files, hash_file, hashed_count};
+
+pub use plugins::{
+    get_artifact_categories, get_artifacts_by_category, get_plugin_artifacts, list_plugins,
+    run_plugin,
+};

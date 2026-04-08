@@ -669,6 +669,128 @@ impl RemnantPlugin {
             flags.join(" | ")
         }
     }
+
+    /// v1.1.0: Detect Windows Search Index ESE database. We can't fully
+    /// parse the ESE format without libesedb but we can:
+    ///   1. Confirm presence and emit a high-value detection artifact
+    ///   2. Scrape printable file paths from raw pages
+    ///   3. Emit a guidance artifact pointing to WinSearchDBAnalyzer
+    fn detect_windows_search_edb(path_str: &str, data: &[u8]) -> Vec<Artifact> {
+        let mut out = Vec::new();
+
+        let mut a = Artifact::new("Search Index", path_str);
+        a.add_field("title", "Windows Search Index Detected");
+        a.add_field(
+            "detail",
+            &format!(
+                "Search index contains records of files that existed on this system even if since deleted. Size: {} bytes",
+                data.len()
+            ),
+        );
+        a.add_field("file_type", "Search Index");
+        a.add_field("forensic_value", "High");
+        a.add_field("mitre", "T1083");
+        out.push(a);
+
+        // Scrape UTF-16LE "Users\..." path strings
+        let user_pattern: &[u8] = &[
+            0x55, 0x00, 0x73, 0x00, 0x65, 0x00, 0x72, 0x00, 0x73, 0x00, 0x5C, 0x00,
+        ];
+        let mut found: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut offset = 0;
+        let max_paths = 200;
+        while offset + user_pattern.len() < data.len() && found.len() < max_paths {
+            if let Some(pos) = data[offset..]
+                .windows(user_pattern.len())
+                .position(|w| w == user_pattern)
+            {
+                let abs = offset + pos;
+                let scan_end = (abs + 520).min(data.len());
+                let chunk = &data[abs..scan_end];
+                let u16s: Vec<u16> = chunk
+                    .chunks_exact(2)
+                    .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                    .take_while(|&ch| ch != 0 && ch > 0x1F && ch < 0xFFFE)
+                    .collect();
+                let s = String::from_utf16_lossy(&u16s);
+                if s.len() > 10 && s.contains('\\') {
+                    found.insert(format!("Users\\{}", s));
+                }
+                offset = abs + user_pattern.len();
+            } else {
+                break;
+            }
+        }
+        for path in found.iter().take(100) {
+            let mut a = Artifact::new("Search Index", path_str);
+            a.add_field("title", &format!("Search index reference: {}", path));
+            a.add_field(
+                "detail",
+                "File was indexed by Windows Search — proves file existed even if since deleted",
+            );
+            a.add_field("file_type", "Search Index");
+            a.add_field("forensic_value", "Medium");
+            a.add_field("mitre", "T1083");
+            out.push(a);
+        }
+
+        let mut a = Artifact::new("Search Index", path_str);
+        a.add_field("title", "Windows Search — Full Parse Pending");
+        a.add_field(
+            "detail",
+            "Windows.edb requires libesedb for full extraction. Use WinSearchDBAnalyzer or SearchIndexCmd for complete record dumps including modification timestamps and content snippets.",
+        );
+        a.add_field("file_type", "Search Index");
+        a.add_field("forensic_value", "Medium");
+        out.push(a);
+
+        out
+    }
+
+    /// v1.1.0: Parse Notepad++ session.xml for the recently opened files list.
+    fn parse_notepadpp_session(path_str: &str, data: &[u8]) -> Vec<Artifact> {
+        let mut out = Vec::new();
+        let text = match std::str::from_utf8(data) {
+            Ok(t) => t,
+            Err(_) => return out,
+        };
+
+        let mut idx = 0;
+        while let Some(start) = text[idx..].find("filename=\"") {
+            let abs_start = idx + start + "filename=\"".len();
+            if let Some(end) = text[abs_start..].find('"') {
+                let filename = &text[abs_start..abs_start + end];
+                let lc = filename.to_lowercase();
+                let suspicious_path = lc.contains("\\temp\\")
+                    || lc.contains("\\appdata\\local\\temp")
+                    || lc.contains("\\downloads\\");
+                let suspicious_name = ["password", "cred", "secret", "token", "private"]
+                    .iter()
+                    .any(|kw| lc.contains(kw));
+                let severity = if suspicious_name {
+                    "Critical"
+                } else if suspicious_path {
+                    "High"
+                } else {
+                    "Medium"
+                };
+                let mut a = Artifact::new("Notepad++ Session", path_str);
+                a.add_field("title", &format!("Notepad++ recent: {}", filename));
+                a.add_field("detail", "Notepad++ session.xml — recently opened text file");
+                a.add_field("file_type", "Notepad++ Session");
+                a.add_field("forensic_value", severity);
+                a.add_field("mitre", "T1083");
+                if suspicious_name || suspicious_path {
+                    a.add_field("suspicious", "true");
+                }
+                out.push(a);
+                idx = abs_start + end + 1;
+            } else {
+                break;
+            }
+        }
+        out
+    }
 }
 
 // ── Helper functions ────────────────────────────────────────────────────
@@ -949,6 +1071,22 @@ impl StrataPlugin for RemnantPlugin {
                                     || path_str.to_lowercase().contains("$extend/$usnjrnl")
                                 {
                                     results.extend(Self::parse_usnjrnl_records(&data));
+                                }
+
+                                // ── v1.1.0: Windows Search index (ESE) ────
+                                if lower_file_name == "windows.edb" {
+                                    results.extend(Self::detect_windows_search_edb(
+                                        &path_str, &data,
+                                    ));
+                                }
+
+                                // ── v1.1.0: Notepad++ session.xml ──────────
+                                if lower_file_name == "session.xml"
+                                    && path_str.to_lowercase().contains("notepad++")
+                                {
+                                    results.extend(Self::parse_notepadpp_session(
+                                        &path_str, &data,
+                                    ));
                                 }
                             }
                         }

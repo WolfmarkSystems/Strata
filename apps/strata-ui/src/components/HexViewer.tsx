@@ -148,7 +148,7 @@ function HexRow({ line, isPEStart }: { line: { offset: string; hex: string; asci
         alignItems: 'center',
         borderBottom: '1px solid rgba(24,28,36,0.5)',
         cursor: 'pointer',
-        background: hover ? '#0f1420' : 'transparent',
+        background: hover ? 'var(--bg-elevated)' : 'transparent',
         transition: 'background 0.1s',
       }}
     >

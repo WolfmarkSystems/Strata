@@ -69,7 +69,7 @@ export default function SplashScreen() {
             opacity: 0,
           }}
         >
-          <WolfMark size={128} />
+          <WolfMark size={220} />
         </div>
 
         <div
@@ -109,7 +109,7 @@ export default function SplashScreen() {
             opacity: 0,
           }}
         >
-          v0.4.0 {'\u00B7'} Wolfmark Systems
+          v1.3.0 {'\u00B7'} Wolfmark Systems
         </div>
       </div>
 

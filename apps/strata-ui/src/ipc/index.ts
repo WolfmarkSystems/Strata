@@ -746,6 +746,55 @@ export function onPluginProgress(
   })
 }
 
+// ── Day 12: hashing ────────────────────────────────────────────────────────
+
+export interface HashResult {
+  file_id: string
+  md5: string
+  sha1: string
+  sha256: string
+  sha512: string
+}
+
+export interface HashProgressEvent {
+  done: number
+  total: number
+}
+
+export async function hashFile(
+  evidenceId: string,
+  fileId: string,
+): Promise<HashResult | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<HashResult>('hash_file_cmd', { evidenceId, fileId })
+  } catch (e) {
+    console.error('hash_file_cmd failed:', e)
+    return null
+  }
+}
+
+export async function hashAllFiles(evidenceId: string): Promise<number> {
+  if (!IN_TAURI) return 0
+  try {
+    return await invoke<number>('hash_all_files_cmd', { evidenceId })
+  } catch (e) {
+    console.error('hash_all_files_cmd failed:', e)
+    return 0
+  }
+}
+
+export function onHashProgress(
+  callback: (data: HashProgressEvent) => void,
+): Promise<() => void> {
+  if (!IN_TAURI) {
+    return Promise.resolve(() => {})
+  }
+  return listen<HashProgressEvent>('hash-progress', (event) => {
+    callback(event.payload)
+  })
+}
+
 export async function getStats(evidenceId: string): Promise<StatsResult> {
   if (!IN_TAURI) {
     return { files: 26235, suspicious: 8993, flagged: 12, carved: 0, hashed: 0, artifacts: 0 }
@@ -922,4 +971,237 @@ export async function generateReport(options: ReportOptions): Promise<ReportResu
     }
   }
   return invoke<ReportResult>('generate_report', { options })
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Day 13 — Case management + report export
+// ──────────────────────────────────────────────────────────────────────────────
+
+export interface CaseEvidence {
+  id: string
+  path: string
+  name: string
+  format: string
+  size_display: string
+  acquired_at: string
+  md5: string | null
+  sha256: string | null
+}
+
+export interface CaseTag {
+  tag: string
+  color: string
+  note: string | null
+  tagged_at: string
+  tagged_by: string
+}
+
+export interface CaseFile {
+  version: string
+  case_number: string
+  case_name: string
+  created_at: string
+  modified_at: string
+  examiner: ExaminerProfile
+  evidence: CaseEvidence[]
+  tags: Record<string, CaseTag>
+  notes: string
+  case_type: string
+}
+
+export interface NewCaseResult {
+  case: CaseFile
+  case_path: string
+}
+
+export interface OpenCaseResult {
+  case: CaseFile
+  case_path: string
+}
+
+export async function newCase(
+  caseNumber: string,
+  caseName: string,
+  caseType: string,
+  examiner: ExaminerProfile,
+  basePath: string,
+): Promise<NewCaseResult | null> {
+  if (!IN_TAURI) {
+    return {
+      case_path: `${basePath}/${caseNumber}/case.strata`,
+      case: {
+        version: '1',
+        case_number: caseNumber,
+        case_name: caseName,
+        case_type: caseType,
+        created_at: new Date().toISOString(),
+        modified_at: new Date().toISOString(),
+        examiner,
+        evidence: [],
+        tags: {},
+        notes: '',
+      },
+    }
+  }
+  try {
+    return await invoke<NewCaseResult>('new_case', {
+      caseNumber,
+      caseName,
+      caseType,
+      examiner,
+      basePath,
+    })
+  } catch (e) {
+    console.error('new_case failed:', e)
+    return null
+  }
+}
+
+export async function saveCase(caseFile: CaseFile, path: string): Promise<boolean> {
+  if (!IN_TAURI) return true
+  try {
+    await invoke('save_case', { case: caseFile, path })
+    return true
+  } catch (e) {
+    console.error('save_case failed:', e)
+    return false
+  }
+}
+
+export async function openCase(): Promise<OpenCaseResult | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<OpenCaseResult | null>('open_case')
+  } catch (e) {
+    console.error('open_case failed:', e)
+    return null
+  }
+}
+
+export async function openCaseAtPath(path: string): Promise<OpenCaseResult | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<OpenCaseResult | null>('open_case_at_path', { path })
+  } catch (e) {
+    console.error('open_case_at_path failed:', e)
+    return null
+  }
+}
+
+export async function getRecentCases(): Promise<string[]> {
+  if (!IN_TAURI) return []
+  try {
+    return await invoke<string[]>('get_recent_cases')
+  } catch (e) {
+    console.error('get_recent_cases failed:', e)
+    return []
+  }
+}
+
+// ── Day 14: license + machine ID ───────────────────────────────────────────
+
+export async function getMachineId(): Promise<string> {
+  if (!IN_TAURI) return 'browser-preview-machine'
+  try {
+    return await invoke<string>('get_machine_id')
+  } catch (e) {
+    console.error('get_machine_id failed:', e)
+    return 'unknown'
+  }
+}
+
+export async function getLicensePath(): Promise<string | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<string | null>('get_license_path')
+  } catch (e) {
+    console.error('get_license_path failed:', e)
+    return null
+  }
+}
+
+export async function deactivateLicense(): Promise<boolean> {
+  if (!IN_TAURI) return false
+  try {
+    return await invoke<boolean>('deactivate_license')
+  } catch (e) {
+    console.error('deactivate_license failed:', e)
+    return false
+  }
+}
+
+// ── v1.2.0: SQLite viewer ──────────────────────────────────────────────────
+
+export interface SqliteTable {
+  name: string
+  row_count: number
+}
+
+export interface SqliteColumn {
+  name: string
+  col_type: string
+  is_timestamp: boolean
+  timestamp_format: string | null
+}
+
+export interface SqliteCell {
+  raw: string
+  converted: string | null
+  is_timestamp: boolean
+  timestamp_format: string | null
+  is_null: boolean
+  is_blob: boolean
+  blob_size: number
+}
+
+export interface SqliteRow {
+  cells: SqliteCell[]
+}
+
+export interface SqliteTableData {
+  columns: SqliteColumn[]
+  rows: SqliteRow[]
+  total_rows: number
+  page: number
+  page_size: number
+}
+
+export async function getSqliteTables(filePath: string): Promise<SqliteTable[]> {
+  if (!IN_TAURI) return []
+  try {
+    return await invoke<SqliteTable[]>('get_sqlite_tables', { filePath })
+  } catch (e) {
+    console.error('get_sqlite_tables failed:', e)
+    return []
+  }
+}
+
+export async function getSqliteTableData(
+  filePath: string,
+  tableName: string,
+  page: number,
+  pageSize: number,
+): Promise<SqliteTableData | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<SqliteTableData>('get_sqlite_table_data', {
+      filePath,
+      tableName,
+      page,
+      pageSize,
+    })
+  } catch (e) {
+    console.error('get_sqlite_table_data failed:', e)
+    return null
+  }
+}
+
+export async function saveReport(html: string, casePath: string): Promise<string | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<string>('save_report', { html, casePath })
+  } catch (e) {
+    console.error('save_report failed:', e)
+    return null
+  }
 }

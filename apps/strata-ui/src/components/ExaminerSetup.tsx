@@ -47,7 +47,7 @@ export default function ExaminerSetup() {
       <div
         style={{
           width: 480,
-          background: '#0b0c0f',
+          background: 'var(--bg-panel)',
           borderStyle: 'solid',
           borderWidth: 1,
           borderColor: 'var(--border)',
@@ -59,7 +59,6 @@ export default function ExaminerSetup() {
       >
         {/* Header */}
         <div style={{ marginBottom: 28, textAlign: 'center' }}>
-          <div style={{ fontSize: 24 }}>{'\u{1FAAA}'}</div>
           <div
             style={{
               fontSize: 22,

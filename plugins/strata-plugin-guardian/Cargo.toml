@@ -1,0 +1,15 @@
+[package]
+name = "strata-plugin-guardian"
+version = "1.0.0"
+edition = "2021"
+description = "Guardian — Antivirus + System Health intelligence. Owns Defender / Avast / MalwareBytes / WER / Reliability."
+license = "Proprietary"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+strata-plugin-sdk = { path = "../../crates/strata-plugin-sdk" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }

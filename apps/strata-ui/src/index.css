@@ -178,6 +178,28 @@ button:active {
   flex-shrink: 0;
 }
 
+/* ── Armored bubble panels ────────────────────────────── */
+/*
+ * Every content panel sits on the pure-black base so the silver borders
+ * read as armor plates on the wolf head aesthetic.
+ */
+.bubble {
+  background: var(--bg-panel);
+  border: 1px solid var(--accent-muted);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.4) inset,
+    0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.bubble-tight {
+  background: var(--bg-panel);
+  border: 1px solid var(--accent-muted);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
 /* ── Resize handle ────────────────────────────────────── */
 .resize-handle {
   position: relative;

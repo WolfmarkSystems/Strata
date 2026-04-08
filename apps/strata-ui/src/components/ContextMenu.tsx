@@ -75,7 +75,7 @@ export default function ContextMenu({
         left: clampedX,
         top: clampedY,
         zIndex: 1000,
-        background: '#0f1420',
+        background: 'var(--bg-elevated)',
         borderStyle: 'solid',
         borderWidth: 1,
         borderColor: 'var(--border)',
@@ -176,7 +176,7 @@ function TagRow({
         cursor: 'pointer',
         fontSize: 12,
         color: 'var(--text-2)',
-        background: isCurrent ? '#0f1e30' : hover ? '#1a2030' : 'transparent',
+        background: isCurrent ? 'var(--bg-elevated)' : hover ? 'var(--bg-elevated)' : 'transparent',
         transition: 'background 0.1s',
       }}
     >
@@ -219,7 +219,7 @@ function MenuItem({
         cursor: 'pointer',
         fontSize: 12,
         color,
-        background: hover ? '#1a2030' : 'transparent',
+        background: hover ? 'var(--bg-elevated)' : 'transparent',
         transition: 'background 0.1s',
       }}
     >

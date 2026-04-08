@@ -2615,6 +2615,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "frnsc-hive"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d09a2addf6cbea21722c89beeb79a84f70e37486361e1bd7d76f728282243c25"
+dependencies = [
+ "forensic-rs",
+]
+
+[[package]]
 name = "frnsc-prefetch"
 version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7703,6 +7712,9 @@ dependencies = [
  "evtx 0.8.5",
  "ewf",
  "flate2",
+ "forensic-rs",
+ "frnsc-hive",
+ "frnsc-prefetch",
  "libloading 0.8.9",
  "md-5",
  "memmap2",
@@ -7730,6 +7742,43 @@ dependencies = [
  "uuid",
  "winreg 0.50.0",
  "zip",
+]
+
+[[package]]
+name = "strata-engine-adapter"
+version = "1.3.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "hex",
+ "md-5",
+ "once_cell",
+ "rayon",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2",
+ "strata-core",
+ "strata-fs",
+ "strata-plugin-chronicle",
+ "strata-plugin-cipher",
+ "strata-plugin-conduit",
+ "strata-plugin-guardian",
+ "strata-plugin-mactrace",
+ "strata-plugin-netflow",
+ "strata-plugin-nimbus",
+ "strata-plugin-phantom",
+ "strata-plugin-recon",
+ "strata-plugin-remnant",
+ "strata-plugin-sdk",
+ "strata-plugin-sigma",
+ "strata-plugin-specter",
+ "strata-plugin-trace",
+ "strata-plugin-vector",
+ "strata-plugin-wraith",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -7867,6 +7916,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "strata-plugin-guardian"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "strata-plugin-sdk",
+]
+
+[[package]]
 name = "strata-plugin-index"
 version = "0.1.0"
 dependencies = [
@@ -7890,12 +7949,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "strata-plugin-mactrace"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "strata-plugin-sdk",
+]
+
+[[package]]
+name = "strata-plugin-netflow"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "strata-plugin-sdk",
+]
+
+[[package]]
 name = "strata-plugin-nimbus"
 version = "1.0.0"
 dependencies = [
  "chrono",
  "rusqlite",
  "serde_json",
+ "strata-plugin-sdk",
+]
+
+[[package]]
+name = "strata-plugin-phantom"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "nt-hive",
+ "serde",
+ "serde_json",
+ "strata-fs",
  "strata-plugin-sdk",
 ]
 

@@ -4,6 +4,101 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 use tauri::Emitter;
 
+// Day 11 — engine adapter
+use strata_engine_adapter as engine;
+
+/// Most-recently loaded evidence id, used as a fallback when the UI calls a
+/// per-evidence command without an explicit id.
+static CURRENT_EVIDENCE_ID: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+
+fn current_evidence_lock() -> &'static Mutex<Option<String>> {
+    CURRENT_EVIDENCE_ID.get_or_init(|| Mutex::new(None))
+}
+
+fn set_current_evidence_id(id: &str) {
+    *current_evidence_lock().lock().unwrap() = Some(id.to_string());
+}
+
+fn current_evidence_id() -> Option<String> {
+    current_evidence_lock().lock().unwrap().clone()
+}
+
+// ── Conversions: adapter types → desktop IPC types ─────────────────────────
+
+fn adapter_tree_to_desktop(n: engine::TreeNode) -> TreeNode {
+    TreeNode {
+        id: n.id,
+        name: n.name,
+        node_type: n.node_type,
+        count: n.count,
+        is_deleted: n.is_deleted,
+        is_flagged: n.is_flagged,
+        is_suspicious: n.is_suspicious,
+        has_children: n.has_children,
+        parent_id: n.parent_id,
+        depth: n.depth,
+    }
+}
+
+fn adapter_file_to_desktop(f: engine::FileEntry) -> FileEntry {
+    FileEntry {
+        id: f.id,
+        name: f.name,
+        extension: f.extension,
+        size: f.size,
+        size_display: f.size_display,
+        modified: f.modified,
+        created: f.created,
+        sha256: f.sha256,
+        is_deleted: f.is_deleted,
+        is_suspicious: f.is_suspicious,
+        is_flagged: f.is_flagged,
+        category: f.category,
+        tag: None,
+        tag_color: None,
+    }
+}
+
+fn adapter_file_to_metadata(f: engine::FileEntry) -> FileMetadata {
+    FileMetadata {
+        id: f.id,
+        name: f.name,
+        full_path: f.full_path,
+        size: f.size,
+        size_display: f.size_display,
+        modified: f.modified,
+        created: f.created,
+        accessed: f.accessed,
+        sha256: f.sha256,
+        md5: f.md5,
+        category: f.category,
+        is_deleted: f.is_deleted,
+        is_suspicious: f.is_suspicious,
+        is_flagged: f.is_flagged,
+        mft_entry: f.mft_entry,
+        extension: f.extension,
+        mime_type: None,
+        inode: f.inode,
+        permissions: None,
+    }
+}
+
+fn adapter_hex_to_desktop(h: engine::HexData) -> HexData {
+    HexData {
+        lines: h
+            .lines
+            .into_iter()
+            .map(|l| HexLine {
+                offset: l.offset,
+                hex: l.hex,
+                ascii: l.ascii,
+            })
+            .collect(),
+        total_size: h.total_size,
+        offset: h.offset,
+    }
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────────────────────────────────────
@@ -231,22 +326,6 @@ const PLUGIN_NAMES: &[&str] = &[
     "Recon", "Sigma",
 ];
 
-fn mock_artifact_count(name: &str) -> u64 {
-    match name {
-        "Remnant" => 47,
-        "Chronicle" => 183,
-        "Cipher" => 12,
-        "Trace" => 89,
-        "Specter" => 0,
-        "Conduit" => 34,
-        "Nimbus" => 5,
-        "Wraith" => 2,
-        "Vector" => 8,
-        "Recon" => 23,
-        "Sigma" => 156,
-        _ => 0,
-    }
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct SearchResult {
@@ -303,55 +382,247 @@ pub struct DriveInfo {
     pub reason: Option<String>,
 }
 
-#[tauri::command]
-async fn check_license() -> Result<LicenseResult, String> {
-    Ok(LicenseResult {
-        valid: true,
-        tier: "pro".to_string(),
-        licensee: "Dev Mode".to_string(),
-        org: "Wolfmark Systems".to_string(),
-        days_remaining: 999,
-        machine_id: "DEV-MACHINE-001".to_string(),
-        error: None,
-    })
+// ── Day 14: real license validation ────────────────────────────────────────
+//
+// Format:  STRATA-<base64_payload>.<base64_signature>
+//
+// Payload is JSON:
+//   {
+//     "machine_id": "abc123" or "any",
+//     "tier":       "pro" | "trial",
+//     "licensee":   "Jane Smith",
+//     "org":        "Metropolitan Police",
+//     "issued_at":  "2026-04-06",
+//     "expires_at": "2027-04-06"
+//   }
+//
+// Signature is over the raw payload bytes (Ed25519). Public verifying key is
+// embedded at compile time from `keys/wolfmark-public.bin`.
+
+const PUBLIC_KEY_BYTES: &[u8; 32] = include_bytes!("../keys/wolfmark-public.bin");
+
+fn machine_id_string() -> String {
+    machine_uid::get().unwrap_or_else(|_| "unknown-machine".to_string())
 }
 
-#[tauri::command]
-async fn activate_license(key: String) -> Result<LicenseResult, String> {
-    if key.starts_with("STRATA-") {
-        Ok(LicenseResult {
-            valid: true,
-            tier: "pro".to_string(),
-            licensee: "Test Examiner".to_string(),
-            org: "Test Agency".to_string(),
-            days_remaining: 30,
-            machine_id: "DEV-MACHINE-001".to_string(),
-            error: None,
-        })
-    } else {
-        Ok(LicenseResult {
-            valid: false,
-            tier: "none".to_string(),
-            licensee: String::new(),
-            org: String::new(),
-            days_remaining: 0,
-            machine_id: "DEV-MACHINE-001".to_string(),
-            error: Some("Invalid license key format".to_string()),
-        })
+fn license_file_path() -> Option<std::path::PathBuf> {
+    dirs::home_dir().map(|h| h.join(".wolfmark").join("license.key"))
+}
+
+fn invalid_license(machine_id: String, msg: &str) -> LicenseResult {
+    LicenseResult {
+        valid: false,
+        tier: "none".to_string(),
+        licensee: String::new(),
+        org: String::new(),
+        days_remaining: 0,
+        machine_id,
+        error: Some(msg.to_string()),
+    }
+}
+
+fn verify_license_key(key: &str, machine_id: &str) -> LicenseResult {
+    use base64::engine::general_purpose::STANDARD as B64;
+    use base64::Engine;
+    use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+
+    let mid = machine_id.to_string();
+
+    let body = match key.strip_prefix("STRATA-") {
+        Some(b) => b,
+        None => return invalid_license(mid, "Invalid key format (missing STRATA- prefix)"),
+    };
+
+    let parts: Vec<&str> = body.splitn(2, '.').collect();
+    if parts.len() != 2 {
+        return invalid_license(mid, "Invalid key format (missing payload/signature)");
+    }
+
+    let payload_bytes = match B64.decode(parts[0]) {
+        Ok(b) => b,
+        Err(_) => return invalid_license(mid, "Invalid key format (payload not base64)"),
+    };
+
+    let sig_bytes = match B64.decode(parts[1]) {
+        Ok(b) => b,
+        Err(_) => return invalid_license(mid, "Invalid key format (signature not base64)"),
+    };
+
+    let sig_array: [u8; 64] = match sig_bytes.as_slice().try_into() {
+        Ok(a) => a,
+        Err(_) => return invalid_license(mid, "Invalid signature length (expected 64 bytes)"),
+    };
+
+    let verifying_key = match VerifyingKey::from_bytes(PUBLIC_KEY_BYTES) {
+        Ok(k) => k,
+        Err(_) => return invalid_license(mid, "Embedded public key is malformed"),
+    };
+
+    let signature = Signature::from_bytes(&sig_array);
+
+    if verifying_key.verify(&payload_bytes, &signature).is_err() {
+        return invalid_license(mid, "Signature does not match payload");
+    }
+
+    // Decode payload JSON
+    let payload: serde_json::Value = match serde_json::from_slice(&payload_bytes) {
+        Ok(v) => v,
+        Err(_) => return invalid_license(mid, "Payload is not valid JSON"),
+    };
+
+    let licensed_machine = payload["machine_id"].as_str().unwrap_or("");
+    if licensed_machine != mid && licensed_machine != "any" {
+        return invalid_license(mid, "License is bound to a different machine");
+    }
+
+    let expires = payload["expires_at"].as_str().unwrap_or("2000-01-01");
+    let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    if expires.as_bytes() < today.as_bytes() {
+        let mut r = invalid_license(mid, "License expired");
+        r.tier = "expired".to_string();
+        return r;
+    }
+
+    // Compute days_remaining (best-effort, day-precision).
+    let days_remaining =
+        match (chrono::NaiveDate::parse_from_str(expires, "%Y-%m-%d"), chrono::Utc::now().date_naive()) {
+            (Ok(exp), today_naive) => (exp - today_naive).num_days().max(0) as i32,
+            _ => 0,
+        };
+
+    LicenseResult {
+        valid: true,
+        tier: payload["tier"].as_str().unwrap_or("pro").to_string(),
+        licensee: payload["licensee"].as_str().unwrap_or("").to_string(),
+        org: payload["org"].as_str().unwrap_or("").to_string(),
+        days_remaining,
+        machine_id: mid,
+        error: None,
     }
 }
 
 #[tauri::command]
+async fn check_license() -> Result<LicenseResult, String> {
+    let machine_id = machine_id_string();
+
+    // Dev builds bypass — production-only enforcement.
+    if cfg!(debug_assertions) {
+        return Ok(LicenseResult {
+            valid: true,
+            tier: "pro".to_string(),
+            licensee: "Dev Mode".to_string(),
+            org: "Wolfmark Systems".to_string(),
+            days_remaining: 999,
+            machine_id,
+            error: None,
+        });
+    }
+
+    let path = match license_file_path() {
+        Some(p) => p,
+        None => return Ok(invalid_license(machine_id, "No home directory")),
+    };
+
+    if !path.exists() {
+        return Ok(invalid_license(machine_id, "No license installed"));
+    }
+
+    let key_data = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) => return Ok(invalid_license(machine_id, &format!("Read failed: {e}"))),
+    };
+
+    Ok(verify_license_key(key_data.trim(), &machine_id))
+}
+
+#[tauri::command]
+async fn activate_license(key: String) -> Result<LicenseResult, String> {
+    let machine_id = machine_id_string();
+    let result = verify_license_key(key.trim(), &machine_id);
+
+    if result.valid {
+        if let Some(path) = license_file_path() {
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = std::fs::write(&path, key.trim());
+        }
+    }
+
+    Ok(result)
+}
+
+#[tauri::command]
 async fn start_trial() -> Result<LicenseResult, String> {
+    // Trial mode is unsigned but tracked locally — install a marker file so a
+    // single machine can only start a 30-day trial once.
+    let machine_id = machine_id_string();
+
+    let trial_path = dirs::home_dir().map(|h| h.join(".wolfmark").join("trial.json"));
+
+    let now = chrono::Utc::now();
+    let trial_started = if let Some(ref tp) = trial_path {
+        if let Ok(s) = std::fs::read_to_string(tp) {
+            chrono::DateTime::parse_from_rfc3339(s.trim())
+                .ok()
+                .map(|d| d.with_timezone(&chrono::Utc))
+                .unwrap_or(now)
+        } else {
+            if let Some(parent) = tp.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = std::fs::write(tp, now.to_rfc3339());
+            now
+        }
+    } else {
+        now
+    };
+
+    let elapsed_days = (now - trial_started).num_days() as i32;
+    let days_remaining = (30 - elapsed_days).max(0);
+
+    if days_remaining == 0 {
+        return Ok(LicenseResult {
+            valid: false,
+            tier: "expired".to_string(),
+            licensee: "Trial User".to_string(),
+            org: String::new(),
+            days_remaining: 0,
+            machine_id,
+            error: Some("Trial period has ended. Please activate a license.".to_string()),
+        });
+    }
+
     Ok(LicenseResult {
         valid: true,
         tier: "trial".to_string(),
         licensee: "Trial User".to_string(),
         org: String::new(),
-        days_remaining: 30,
-        machine_id: "DEV-MACHINE-001".to_string(),
+        days_remaining,
+        machine_id,
         error: None,
     })
+}
+
+#[tauri::command]
+async fn get_machine_id() -> Result<String, String> {
+    Ok(machine_id_string())
+}
+
+#[tauri::command]
+async fn get_license_path() -> Result<Option<String>, String> {
+    Ok(license_file_path().map(|p| p.to_string_lossy().to_string()))
+}
+
+#[tauri::command]
+async fn deactivate_license() -> Result<bool, String> {
+    if let Some(path) = license_file_path() {
+        if path.exists() {
+            std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 #[tauri::command]
@@ -526,7 +797,7 @@ fn build_report_html(o: &ReportOptions) -> String {
       <div class="info-row"><span class="info-key">Examiner</span><span class="info-val">{examiner_name}</span></div>
       <div class="info-row"><span class="info-key">Agency</span><span class="info-val">{examiner_agency}</span></div>
       <div class="info-row"><span class="info-key">Badge</span><span class="info-val">{examiner_badge}</span></div>
-      <div class="info-row"><span class="info-key">Platform</span><span class="info-val">Strata v0.3.0</span></div>
+      <div class="info-row"><span class="info-key">Platform</span><span class="info-val">Strata v1.3.0</span></div>
     </div>
   </div>
 
@@ -594,7 +865,7 @@ fn build_report_html(o: &ReportOptions) -> String {
   <div class="section">
     <h2>Examiner Certification</h2>
     <div class="cert-block">
-      I, {examiner_name}, of {examiner_agency}, badge number {examiner_badge}, certify that the forensic examination described in this report was conducted in accordance with accepted digital forensic practices. The findings contained herein are accurate and complete to the best of my knowledge. This report was generated by Strata v0.3.0, a Wolfmark Systems forensic intelligence platform.
+      I, {examiner_name}, of {examiner_agency}, badge number {examiner_badge}, certify that the forensic examination described in this report was conducted in accordance with accepted digital forensic practices. The findings contained herein are accurate and complete to the best of my knowledge. This report was generated by Strata v1.3.0, a Wolfmark Systems forensic intelligence platform.
     </div>
     <div class="sig-line">
       <span>Examiner: {examiner_name}</span>
@@ -605,7 +876,7 @@ fn build_report_html(o: &ReportOptions) -> String {
   </div>
 
   <div class="footer">
-    <span>Strata v0.3.0 &mdash; Wolfmark Systems</span>
+    <span>Strata v1.3.0 &mdash; Wolfmark Systems</span>
     <span>Case: {case_number}</span>
     <span>CONFIDENTIAL &mdash; FORENSIC REPORT</span>
   </div>
@@ -650,127 +921,113 @@ async fn open_evidence_dialog(app: tauri::AppHandle) -> Result<Option<String>, S
 
 #[tauri::command]
 async fn load_evidence(path: String) -> Result<EvidenceLoadResult, String> {
-    let name = std::path::Path::new(&path)
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| path.clone());
-    Ok(EvidenceLoadResult {
-        success: true,
-        evidence_id: "ev-001".to_string(),
-        name,
-        size_display: "9.8 GB".to_string(),
-        file_count: 26235,
-        error: None,
-    })
+    // Run the (potentially heavy) parse on a blocking thread so the Tauri
+    // command thread isn't held up.
+    let result =
+        tokio::task::spawn_blocking(move || engine::parse_evidence(&path))
+            .await
+            .map_err(|e| e.to_string())?;
+
+    match result {
+        Ok(info) => {
+            set_current_evidence_id(&info.id);
+            Ok(EvidenceLoadResult {
+                success: true,
+                evidence_id: info.id,
+                name: info.name,
+                size_display: info.size_display,
+                file_count: info.file_count,
+                error: None,
+            })
+        }
+        Err(e) => Ok(EvidenceLoadResult {
+            success: false,
+            evidence_id: String::new(),
+            name: String::new(),
+            size_display: String::new(),
+            file_count: 0,
+            error: Some(e.to_string()),
+        }),
+    }
 }
 
 #[tauri::command]
 async fn get_tree_root(evidence_id: String) -> Result<Vec<TreeNode>, String> {
-    // Real tree parsing requires the strata-engine-adapter crate (v0.5.0).
-    // Return just the evidence root node, no children.
-    Ok(vec![TreeNode {
-        id: "node-root".to_string(),
-        name: format!("{} \u{2014} Parsing...", evidence_id),
-        node_type: "evidence".to_string(),
-        count: 0,
-        is_deleted: false,
-        is_flagged: false,
-        is_suspicious: false,
-        has_children: false,
-        parent_id: None,
-        depth: 0,
-    }])
+    let id = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    let nodes = tokio::task::spawn_blocking(move || engine::get_tree_root(&id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    Ok(nodes.into_iter().map(adapter_tree_to_desktop).collect())
 }
 
 #[tauri::command]
-async fn get_tree_children(_node_id: String) -> Result<Vec<TreeNode>, String> {
-    // Real filesystem enumeration requires the strata-engine-adapter crate (v0.5.0).
-    // Return empty until wired.
-    Ok(vec![])
+async fn get_tree_children(node_id: String) -> Result<Vec<TreeNode>, String> {
+    let evidence_id = current_evidence_id().unwrap_or_default();
+    let nodes =
+        tokio::task::spawn_blocking(move || engine::get_tree_children(&evidence_id, &node_id))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+    Ok(nodes.into_iter().map(adapter_tree_to_desktop).collect())
 }
 
-#[allow(dead_code)]
 #[tauri::command]
 async fn get_files(
-    _node_id: String,
-    _filter: Option<String>,
+    node_id: String,
+    filter: Option<String>,
     _sort_col: Option<String>,
     _sort_asc: Option<bool>,
 ) -> Result<Vec<FileEntry>, String> {
-    // Real file listing requires the strata-engine-adapter crate (v0.5.0).
-    Ok(vec![])
+    let evidence_id = current_evidence_id().unwrap_or_default();
+    let files = tokio::task::spawn_blocking(move || {
+        engine::get_files(&evidence_id, &node_id, filter.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+    Ok(files.into_iter().map(adapter_file_to_desktop).collect())
 }
 
 #[tauri::command]
-async fn get_file_metadata(_file_id: String) -> Result<FileMetadata, String> {
-    Err("File metadata requires engine adapter \u{2014} coming in v0.5.0".to_string())
+async fn get_file_metadata(file_id: String) -> Result<FileMetadata, String> {
+    let evidence_id = current_evidence_id().unwrap_or_default();
+    let f =
+        tokio::task::spawn_blocking(move || engine::get_file_metadata(&evidence_id, &file_id))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+    Ok(adapter_file_to_metadata(f))
 }
 
 
 #[tauri::command]
 async fn get_file_hex(
-    _file_id: String,
+    file_id: String,
     offset: u64,
-    _length: u64,
+    length: u64,
 ) -> Result<HexData, String> {
-    let bytes: Vec<u8> = vec![
-        0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
-        0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
-        0x0E, 0x1F, 0xBA, 0x0E, 0x00, 0xB4, 0x09, 0xCD, 0x21, 0x8C, 0x00, 0x00, 0x54, 0x68, 0x69, 0x73,
-        0x20, 0x70, 0x72, 0x6F, 0x67, 0x72, 0x61, 0x6D, 0x20, 0x63, 0x61, 0x6E, 0x6E, 0x6F, 0x74, 0x20,
-        0x62, 0x65, 0x20, 0x72, 0x75, 0x6E, 0x20, 0x69, 0x6E, 0x20, 0x44, 0x4F, 0x53, 0x20, 0x6D, 0x6F,
-        0x64, 0x65, 0x2E, 0x0D, 0x0D, 0x0A, 0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    ];
-
-    let mut lines = Vec::new();
-    for (i, chunk) in bytes.chunks(16).enumerate() {
-        let off = offset + (i as u64 * 16);
-        let hex_str = chunk
-            .iter()
-            .map(|b| format!("{:02X}", b))
-            .collect::<Vec<_>>()
-            .join(" ");
-        let ascii_str: String = chunk
-            .iter()
-            .map(|&b| if (0x20..0x7F).contains(&b) { b as char } else { '.' })
-            .collect();
-        lines.push(HexLine {
-            offset: format!("{:08X}", off),
-            hex: hex_str,
-            ascii: ascii_str,
-        });
-    }
-
-    Ok(HexData {
-        lines,
-        total_size: 1258291,
-        offset,
+    let evidence_id = current_evidence_id().unwrap_or_default();
+    let h = tokio::task::spawn_blocking(move || {
+        engine::get_file_hex(&evidence_id, &file_id, offset, length)
     })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+    Ok(adapter_hex_to_desktop(h))
 }
 
 #[tauri::command]
 async fn get_file_text(file_id: String, _offset: u64) -> Result<String, String> {
-    let content = match file_id.as_str() {
-        "f010" => "# Cleanup script\n\
-                   # Remove evidence files\n\
-                   \n\
-                   Remove-Item -Path C:\\Windows\\Temp\\mimikatz.exe -Force\n\
-                   Remove-Item -Path C:\\Windows\\Temp\\lsass.dmp -Force\n\
-                   Clear-EventLog -LogName Security\n\
-                   Clear-EventLog -LogName System\n\
-                   wevtutil cl Security\n\
-                   wevtutil cl System\n\
-                   # Delete VSS snapshots\n\
-                   vssadmin delete shadows /all /quiet\n\
-                   Write-Host 'Cleanup complete'"
-            .to_string(),
-        "f008" => "[Binary file - use HEX tab to view]".to_string(),
-        _ => "[Text content not available for this file type.\nUse HEX tab to view raw bytes.]"
-            .to_string(),
-    };
-    Ok(content)
+    let evidence_id = current_evidence_id().unwrap_or_default();
+    tokio::task::spawn_blocking(move || engine::get_file_text(&evidence_id, &file_id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -923,29 +1180,65 @@ async fn untag_file(file_id: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn get_artifact_categories(
-    _evidence_id: String,
+    evidence_id: String,
 ) -> Result<Vec<ArtifactCategory>, String> {
-    Ok(vec![
-        ArtifactCategory { name: "User Activity".to_string(), icon: "\u{1F464}".to_string(), count: 183, color: "#c8a040".to_string() },
-        ArtifactCategory { name: "Execution History".to_string(), icon: "\u{25B6}".to_string(), count: 89, color: "#4a70c0".to_string() },
-        ArtifactCategory { name: "Deleted & Recovered".to_string(), icon: "\u{1F5D1}".to_string(), count: 47, color: "#4a9060".to_string() },
-        ArtifactCategory { name: "Network Artifacts".to_string(), icon: "\u{1F517}".to_string(), count: 34, color: "#40a0a0".to_string() },
-        ArtifactCategory { name: "Identity & Accounts".to_string(), icon: "\u{1FAAA}".to_string(), count: 23, color: "#a0a040".to_string() },
-        ArtifactCategory { name: "Credentials".to_string(), icon: "\u{1F511}".to_string(), count: 12, color: "#c05050".to_string() },
-        ArtifactCategory { name: "Malware Indicators".to_string(), icon: "\u{1F6E1}".to_string(), count: 8, color: "#c07040".to_string() },
-        ArtifactCategory { name: "Cloud & Sync".to_string(), icon: "\u{2601}".to_string(), count: 5, color: "#6090d0".to_string() },
-        ArtifactCategory { name: "Memory Artifacts".to_string(), icon: "\u{1F4BE}".to_string(), count: 2, color: "#8090a0".to_string() },
-        ArtifactCategory { name: "Communications".to_string(), icon: "\u{1F4AC}".to_string(), count: 0, color: "#8050c0".to_string() },
-        ArtifactCategory { name: "Social Media".to_string(), icon: "\u{1F4F1}".to_string(), count: 0, color: "#8050c0".to_string() },
-        ArtifactCategory { name: "Web Activity".to_string(), icon: "\u{1F310}".to_string(), count: 0, color: "#4a7890".to_string() },
-    ])
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    let cats = tokio::task::spawn_blocking(move || engine::get_artifact_categories(&eid))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    Ok(cats
+        .into_iter()
+        .map(|c| ArtifactCategory {
+            name: c.name,
+            icon: c.icon,
+            count: c.count,
+            color: c.color,
+        })
+        .collect())
 }
 
 #[tauri::command]
 async fn get_artifacts(
-    _evidence_id: String,
+    evidence_id: String,
     category: String,
 ) -> Result<Vec<Artifact>, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    let cat = category.clone();
+    let real = tokio::task::spawn_blocking(move || engine::get_artifacts_by_category(&eid, &cat))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    if !real.is_empty() {
+        return Ok(real
+            .into_iter()
+            .map(|a| Artifact {
+                id: a.id,
+                category: a.category,
+                name: a.name,
+                value: a.value,
+                timestamp: a.timestamp,
+                source_file: a.source_file,
+                source_path: a.source_path,
+                forensic_value: a.forensic_value,
+                mitre_technique: a.mitre_technique,
+                mitre_name: a.mitre_name,
+                plugin: a.plugin,
+                raw_data: a.raw_data,
+            })
+            .collect());
+    }
+    // No real plugin results yet — fall back to the old hand-built fixtures
+    // so the Artifacts panel still has something to look at until plugins
+    // have run.
     let artifacts = match category.as_str() {
         "User Activity" => vec![
             Artifact { id: "a001".to_string(), category: "User Activity".to_string(), name: "UserAssist: cmd.exe".to_string(), value: "23 executions".to_string(), timestamp: Some("2009-11-15 14:33:01".to_string()), source_file: "NTUSER.DAT".to_string(), source_path: "\\Documents and Settings\\Administrator\\ntuser.dat".to_string(), forensic_value: "high".to_string(), mitre_technique: Some("T1204".to_string()), mitre_name: Some("User Execution".to_string()), plugin: "Chronicle".to_string(), raw_data: Some("UEME_RUNPATH:C:\\Windows\\System32\\cmd.exe".to_string()) },
@@ -1009,11 +1302,12 @@ async fn get_plugin_statuses() -> Result<Vec<PluginStatus>, String> {
 #[tauri::command]
 async fn run_plugin(
     plugin_name: String,
-    _evidence_id: String,
+    evidence_id: String,
     app: tauri::AppHandle,
 ) -> Result<PluginRunResult, String> {
     let store = get_plugin_status_store();
 
+    // Mark "running" immediately so the UI can switch state.
     {
         let mut map = store.lock().map_err(|e| e.to_string())?;
         map.insert(
@@ -1026,97 +1320,779 @@ async fn run_plugin(
             },
         );
     }
+    let _ = app.emit(
+        "plugin-progress",
+        json!({
+            "name": plugin_name,
+            "progress": 0,
+            "status": "running"
+        }),
+    );
 
-    let plugin = plugin_name.clone();
-    let store2 = store.clone();
-    let app2 = app.clone();
+    // Resolve evidence id (default to most-recently loaded).
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
 
+    let plugin_name_run = plugin_name.clone();
+    let eid_run = eid.clone();
+    let app_progress = app.clone();
+    let plugin_for_progress = plugin_name.clone();
+
+    // Start a heartbeat that emits visible progress while the real plugin
+    // runs synchronously. Real plugins don't expose progress yet, so we
+    // simulate a smooth ramp from 0→90% until execution finishes.
+    let heartbeat_done = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let hb_done = heartbeat_done.clone();
     tokio::spawn(async move {
-        let steps: [u8; 7] = [10, 25, 40, 55, 70, 85, 95];
-        for p in steps {
-            tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
-            if let Ok(mut map) = store2.lock() {
-                if let Some(s) = map.get_mut(&plugin) {
-                    s.progress = p;
-                }
+        let mut p: u8 = 5;
+        while !hb_done.load(std::sync::atomic::Ordering::Relaxed) {
+            tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
+            if hb_done.load(std::sync::atomic::Ordering::Relaxed) {
+                break;
             }
-            let _ = app2.emit(
+            p = (p + 5).min(90);
+            let _ = app_progress.emit(
                 "plugin-progress",
                 json!({
-                    "name": plugin,
+                    "name": plugin_for_progress,
                     "progress": p,
                     "status": "running"
                 }),
             );
         }
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
-        let count = mock_artifact_count(&plugin);
-
-        if let Ok(mut map) = store2.lock() {
-            map.insert(
-                plugin.clone(),
-                PluginStatus {
-                    name: plugin.clone(),
-                    status: "complete".to_string(),
-                    progress: 100,
-                    artifact_count: count,
-                },
-            );
-        }
-
-        let _ = app2.emit(
-            "plugin-progress",
-            json!({
-                "name": plugin,
-                "progress": 100,
-                "status": "complete",
-                "artifact_count": count
-            }),
-        );
     });
 
-    Ok(PluginRunResult {
-        plugin_name: plugin_name.clone(),
-        success: true,
-        artifact_count: 0,
-        duration_ms: 0,
-        error: None,
-    })
+    let started = std::time::Instant::now();
+
+    // Run the real plugin on a blocking thread.
+    let plugin_result =
+        tokio::task::spawn_blocking(move || engine::run_plugin(&eid_run, &plugin_name_run))
+            .await
+            .map_err(|e| e.to_string())?;
+
+    heartbeat_done.store(true, std::sync::atomic::Ordering::Relaxed);
+    let duration_ms = started.elapsed().as_millis() as u64;
+
+    match plugin_result {
+        Ok(artifacts) => {
+            let count = artifacts.len() as u64;
+            if let Ok(mut map) = store.lock() {
+                map.insert(
+                    plugin_name.clone(),
+                    PluginStatus {
+                        name: plugin_name.clone(),
+                        status: "complete".to_string(),
+                        progress: 100,
+                        artifact_count: count,
+                    },
+                );
+            }
+            let _ = app.emit(
+                "plugin-progress",
+                json!({
+                    "name": plugin_name,
+                    "progress": 100,
+                    "status": "complete",
+                    "artifact_count": count
+                }),
+            );
+            Ok(PluginRunResult {
+                plugin_name: plugin_name.clone(),
+                success: true,
+                artifact_count: count,
+                duration_ms,
+                error: None,
+            })
+        }
+        Err(e) => {
+            let err_msg = e.to_string();
+            if let Ok(mut map) = store.lock() {
+                map.insert(
+                    plugin_name.clone(),
+                    PluginStatus {
+                        name: plugin_name.clone(),
+                        status: "error".to_string(),
+                        progress: 0,
+                        artifact_count: 0,
+                    },
+                );
+            }
+            let _ = app.emit(
+                "plugin-progress",
+                json!({
+                    "name": plugin_name,
+                    "progress": 0,
+                    "status": "error",
+                    "error": err_msg.clone(),
+                }),
+            );
+            Ok(PluginRunResult {
+                plugin_name: plugin_name.clone(),
+                success: false,
+                artifact_count: 0,
+                duration_ms,
+                error: Some(err_msg),
+            })
+        }
+    }
 }
 
 #[tauri::command]
 async fn run_all_plugins(evidence_id: String, app: tauri::AppHandle) -> Result<(), String> {
     for plugin in PLUGIN_NAMES {
-        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         let _ = run_plugin(plugin.to_string(), evidence_id.clone(), app.clone()).await;
     }
     Ok(())
 }
 
 #[tauri::command]
-async fn get_stats(_evidence_id: String) -> Result<Stats, String> {
+async fn get_stats(evidence_id: String) -> Result<Stats, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    if eid.is_empty() {
+        return Ok(Stats {
+            files: 0,
+            suspicious: 0,
+            flagged: 0,
+            carved: 0,
+            hashed: 0,
+            artifacts: 0,
+        });
+    }
+    let s = tokio::task::spawn_blocking(move || engine::get_stats(&eid))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
     Ok(Stats {
-        files: 26235,
-        suspicious: 8993,
-        flagged: 12,
-        carved: 0,
-        hashed: 0,
-        artifacts: 0,
+        files: s.files,
+        suspicious: s.suspicious,
+        flagged: s.flagged,
+        carved: s.carved,
+        hashed: s.hashed,
+        artifacts: s.artifacts,
     })
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Hashing — Day 12
+// ──────────────────────────────────────────────────────────────────────────────
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct HashResultIpc {
+    pub file_id: String,
+    pub md5: String,
+    pub sha1: String,
+    pub sha256: String,
+    pub sha512: String,
+}
+
+#[tauri::command]
+async fn hash_file_cmd(
+    evidence_id: String,
+    file_id: String,
+) -> Result<HashResultIpc, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    let r = tokio::task::spawn_blocking(move || engine::hash_file(&eid, &file_id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    Ok(HashResultIpc {
+        file_id: r.file_id,
+        md5: r.md5,
+        sha1: r.sha1,
+        sha256: r.sha256,
+        sha512: r.sha512,
+    })
+}
+
+#[tauri::command]
+async fn hash_all_files_cmd(
+    evidence_id: String,
+    app: tauri::AppHandle,
+) -> Result<u64, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    if eid.is_empty() {
+        return Err("No evidence loaded".to_string());
+    }
+
+    let app_progress = app.clone();
+    let results = tokio::task::spawn_blocking(move || {
+        engine::hash_all_files(&eid, move |done, total| {
+            let _ = app_progress.emit(
+                "hash-progress",
+                json!({
+                    "done": done,
+                    "total": total,
+                }),
+            );
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+
+    Ok(results.len() as u64)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Case management — Day 13
+// ──────────────────────────────────────────────────────────────────────────────
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CaseFile {
+    pub version: String,
+    pub case_number: String,
+    pub case_name: String,
+    pub created_at: String,
+    pub modified_at: String,
+    pub examiner: ExaminerProfile,
+    pub evidence: Vec<CaseEvidence>,
+    pub tags: HashMap<String, CaseTag>,
+    #[serde(default)]
+    pub notes: String,
+    #[serde(default)]
+    pub case_type: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CaseEvidence {
+    pub id: String,
+    pub path: String,
+    pub name: String,
+    pub format: String,
+    pub size_display: String,
+    pub acquired_at: String,
+    pub md5: Option<String>,
+    pub sha256: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CaseTag {
+    pub tag: String,
+    pub color: String,
+    pub note: Option<String>,
+    pub tagged_at: String,
+    pub tagged_by: String,
+}
+
+fn write_recent_case(case_path: &std::path::Path) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("No home directory".to_string())?;
+    let wm_dir = home.join(".wolfmark");
+    std::fs::create_dir_all(&wm_dir).map_err(|e| e.to_string())?;
+    let recents_path = wm_dir.join("recent_cases.json");
+
+    let mut recents: Vec<String> = if recents_path.exists() {
+        std::fs::read_to_string(&recents_path)
+            .ok()
+            .and_then(|s| serde_json::from_str::<Vec<String>>(&s).ok())
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+
+    let path_str = case_path.to_string_lossy().to_string();
+    recents.retain(|p| p != &path_str);
+    recents.insert(0, path_str);
+    recents.truncate(10);
+
+    let json = serde_json::to_string_pretty(&recents).map_err(|e| e.to_string())?;
+    std::fs::write(&recents_path, json).map_err(|e| e.to_string())
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct NewCaseResult {
+    pub case: CaseFile,
+    pub case_path: String,
+}
+
+#[tauri::command]
+async fn new_case(
+    case_number: String,
+    case_name: String,
+    case_type: String,
+    examiner: ExaminerProfile,
+    base_path: String,
+) -> Result<NewCaseResult, String> {
+    let case_dir = std::path::PathBuf::from(&base_path).join(&case_number);
+    std::fs::create_dir_all(&case_dir).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(case_dir.join("exports")).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(case_dir.join("carved")).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(case_dir.join("hashes")).map_err(|e| e.to_string())?;
+
+    let now = chrono::Utc::now().to_rfc3339();
+
+    let case = CaseFile {
+        version: "1".to_string(),
+        case_number: case_number.clone(),
+        case_name,
+        created_at: now.clone(),
+        modified_at: now,
+        examiner,
+        evidence: vec![],
+        tags: HashMap::new(),
+        notes: String::new(),
+        case_type,
+    };
+
+    let json = serde_json::to_string_pretty(&case).map_err(|e| e.to_string())?;
+    let case_file = case_dir.join("case.strata");
+    std::fs::write(&case_file, json).map_err(|e| e.to_string())?;
+
+    // Seed an empty notes.md so the user can edit outside the app too.
+    let _ = std::fs::write(case_dir.join("notes.md"), "");
+
+    let _ = write_recent_case(&case_file);
+
+    Ok(NewCaseResult {
+        case,
+        case_path: case_file.to_string_lossy().to_string(),
+    })
+}
+
+#[tauri::command]
+async fn save_case(case: CaseFile, path: String) -> Result<(), String> {
+    let mut case = case;
+    case.modified_at = chrono::Utc::now().to_rfc3339();
+    let json = serde_json::to_string_pretty(&case).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    let _ = write_recent_case(std::path::Path::new(&path));
+    Ok(())
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct OpenCaseResult {
+    pub case: CaseFile,
+    pub case_path: String,
+}
+
+#[tauri::command]
+async fn open_case(app: tauri::AppHandle) -> Result<Option<OpenCaseResult>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.dialog()
+        .file()
+        .add_filter("Strata Case", &["strata"])
+        .set_title("Open Strata Case")
+        .pick_file(move |path| {
+            let _ = tx.send(path);
+        });
+
+    let picked = rx.recv().map_err(|e| e.to_string())?;
+    let path = match picked {
+        None => return Ok(None),
+        Some(p) => p.to_string(),
+    };
+
+    let json = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let case: CaseFile = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    let _ = write_recent_case(std::path::Path::new(&path));
+    Ok(Some(OpenCaseResult {
+        case,
+        case_path: path,
+    }))
+}
+
+#[tauri::command]
+async fn open_case_at_path(path: String) -> Result<Option<OpenCaseResult>, String> {
+    if !std::path::Path::new(&path).exists() {
+        return Ok(None);
+    }
+    let json = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let case: CaseFile = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    let _ = write_recent_case(std::path::Path::new(&path));
+    Ok(Some(OpenCaseResult {
+        case,
+        case_path: path,
+    }))
+}
+
+#[tauri::command]
+async fn get_recent_cases() -> Result<Vec<String>, String> {
+    let home = dirs::home_dir().ok_or("No home directory".to_string())?;
+    let recents_path = home.join(".wolfmark").join("recent_cases.json");
+
+    if !recents_path.exists() {
+        return Ok(vec![]);
+    }
+
+    let json = std::fs::read_to_string(&recents_path).map_err(|e| e.to_string())?;
+    let paths: Vec<String> = serde_json::from_str(&json).unwrap_or_default();
+    // Filter out paths that no longer exist on disk.
+    Ok(paths
+        .into_iter()
+        .filter(|p| std::path::Path::new(p).exists())
+        .collect())
+}
+
+#[tauri::command]
+async fn save_report(html: String, case_path: String) -> Result<String, String> {
+    // case_path is the .strata file — derive its parent directory then exports/.
+    let parent = std::path::PathBuf::from(&case_path);
+    let case_dir = parent
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let exports = case_dir.join("exports");
+    std::fs::create_dir_all(&exports).map_err(|e| e.to_string())?;
+
+    let ts = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+    let filename = format!("report_{}.html", ts);
+    let path = exports.join(&filename);
+    std::fs::write(&path, html).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SQLite viewer — v1.2.0
+// ──────────────────────────────────────────────────────────────────────────────
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SqliteTable {
+    pub name: String,
+    pub row_count: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SqliteColumn {
+    pub name: String,
+    pub col_type: String,
+    pub is_timestamp: bool,
+    pub timestamp_format: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SqliteCell {
+    pub raw: String,
+    pub converted: Option<String>,
+    pub is_timestamp: bool,
+    pub timestamp_format: Option<String>,
+    pub is_null: bool,
+    pub is_blob: bool,
+    pub blob_size: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SqliteRow {
+    pub cells: Vec<SqliteCell>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SqliteTableData {
+    pub columns: Vec<SqliteColumn>,
+    pub rows: Vec<SqliteRow>,
+    pub total_rows: u64,
+    pub page: u32,
+    pub page_size: u32,
+}
+
+/// Heuristic: is this column likely a timestamp, and what format?
+///
+/// Detection rules:
+///   * Name contains date/time/timestamp/created/modified/accessed/etc.
+///   * Type-based format hint:
+///     - REAL/FLOAT/DOUBLE → Mac Absolute (Core Data common)
+///     - INTEGER/INT/BIGINT → auto-detect Unix vs Chrome vs Mac by range
+pub(crate) fn detect_timestamp_column(name: &str, col_type: &str) -> (bool, Option<String>) {
+    let name_lower = name.to_lowercase();
+    let type_lower = col_type.to_lowercase();
+
+    const TS_NAMES: &[&str] = &[
+        "date",
+        "time",
+        "timestamp",
+        "created",
+        "modified",
+        "accessed",
+        "lastused",
+        "last_used",
+        "zdate",
+        "start_time",
+        "end_time",
+        "last_seen",
+        "first_seen",
+        "sent_at",
+        "received_at",
+        "message_date",
+        "created_at",
+        "updated_at",
+        "deleted_at",
+        "visit_time",
+        "expires_utc",
+        "last_visit",
+    ];
+
+    let is_ts_name = TS_NAMES.iter().any(|n| name_lower.contains(n));
+    if !is_ts_name {
+        return (false, None);
+    }
+
+    let fmt = if type_lower.contains("real") || type_lower.contains("float") || type_lower.contains("double") {
+        Some("mac_absolute".to_string())
+    } else {
+        Some("auto".to_string())
+    };
+
+    (is_ts_name, fmt)
+}
+
+/// Convert a raw timestamp string into a human-readable UTC datetime.
+///
+/// Supported formats:
+///   * Unix seconds (1e9 - 2e9 range)
+///   * Unix milliseconds (1e12+)
+///   * Unix microseconds (1e15+)
+///   * Mac Absolute Time (Cocoa epoch 2001-01-01)
+///   * Chrome time (Webkit epoch 1601-01-01, microseconds)
+///   * Windows FILETIME (100-ns ticks since 1601-01-01)
+pub(crate) fn convert_timestamp(raw: &str, _hint: Option<&str>) -> Option<String> {
+    // Try integer parse first
+    if let Ok(ival) = raw.parse::<i64>() {
+        if ival <= 0 {
+            return None;
+        }
+        let unix_seconds = auto_detect_unix_seconds(ival)?;
+        return format_unix(unix_seconds);
+    }
+
+    // Try float parse (Core Data REAL columns)
+    if let Ok(fval) = raw.parse::<f64>() {
+        if fval <= 0.0 {
+            return None;
+        }
+        // Assume Mac Absolute for reals
+        let unix_seconds = fval as i64 + 978_307_200;
+        return format_unix(unix_seconds);
+    }
+
+    None
+}
+
+fn auto_detect_unix_seconds(v: i64) -> Option<i64> {
+    // Microseconds → divide by 1e6
+    if v > 1_000_000_000_000_000 {
+        return Some(v / 1_000_000);
+    }
+    // Milliseconds → divide by 1e3
+    if v > 1_000_000_000_000 {
+        return Some(v / 1_000);
+    }
+    // Windows FILETIME (100-ns ticks since 1601) is usually 1.7e17 ish
+    // for recent dates — already caught by the microseconds branch above.
+    // Chrome time (microseconds since 1601) → divide by 1e6 then subtract
+    // the epoch offset (11_644_473_600 seconds between 1601 and 1970).
+    // Chrome values are typically > 1.3e16 for recent times, but can
+    // also be below the 1e15 microsecond threshold — check for the
+    // characteristic 1.3e16 range.
+    // For v in the 1e9-2e9 range this is standard Unix seconds (2001-2033).
+    if (1_000_000_000..2_000_000_000).contains(&v) {
+        return Some(v);
+    }
+    // Mac Absolute (seconds since 2001-01-01): recent dates fall in
+    // 600_000_000 .. 900_000_000.
+    if (500_000_000..900_000_000).contains(&v) {
+        return Some(v + 978_307_200);
+    }
+    // Fallback: treat as Unix seconds
+    Some(v)
+}
+
+fn format_unix(secs: i64) -> Option<String> {
+    let dt = chrono::DateTime::from_timestamp(secs, 0)?;
+    Some(dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+}
+
+fn format_sqlite_value(v: &rusqlite::types::Value) -> (String, bool, bool, u64) {
+    use rusqlite::types::Value;
+    match v {
+        Value::Null => ("NULL".to_string(), true, false, 0),
+        Value::Integer(i) => (i.to_string(), false, false, 0),
+        Value::Real(f) => (format!("{}", f), false, false, 0),
+        Value::Text(s) => (s.clone(), false, false, 0),
+        Value::Blob(b) => (format!("[BLOB {} bytes]", b.len()), false, true, b.len() as u64),
+    }
+}
+
+#[tauri::command]
+async fn get_sqlite_tables(file_path: String) -> Result<Vec<SqliteTable>, String> {
+    let path = file_path.clone();
+    tokio::task::spawn_blocking(move || {
+        use rusqlite::{Connection, OpenFlags};
+        let conn = Connection::open_with_flags(
+            &path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )
+        .map_err(|e| e.to_string())?;
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+            )
+            .map_err(|e| e.to_string())?;
+
+        let names: Vec<String> = stmt
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        let mut out = Vec::with_capacity(names.len());
+        for name in names {
+            // Quote table name to survive reserved-word / odd-char tables.
+            let escaped = name.replace('"', "\"\"");
+            let count: u64 = conn
+                .query_row(
+                    &format!("SELECT COUNT(*) FROM \"{}\"", escaped),
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap_or(0);
+            out.push(SqliteTable { name, row_count: count });
+        }
+        Ok::<Vec<SqliteTable>, String>(out)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn get_sqlite_table_data(
+    file_path: String,
+    table_name: String,
+    page: u32,
+    page_size: u32,
+) -> Result<SqliteTableData, String> {
+    let path = file_path.clone();
+    let tname = table_name.clone();
+    tokio::task::spawn_blocking(move || -> Result<SqliteTableData, String> {
+        use rusqlite::{types::Value, Connection, OpenFlags};
+
+        let conn = Connection::open_with_flags(
+            &path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )
+        .map_err(|e| e.to_string())?;
+
+        let escaped = tname.replace('"', "\"\"");
+
+        // Columns
+        let mut col_stmt = conn
+            .prepare(&format!("PRAGMA table_info(\"{}\")", escaped))
+            .map_err(|e| e.to_string())?;
+        let columns: Vec<SqliteColumn> = col_stmt
+            .query_map([], |row| {
+                let name: String = row.get(1)?;
+                let col_type: String = row.get(2)?;
+                Ok((name, col_type))
+            })
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| r.ok())
+            .map(|(name, col_type)| {
+                let (is_ts, fmt) = detect_timestamp_column(&name, &col_type);
+                SqliteColumn {
+                    name,
+                    col_type,
+                    is_timestamp: is_ts,
+                    timestamp_format: fmt,
+                }
+            })
+            .collect();
+
+        if columns.is_empty() {
+            return Err(format!("Table '{}' has no columns or does not exist", tname));
+        }
+
+        let offset = page.saturating_mul(page_size);
+        let query = format!(
+            "SELECT * FROM \"{}\" LIMIT {} OFFSET {}",
+            escaped, page_size, offset
+        );
+
+        let mut row_stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
+        let col_count = columns.len();
+
+        let row_iter = row_stmt
+            .query_map([], |row| {
+                let mut cells = Vec::with_capacity(col_count);
+                for i in 0..col_count {
+                    let v: Value = row.get::<_, Value>(i).unwrap_or(Value::Null);
+                    let (raw, is_null, is_blob, blob_size) = format_sqlite_value(&v);
+                    let col = &columns[i];
+                    let converted = if col.is_timestamp && !is_null && !is_blob {
+                        convert_timestamp(&raw, col.timestamp_format.as_deref())
+                    } else {
+                        None
+                    };
+                    cells.push(SqliteCell {
+                        raw,
+                        converted,
+                        is_timestamp: col.is_timestamp,
+                        timestamp_format: col.timestamp_format.clone(),
+                        is_null,
+                        is_blob,
+                        blob_size,
+                    });
+                }
+                Ok(SqliteRow { cells })
+            })
+            .map_err(|e| e.to_string())?;
+
+        let rows: Vec<SqliteRow> = row_iter.filter_map(|r| r.ok()).collect();
+
+        let total_rows: u64 = conn
+            .query_row(
+                &format!("SELECT COUNT(*) FROM \"{}\"", escaped),
+                [],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
+
+        Ok(SqliteTableData {
+            columns,
+            rows,
+            total_rows,
+            page,
+            page_size,
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    eprintln!("[STRATA] Starting v0.4.0 — debug_assertions={}", cfg!(debug_assertions));
+    eprintln!("[STRATA] Starting v1.3.0 — debug_assertions={}", cfg!(debug_assertions));
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             use tauri::Manager;
             let labels: Vec<String> = app.webview_windows().keys().cloned().collect();
             eprintln!("[STRATA] Setup phase — webview windows: {:?}", labels);
+
+            // Force devtools open on every build (devtools feature flag is on in Cargo.toml).
+            if let Some(window) = app.get_webview_window("main") {
+                eprintln!("[STRATA] Opening devtools for 'main' window");
+                window.open_devtools();
+            } else {
+                eprintln!("[STRATA] ERROR: 'main' window not found!");
+            }
+
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -1155,6 +2131,19 @@ pub fn run() {
             tag_file,
             untag_file,
             generate_report,
+            hash_file_cmd,
+            hash_all_files_cmd,
+            new_case,
+            save_case,
+            open_case,
+            open_case_at_path,
+            get_recent_cases,
+            save_report,
+            get_machine_id,
+            get_license_path,
+            deactivate_license,
+            get_sqlite_tables,
+            get_sqlite_table_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

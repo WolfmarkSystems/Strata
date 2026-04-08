@@ -12,6 +12,7 @@ const TOP_ITEMS: NavItem[] = [
   { id: 'files',     icon: '\u{1F4C1}', label: 'Files' },
   { id: 'artifacts', icon: '\u{1F5C2}', label: 'Artifacts' },
   { id: 'tags',      icon: '\u{1F3F7}', label: 'Tags' },
+  { id: 'notes',     icon: '\u{1F4DD}', label: 'Notes' },
   { id: 'plugins',   icon: '\u{1F50C}', label: 'Plugins' },
 ]
 
@@ -25,15 +26,16 @@ export default function Sidebar() {
 
   return (
     <div
+      className="bubble"
       style={{
-        width: 42,
-        background: '#090a0d',
-        borderRight: '1px solid var(--border-sub)',
+        width: 72,
+        height: '100%',
+        alignSelf: 'stretch',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '8px 0',
-        gap: 4,
+        padding: '14px 0',
+        gap: 8,
         flexShrink: 0,
       }}
     >
@@ -71,8 +73,9 @@ function SidebarIcon({
 }) {
   const [hover, setHover] = useState(false)
 
-  const bg = active ? '#0f1e30' : hover ? '#111622' : 'transparent'
-  const color = active ? '#8fa8c0' : hover ? 'var(--text-2)' : 'var(--text-muted)'
+  const bg = active ? 'var(--bg-elevated)' : hover ? 'var(--bg-elevated)' : 'transparent'
+  const color = active ? 'var(--text-1)' : hover ? 'var(--text-2)' : 'var(--text-muted)'
+  const borderColor = active ? 'var(--accent-2)' : hover ? 'var(--border)' : 'transparent'
 
   return (
     <button
@@ -81,18 +84,19 @@ function SidebarIcon({
       onMouseLeave={() => setHover(false)}
       title={item.label}
       style={{
-        width: 30,
-        height: 30,
-        borderRadius: 5,
+        width: 48,
+        height: 48,
+        borderRadius: 'var(--radius-md)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 15,
+        fontSize: 24,
         cursor: 'pointer',
-        border: 'none',
+        border: `1px solid ${borderColor}`,
         background: bg,
         color,
         transition: 'all 0.15s',
+        padding: 0,
       }}
     >
       {item.icon}

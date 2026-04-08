@@ -124,6 +124,68 @@ impl WraithPlugin {
             return results;
         }
 
+        // ── LSASS dump detection (T1003.001) — Day 11+ addition ────────
+        // Any .dmp file whose name or parent path references lsass is an
+        // automatic critical IOC. Also flag .dmp files that live in user
+        // Temp/AppData rather than the WER ReportArchive paths.
+        if name_lower.ends_with(".dmp") {
+            let lsass_indicator = name_lower.contains("lsass")
+                || path_lower.contains("\\lsass")
+                || path_lower.contains("/lsass");
+            let unusual_location = path_lower.contains("\\temp\\")
+                || path_lower.contains("\\appdata\\local\\temp")
+                || path_lower.contains("\\users\\public\\")
+                || path_lower.contains("\\windows\\temp\\");
+            let is_legitimate_wer =
+                path_lower.contains("\\wer\\") || path_lower.contains("\\reportarchive\\");
+
+            if lsass_indicator {
+                let mut a = Artifact::new("LSASS Dump", &path_str);
+                a.add_field("title", "\u{26A0} LSASS memory dump detected");
+                a.add_field(
+                    "detail",
+                    &format!(
+                        "File: {} — LSASS process memory dump. Indicates credential dumping (mimikatz, comsvcs.dll MiniDump, ProcDump). CRITICAL IOC.",
+                        name
+                    ),
+                );
+                a.add_field("file_type", "LSASS Dump");
+                a.add_field("forensic_value", "Critical");
+                a.add_field("suspicious", "true");
+                a.add_field("mitre", "T1003.001");
+                results.push(a);
+            } else if unusual_location && !is_legitimate_wer {
+                let mut a = Artifact::new("Suspicious Dump", &path_str);
+                a.add_field("title", &format!("Suspicious .dmp in non-WER path: {}", name));
+                a.add_field(
+                    "detail",
+                    "Process memory dump found in user Temp / AppData (outside WER ReportArchive). May be a credential-dumping artifact.",
+                );
+                a.add_field("file_type", "Suspicious Dump");
+                a.add_field("forensic_value", "High");
+                a.add_field("suspicious", "true");
+                a.add_field("mitre", "T1003");
+                results.push(a);
+            }
+        }
+
+        // ── Sysmon Operational log detection ───────────────────────────
+        // If Microsoft-Windows-Sysmon%4Operational.evtx is present, surface
+        // it as a high-value source — Sysmon captures process creation with
+        // command line, network connections, image loads, DNS queries, etc.
+        if name_lower.contains("sysmon") && name_lower.ends_with(".evtx") {
+            let mut a = Artifact::new("Sysmon Log", &path_str);
+            a.add_field("title", "Sysmon Operational log present");
+            a.add_field(
+                "detail",
+                "Sysmon EVTX detected — parse for Event 1 (process creation w/ command line), 3 (network connection), 7 (image load), 8 (CreateRemoteThread), 10 (process access — lsass), 11 (file create), 13 (registry set), 22 (DNS query). Sysmon is the richest possible endpoint telemetry source.",
+            );
+            a.add_field("file_type", "Sysmon Log");
+            a.add_field("forensic_value", "Critical");
+            a.add_field("mitre", "T1059");
+            results.push(a);
+        }
+
         // Crash Dumps
         if name_lower.ends_with(".dmp") && (path_lower.contains("minidump") || name_lower == "memory.dmp") {
             let mut artifact = Artifact::new("SystemActivity", &path_str);

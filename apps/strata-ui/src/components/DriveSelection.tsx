@@ -47,7 +47,7 @@ export default function DriveSelection() {
       <div
         style={{
           width: 520,
-          background: '#0b0c0f',
+          background: 'var(--bg-panel)',
           borderStyle: 'solid',
           borderWidth: 1,
           borderColor: 'var(--border)',
@@ -59,7 +59,6 @@ export default function DriveSelection() {
       >
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <div style={{ fontSize: 24 }}>{'\u{1F4BE}'}</div>
           <div
             style={{
               fontSize: 22,
@@ -200,10 +199,10 @@ function DriveRow({
   let bg = 'var(--bg-elevated)'
   let borderColor = 'var(--border)'
   if (!permitted) {
-    bg = '#0a0c10'
+    bg = 'var(--bg-panel)'
   } else if (selected) {
-    bg = '#0f1e30'
-    borderColor = '#1c3050'
+    bg = 'var(--bg-elevated)'
+    borderColor = 'var(--accent-2)'
   } else if (hover) {
     borderColor = 'var(--accent-muted)'
   }

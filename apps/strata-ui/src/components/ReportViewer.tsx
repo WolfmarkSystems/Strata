@@ -1,10 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../store/appStore'
+import { saveReport } from '../ipc'
 
 export default function ReportViewer() {
   const reportHtml = useAppStore((s) => s.reportHtml)
   const setReportVisible = useAppStore((s) => s.setReportVisible)
+  const casePath = useAppStore((s) => s.casePath)
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [savedPath, setSavedPath] = useState<string | null>(null)
+  const [savedFlash, setSavedFlash] = useState(false)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -21,6 +25,29 @@ export default function ReportViewer() {
     if (win) {
       win.focus()
       win.print()
+    }
+  }
+
+  const handleSaveHtml = async () => {
+    if (!reportHtml) return
+    if (!casePath) {
+      // Fallback: use a Blob URL download in the browser
+      const blob = new Blob([reportHtml], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `strata-report-${new Date().toISOString().replace(/[:.]/g, '-')}.html`
+      a.click()
+      URL.revokeObjectURL(url)
+      setSavedFlash(true)
+      setTimeout(() => setSavedFlash(false), 2500)
+      return
+    }
+    const path = await saveReport(reportHtml, casePath)
+    if (path) {
+      setSavedPath(path)
+      setSavedFlash(true)
+      setTimeout(() => setSavedFlash(false), 4000)
     }
   }
 
@@ -67,39 +94,37 @@ export default function ReportViewer() {
             fontFamily: 'monospace',
           }}
         >
-          {'\u00B7'} Preview mode
+          {'\u00B7'} {casePath ? 'Linked to case' : 'Preview mode'}
         </span>
+
+        {savedFlash && (
+          <span
+            style={{
+              fontSize: 10,
+              color: 'var(--clean)',
+              fontFamily: 'monospace',
+              marginLeft: 8,
+              animation: 'gateFade 200ms ease-out',
+            }}
+            title={savedPath ?? undefined}
+          >
+            {'\u2713'} {savedPath ? `Saved to ${savedPath.split('/').pop()}` : 'Downloaded'}
+          </span>
+        )}
+
         <div style={{ flex: 1 }} />
+
         <button
-          onClick={handlePrint}
-          style={{
-            padding: '6px 14px',
-            fontSize: 11,
-            fontFamily: 'monospace',
-            letterSpacing: '0.06em',
-            background: 'var(--bg-elevated)',
-            color: 'var(--text-2)',
-            border: '1px solid var(--border)',
-            borderRadius: 4,
-            cursor: 'pointer',
-          }}
+          onClick={handleSaveHtml}
+          disabled={!reportHtml}
+          style={toolbarButton('var(--text-2)')}
         >
+          {'\u{1F4BE}'} SAVE HTML
+        </button>
+        <button onClick={handlePrint} style={toolbarButton('var(--text-2)')}>
           {'\u29C9'} PRINT / SAVE PDF
         </button>
-        <button
-          onClick={handleClose}
-          style={{
-            padding: '6px 14px',
-            fontSize: 11,
-            fontFamily: 'monospace',
-            letterSpacing: '0.06em',
-            background: 'transparent',
-            color: 'var(--text-muted)',
-            border: '1px solid var(--border)',
-            borderRadius: 4,
-            cursor: 'pointer',
-          }}
-        >
+        <button onClick={handleClose} style={toolbarButton('var(--text-muted)')}>
           {'\u2715'} CLOSE
         </button>
       </div>
@@ -123,7 +148,7 @@ export default function ReportViewer() {
             maxWidth: 900,
             height: '100%',
             border: '1px solid var(--border)',
-            borderRadius: 4,
+            borderRadius: 'var(--radius-md)',
             background: '#ffffff',
             boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
           }}
@@ -131,4 +156,18 @@ export default function ReportViewer() {
       </div>
     </div>
   )
+}
+
+function toolbarButton(color: string): React.CSSProperties {
+  return {
+    padding: '6px 14px',
+    fontSize: 11,
+    fontFamily: 'monospace',
+    letterSpacing: '0.06em',
+    background: 'var(--bg-elevated)',
+    color,
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-sm)',
+    cursor: 'pointer',
+  }
 }

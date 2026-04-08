@@ -3,6 +3,7 @@ export type ViewMode =
   | 'artifacts'
   | 'tags'
   | 'plugins'
+  | 'notes'
   | 'settings'
 
 export type LicenseStatus =
@@ -274,14 +275,64 @@ export const PLUGIN_DATA: PluginInfo[] = [
     status: 'idle', artifact_count: 0, progress: 0,
   },
   {
+    name: 'Phantom',
+    version: 'v1.0.0',
+    plugin_type: 'Analyzer',
+    short_desc: 'Registry Intelligence Engine — SYSTEM, SOFTWARE, SAM, AmCache, USRCLASS',
+    full_desc: 'Phantom owns registry hive parsing. It decodes ShimCache / AppCompatCache for evidence of every file the OS ever considered executing, walks USBSTOR + Enum\\USB + MountedDevices to reconstruct the complete USB device history with first-install, last-connect, and last-removal timestamps, enumerates every service with ImagePath + start type + run-as account to flag non-standard persistence, extracts SHA1 hashes from AmCache.hve InventoryApplicationFile as the gold-standard execution-evidence artifact, surfaces unsigned drivers from InventoryDriverBinary, and reconstructs the hostname, timezone, last shutdown time, network adapter history, installed programs, Microsoft cloud account identities, HKLM AutoRun keys, MuiCache display names, UserChoice default handlers, and USRCLASS shellbags. Phantom is the single biggest coverage win in the v0.6.0 plugin fleet.',
+    mitre: ['T1059', 'T1543.003', 'T1547.001', 'T1052.001', 'T1200', 'T1078.003', 'T1546.001'],
+    categories: ['Registry Intelligence', 'Execution Evidence', 'Device History', 'Persistence'],
+    changelog: [{ version: 'v1.0.0', changes: ['Initial release — SYSTEM/SOFTWARE/SAM/SECURITY/AmCache/USRCLASS parsers'] }],
+    accent_color: '#d946ef',
+    status: 'idle', artifact_count: 0, progress: 0,
+  },
+  {
+    name: 'Guardian',
+    version: 'v1.0.0',
+    plugin_type: 'Analyzer',
+    short_desc: 'Antivirus + System Health — Defender, Avast, MalwareBytes, WER',
+    full_desc: 'Guardian proves malware was present even after it has been cleaned up. It surfaces Windows Defender MpEventLog.evtx detection events and quarantined items, parses Avast / MalwareBytes log files for threat-detection records, examines Windows Error Reporting (WER) .wer files for application crashes flagging crashes in Temp or AppData paths, and wires into the Reliability Monitor database for system-health timeline. When an incident cleanup attempt wiped the malware but missed the AV log, Guardian finds the smoking gun.',
+    mitre: ['T1562.001', 'T1027', 'T1036', 'T1070.004'],
+    categories: ['Antivirus', 'System Health', 'Crash Analysis'],
+    changelog: [{ version: 'v1.0.0', changes: ['Initial release — Defender log + quarantine, WER parsing, Avast/MBAM detection'] }],
+    accent_color: '#06b6d4',
+    status: 'idle', artifact_count: 0, progress: 0,
+  },
+  {
+    name: 'NetFlow',
+    version: 'v1.0.0',
+    plugin_type: 'Analyzer',
+    short_desc: 'Network forensics — PCAP, IIS/Apache logs, WLAN, exfil tools',
+    full_desc: 'NetFlow owns FOR572-style network-forensic artifacts plus the top exfil tool signatures. It validates PCAP / PCAPNG magic bytes, scans IIS W3C logs and Apache / Nginx access logs for webshell patterns (cmd=, exec=, c99shell, wso.php), SQL-injection patterns (UNION SELECT, OR 1=1, sqlmap), scanner user-agents (nikto, nmap, masscan), and directory-traversal attempts (..%2f, ..\\..\\), parses WLAN profile XML for SSID + auth type, decodes rclone.conf into per-remote exfil destinations with type (s3, gdrive, dropbox, sftp), surfaces WinSCP.ini and MEGAsync.cfg presence as exfil IOCs, scrapes Power Efficiency Diagnostics HTML reports for long-running rclone / WinSCP / MEGAsync sessions, and flags P2P client artifacts. NetFlow is the plugin that connects "data left the building" to "how it left".',
+    mitre: ['T1071', 'T1190', 'T1505.003', 'T1537', 'T1048', 'T1219', 'T1567'],
+    categories: ['Network Forensics', 'Exfiltration', 'Web Attacks'],
+    changelog: [{ version: 'v1.0.0', changes: ['Initial release — PCAP detection, IIS/Apache attack-pattern scanner, WLAN profiles, WinSCP/Rclone/MEGAsync signatures, remote-access tool detection'] }],
+    accent_color: '#10b981',
+    status: 'idle', artifact_count: 0, progress: 0,
+  },
+  {
+    name: 'MacTrace',
+    version: 'v1.0.0',
+    plugin_type: 'Analyzer',
+    short_desc: 'macOS + iOS artifacts — LaunchAgents, KnowledgeC, PowerLog, SMS, WhatsApp',
+    full_desc: 'MacTrace owns the FOR518 (macOS/APFS) and FOR585 (iOS) artifact landscape. It parses LaunchAgents / LaunchDaemons for macOS persistence, opens KnowledgeC.db as SQLite to count ZOBJECT activity rows, reads iOS PowerLog (CurrentPowerlog.PLSQL) for app foreground events, surfaces locationd clients.plist authorization history, opens sms.db / chat.db / CallHistory.storedata / AddressBook.sqlitedb for message + call + contact counts, detects macOS Unified Log tracev3 bundles, parses Recent Items + LoginItems + SharedFileList (sfl2/sfl3), and decodes WhatsApp (iOS ChatStorage.sqlite + Android msgstore.db), Signal, and Telegram local databases. When the evidence is on an Apple device or iPhone, MacTrace finds it.',
+    mitre: ['T1543.001', 'T1543.004', 'T1005', 'T1430', 'T1213', 'T1547'],
+    categories: ['macOS', 'iOS', 'Mobile Communications'],
+    changelog: [{ version: 'v1.0.0', changes: ['Initial release — LaunchAgents, KnowledgeC, PowerLog, locationd, SMS, CallHistory, Signal, WhatsApp, Telegram, Safari history'] }],
+    accent_color: '#f472b6',
+    status: 'idle', artifact_count: 0, progress: 0,
+  },
+  {
     name: 'Sigma',
     version: 'v1.0.0',
     plugin_type: 'Analyzer',
     short_desc: 'Threat correlation — MITRE ATT&CK mapping, kill chain, scoring',
-    full_desc: 'Sigma runs last because it needs everything. It reads every artifact produced by all ten preceding plugins, maps findings to MITRE ATT&CK, builds a kill chain coverage map, detects known attack sequences including credential dumping, ransomware indicators, and lateral movement chains. It assigns confidence scores based on corroborating evidence sources and produces a complete threat assessment.',
+    full_desc: 'Sigma runs last because it needs everything. It reads every artifact produced by all twelve preceding plugins, maps findings to MITRE ATT&CK, builds a kill chain coverage map, detects known attack sequences including credential dumping, ransomware indicators, lateral movement chains, USB exfiltration sequences, archive-then-upload patterns, AV evasion + file deletion pairs, and new-account + persistence combinations. It assigns confidence scores based on corroborating evidence sources and produces a complete threat assessment.',
     mitre: ['Cross-tactic correlation'],
     categories: ['Threat Intelligence', 'Kill Chain', 'ATT&CK'],
-    changelog: [{ version: 'v1.0.0', changes: ['Initial release'] }],
+    changelog: [
+      { version: 'v1.0.0', changes: ['USB Exfil Sequence, Archive+Upload, AV Evasion, New Account + Persistence, Shimcache Ghost correlation rules added'] },
+    ],
     accent_color: '#c04080',
     status: 'idle', artifact_count: 0, progress: 0,
   },

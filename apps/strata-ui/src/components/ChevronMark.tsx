@@ -12,9 +12,9 @@ export default function ChevronMark({ width = 60, height = 52 }: Props) {
       <polygon points="68,28 72,30 72,38 68,36" fill="#2a3a55" />
       <polygon points="12,28 8,30 8,38 12,36" fill="#4a6880" />
       <line x1="12" y1="36" x2="68" y2="36" stroke="#d8e2ec" strokeWidth="0.5" opacity="0.4" />
-      <polygon points="68,36 72,38 72,46 68,44" fill="#1a2840" />
+      <polygon points="68,36 72,38 72,46 68,44" fill="var(--border)" />
       <polygon points="12,36 8,38 8,46 12,44" fill="#3a5268" />
-      <polygon points="12,52 8,54 36,66 40,64 40,56" fill="#0f1c2e" opacity="0.9" />
+      <polygon points="12,52 8,54 36,66 40,64 40,56" fill="var(--bg-elevated)" opacity="0.9" />
       <polygon points="68,52 72,54 44,66 40,64 40,56" fill="#080e18" opacity="0.9" />
       <polyline
         points="12,20 40,4 68,20"

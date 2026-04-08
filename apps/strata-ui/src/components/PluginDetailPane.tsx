@@ -41,10 +41,10 @@ export default function PluginDetailPane({
   if (!plugin) {
     return (
       <div
+        className="bubble"
         style={{
           height: '100%',
           width: '100%',
-          background: 'var(--bg-panel)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -69,13 +69,12 @@ export default function PluginDetailPane({
 
   return (
     <div
+      className="bubble"
       style={{
         height: '100%',
         width: '100%',
-        background: 'var(--bg-panel)',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
       }}
     >
       {/* Accent bar */}

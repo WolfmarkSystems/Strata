@@ -1,7 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import WolfMark from '../components/WolfMark'
 import { THEMES } from '../themes'
+import {
+  getMachineId,
+  getLicensePath,
+  deactivateLicense,
+  checkLicense,
+  activateLicense,
+  type LicenseResult,
+} from '../ipc'
 
 type Tab = 'appearance' | 'examiner' | 'hashsets' | 'license' | 'about'
 
@@ -48,13 +56,13 @@ export default function SettingsView() {
                 fontSize: 12,
                 cursor: 'pointer',
                 background: 'transparent',
-                color: active ? '#8fa8c0' : 'var(--text-muted)',
+                color: active ? 'var(--text-1)' : 'var(--text-muted)',
                 borderTopStyle: 'none',
                 borderRightStyle: 'none',
                 borderLeftStyle: 'none',
                 borderBottomStyle: 'solid',
                 borderBottomWidth: 2,
-                borderBottomColor: active ? '#8fa8c0' : 'transparent',
+                borderBottomColor: active ? 'var(--text-1)' : 'transparent',
                 transition: 'all 0.15s',
                 fontFamily: 'inherit',
                 userSelect: 'none',
@@ -425,127 +433,218 @@ function Checkbox({
 // ──────────────────────────────────────────────────────────────────────────────
 
 function LicenseTab() {
-  const [showKey, setShowKey] = useState(false)
+  const [machineId, setMachineId] = useState<string>('—')
+  const [machineCopied, setMachineCopied] = useState(false)
+  const [license, setLicense] = useState<LicenseResult | null>(null)
+  const [licensePath, setLicensePath] = useState<string | null>(null)
+  const [activateInput, setActivateInput] = useState('')
+  const [activateError, setActivateError] = useState<string | null>(null)
+  const [activateBusy, setActivateBusy] = useState(false)
+
+  const refresh = async () => {
+    setMachineId(await getMachineId())
+    setLicense(await checkLicense())
+    setLicensePath(await getLicensePath())
+  }
+
+  useEffect(() => {
+    void refresh()
+  }, [])
+
+  const copyMachine = async () => {
+    if (!navigator.clipboard) return
+    await navigator.clipboard.writeText(machineId)
+    setMachineCopied(true)
+    setTimeout(() => setMachineCopied(false), 1500)
+  }
+
+  const handleActivate = async () => {
+    setActivateError(null)
+    setActivateBusy(true)
+    const result = await activateLicense(activateInput.trim())
+    setActivateBusy(false)
+    if (result.valid) {
+      setActivateInput('')
+      await refresh()
+    } else {
+      setActivateError(result.error ?? 'License could not be activated')
+    }
+  }
+
+  const handleDeactivate = async () => {
+    if (!confirm('Remove the installed license key from this machine?')) return
+    await deactivateLicense()
+    await refresh()
+  }
+
+  // ── Status banner ─────────────────────────────────────────────────────────
+  const isValid = license?.valid === true
+  const tier = license?.tier ?? 'none'
+  const statusColor = isValid
+    ? 'var(--clean)'
+    : tier === 'trial'
+      ? 'var(--sus)'
+      : 'var(--flag)'
+  const statusLabel = isValid
+    ? `${tier.toUpperCase()} LICENSE ACTIVE`
+    : tier === 'trial'
+      ? 'TRIAL'
+      : tier === 'expired'
+        ? 'LICENSE EXPIRED'
+        : 'NO LICENSE'
 
   return (
     <div>
+      {/* ── Status card ─── */}
       <div
+        className="bubble-tight"
         style={{
-          background: 'rgba(72,120,88,0.08)',
-          borderStyle: 'solid',
-          borderWidth: 1,
-          borderColor: 'rgba(72,120,88,0.3)',
-          borderRadius: 6,
-          padding: '14px 16px',
+          padding: '14px 18px',
+          marginBottom: 20,
+          maxWidth: 540,
+        }}
+      >
+        <div
+          style={{
+            color: statusColor,
+            fontWeight: 700,
+            fontSize: 13,
+            letterSpacing: '0.08em',
+            marginBottom: 6,
+          }}
+        >
+          {isValid ? '\u2713 ' : '\u26A0 '} {statusLabel}
+        </div>
+        {isValid && (
+          <>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              Licensee: {license?.licensee || '\u2014'}
+            </div>
+            {license?.org && (
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                Organization: {license.org}
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {license?.days_remaining ?? 0} days remaining
+            </div>
+          </>
+        )}
+        {license?.error && !isValid && (
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            {license.error}
+          </div>
+        )}
+      </div>
+
+      {/* ── Machine ID ─── */}
+      <SectionLabel>Machine ID</SectionLabel>
+      <div
+        className="bubble-tight"
+        style={{
+          padding: '14px 18px',
+          maxWidth: 540,
           marginBottom: 20,
         }}
       >
         <div
           style={{
-            color: 'var(--clean)',
-            fontWeight: 700,
-            fontSize: 13,
-            marginBottom: 4,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            fontFamily: 'monospace',
+            fontSize: 12,
+            color: 'var(--text-1)',
+            marginBottom: 8,
+            wordBreak: 'break-all',
           }}
         >
-          {'\u2713'} Pro License Active
+          <span style={{ flex: 1 }}>{machineId}</span>
+          <button
+            className="btn-secondary"
+            style={{ padding: '4px 10px', fontSize: 10 }}
+            onClick={copyMachine}
+          >
+            {machineCopied ? '\u2713 Copied' : 'Copy'}
+          </button>
         </div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Licensee: Dev Mode</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>999 days remaining</div>
-      </div>
-
-      <SectionLabel>License Details</SectionLabel>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 440 }}>
-        <div>
-          <div
-            style={{
-              fontSize: 10,
-              color: 'var(--text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              marginBottom: 4,
-            }}
-          >
-            Machine ID
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontFamily: 'monospace',
-              fontSize: 11,
-              color: 'var(--text-2)',
-            }}
-          >
-            <span>4F2A-9C8E-7B3D-1A6F</span>
-            <button
-              className="btn-secondary"
-              style={{ padding: '2px 8px', fontSize: 10 }}
-              onClick={() => navigator.clipboard?.writeText('4F2A-9C8E-7B3D-1A6F')}
-            >
-              Copy
-            </button>
-          </div>
-        </div>
-        <div>
-          <div
-            style={{
-              fontSize: 10,
-              color: 'var(--text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              marginBottom: 4,
-            }}
-          >
-            License Key
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontFamily: 'monospace',
-              fontSize: 11,
-              color: 'var(--text-2)',
-            }}
-          >
-            <span>{showKey ? 'DEV-MODE-9F2A8C' : 'DEV-MODE-XXXXXX'}</span>
-            <button
-              className="btn-secondary"
-              style={{ padding: '2px 8px', fontSize: 10 }}
-              onClick={() => setShowKey((v) => !v)}
-            >
-              {showKey ? 'Hide' : 'View key'}
-            </button>
-          </div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          To get a license key, email{' '}
+          <span style={{ color: 'var(--text-2)' }}>wolfmarksystems@proton.me</span> with
+          your Machine ID above. Your license will be cryptographically bound to this
+          machine.
         </div>
       </div>
 
+      {/* ── Activate ─── */}
+      <SectionLabel>Activate License</SectionLabel>
       <div
+        className="bubble-tight"
         style={{
-          marginTop: 24,
+          padding: '14px 18px',
+          maxWidth: 540,
+          marginBottom: 20,
           display: 'flex',
           flexDirection: 'column',
-          gap: 6,
-          fontSize: 11,
+          gap: 8,
         }}
       >
-        <a
-          href="#"
-          onClick={(e) => e.preventDefault()}
-          style={{ color: 'var(--text-muted)', textDecoration: 'underline' }}
-        >
-          Transfer License
-        </a>
-        <a
-          href="#"
-          onClick={(e) => e.preventDefault()}
-          style={{ color: 'var(--flag)', textDecoration: 'underline', opacity: 0.7 }}
-        >
-          Deactivate License
-        </a>
+        <input
+          type="text"
+          value={activateInput}
+          onChange={(e) => {
+            setActivateInput(e.target.value)
+            setActivateError(null)
+          }}
+          placeholder="STRATA-..."
+          spellCheck={false}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            background: 'var(--bg-input)',
+            border: `1px solid ${activateError ? 'var(--flag)' : 'var(--border)'}`,
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--text-1)',
+            fontFamily: 'monospace',
+            fontSize: 12,
+            outline: 'none',
+          }}
+        />
+        {activateError && (
+          <div style={{ fontSize: 11, color: 'var(--flag)' }}>{activateError}</div>
+        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn-primary"
+            onClick={handleActivate}
+            disabled={activateBusy || !activateInput.trim()}
+          >
+            {activateBusy ? 'Activating\u2026' : 'Activate Key'}
+          </button>
+          {isValid && (
+            <button
+              className="btn-secondary"
+              onClick={handleDeactivate}
+              style={{ color: 'var(--flag)' }}
+            >
+              Deactivate
+            </button>
+          )}
+        </div>
       </div>
+
+      {licensePath && (
+        <div
+          style={{
+            fontSize: 10,
+            color: 'var(--text-off)',
+            fontFamily: 'monospace',
+            marginTop: 4,
+          }}
+        >
+          License file: {licensePath}
+        </div>
+      )}
     </div>
   )
 }

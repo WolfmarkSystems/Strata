@@ -45,8 +45,8 @@ export default function PluginCard({
   }, [isRunning])
 
   const accent = plugin.accent_color
-  const bg = isSelected ? '#0f1e30' : hover ? '#111622' : 'var(--bg-elevated)'
-  const borderColor = isSelected ? '#1c3050' : 'var(--border)'
+  const bg = isSelected ? 'var(--bg-elevated)' : hover ? 'var(--bg-elevated)' : 'var(--bg-elevated)'
+  const borderColor = isSelected ? 'var(--accent-2)' : 'var(--border)'
 
   const runDisabled = !evidenceLoaded || isRunning
   const runLabel = isRunning ? 'RUNNING...' : isComplete ? 'RE-RUN' : 'RUN'

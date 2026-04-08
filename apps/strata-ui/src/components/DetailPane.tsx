@@ -1,22 +1,44 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getFileMetadata } from '../ipc'
 import type { FileMetadata } from '../types'
 import HexViewer from './HexViewer'
 import TextViewer from './TextViewer'
+import SqliteViewer from './SqliteViewer'
+import TimestampConverter from './TimestampConverter'
 import { lookupKnowledge, type KnowledgeEntry } from '../data/knowledgeBank'
 
 interface Props {
   fileId: string | null
 }
 
-type Tab = 'meta' | 'hex' | 'text' | 'image'
+type Tab = 'meta' | 'hex' | 'text' | 'image' | 'sqlite'
 
-const TABS: { id: Tab; label: string }[] = [
+const BASE_TABS: { id: Tab; label: string }[] = [
   { id: 'meta',  label: 'META' },
   { id: 'hex',   label: 'HEX' },
   { id: 'text',  label: 'TEXT' },
   { id: 'image', label: 'IMAGE' },
 ]
+
+const SQLITE_EXTENSIONS = new Set(['db', 'sqlite', 'sqlite3', 'db3', 'storedata', 'sqlitedb'])
+
+function isSqliteFile(meta: FileMetadata | null): boolean {
+  if (!meta) return false
+  const ext = (meta.extension ?? '').toLowerCase().replace(/^\./, '')
+  if (SQLITE_EXTENSIONS.has(ext)) return true
+  // Filename-based detection for databases with no extension
+  const name = (meta.name ?? '').toLowerCase()
+  return (
+    name.endsWith('.db') ||
+    name.endsWith('.sqlite') ||
+    name.endsWith('.sqlite3') ||
+    name === 'history' ||
+    name === 'places.sqlite' ||
+    name === 'knowledgec.db' ||
+    name === 'sms.db' ||
+    name === 'chat.db'
+  )
+}
 
 export default function DetailPane({ fileId }: Props) {
   const [tab, setTab] = useState<Tab>('meta')
@@ -35,40 +57,59 @@ export default function DetailPane({ fileId }: Props) {
     })
   }, [fileId])
 
+  // Build the tab list dynamically — append SQLITE when the selected file
+  // is a SQLite database.
+  const isSqlite = isSqliteFile(meta)
+  const tabs = useMemo<{ id: Tab; label: string }[]>(() => {
+    if (isSqlite) {
+      return [...BASE_TABS, { id: 'sqlite', label: 'SQLITE' }]
+    }
+    return BASE_TABS
+  }, [isSqlite])
+
+  // If the user switches away from a SQLite file while on the SQLITE tab,
+  // fall back to META.
+  useEffect(() => {
+    if (tab === 'sqlite' && !isSqlite) {
+      setTab('meta')
+    }
+  }, [tab, isSqlite])
+
   return (
     <div
+      className="bubble"
       style={{
         height: '100%',
         width: '100%',
-        background: 'var(--bg-panel)',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
       }}
     >
       {/* Tab bar */}
       <div
         style={{
           display: 'flex',
-          background: 'var(--bg-surface)',
-          borderBottom: '1px solid var(--border-sub)',
+          background: 'transparent',
+          borderBottom: '1px solid var(--border)',
           flexShrink: 0,
         }}
       >
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const active = tab === t.id
           return (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               style={{
-                padding: '7px 12px',
+                padding: '10px 14px',
                 fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
                 cursor: 'pointer',
                 background: 'transparent',
-                color: active ? '#8fa8c0' : 'var(--text-muted)',
+                color: active ? 'var(--text-1)' : 'var(--text-muted)',
                 border: 'none',
-                borderBottom: `2px solid ${active ? '#8fa8c0' : 'transparent'}`,
+                borderBottom: `2px solid ${active ? 'var(--accent-2)' : 'transparent'}`,
                 transition: 'all 0.15s',
                 fontFamily: 'inherit',
               }}
@@ -99,11 +140,35 @@ export default function DetailPane({ fileId }: Props) {
         ) : tab === 'meta' ? (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <MetaContent meta={meta} loading={loading} />
+            {isSqlite && (
+              <div style={{ padding: 10 }}>
+                <TimestampConverter />
+              </div>
+            )}
           </div>
         ) : tab === 'hex' ? (
           <HexViewer fileId={fileId} />
         ) : tab === 'text' ? (
           <TextViewer fileId={fileId} extension={meta?.extension} />
+        ) : tab === 'sqlite' ? (
+          meta?.full_path ? (
+            <SqliteViewer filePath={meta.full_path} />
+          ) : (
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 11,
+                color: 'var(--text-muted)',
+                padding: 12,
+                textAlign: 'center',
+              }}
+            >
+              File path unavailable — SQLite viewer needs a real filesystem path.
+            </div>
+          )
         ) : (
           <div
             style={{

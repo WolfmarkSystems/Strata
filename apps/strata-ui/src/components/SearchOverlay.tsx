@@ -211,7 +211,7 @@ function ResultRow({ result, onClick }: { result: SearchResult; onClick: () => v
         gap: 12,
         cursor: 'pointer',
         borderBottom: '1px solid var(--border-sub)',
-        background: hover ? '#0f1420' : 'transparent',
+        background: hover ? 'var(--bg-elevated)' : 'transparent',
         transition: 'background 0.1s',
       }}
     >

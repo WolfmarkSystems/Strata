@@ -71,13 +71,12 @@ export default function EvidenceTree() {
 
   return (
     <div
+      className="bubble"
       style={{
         height: '100%',
         width: '100%',
-        background: 'var(--bg-panel)',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
       }}
     >
       {/* Header */}
@@ -149,19 +148,6 @@ export default function EvidenceTree() {
           />
         ))}
 
-        {evidenceId && visibleNodes.length > 0 && (
-          <div
-            style={{
-              fontSize: 11,
-              color: 'var(--text-muted)',
-              padding: '8px 12px',
-              fontStyle: 'italic',
-              lineHeight: 1.5,
-            }}
-          >
-            Evidence loaded. Filesystem parsing requires Strata v0.5.0 engine.
-          </div>
-        )}
       </div>
     </div>
   )
@@ -201,8 +187,8 @@ function TreeNodeRow({
   if (selected) textColor = 'var(--text-1)'
 
   let bg = 'transparent'
-  if (selected) bg = '#0f1e30'
-  else if (hover) bg = '#0f1420'
+  if (selected) bg = 'var(--bg-elevated)'
+  else if (hover) bg = 'var(--bg-elevated)'
 
   return (
     <div

@@ -26,13 +26,12 @@ export default function ArtifactCategories({ categories, selectedCat, onSelect }
 
   return (
     <div
+      className="bubble"
       style={{
         height: '100%',
         width: '100%',
-        background: 'var(--bg-panel)',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
       }}
     >
       <div
@@ -78,8 +77,8 @@ function CategoryRow({
   const hasResults = cat.count > 0
 
   let bg = 'transparent'
-  if (selected) bg = '#0f1e30'
-  else if (hover) bg = '#0f1420'
+  if (selected) bg = 'var(--bg-elevated)'
+  else if (hover) bg = 'var(--bg-elevated)'
 
   let nameColor: string = hasResults ? 'var(--text-2)' : 'var(--text-muted)'
   if (selected) nameColor = 'var(--text-1)'

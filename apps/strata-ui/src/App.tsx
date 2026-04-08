@@ -12,6 +12,7 @@ import ArtifactsView from './views/ArtifactsView'
 import TaggedView from './views/TaggedView'
 import PluginsView from './views/PluginsView'
 import SettingsView from './views/SettingsView'
+import NotesView from './views/NotesView'
 import { useAppStore } from './store/appStore'
 import { generateReport, openEvidenceDialog, loadEvidence, getStats } from './ipc'
 
@@ -64,6 +65,11 @@ export default function App() {
         setReportVisible(true)
         return
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault()
+        await useAppStore.getState().saveCaseNow()
+        return
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
         e.preventDefault()
         const path = await openEvidenceDialog()
@@ -82,8 +88,9 @@ export default function App() {
           case '1': setView('files'); break
           case '2': setView('artifacts'); break
           case '3': setView('tags'); break
-          case '4': setView('plugins'); break
-          case '5': setView('settings'); break
+          case '4': setView('notes'); break
+          case '5': setView('plugins'); break
+          case '6': setView('settings'); break
         }
       }
     }
@@ -113,6 +120,9 @@ export default function App() {
           display: 'flex',
           flex: 1,
           overflow: 'hidden',
+          padding: 8,
+          gap: 8,
+          background: 'var(--bg-base)',
         }}
       >
         <Sidebar />
@@ -120,6 +130,7 @@ export default function App() {
           {view === 'files' && <FileExplorer />}
           {view === 'artifacts' && <ArtifactsView />}
           {view === 'tags' && <TaggedView />}
+          {view === 'notes' && <NotesView />}
           {view === 'plugins' && <PluginsView />}
           {view === 'settings' && <SettingsView />}
         </div>

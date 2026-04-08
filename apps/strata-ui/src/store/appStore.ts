@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { AppState, ViewMode, Stats } from '../types'
-import type { PluginStatus, LicenseResult, ExaminerProfile } from '../ipc'
+import type { PluginStatus, LicenseResult, ExaminerProfile, CaseFile } from '../ipc'
+import { saveCase as ipcSaveCase } from '../ipc'
 import { applyTheme, getTheme } from '../themes'
 
 export type AppGate = 'splash' | 'examiner' | 'drive' | 'main'
@@ -39,6 +40,16 @@ interface AppStore extends AppState {
   setReportVisible: (v: boolean) => void
   setReportHtml: (h: string | null) => void
 
+  // Day 13 — case management
+  caseData: CaseFile | null
+  casePath: string | null
+  caseModified: boolean
+  setCaseData: (c: CaseFile, path: string) => void
+  updateCaseNotes: (notes: string) => void
+  markCaseModified: () => void
+  saveCaseNow: () => Promise<void>
+  clearCase: () => void
+
   setView: (v: ViewMode) => void
   setLicensed: (s: AppState['licensed']) => void
   setCase: (id: string, name: string) => void
@@ -60,6 +71,17 @@ interface AppStore extends AppState {
 // before any component mounts.
 if (typeof document !== 'undefined') {
   applyTheme(getTheme('Iron Wolf'))
+}
+
+// Debounced autosave — coalesces a burst of updates (typing notes, tagging
+// files) into a single save 5 seconds after the last change.
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleAutosave() {
+  if (autosaveTimer) clearTimeout(autosaveTimer)
+  autosaveTimer = setTimeout(() => {
+    autosaveTimer = null
+    void useAppStore.getState().saveCaseNow()
+  }, 5000)
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -130,6 +152,49 @@ export const useAppStore = create<AppStore>((set) => ({
   reportHtml: null,
   setReportVisible: (v) => set({ reportVisible: v }),
   setReportHtml: (h) => set({ reportHtml: h }),
+
+  // ── Case management ─────────────────────────────────────────────────────
+  caseData: null,
+  casePath: null,
+  caseModified: false,
+  setCaseData: (c, path) =>
+    set({
+      caseData: c,
+      casePath: path,
+      caseModified: false,
+      caseId: c.case_number,
+      caseName: c.case_name,
+      examinerProfile: c.examiner,
+      examinerName: c.examiner.name || 'Examiner',
+    }),
+  updateCaseNotes: (notes) => {
+    set((s) => {
+      if (!s.caseData) return {}
+      return {
+        caseData: { ...s.caseData, notes },
+        caseModified: true,
+      }
+    })
+    scheduleAutosave()
+  },
+  markCaseModified: () => {
+    set({ caseModified: true })
+    scheduleAutosave()
+  },
+  saveCaseNow: async () => {
+    const s = useAppStore.getState()
+    if (!s.caseData || !s.casePath) return
+    const ok = await ipcSaveCase(s.caseData, s.casePath)
+    if (ok) set({ caseModified: false })
+  },
+  clearCase: () =>
+    set({
+      caseData: null,
+      casePath: null,
+      caseModified: false,
+      caseId: null,
+      caseName: null,
+    }),
 
   setView: (v) => set({ view: v }),
   setLicensed: (s) => set({ licensed: s }),

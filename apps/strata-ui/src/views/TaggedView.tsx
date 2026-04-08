@@ -74,7 +74,7 @@ export default function TaggedView() {
         style={{
           width: 180,
           minWidth: 180,
-          background: '#0a0c12',
+          background: 'var(--bg-panel)',
           borderRightStyle: 'solid',
           borderRightWidth: 1,
           borderRightColor: 'var(--border-sub)',
@@ -147,7 +147,7 @@ export default function TaggedView() {
           <div
             style={{
               display: 'flex',
-              background: '#0a0c12',
+              background: 'var(--bg-panel)',
               borderBottomStyle: 'solid',
               borderBottomWidth: 1,
               borderBottomColor: 'var(--border-sub)',
@@ -235,7 +235,7 @@ export default function TaggedView() {
         style={{
           width: 240,
           minWidth: 240,
-          background: '#0a0c12',
+          background: 'var(--bg-panel)',
           borderLeftStyle: 'solid',
           borderLeftWidth: 1,
           borderLeftColor: 'var(--border-sub)',
@@ -410,8 +410,8 @@ function TagListRow({
   const hasResults = count > 0
 
   let bg = 'transparent'
-  if (isSelected) bg = '#0f1e30'
-  else if (hover) bg = '#0f1420'
+  if (isSelected) bg = 'var(--bg-elevated)'
+  else if (hover) bg = 'var(--bg-elevated)'
 
   const badgeBg = hasResults ? hexToRgba(tag.color, 0.15) : 'var(--bg-elevated)'
   const badgeBorder = hasResults ? hexToRgba(tag.color, 0.3) : 'var(--border)'
@@ -478,8 +478,8 @@ function TaggedFileRow({
 }) {
   const [hover, setHover] = useState(false)
   let bg = 'transparent'
-  if (selected) bg = '#0f1e30'
-  else if (hover) bg = '#0f1420'
+  if (selected) bg = 'var(--bg-elevated)'
+  else if (hover) bg = 'var(--bg-elevated)'
 
   return (
     <div

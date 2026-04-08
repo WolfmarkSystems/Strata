@@ -66,13 +66,12 @@ export default function ArtifactResults({
 
   return (
     <div
+      className="bubble"
       style={{
         height: '100%',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
-        background: 'var(--bg-base)',
       }}
     >
       {/* Header */}
@@ -124,7 +123,7 @@ export default function ArtifactResults({
         <div
           style={{
             display: 'flex',
-            background: '#0a0c12',
+            background: 'var(--bg-panel)',
             borderBottomStyle: 'solid',
             borderBottomWidth: 1,
             borderBottomColor: 'var(--border-sub)',
@@ -253,8 +252,8 @@ function ArtifactRow({
   const [hover, setHover] = useState(false)
 
   let bg = 'transparent'
-  if (selected) bg = '#0f1e30'
-  else if (hover) bg = '#0f1420'
+  if (selected) bg = 'var(--bg-elevated)'
+  else if (hover) bg = 'var(--bg-elevated)'
 
   const fvColor =
     artifact.forensic_value === 'high'

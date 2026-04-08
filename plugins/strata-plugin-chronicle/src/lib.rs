@@ -111,6 +111,65 @@ impl ChroniclePlugin {
         results
     }
 
+    /// v1.1.0: Parse the Chromium Media History SQLite database. The
+    /// `playbackSession` table records every video/audio playback the user
+    /// performed in Chrome or Edge. Survives normal "Clear browsing data"
+    /// operations on most browser versions.
+    fn parse_media_history(path: &Path) -> Vec<Artifact> {
+        let mut out = Vec::new();
+        let path_str = path.to_string_lossy().to_string();
+        let conn = match rusqlite::Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        ) {
+            Ok(c) => c,
+            Err(_) => return out,
+        };
+        if !table_exists(&conn, "playbackSession") {
+            return out;
+        }
+        let mut stmt = match conn.prepare(
+            "SELECT url, title, last_updated_time_s, watch_time_s, last_video_position_s
+             FROM playbackSession
+             ORDER BY last_updated_time_s DESC
+             LIMIT 200",
+        ) {
+            Ok(s) => s,
+            Err(_) => return out,
+        };
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0).unwrap_or_default(),
+                row.get::<_, String>(1).unwrap_or_default(),
+                row.get::<_, i64>(2).unwrap_or(0),
+                row.get::<_, i64>(3).unwrap_or(0),
+                row.get::<_, i64>(4).unwrap_or(0),
+            ))
+        });
+        if let Ok(rows) = rows {
+            for row in rows.flatten() {
+                let (url, title, ts_s, watch_s, _pos) = row;
+                let title_disp = if title.is_empty() { url.clone() } else { title };
+                let mut a = Artifact::new("Media History", &path_str);
+                if ts_s > 0 {
+                    a.timestamp = Some(ts_s as u64);
+                }
+                a.add_field("title", &format!("Media played: {}", title_disp));
+                a.add_field(
+                    "detail",
+                    &format!(
+                        "URL: {} | Watch time: {}s | Survives normal history clear",
+                        url, watch_s
+                    ),
+                );
+                a.add_field("file_type", "Media History");
+                a.add_field("forensic_value", "Low");
+                out.push(a);
+            }
+        }
+        out
+    }
+
     fn parse_lnk_content(path: &Path, data: &[u8]) -> Vec<(String, String, Option<i64>)> {
         let mut results = Vec::new();
         if data.len() < 0x4C || data[0..4] != [0x4C,0x00,0x00,0x00] { return results; }
@@ -259,8 +318,300 @@ impl ChroniclePlugin {
                 }
             }
         }
+
+        // ── v0.7.0: ComDlg32 MRUs ─────────────────────────────────────
+        // Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\
+        //   OpenSavePidlMRU       — files opened/saved via standard dialog
+        //   LastVisitedPidlMRU    — application + last directory pairs
+        // Software\Microsoft\Windows\CurrentVersion\Explorer\
+        //   RunMRU                — commands typed into Run dialog
+        let cdlg_node: Option<nt_hive::KeyNode<'_, &[u8]>> = (|| {
+            root.subkey("Software")?.ok()?
+                .subkey("Microsoft")?.ok()?
+                .subkey("Windows")?.ok()?
+                .subkey("CurrentVersion")?.ok()?
+                .subkey("Explorer")?.ok()?
+                .subkey("ComDlg32")?.ok()
+        })();
+        if let Some(cdlg) = cdlg_node {
+            // OpenSavePidlMRU — extension-named subkeys, each containing
+            // numbered values that are PIDL byte blobs. We extract any
+            // printable filename strings we can.
+            if let Some(Ok(open_save)) = cdlg.subkey("OpenSavePidlMRU") {
+                if let Some(Ok(ext_iter)) = open_save.subkeys() {
+                    for ext_res in ext_iter {
+                        let Ok(ext_node) = ext_res else { continue };
+                        let Ok(ext_name) = ext_node.name() else { continue };
+                        let ext_name = ext_name.to_string_lossy();
+                        if let Some(Ok(values)) = ext_node.values() {
+                            for vr in values {
+                                let Ok(v) = vr else { continue };
+                                let Ok(vn) = v.name() else { continue };
+                                let vn_s = vn.to_string_lossy();
+                                if vn_s == "MRUListEx" {
+                                    continue;
+                                }
+                                let vd: Vec<u8> = match v.data() {
+                                    Ok(d) => match d.into_vec() {
+                                        Ok(b) => b,
+                                        Err(_) => continue,
+                                    },
+                                    Err(_) => continue,
+                                };
+                                // Heuristic: scrape printable filename
+                                let scraped = scrape_pidl_strings(&vd);
+                                for s in scraped {
+                                    let mut a = Artifact::new("OpenSavePidlMRU", &path_str);
+                                    a.add_field("title", &format!("Opened/saved (.{}): {}", ext_name, s));
+                                    a.add_field(
+                                        "detail",
+                                        &format!("Standard file dialog history for extension .{}", ext_name),
+                                    );
+                                    a.add_field("file_type", "OpenSavePidlMRU");
+                                    a.add_field("forensic_value", "High");
+                                    a.add_field("mitre", "T1083");
+                                    artifacts.push(a);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // LastVisitedPidlMRU — application + directory pairs
+            if let Some(Ok(lv)) = cdlg.subkey("LastVisitedPidlMRU") {
+                if let Some(Ok(values)) = lv.values() {
+                    for vr in values {
+                        let Ok(v) = vr else { continue };
+                        let Ok(vn) = v.name() else { continue };
+                        let vn_s = vn.to_string_lossy();
+                        if vn_s == "MRUListEx" {
+                            continue;
+                        }
+                        let vd: Vec<u8> = match v.data() {
+                            Ok(d) => match d.into_vec() {
+                                Ok(b) => b,
+                                Err(_) => continue,
+                            },
+                            Err(_) => continue,
+                        };
+                        // First element is the executable name (UTF-16LE);
+                        // remainder is the PIDL.
+                        let exe_name = extract_utf16le_string(&vd);
+                        if !exe_name.is_empty() {
+                            let mut a = Artifact::new("LastVisitedPidlMRU", &path_str);
+                            a.add_field("title", &format!("App used file dialog: {}", exe_name));
+                            a.add_field(
+                                "detail",
+                                "Proves the application was executed AND used the standard file dialog",
+                            );
+                            a.add_field("file_type", "LastVisitedPidlMRU");
+                            a.add_field("forensic_value", "High");
+                            a.add_field("mitre", "T1204");
+                            artifacts.push(a);
+                        }
+                    }
+                }
+            }
+        }
+
+        // RunMRU — direct user-typed commands in the Run dialog
+        let run_mru_node: Option<nt_hive::KeyNode<'_, &[u8]>> = (|| {
+            root.subkey("Software")?.ok()?
+                .subkey("Microsoft")?.ok()?
+                .subkey("Windows")?.ok()?
+                .subkey("CurrentVersion")?.ok()?
+                .subkey("Explorer")?.ok()?
+                .subkey("RunMRU")?.ok()
+        })();
+        if let Some(rm) = run_mru_node {
+            if let Some(Ok(values)) = rm.values() {
+                for vr in values {
+                    let Ok(v) = vr else { continue };
+                    let Ok(vn) = v.name() else { continue };
+                    let vn_s = vn.to_string_lossy();
+                    if vn_s == "MRUList" || vn_s == "MRUListEx" {
+                        continue;
+                    }
+                    let vd: Vec<u8> = match v.data() {
+                        Ok(d) => match d.into_vec() {
+                            Ok(b) => b,
+                            Err(_) => continue,
+                        },
+                        Err(_) => continue,
+                    };
+                    let mut command = extract_utf16le_string(&vd);
+                    // RunMRU entries have a trailing "\1" suffix — strip it.
+                    if let Some(pos) = command.find('\u{1}') {
+                        command.truncate(pos);
+                    }
+                    if command.is_empty() {
+                        continue;
+                    }
+                    let suspicious = {
+                        let lc = command.to_lowercase();
+                        lc.contains("powershell")
+                            || lc.contains("cmd ")
+                            || lc.contains("wscript")
+                            || lc.contains("\\temp\\")
+                    };
+                    let mut a = Artifact::new("RunMRU", &path_str);
+                    a.add_field("title", &format!("User typed: {}", command));
+                    a.add_field(
+                        "detail",
+                        "Direct user input via Run dialog (Win+R) — strong evidence of interactive execution",
+                    );
+                    a.add_field("file_type", "RunMRU");
+                    a.add_field("forensic_value", if suspicious { "Critical" } else { "High" });
+                    if suspicious {
+                        a.add_field("suspicious", "true");
+                    }
+                    a.add_field("mitre", "T1059.003");
+                    artifacts.push(a);
+                }
+            }
+        }
+
+        // ── v1.1.0: Office Recent Files (per app) ─────────────────────
+        // Software\Microsoft\Office\<version>\<app>\File MRU
+        // <version> = 14.0 / 15.0 / 16.0
+        // <app>     = Word / Excel / PowerPoint / Access / Outlook / OneNote
+        let office_versions = ["16.0", "15.0", "14.0"];
+        let office_apps = ["Word", "Excel", "PowerPoint", "Access", "Outlook", "OneNote"];
+        for ver in &office_versions {
+            for app in &office_apps {
+                let file_mru: Option<nt_hive::KeyNode<'_, &[u8]>> = (|| {
+                    root.subkey("Software")?.ok()?
+                        .subkey("Microsoft")?.ok()?
+                        .subkey("Office")?.ok()?
+                        .subkey(ver)?.ok()?
+                        .subkey(app)?.ok()?
+                        .subkey("File MRU")?.ok()
+                })();
+                if let Some(mru) = file_mru {
+                    if let Some(Ok(values)) = mru.values() {
+                        for vr in values {
+                            let Ok(v) = vr else { continue };
+                            let Ok(vname) = v.name() else { continue };
+                            let vname_s = vname.to_string_lossy();
+                            if vname_s == "Max Display" { continue; }
+                            let vd: Vec<u8> = match v.data() {
+                                Ok(d) => match d.into_vec() { Ok(b) => b, Err(_) => continue },
+                                Err(_) => continue,
+                            };
+                            let raw = extract_utf16le_string(&vd);
+                            // Office MRU values look like:
+                            // [F00000000][T01D...]*\\path\to\file.docx
+                            // Strip leading [...] tokens to get the path.
+                            let cleaned = strip_office_mru_prefix(&raw);
+                            if cleaned.is_empty() { continue; }
+                            let lc = cleaned.to_lowercase();
+                            let suspicious = lc.starts_with("\\\\")
+                                || lc.contains("\\temp\\")
+                                || lc.contains("\\appdata\\local\\temp")
+                                || lc.starts_with("d:\\")
+                                || lc.starts_with("e:\\");
+                            let mut a = Artifact::new("Office Recent File", &path_str);
+                            a.add_field("title", &format!("Office {}: {}", app, cleaned));
+                            a.add_field(
+                                "detail",
+                                &format!("Office version {} {} File MRU", ver, app),
+                            );
+                            a.add_field("file_type", "Office Recent File");
+                            a.add_field("mitre", "T1083");
+                            if suspicious {
+                                a.add_field("forensic_value", "High");
+                                a.add_field("suspicious", "true");
+                            } else {
+                                a.add_field("forensic_value", "Medium");
+                            }
+                            artifacts.push(a);
+                        }
+                    }
+                }
+
+                // ── Office Trust Records ───────────────────────────────
+                // Software\Microsoft\Office\<ver>\<app>\Security\
+                //   Trusted Documents\TrustRecords
+                let trust: Option<nt_hive::KeyNode<'_, &[u8]>> = (|| {
+                    root.subkey("Software")?.ok()?
+                        .subkey("Microsoft")?.ok()?
+                        .subkey("Office")?.ok()?
+                        .subkey(ver)?.ok()?
+                        .subkey(app)?.ok()?
+                        .subkey("Security")?.ok()?
+                        .subkey("Trusted Documents")?.ok()?
+                        .subkey("TrustRecords")?.ok()
+                })();
+                if let Some(tr) = trust {
+                    if let Some(Ok(values)) = tr.values() {
+                        for vr in values {
+                            let Ok(v) = vr else { continue };
+                            let Ok(vname) = v.name() else { continue };
+                            let doc_path = vname.to_string_lossy();
+                            // The value data is a 28-byte blob. Last 4 bytes
+                            // are flags: 0x7FFFFFFF = full trust (macros
+                            // enabled).
+                            let vd: Vec<u8> = match v.data() {
+                                Ok(d) => match d.into_vec() { Ok(b) => b, Err(_) => continue },
+                                Err(_) => continue,
+                            };
+                            let macros_enabled = vd
+                                .get(vd.len().saturating_sub(4)..)
+                                .and_then(|b| b.try_into().ok().map(u32::from_le_bytes))
+                                .map(|f| f == 0x7FFF_FFFF || f & 0x7FFF_FFFF == 0x7FFF_FFFF)
+                                .unwrap_or(false);
+                            // First 8 bytes are a FILETIME for when trust was granted
+                            let ft = if vd.len() >= 8 {
+                                i64::from_le_bytes(vd[0..8].try_into().unwrap_or([0; 8]))
+                            } else {
+                                0
+                            };
+                            let unix = filetime_to_unix(ft);
+                            let mut a = Artifact::new("Office Trust Record", &path_str);
+                            if let Some(u) = unix {
+                                a.timestamp = Some(u as u64);
+                            }
+                            a.add_field(
+                                "title",
+                                &format!("Office Trust ({}): {}", app, doc_path),
+                            );
+                            a.add_field(
+                                "detail",
+                                &format!(
+                                    "User {} on {} | doc: {}",
+                                    if macros_enabled {
+                                        "ENABLED MACROS"
+                                    } else {
+                                        "trusted editing"
+                                    },
+                                    unix.map(|u| {
+                                        chrono::DateTime::from_timestamp(u, 0)
+                                            .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                            .unwrap_or_else(|| format!("unix:{}", u))
+                                    })
+                                    .unwrap_or_else(|| "unknown date".to_string()),
+                                    doc_path
+                                ),
+                            );
+                            a.add_field("file_type", "Office Trust Record");
+                            a.add_field("mitre", "T1566.001");
+                            a.add_field("forensic_value", if macros_enabled { "Critical" } else { "High" });
+                            a.add_field("suspicious", "true");
+                            artifacts.push(a);
+                        }
+                    }
+                }
+            }
+        }
+
         artifacts
     }
+
+    /// Strip Office MRU `[F.....][T....]*` token prefixes to get the bare path.
+    /// Used by parse_ntuser_dat for Office File MRU entries.
+    #[allow(dead_code)]
+    fn _strip_office_mru_dummy() {}
 
     /// GAP 2: Parse Jump List CFB/OLE2 compound file.
     fn parse_jumplist_cfb(path: &Path, data: &[u8], app_name: &str) -> Vec<Artifact> {
@@ -295,6 +646,53 @@ impl ChroniclePlugin {
 fn extract_utf16le_string(data: &[u8]) -> String {
     let u16s: Vec<u16> = data.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).take_while(|&ch| ch != 0).collect();
     String::from_utf16_lossy(&u16s)
+}
+
+/// Strip Office MRU `[F.....][T....]*` prefix tokens to recover the bare
+/// path. Office stores File MRU entries as
+/// `[F00000000][T01D5...]*\\server\\share\\file.docx`.
+fn strip_office_mru_prefix(raw: &str) -> String {
+    let mut s = raw.trim().to_string();
+    while s.starts_with('[') {
+        if let Some(end) = s.find(']') {
+            s = s[end + 1..].to_string();
+        } else {
+            break;
+        }
+    }
+    if let Some(stripped) = s.strip_prefix('*') {
+        s = stripped.to_string();
+    }
+    s.trim().to_string()
+}
+
+/// Scrape printable filename-like strings from a binary PIDL blob. PIDLs are
+/// nested ITEMIDLIST structures and full decoding is involved; this heuristic
+/// finds embedded UTF-16LE display names that PIDLs almost always carry. Used
+/// by the OpenSavePidlMRU parser.
+fn scrape_pidl_strings(data: &[u8]) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i + 8 <= data.len() {
+        let chunk_end = (i + 512).min(data.len());
+        let chunk = &data[i..chunk_end];
+        let mut s = String::new();
+        let mut j = 0;
+        while j + 2 <= chunk.len() {
+            let c = u16::from_le_bytes([chunk[j], chunk[j + 1]]);
+            if c == 0 { break; }
+            if let Some(ch) = char::from_u32(c as u32) {
+                if ch.is_ascii_graphic() || ch == ' ' { s.push(ch); } else { break; }
+            } else { break; }
+            j += 2;
+        }
+        if s.len() >= 4 && (s.contains('.') || s.contains('\\')) {
+            out.push(s.clone());
+        }
+        i += s.len().max(2) * 2 + 2;
+        if out.len() > 50 { break; }
+    }
+    out
 }
 fn extract_lnk_target(data: &[u8]) -> String {
     if data.len() < 0x4C { return String::new(); }
@@ -342,6 +740,44 @@ impl StrataPlugin for ChroniclePlugin {
                 results.extend(Self::detect_recentdocs_detailed(&entry_path, fn_, &ps));
                 results.extend(Self::detect_jumplist(&entry_path, fn_, &ps));
                 if fn_.eq_ignore_ascii_case("NTUSER.DAT") { if let Ok(data) = std::fs::read(&entry_path) { results.extend(Self::parse_ntuser_dat(&entry_path, &data)); } }
+
+                // ── v1.1.0: Browser Media History (Chrome / Edge) ────
+                if fn_.eq_ignore_ascii_case("Media History") {
+                    let parsed = Self::parse_media_history(&entry_path);
+                    if parsed.is_empty() {
+                        let mut a = Artifact::new("Media History", &ps);
+                        a.add_field("title", "Browser Media History present");
+                        a.add_field(
+                            "detail",
+                            "Chrome/Edge Media History DB found — 'playbackSession' table not parseable or empty",
+                        );
+                        a.add_field("file_type", "Media History");
+                        a.add_field("forensic_value", "Low");
+                        results.push(a);
+                    } else {
+                        for art in parsed {
+                            results.push(art);
+                        }
+                    }
+                }
+
+                // ── v1.1.0: Browser Session restore files ────────────
+                let lc_name = fn_.to_lowercase();
+                if (lc_name.starts_with("session_") || lc_name.starts_with("tabs_"))
+                    && (ps.to_lowercase().contains("\\sessions")
+                        || ps.to_lowercase().contains("/sessions"))
+                {
+                    let mut a = Artifact::new("Browser Session", &ps);
+                    a.add_field("title", &format!("Browser session file: {}", fn_));
+                    a.add_field(
+                        "detail",
+                        "Chromium-based browser session/tab restore file. Contains tabs open at last browser close. Parse with specialized session-restore decoder for full reconstruction.",
+                    );
+                    a.add_field("file_type", "Browser Session");
+                    a.add_field("forensic_value", "Medium");
+                    results.push(a);
+                }
+
                 if fn_.to_lowercase().ends_with(".automaticdestinations-ms") {
                     if let Ok(data) = std::fs::read(&entry_path) {
                         let aid = fn_.split('.').next().unwrap_or("unknown");

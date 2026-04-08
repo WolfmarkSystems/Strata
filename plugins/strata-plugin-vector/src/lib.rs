@@ -134,17 +134,78 @@ impl VectorPlugin {
         }
 
         // Scan for VBA/Macros strings
-        let scan_len = data.len().min(65536);
+        let scan_len = data.len().min(262144); // 256 KB scan window
         let scan_text = String::from_utf8_lossy(&data[..scan_len]).to_lowercase();
-        let has_macros = scan_text.contains("vba") || scan_text.contains("macros") || scan_text.contains("macro");
+        let has_macros = scan_text.contains("vba")
+            || scan_text.contains("macros")
+            || scan_text.contains("macro");
 
         if has_macros {
+            // ── v1.1.0: deep macro indicator analysis ──
+            let critical: &[(&str, &str)] = &[
+                ("shell(", "T1059.005"),
+                ("wscript.shell", "T1059.005"),
+                ("createobject(\"wscript", "T1059.005"),
+                ("createobject(\"scripting", "T1059.005"),
+                ("urldownloadtofile", "T1105"),
+                ("downloadfile", "T1105"),
+                ("xmlhttp", "T1105"),
+                ("powershell", "T1059.001"),
+            ];
+            let high: &[(&str, &str)] = &[
+                ("auto_open", "T1204.002"),
+                ("autoopen", "T1204.002"),
+                ("document_open", "T1204.002"),
+                ("workbook_open", "T1204.002"),
+                ("environ(\"username\")", "T1033"),
+                ("environ(\"computername\")", "T1082"),
+            ];
+
+            let mut critical_hits = Vec::new();
+            let mut high_hits = Vec::new();
+            for (kw, mitre) in critical {
+                if scan_text.contains(kw) {
+                    critical_hits.push(format!("{} ({})", kw, mitre));
+                }
+            }
+            for (kw, mitre) in high {
+                if scan_text.contains(kw) {
+                    high_hits.push(format!("{} ({})", kw, mitre));
+                }
+            }
+
+            let severity = if !critical_hits.is_empty() {
+                "Critical"
+            } else if high_hits.len() >= 2 {
+                "High"
+            } else {
+                "Medium"
+            };
+
+            let mut indicators_summary = Vec::new();
+            if !critical_hits.is_empty() {
+                indicators_summary.push(format!("CRITICAL: {}", critical_hits.join(", ")));
+            }
+            if !high_hits.is_empty() {
+                indicators_summary.push(format!("HIGH: {}", high_hits.join(", ")));
+            }
+            if indicators_summary.is_empty() {
+                indicators_summary.push("VBA/Macro present (no specific indicators)".to_string());
+            }
+
             let mut artifact = Artifact::new("ExecutionHistory", &path_str);
             artifact.add_field("title", &format!("Office Macro Detected: {}", name));
             artifact.add_field("file_type", "Office Macro Detected");
-            artifact.add_field("detail", "OLE2 document with VBA/Macro content — potential macro-based payload delivery");
+            artifact.add_field(
+                "detail",
+                &format!(
+                    "OLE2 document with VBA/Macro content. {}",
+                    indicators_summary.join(" | ")
+                ),
+            );
             artifact.add_field("mitre", "T1137.001");
             artifact.add_field("suspicious", "true");
+            artifact.add_field("forensic_value", severity);
             results.push(artifact);
         }
 
@@ -154,11 +215,17 @@ impl VectorPlugin {
     fn analyze_script(path: &Path, name: &str) -> Vec<Artifact> {
         let mut results = Vec::new();
         let path_str = path.to_string_lossy();
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
 
         let content = match std::fs::read_to_string(path) {
             Ok(c) => c,
             Err(_) => return results,
         };
+        let content_lower = content.to_lowercase();
 
         let mut found_indicators = Vec::new();
         for indicator in Self::SCRIPT_INDICATORS {
@@ -167,15 +234,128 @@ impl VectorPlugin {
             }
         }
 
-        if !found_indicators.is_empty() {
+        // ── v1.1.0: language-specific keyword detection ──
+        let mut critical: Vec<(&str, &str)> = Vec::new();
+        let mut high: Vec<(&str, &str)> = Vec::new();
+
+        match ext.as_str() {
+            "ps1" => {
+                let ps_critical: &[(&str, &str)] = &[
+                    ("invoke-mimikatz", "T1003"),
+                    ("invoke-bloodhound", "T1087"),
+                    ("invoke-kerberoast", "T1558.003"),
+                    ("dumpcreds", "T1003"),
+                    ("get-keystrokes", "T1056.001"),
+                    ("invoke-shellcode", "T1059.001"),
+                ];
+                let ps_high: &[(&str, &str)] = &[
+                    ("add-mppreference -exclusionpath", "T1562.001"),
+                    ("set-mppreference -disable", "T1562.001"),
+                    ("new-scheduledtask", "T1053.005"),
+                    ("register-scheduledtask", "T1053.005"),
+                    ("net user /add", "T1136.001"),
+                    ("invoke-webrequest", "T1105"),
+                    ("downloadstring", "T1105"),
+                    ("downloadfile", "T1105"),
+                    ("frombase64string", "T1140"),
+                    ("-encodedcommand", "T1027"),
+                    ("invoke-expression", "T1059.001"),
+                    ("iex (", "T1059.001"),
+                    ("[reflection.assembly]::load", "T1620"),
+                    ("vssadmin delete shadows", "T1490"),
+                    ("wevtutil cl", "T1070.001"),
+                ];
+                for (kw, m) in ps_critical {
+                    if content_lower.contains(kw) {
+                        critical.push((*kw, *m));
+                    }
+                }
+                for (kw, m) in ps_high {
+                    if content_lower.contains(kw) {
+                        high.push((*kw, *m));
+                    }
+                }
+            }
+            "vbs" => {
+                let vbs_high: &[(&str, &str)] = &[
+                    ("wscript.shell", "T1059.005"),
+                    (".run(", "T1059.005"),
+                    ("createobject(\"scripting.filesystemobject\")", "T1059.005"),
+                    ("getobject(\"winmgmts", "T1047"),
+                    ("xmlhttp", "T1105"),
+                ];
+                for (kw, m) in vbs_high {
+                    if content_lower.contains(kw) {
+                        high.push((*kw, *m));
+                    }
+                }
+            }
+            "js" => {
+                let js_high: &[(&str, &str)] = &[
+                    ("wscript.shell", "T1059.007"),
+                    ("activexobject", "T1059.007"),
+                    (".run(", "T1059.007"),
+                    ("xmlhttprequest", "T1105"),
+                ];
+                for (kw, m) in js_high {
+                    if content_lower.contains(kw) {
+                        high.push((*kw, *m));
+                    }
+                }
+            }
+            "bat" | "cmd" => {
+                let bat_high: &[(&str, &str)] = &[
+                    ("vssadmin delete shadows", "T1490"),
+                    ("wevtutil cl", "T1070.001"),
+                    ("net user /add", "T1136.001"),
+                    ("netsh advfirewall set", "T1562.004"),
+                    ("certutil -urlcache", "T1105"),
+                    ("certutil -decode", "T1140"),
+                ];
+                for (kw, m) in bat_high {
+                    if content_lower.contains(kw) {
+                        high.push((*kw, *m));
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        if !found_indicators.is_empty() || !critical.is_empty() || !high.is_empty() {
+            let severity = if !critical.is_empty() {
+                "Critical"
+            } else if high.len() >= 2 || !found_indicators.is_empty() {
+                "High"
+            } else {
+                "Medium"
+            };
+            let mut detail_parts = Vec::new();
+            if !critical.is_empty() {
+                let cs: Vec<String> =
+                    critical.iter().map(|(k, m)| format!("{} ({})", k, m)).collect();
+                detail_parts.push(format!("CRITICAL: {}", cs.join(", ")));
+            }
+            if !high.is_empty() {
+                let hs: Vec<String> =
+                    high.iter().map(|(k, m)| format!("{} ({})", k, m)).collect();
+                detail_parts.push(format!("HIGH: {}", hs.join(", ")));
+            }
+            if !found_indicators.is_empty() {
+                detail_parts.push(format!("Generic: {}", found_indicators.join(", ")));
+            }
+            let primary_mitre = critical
+                .first()
+                .or(high.first())
+                .map(|(_, m)| m.to_string())
+                .unwrap_or_else(|| "T1059".to_string());
+
             let mut artifact = Artifact::new("ExecutionHistory", &path_str);
             artifact.add_field("title", &format!("Suspicious Script: {}", name));
             artifact.add_field("file_type", "Suspicious Script");
-            artifact.add_field("detail", &format!(
-                "Script contains suspicious indicators: {}",
-                found_indicators.join(", ")
-            ));
+            artifact.add_field("detail", &detail_parts.join(" | "));
             artifact.add_field("suspicious", "true");
+            artifact.add_field("forensic_value", severity);
+            artifact.add_field("mitre", &primary_mitre);
             results.push(artifact);
         }
 
