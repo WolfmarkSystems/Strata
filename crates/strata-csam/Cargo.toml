@@ -1,0 +1,27 @@
+[package]
+name = "strata-csam"
+version = "0.1.0"
+edition = "2021"
+description = "Strata CSAM detection layer — hash and perceptual matching for forensic examiners"
+license = "Proprietary"
+
+[dependencies]
+sha2 = { workspace = true }
+sha1 = { workspace = true }
+md-5 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+hex = "0.4"
+anyhow = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+rayon = { workspace = true }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "bmp", "gif"] }
+printpdf = "0.9"
+rusqlite = { workspace = true }
+tracing = { workspace = true }
+
+strata-fs = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

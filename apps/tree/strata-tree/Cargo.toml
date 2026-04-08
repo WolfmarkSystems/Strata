@@ -49,6 +49,8 @@ strata-plugin-wraith = { path = "../../../plugins/strata-plugin-wraith" }
 strata-plugin-vector = { path = "../../../plugins/strata-plugin-vector" }
 strata-plugin-recon = { path = "../../../plugins/strata-plugin-recon" }
 strata-plugin-sigma = { path = "../../../plugins/strata-plugin-sigma" }
+strata-plugin-csam = { path = "../../../plugins/strata-plugin-csam" }
+strata-csam = { workspace = true }
 egui-phosphor = "0.11"
 
 [features]

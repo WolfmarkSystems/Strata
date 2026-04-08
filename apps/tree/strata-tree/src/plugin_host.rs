@@ -22,6 +22,9 @@ impl PluginHost {
                 Box::new(strata_plugin_vector::VectorPlugin::new()),
                 Box::new(strata_plugin_recon::ReconPlugin::new()),
                 Box::new(strata_plugin_sigma::SigmaPlugin::new()),
+                // Sentinel plugin: always free regardless of license tier.
+                // See plugins/strata-plugin-csam/src/lib.rs.
+                Box::new(strata_plugin_csam::CsamPlugin::new()),
             ],
         }
     }

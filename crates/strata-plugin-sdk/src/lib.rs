@@ -49,6 +49,39 @@ pub enum PluginType {
     Cipher,
 }
 
+/// Minimum license tier required to run a plugin.
+///
+/// This is **independent** of `strata_license::LicenseTier` to keep
+/// the plugin SDK from depending on the license crate (which would
+/// pull license logic into every plugin). The strata-tree app maps
+/// `LicenseTier` to `PluginTier` at the gating call site in
+/// `AppState::run_plugin`.
+///
+/// `PartialOrd`/`Ord` ordering goes Free < Trial < Professional <
+/// Enterprise, so a tier check is `user_tier >= plugin.required_tier()`.
+///
+/// **Free** is reserved for plugins that must always be available
+/// regardless of license — currently only the CSAM Sentinel plugin.
+/// Per the v1.4.0 spec: free on every license tier, no gating, ever.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum PluginTier {
+    Free = 0,
+    Trial = 1,
+    Professional = 2,
+    Enterprise = 3,
+}
+
+impl PluginTier {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PluginTier::Free => "Free",
+            PluginTier::Trial => "Trial",
+            PluginTier::Professional => "Professional",
+            PluginTier::Enterprise => "Enterprise",
+        }
+    }
+}
+
 /// What a plugin can do
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PluginCapability {
@@ -171,6 +204,18 @@ pub trait StrataPlugin: Send + Sync {
     fn plugin_type(&self) -> PluginType;
     fn capabilities(&self) -> Vec<PluginCapability>;
     fn description(&self) -> &str;
+
+    /// Minimum license tier required to run this plugin. The default
+    /// is `Professional` — most analyzer/carver plugins are gated.
+    /// **Override to `PluginTier::Free`** for plugins that must
+    /// always be available regardless of license (currently only the
+    /// CSAM Sentinel plugin per the v1.4.0 spec).
+    ///
+    /// Backward-compatible: existing plugins that don't override
+    /// inherit `Professional`, matching their current de facto status.
+    fn required_tier(&self) -> PluginTier {
+        PluginTier::Professional
+    }
 
     /// Run the plugin with the given context.
     fn run(&self, context: PluginContext) -> PluginResult;

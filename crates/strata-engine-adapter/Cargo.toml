@@ -31,6 +31,10 @@ strata-plugin-phantom   = { path = "../../plugins/strata-plugin-phantom" }
 strata-plugin-guardian  = { path = "../../plugins/strata-plugin-guardian" }
 strata-plugin-netflow   = { path = "../../plugins/strata-plugin-netflow" }
 strata-plugin-mactrace  = { path = "../../plugins/strata-plugin-mactrace" }
+strata-plugin-csam      = { path = "../../plugins/strata-plugin-csam" }
+
+# CSAM scanner core (used by the Forge IPC commands in src/csam.rs).
+strata-csam = { workspace = true }
 
 # Serialization + IPC-friendly types.
 serde      = { version = "1", features = ["derive"] }
@@ -52,3 +56,7 @@ anyhow   = "1"
 tracing  = "0.1"
 once_cell = "1"
 chrono   = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+uuid     = { workspace = true }

@@ -15,6 +15,7 @@ mod plugin_host;
 mod raid;
 mod search;
 mod state;
+mod state_csam;
 mod theme;
 mod ui;
 

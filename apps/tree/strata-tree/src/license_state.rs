@@ -5,6 +5,7 @@ use strata_license::{
     generate_machine_id, get_trial_state, trial_days_remaining, LicenseTier, LicenseValidator,
     StrataLicense, ENTERPRISE_FEATURES, FREE_FEATURES, PRO_FEATURES, TRIAL_FEATURES,
 };
+use strata_plugin_sdk::PluginTier;
 
 #[derive(Debug, Clone)]
 pub struct AppLicenseState {
@@ -119,6 +120,22 @@ impl AppLicenseState {
         // During development: all features unlocked.
         // TODO: restore feature gating when licensing is shipped.
         true
+    }
+
+    /// Map the user's `LicenseTier` to the plugin SDK's `PluginTier`.
+    /// This is the bridge between the license crate and the plugin
+    /// SDK — the SDK deliberately does not depend on the license
+    /// crate, so the mapping lives here at the boundary.
+    ///
+    /// Used by `AppState::run_plugin` to gate plugin execution: a
+    /// plugin runs iff `current_plugin_tier() >= plugin.required_tier()`.
+    pub fn current_plugin_tier(&self) -> PluginTier {
+        match self.tier {
+            LicenseTier::Free => PluginTier::Free,
+            LicenseTier::Trial => PluginTier::Trial,
+            LicenseTier::Professional => PluginTier::Professional,
+            LicenseTier::Enterprise => PluginTier::Enterprise,
+        }
     }
 
     pub fn is_trial_expired(&self) -> bool {

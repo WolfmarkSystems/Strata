@@ -578,6 +578,33 @@ pub struct AppState {
     pub carve_files_found: u64,
     pub carve_selected_signatures: std::collections::HashSet<String>,
     pub carve_output_dir: String,
+
+    // ── CSAM Sentinel plugin state ──
+    // All CSAM-specific fields live here. Methods are implemented
+    // in `state_csam.rs` to keep this file from growing further.
+    // The CSAM scanner is a sentinel plugin (free on all license
+    // tiers); see plugins/strata-plugin-csam/src/lib.rs.
+    //
+    // **Audit chain note:** there is intentionally NO separate CSAM
+    // audit log here. CSAM events are routed through the unified
+    // case audit log via `self.log_action(...)` so they share one
+    // chain (Decision 3 / Option i — unified chain in the case
+    // `audit_log` SQLite table with `CSAM_*` action namespace).
+    // The strata-csam crate's `CsamAuditLog` and `flush_to_sqlite`
+    // helpers are still correct and tested but are used by the
+    // strata-engine-adapter / Forge IPC layer, not here.
+    pub csam_hash_dbs: Vec<strata_csam::CsamHashDb>,
+    pub csam_hits: Vec<strata_csam::CsamHit>,
+    pub csam_status: String,
+    pub csam_scan_running: bool,
+    pub csam_scan_config: strata_csam::ScanConfig,
+    /// When `Some(hit_id)`, the UI shows the "you are about to view
+    /// flagged content" warning modal. The hit_id identifies which
+    /// hit triggered the request. Set by the [REVIEW] button.
+    pub csam_pending_review: Option<String>,
+    /// Per-hit examiner notes buffer (keyed by hit_id) — bound to
+    /// the text box that feeds into `csam_confirm_hit`.
+    pub csam_note_buffers: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug)]
@@ -736,6 +763,15 @@ impl Default for AppState {
             carve_files_found: 0,
             carve_selected_signatures: std::collections::HashSet::new(),
             carve_output_dir: String::new(), // Set from evidence path when dialog opens
+
+            // ── CSAM Sentinel plugin defaults ──
+            csam_hash_dbs: Vec::new(),
+            csam_hits: Vec::new(),
+            csam_status: String::new(),
+            csam_scan_running: false,
+            csam_scan_config: strata_csam::ScanConfig::default(),
+            csam_pending_review: None,
+            csam_note_buffers: std::collections::HashMap::new(),
         }
     }
 }
@@ -823,6 +859,38 @@ impl AppState {
         if root_path.is_empty() {
             self.status = "No evidence loaded — cannot run plugin.".to_string();
             return;
+        }
+
+        // ── License-tier gating ──────────────────────────────────────
+        // A plugin runs iff the user's current tier is at least the
+        // plugin's `required_tier()`. The CSAM Sentinel plugin returns
+        // `PluginTier::Free`, which every license tier satisfies, so
+        // it is never blocked here. Conventional analyzer/carver
+        // plugins default to `Professional` and are only allowed for
+        // Pro/Enterprise users when feature gating ships. Today
+        // `has_feature("plugins")` is hard-coded to true during dev,
+        // so the gate is informational — but the comparison is the
+        // forge-resistant form that survives feature-flag flips.
+        let user_tier = self.license_state.current_plugin_tier();
+        let required_tier = self
+            .plugin_host
+            .list()
+            .iter()
+            .find(|p| p.name() == plugin_name)
+            .map(|p| p.required_tier());
+
+        if let Some(required) = required_tier {
+            if user_tier < required {
+                self.status = format!(
+                    "{} requires {} tier (you have {}).",
+                    plugin_name,
+                    required.as_str(),
+                    user_tier.as_str()
+                );
+                // Do NOT write a PLUGIN_START audit row here — the
+                // run is rejected before any side effect lands.
+                return;
+            }
         }
 
         let context = strata_plugin_sdk::PluginContext {

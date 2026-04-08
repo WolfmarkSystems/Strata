@@ -7658,11 +7658,13 @@ dependencies = [
  "serde_json",
  "sha2",
  "strata-core",
+ "strata-csam",
  "strata-fs",
  "strata-license",
  "strata-plugin-chronicle",
  "strata-plugin-cipher",
  "strata-plugin-conduit",
+ "strata-plugin-csam",
  "strata-plugin-nimbus",
  "strata-plugin-recon",
  "strata-plugin-remnant",
@@ -7745,6 +7747,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "strata-csam"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "hex",
+ "image",
+ "md-5",
+ "printpdf",
+ "rayon",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2",
+ "strata-fs",
+ "tempfile",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "strata-engine-adapter"
 version = "1.3.0"
 dependencies = [
@@ -7759,10 +7783,12 @@ dependencies = [
  "sha1",
  "sha2",
  "strata-core",
+ "strata-csam",
  "strata-fs",
  "strata-plugin-chronicle",
  "strata-plugin-cipher",
  "strata-plugin-conduit",
+ "strata-plugin-csam",
  "strata-plugin-guardian",
  "strata-plugin-mactrace",
  "strata-plugin-netflow",
@@ -7776,9 +7802,11 @@ dependencies = [
  "strata-plugin-trace",
  "strata-plugin-vector",
  "strata-plugin-wraith",
+ "tempfile",
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -7912,6 +7940,14 @@ version = "1.0.0"
 dependencies = [
  "chrono",
  "serde_json",
+ "strata-plugin-sdk",
+]
+
+[[package]]
+name = "strata-plugin-csam"
+version = "0.1.0"
+dependencies = [
+ "strata-csam",
  "strata-plugin-sdk",
 ]
 

@@ -34,7 +34,9 @@ members = [
     "plugins/strata-plugin-guardian",
     "plugins/strata-plugin-netflow",
     "plugins/strata-plugin-mactrace",
+    "plugins/strata-plugin-csam",
     "crates/strata-engine-adapter",
+    "crates/strata-csam",
 ]
 
 [workspace.dependencies]
@@ -83,4 +85,5 @@ strata-insight = { path = "crates/strata-insight" }
 strata-forge-core = { path = "crates/strata-forge-core" }
 strata-shield-engine = { path = "crates/strata-shield-engine" }
 strata-shield-cli = { path = "crates/strata-shield-cli" }
+strata-csam = { path = "crates/strata-csam" }
 vt-core = { path = "apps/tree/vt-core" }

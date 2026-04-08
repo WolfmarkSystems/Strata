@@ -1,0 +1,13 @@
+[package]
+name = "strata-plugin-csam"
+version = "0.1.0"
+edition = "2021"
+description = "Strata CSAM Sentinel plugin — wraps strata-csam for the unified plugin host"
+license = "Proprietary"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+strata-plugin-sdk = { path = "../../crates/strata-plugin-sdk" }
+strata-csam = { workspace = true }

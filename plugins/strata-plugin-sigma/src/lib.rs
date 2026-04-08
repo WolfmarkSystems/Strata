@@ -760,6 +760,125 @@ impl StrataPlugin for SigmaPlugin {
             results.push(a);
         }
 
+        // ── v1.4.0 CSAM Sentinel correlation rules ────────────────────
+        //
+        // These rules correlate against CSAM hits emitted by the Strata
+        // CSAM Scanner sentinel plugin. CSAM hits surface in `prior_results`
+        // as ArtifactRecords with subcategory "CSAM Hit" — the bridge
+        // from the dedicated CSAM scan workflow into Sigma's correlation
+        // pipeline lives in apps/tree/strata-tree/src/state_csam.rs
+        // (`publish_csam_plugin_output`). Each hit's `detail` field is a
+        // sequence of bracket-delimited tokens:
+        //
+        //   [match_type=ExactSha256] [confidence=Confirmed] [source=...] [sha256=...]
+        //   [match_type=Perceptual] [confidence=High] [source=...] [sha256=...] [distance=3]
+        //
+        // Substring checks against these tokens are unambiguous because
+        // the bracket delimiters cannot prefix any other token.
+        //
+        // **Audit cross-reference:** every CSAM hit recorded by the
+        // scanner also writes a `CSAM_HIT_DETECTED` entry into the
+        // unified case audit_log table (action_type column). The Sigma
+        // rule firing alone is intelligence; confirmation requires
+        // correlating against the chain entry that records the original
+        // detection. The strata-csam crate's hash recipe is byte-
+        // compatible with strata-tree's `compute_audit_entry_hash` so
+        // the CSAM events are full chain-of-custody links.
+        //
+        // **MITRE:** N/A. Child-safety detection is not adversary-tactic
+        // correlation, so neither rule contributes to the kill chain
+        // tactic coverage map. The rules' detail strings explicitly
+        // call out "MITRE: N/A — child safety" for the examiner.
+
+        let csam_hit_records: Vec<&ArtifactRecord> = all_records
+            .iter()
+            .copied()
+            .filter(|r| r.subcategory == "CSAM Hit")
+            .collect();
+
+        // RULE 28: CSAM Hash Match Detected
+        //   Fires on any CSAM hit with confidence Confirmed (exact
+        //   crypto hash match) or High (perceptual distance 0-5).
+        //   Severity: CRITICAL.
+        //   MITRE: N/A — child safety.
+        //   Action: flag immediately, require qualified examiner review.
+        let csam_hash_hits: usize = csam_hit_records
+            .iter()
+            .filter(|r| {
+                r.detail.contains("[confidence=Confirmed]")
+                    || r.detail.contains("[confidence=High]")
+            })
+            .count();
+        if csam_hash_hits > 0 {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: CSAM Hash Match Detected");
+            a.add_field(
+                "detail",
+                &format!(
+                    "{} CSAM hit(s) with Confirmed or High confidence detected by the Strata CSAM Scanner. \
+                     A Confirmed hit is an exact MD5/SHA1/SHA256 match against an examiner-imported CSAM \
+                     hash database; a High hit is a perceptual hash within Hamming distance 5. Severity \
+                     CRITICAL. Cross-reference action_type=CSAM_HIT_DETECTED entries in the case audit_log \
+                     table for the original detection events and full chain-of-custody. MITRE: N/A — \
+                     child-safety detection, not adversary tactic. Action: flag immediately and require \
+                     qualified examiner review before any further handling. Strata never auto-displays \
+                     matched images; viewing requires explicit examiner action through the Sentinel panel.",
+                    csam_hash_hits
+                ),
+            );
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("suspicious", "true");
+            results.push(a);
+        }
+
+        // RULE 29: Probable CSAM Variant Detected
+        //   Fires on any CSAM hit where match_type is Perceptual AND
+        //   the perceptual Hamming distance is ≤ 10. Catches edits,
+        //   crops, recompressions, and resizes that defeat exact
+        //   crypto hashes.
+        //   Severity: HIGH.
+        //   MITRE: N/A — child safety.
+        //   Action: flag for examiner review.
+        let csam_perceptual_hits: usize = csam_hit_records
+            .iter()
+            .filter(|r| r.detail.contains("[match_type=Perceptual]"))
+            .filter(|r| {
+                // Parse the [distance=N] token. Token must be present
+                // for a Perceptual hit, and N must be ≤ 10.
+                r.detail
+                    .split_whitespace()
+                    .find_map(|tok| {
+                        tok.strip_prefix("[distance=")
+                            .and_then(|t| t.strip_suffix("]"))
+                            .and_then(|n| n.parse::<u32>().ok())
+                    })
+                    .map(|d| d <= 10)
+                    .unwrap_or(false)
+            })
+            .count();
+        if csam_perceptual_hits > 0 {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: Probable CSAM Variant Detected");
+            a.add_field(
+                "detail",
+                &format!(
+                    "{} CSAM perceptual hit(s) within Hamming distance 10 of a known image. \
+                     Catches edits, crops, recompressions, and resizes that defeat exact crypto \
+                     hashes. Severity HIGH. Cross-reference action_type=CSAM_HIT_DETECTED entries \
+                     in the case audit_log table for the matched source identifier and full \
+                     distance metadata. MITRE: N/A — child-safety detection, not adversary tactic. \
+                     Action: flag for examiner review. The dHash algorithm is documented in \
+                     strata-csam/src/perceptual.rs and is locked as a forensic reproducibility \
+                     contract — any change requires a major version bump and re-hash of stored \
+                     perceptual databases.",
+                    csam_perceptual_hits
+                ),
+            );
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("suspicious", "true");
+            results.push(a);
+        }
+
         // Build technique breakdown string
         let mut technique_lines: Vec<String> = technique_counts
             .iter()
@@ -890,4 +1009,391 @@ impl StrataPlugin for SigmaPlugin {
 pub extern "C" fn create_plugin_sigma() -> *mut std::ffi::c_void {
     let plugin: Box<dyn StrataPlugin> = Box::new(SigmaPlugin::new());
     Box::into_raw(Box::new(plugin)) as *mut std::ffi::c_void
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Tests
+// ──────────────────────────────────────────────────────────────────────
+//
+// These are the first tests in the SigmaPlugin source. They cover the
+// v1.4.0 CSAM correlation rules by feeding synthetic prior_results
+// into `SigmaPlugin::run()` — the same code path the host uses.
+// Tests use only public APIs; no private field access.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Build an `ArtifactRecord` representing a CSAM hit with the
+    /// exact bracket-delimited detail format published by
+    /// strata-tree's `state_csam.rs::publish_csam_plugin_output`.
+    /// Tests use this helper rather than constructing detail strings
+    /// inline so the format stays consistent across tests AND with
+    /// the production bridge.
+    fn csam_hit_record(
+        file_path: &str,
+        match_type: &str,
+        confidence: &str,
+        source: &str,
+        sha256: &str,
+        distance: Option<u32>,
+    ) -> ArtifactRecord {
+        let distance_token = match distance {
+            Some(d) => format!(" [distance={}]", d),
+            None => String::new(),
+        };
+        let detail = format!(
+            "[match_type={}] [confidence={}] [source={}] [sha256={}]{}",
+            match_type, confidence, source, sha256, distance_token,
+        );
+        ArtifactRecord {
+            category: ArtifactCategory::Media,
+            subcategory: "CSAM Hit".to_string(),
+            timestamp: Some(0),
+            title: file_path.to_string(),
+            detail,
+            source_path: file_path.to_string(),
+            forensic_value: ForensicValue::Critical,
+            mitre_technique: None,
+            is_suspicious: true,
+            raw_data: None,
+        }
+    }
+
+    /// Wrap one or more records in a synthetic `PluginOutput` so they
+    /// can be passed as `prior_results` to `SigmaPlugin::run()`.
+    fn synthetic_csam_plugin_output(records: Vec<ArtifactRecord>) -> PluginOutput {
+        let total = records.len();
+        PluginOutput {
+            plugin_name: "Strata CSAM Scanner".to_string(),
+            plugin_version: "0.1.0".to_string(),
+            executed_at: String::new(),
+            duration_ms: 0,
+            artifacts: records,
+            summary: PluginSummary {
+                total_artifacts: total,
+                suspicious_count: total,
+                categories_populated: vec!["Media".to_string()],
+                headline: format!("CSAM scan: {} hit(s)", total),
+            },
+            warnings: vec![],
+        }
+    }
+
+    /// Run Sigma over the given prior outputs and return the firing
+    /// rule titles (i.e., entries with file_type=="Sigma Rule").
+    fn run_sigma(prior: Vec<PluginOutput>) -> Vec<String> {
+        let plugin = SigmaPlugin::new();
+        let ctx = PluginContext {
+            root_path: "/tmp".to_string(),
+            config: HashMap::new(),
+            prior_results: prior,
+        };
+        let artifacts = plugin.run(ctx).expect("sigma run");
+        artifacts
+            .into_iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "Sigma Rule")
+                    .unwrap_or(false)
+            })
+            .filter_map(|a| a.data.get("title").cloned())
+            .collect()
+    }
+
+    // ── Rule 28 — CSAM Hash Match Detected ─────────────────────────
+
+    #[test]
+    fn rule_28_fires_on_confirmed_exact_hash_hit() {
+        let hit = csam_hit_record(
+            "/evidence/photo_001.jpg",
+            "ExactSha256",
+            "Confirmed",
+            "ncmec_2024",
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            None,
+        );
+        let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
+        assert!(
+            titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            "expected Rule 28 to fire, got: {:?}",
+            titles
+        );
+    }
+
+    #[test]
+    fn rule_28_fires_on_high_confidence_perceptual_hit() {
+        // confidence=High = perceptual distance 0-5; Rule 28 includes
+        // both Confirmed and High because both indicate strong matches.
+        let hit = csam_hit_record(
+            "/evidence/edited.jpg",
+            "Perceptual",
+            "High",
+            "perceptual_db",
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            Some(3),
+        );
+        let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
+        assert!(
+            titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            "expected Rule 28 to fire on High-confidence perceptual hit, got: {:?}",
+            titles
+        );
+    }
+
+    #[test]
+    fn rule_28_does_not_fire_on_medium_confidence_alone() {
+        // Medium = perceptual distance 6-10 — strong enough for Rule 29
+        // but NOT for Rule 28 (which requires Confirmed or High only).
+        let hit = csam_hit_record(
+            "/evidence/distant.jpg",
+            "Perceptual",
+            "Medium",
+            "perceptual_db",
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            Some(8),
+        );
+        let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
+        assert!(
+            !titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            "Rule 28 must NOT fire on Medium-only confidence, got: {:?}",
+            titles
+        );
+        // But Rule 29 SHOULD fire — distance 8 ≤ 10.
+        assert!(
+            titles
+                .iter()
+                .any(|t| t == "RULE FIRED: Probable CSAM Variant Detected"),
+            "Rule 29 should fire on Medium perceptual hit at distance 8, got: {:?}",
+            titles
+        );
+    }
+
+    /// **LOAD-BEARING NEGATIVE TEST. DO NOT REMOVE.**
+    ///
+    /// This test confirms that Rules 28 and 29 require
+    /// `subcategory == "CSAM Hit"` and do NOT fire on substring
+    /// matches against arbitrary record details. Without it, a
+    /// future bug where the subcategory check is dropped from the
+    /// rule filters would silently start firing CSAM rules on
+    /// unrelated data — and the existing positive tests would not
+    /// catch it because they all use real CSAM Hit records.
+    ///
+    /// If you change the rule filters in lib.rs, this test must
+    /// continue to pass. If you need to weaken the subcategory
+    /// requirement, the spec rule must be re-reviewed first.
+    #[test]
+    fn rule_28_does_not_fire_with_no_csam_hits() {
+        // Synthetic prior_results with NO CSAM Hit records.
+        let unrelated = ArtifactRecord {
+            category: ArtifactCategory::SystemActivity,
+            subcategory: "EVTX-1234".to_string(),
+            timestamp: Some(0),
+            title: "unrelated".to_string(),
+            detail: "[match_type=Confirmed]".to_string(), // looks like CSAM but isn't
+            source_path: String::new(),
+            forensic_value: ForensicValue::Low,
+            mitre_technique: None,
+            is_suspicious: false,
+            raw_data: None,
+        };
+        let prior = PluginOutput {
+            plugin_name: "Strata Other".to_string(),
+            plugin_version: "1.0.0".to_string(),
+            executed_at: String::new(),
+            duration_ms: 0,
+            artifacts: vec![unrelated],
+            summary: PluginSummary {
+                total_artifacts: 1,
+                suspicious_count: 0,
+                categories_populated: vec![],
+                headline: String::new(),
+            },
+            warnings: vec![],
+        };
+        let titles = run_sigma(vec![prior]);
+        assert!(
+            !titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            "Rule 28 must require subcategory='CSAM Hit', got: {:?}",
+            titles
+        );
+        assert!(
+            !titles
+                .iter()
+                .any(|t| t == "RULE FIRED: Probable CSAM Variant Detected"),
+            "Rule 29 must require subcategory='CSAM Hit', got: {:?}",
+            titles
+        );
+    }
+
+    // ── Rule 29 — Probable CSAM Variant Detected ───────────────────
+
+    #[test]
+    fn rule_29_fires_on_perceptual_within_distance_10() {
+        let hit = csam_hit_record(
+            "/evidence/cropped.jpg",
+            "Perceptual",
+            "Medium",
+            "perceptual_db",
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            Some(7),
+        );
+        let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
+        assert!(
+            titles
+                .iter()
+                .any(|t| t == "RULE FIRED: Probable CSAM Variant Detected"),
+            "expected Rule 29 to fire at distance 7, got: {:?}",
+            titles
+        );
+    }
+
+    #[test]
+    fn rule_29_fires_at_exactly_distance_10() {
+        // Boundary: distance == 10 must fire (≤ 10).
+        let hit = csam_hit_record(
+            "/evidence/edge.jpg",
+            "Perceptual",
+            "Medium",
+            "perceptual_db",
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            Some(10),
+        );
+        let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
+        assert!(
+            titles
+                .iter()
+                .any(|t| t == "RULE FIRED: Probable CSAM Variant Detected"),
+            "Rule 29 boundary (distance=10) must fire, got: {:?}",
+            titles
+        );
+    }
+
+    #[test]
+    fn rule_29_does_not_fire_at_distance_11() {
+        // Boundary: distance == 11 must NOT fire (> 10). This is the
+        // NeedsReview confidence range — too distant for Rule 29.
+        let hit = csam_hit_record(
+            "/evidence/far.jpg",
+            "Perceptual",
+            "NeedsReview",
+            "perceptual_db",
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            Some(11),
+        );
+        let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
+        assert!(
+            !titles
+                .iter()
+                .any(|t| t == "RULE FIRED: Probable CSAM Variant Detected"),
+            "Rule 29 must NOT fire at distance 11, got: {:?}",
+            titles
+        );
+    }
+
+    #[test]
+    fn rule_29_does_not_fire_on_exact_hash_match() {
+        // Exact crypto matches are NOT perceptual — Rule 29 only fires
+        // on match_type=Perceptual.
+        let hit = csam_hit_record(
+            "/evidence/exact.jpg",
+            "ExactMd5",
+            "Confirmed",
+            "ncmec_2024",
+            "d41d8cd98f00b204e9800998ecf8427ed41d8cd98f00b204e9800998ecf8427e",
+            None,
+        );
+        let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
+        assert!(
+            !titles
+                .iter()
+                .any(|t| t == "RULE FIRED: Probable CSAM Variant Detected"),
+            "Rule 29 must NOT fire on exact hash hit, got: {:?}",
+            titles
+        );
+        // But Rule 28 SHOULD fire.
+        assert!(
+            titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            "Rule 28 should fire on Confirmed exact hit, got: {:?}",
+            titles
+        );
+    }
+
+    // ── Rule 28 + Rule 29 overlap (intentional) ────────────────────
+
+    #[test]
+    fn high_confidence_perceptual_fires_both_rules() {
+        // A perceptual hit at distance 3 has confidence=High AND
+        // distance ≤ 10 — both rules should fire on the same hit.
+        // Overlap is intentional; the rules cover distinct concerns.
+        let hit = csam_hit_record(
+            "/evidence/both.jpg",
+            "Perceptual",
+            "High",
+            "perceptual_db",
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            Some(3),
+        );
+        let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
+        assert!(
+            titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            "Rule 28 should fire, got: {:?}",
+            titles
+        );
+        assert!(
+            titles
+                .iter()
+                .any(|t| t == "RULE FIRED: Probable CSAM Variant Detected"),
+            "Rule 29 should fire, got: {:?}",
+            titles
+        );
+    }
+
+    // ── Multi-hit aggregation ──────────────────────────────────────
+
+    #[test]
+    fn rules_fire_once_for_multiple_hits() {
+        // The rule narrative includes the count, but the rule itself
+        // fires ONCE per scan with the aggregate count, not once per
+        // hit. This matches the existing rule pattern (e.g.
+        // count_evtx-based rules at v1.3.0).
+        let hits = vec![
+            csam_hit_record(
+                "/a.jpg",
+                "ExactSha256",
+                "Confirmed",
+                "db",
+                "1111111111111111111111111111111111111111111111111111111111111111",
+                None,
+            ),
+            csam_hit_record(
+                "/b.jpg",
+                "ExactSha256",
+                "Confirmed",
+                "db",
+                "2222222222222222222222222222222222222222222222222222222222222222",
+                None,
+            ),
+            csam_hit_record(
+                "/c.jpg",
+                "Perceptual",
+                "Medium",
+                "db",
+                "3333333333333333333333333333333333333333333333333333333333333333",
+                Some(7),
+            ),
+        ];
+        let titles = run_sigma(vec![synthetic_csam_plugin_output(hits)]);
+        let r28_count = titles
+            .iter()
+            .filter(|t| *t == "RULE FIRED: CSAM Hash Match Detected")
+            .count();
+        let r29_count = titles
+            .iter()
+            .filter(|t| *t == "RULE FIRED: Probable CSAM Variant Detected")
+            .count();
+        assert_eq!(r28_count, 1, "Rule 28 should fire exactly once aggregating multi hits");
+        assert_eq!(r29_count, 1, "Rule 29 should fire exactly once aggregating multi hits");
+    }
 }

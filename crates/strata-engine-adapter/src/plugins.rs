@@ -17,7 +17,13 @@ use once_cell::sync::Lazy;
 /// All built-in plugins, statically linked. Mirrors strata-tree's plugin_host
 /// plus the v0.6.0 additions: Phantom (registry intelligence) and Guardian
 /// (AV + system health). Sigma must remain LAST so its correlation engine
-/// sees results from all 12 prior plugins.
+/// sees results from all prior plugins.
+///
+/// **CSAM Sentinel:** the CSAM scanner is registered here so it appears in
+/// `list_plugins()` for the Forge UI. Its `run()` is a no-op informational
+/// artifact pointing to the dedicated CSAM IPC commands in `csam.rs` —
+/// the real workflow (hash-set import, scan, review/confirm/dismiss,
+/// report) lives behind those commands, not behind generic `run_plugin()`.
 fn build_plugins() -> Vec<Box<dyn StrataPlugin>> {
     vec![
         Box::new(strata_plugin_remnant::RemnantPlugin::new()),
@@ -34,6 +40,8 @@ fn build_plugins() -> Vec<Box<dyn StrataPlugin>> {
         Box::new(strata_plugin_guardian::GuardianPlugin::new()),
         Box::new(strata_plugin_netflow::NetFlowPlugin::new()),
         Box::new(strata_plugin_mactrace::MacTracePlugin::new()),
+        // Sentinel — free on every license tier.
+        Box::new(strata_plugin_csam::CsamPlugin::new()),
         Box::new(strata_plugin_sigma::SigmaPlugin::new()),
     ]
 }

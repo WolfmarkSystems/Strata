@@ -9,6 +9,7 @@
 //! All commands are synchronous (the Tauri command layer wraps them in
 //! `tokio::task::spawn_blocking` if needed).
 
+pub mod csam;
 pub mod evidence;
 pub mod files;
 pub mod hashing;
@@ -34,4 +35,11 @@ pub use hashing::{hash_all_files, hash_file, hashed_count};
 pub use plugins::{
     get_artifact_categories, get_artifacts_by_category, get_plugin_artifacts, list_plugins,
     run_plugin,
+};
+
+pub use csam::{
+    csam_confirm_hit, csam_create_session, csam_dismiss_hit, csam_drop_session,
+    csam_export_audit_log, csam_generate_report, csam_import_hash_set, csam_list_hits,
+    csam_review_hit, csam_run_scan, csam_session_summary, CsamHitInfo, CsamScanOptions,
+    CsamScanSummary, CsamSessionSummary, HashSetImportResult,
 };

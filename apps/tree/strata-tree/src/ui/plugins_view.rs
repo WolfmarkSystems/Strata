@@ -6,6 +6,7 @@ use libloading::{Library, Symbol};
 use std::path::Path;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
+use strata_plugin_csam::CSAM_PLUGIN_NAME;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -220,6 +221,15 @@ fn render_builtin_detail(
         ui.label(egui::RichText::new("Select a plugin to view details").color(t.muted).size(12.0));
         return;
     };
+
+    // ── Sentinel plugin special-case ───────────────────────────────
+    // The CSAM scanner has its own dedicated control surface and
+    // does NOT use the standard description / categories / MITRE
+    // layout below. Render the dedicated panel and return.
+    if name == CSAM_PLUGIN_NAME {
+        render_csam_detail(ui, state);
+        return;
+    }
 
     let accent = plugin_accent_color(name);
 
@@ -542,6 +552,396 @@ fn load_plugin_config(state: &mut AppState) {
             {
                 state.plugin_enabled = map;
             }
+        }
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// CSAM Sentinel plugin — dedicated details pane
+// ──────────────────────────────────────────────────────────────────────
+//
+// This is the special-cased UI for the CSAM Sentinel plugin (free
+// on every license tier per the v1.4.0 spec). It replaces the
+// standard description / categories / MITRE layout when the user
+// selects the CSAM card.
+//
+// **CRITICAL UI RULES — DO NOT WEAKEN:**
+// 1. No matched image is ever auto-displayed.
+// 2. The [REVIEW] button never opens an image viewer directly. It
+//    sets `csam_pending_review`, which causes the UI to render an
+//    acknowledgement modal. The modal explicitly tells the examiner
+//    that the action will be logged. Only after acknowledging does
+//    the audit log record `HitReviewed` and the hit is marked
+//    `examiner_reviewed`.
+// 3. All button clicks (REVIEW / CONFIRM / DISMISS) write to the
+//    in-memory CSAM audit log (which the IPC layer flushes to the
+//    case `audit_log` SQLite table in Task 8).
+// 4. Hit cards display path, hashes, match metadata only — never
+//    thumbnails or previews of any kind.
+fn render_csam_detail(ui: &mut egui::Ui, state: &mut AppState) {
+    let t = *state.theme();
+
+    // ── RESTRICTED notice header (always visible) ──────────────────
+    egui::Frame::none()
+        .fill(egui::Color32::from_rgb(60, 0, 0))
+        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(180, 30, 30)))
+        .rounding(4.0)
+        .inner_margin(egui::Margin::symmetric(8.0, 6.0))
+        .show(ui, |ui| {
+            ui.label(
+                egui::RichText::new("⚠ CSAM DETECTION — RESTRICTED")
+                    .color(egui::Color32::WHITE)
+                    .strong()
+                    .size(11.5),
+            );
+            ui.label(
+                egui::RichText::new(
+                    "Hash-based detection only. Images are NEVER auto-displayed. \
+                     All matches logged to the immutable audit trail.",
+                )
+                .color(egui::Color32::from_rgb(255, 200, 200))
+                .size(9.5),
+            );
+        });
+    ui.add_space(8.0);
+
+    egui::ScrollArea::vertical()
+        .id_source("csam_detail_scroll")
+        .show(ui, |ui| {
+            // ── Hash sets section ──────────────────────────────────
+            ui.label(
+                egui::RichText::new("HASH SETS")
+                    .color(t.muted)
+                    .size(10.0),
+            );
+            ui.add_space(2.0);
+            if state.csam_hash_dbs.is_empty() {
+                ui.label(
+                    egui::RichText::new("No hash sets loaded")
+                        .color(t.muted)
+                        .size(10.0),
+                );
+                ui.label(
+                    egui::RichText::new(
+                        "Import NCMEC, Project VIC VICS, or generic hash files.",
+                    )
+                    .color(t.muted)
+                    .size(9.5),
+                );
+            } else {
+                for db in &state.csam_hash_dbs {
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "✓ {} | {} | {} entries",
+                            db.name,
+                            db.source_format.as_str(),
+                            db.entry_count
+                        ))
+                        .color(t.secondary)
+                        .size(10.0),
+                    );
+                }
+            }
+            ui.add_space(4.0);
+            if ui.button("[ IMPORT HASH SET ]").clicked() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .set_title("Select CSAM hash set file")
+                    .add_filter("Hash files", &["txt", "json", "list", "md5", "sha1", "sha256"])
+                    .add_filter("All files", &["*"])
+                    .pick_file()
+                {
+                    let stem = path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("hash_set")
+                        .to_string();
+                    state.import_csam_hash_set(&path, &stem);
+                }
+            }
+            ui.add_space(10.0);
+
+            // ── Scan options ───────────────────────────────────────
+            ui.label(
+                egui::RichText::new("SCAN OPTIONS")
+                    .color(t.muted)
+                    .size(10.0),
+            );
+            ui.add_space(2.0);
+            ui.checkbox(
+                &mut state.csam_scan_config.run_exact_hash,
+                "Exact hash matching (MD5 / SHA1 / SHA256)",
+            );
+            ui.checkbox(
+                &mut state.csam_scan_config.run_perceptual,
+                "Perceptual hash matching (edited / cropped variants)",
+            );
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new("Threshold:")
+                        .color(t.secondary)
+                        .size(10.0),
+                );
+                ui.add(
+                    egui::DragValue::new(&mut state.csam_scan_config.perceptual_threshold)
+                        .range(0..=64),
+                );
+                ui.label(
+                    egui::RichText::new("(0 = identical, < 10 = likely)")
+                        .color(t.muted)
+                        .size(9.5),
+                );
+            });
+            ui.horizontal(|ui| {
+                ui.radio_value(
+                    &mut state.csam_scan_config.scan_all_files,
+                    false,
+                    "Image files only",
+                );
+                ui.radio_value(
+                    &mut state.csam_scan_config.scan_all_files,
+                    true,
+                    "All files",
+                );
+            });
+            ui.add_space(10.0);
+
+            // ── Run button ─────────────────────────────────────────
+            let has_evidence = !state.evidence_sources.is_empty();
+            let can_run = has_evidence && !state.csam_scan_running;
+            let run_label = if state.csam_scan_running {
+                "SCANNING..."
+            } else {
+                "RUN CSAM SCAN"
+            };
+            if ui
+                .add_enabled(
+                    can_run,
+                    egui::Button::new(
+                        egui::RichText::new(run_label)
+                            .color(t.text)
+                            .strong()
+                            .size(11.5),
+                    )
+                    .fill(t.card)
+                    .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(180, 30, 30)))
+                    .rounding(4.0),
+                )
+                .clicked()
+            {
+                state.run_csam_scan();
+            }
+            if !has_evidence {
+                ui.label(
+                    egui::RichText::new("(load evidence first)")
+                        .color(t.muted)
+                        .size(9.0),
+                );
+            }
+            ui.add_space(8.0);
+
+            // ── Status line ────────────────────────────────────────
+            if !state.csam_status.is_empty() {
+                ui.label(
+                    egui::RichText::new(&state.csam_status)
+                        .color(t.secondary)
+                        .size(10.0)
+                        .italics(),
+                );
+                ui.add_space(6.0);
+            }
+
+            // ── Results ────────────────────────────────────────────
+            let (sets, total, confirmed) = state.csam_summary();
+            ui.label(
+                egui::RichText::new(format!(
+                    "RESULTS — {} hit(s), {} confirmed, {} hash set(s) loaded",
+                    total, confirmed, sets
+                ))
+                .color(t.muted)
+                .size(10.0),
+            );
+            ui.add_space(4.0);
+
+            if state.csam_hits.is_empty() {
+                ui.label(
+                    egui::RichText::new("No scan results yet.")
+                        .color(t.muted)
+                        .size(10.0),
+                );
+            } else {
+                // Collect actions during iteration so we don't borrow
+                // `state` mutably while iterating its hits.
+                let mut click_review: Option<String> = None;
+                let mut click_confirm: Option<String> = None;
+                let mut click_dismiss: Option<String> = None;
+
+                for hit in &state.csam_hits {
+                    let hit_id = hit.hit_id.to_string();
+                    egui::Frame::none()
+                        .fill(t.elevated)
+                        .stroke(egui::Stroke::new(1.0, t.border))
+                        .rounding(3.0)
+                        .inner_margin(egui::Margin::symmetric(6.0, 4.0))
+                        .show(ui, |ui| {
+                            ui.label(
+                                egui::RichText::new(format!("⚠ {}", hit.file_path))
+                                    .color(t.text)
+                                    .size(10.0)
+                                    .strong(),
+                            );
+                            ui.label(
+                                egui::RichText::new(format!(
+                                    "Type: {} | Confidence: {} | Source: {}",
+                                    AppState::csam_hit_match_label(hit),
+                                    hit.confidence.as_str(),
+                                    hit.match_source,
+                                ))
+                                .color(t.secondary)
+                                .size(9.5),
+                            );
+                            ui.label(
+                                egui::RichText::new(format!("SHA-256: {}", hit.sha256))
+                                    .color(t.muted)
+                                    .size(9.0),
+                            );
+                            if let Some(d) = hit.perceptual_distance {
+                                ui.label(
+                                    egui::RichText::new(format!(
+                                        "Perceptual distance: {}",
+                                        d
+                                    ))
+                                    .color(t.muted)
+                                    .size(9.0),
+                                );
+                            }
+                            ui.horizontal(|ui| {
+                                if hit.examiner_reviewed {
+                                    ui.label(
+                                        egui::RichText::new("✓ reviewed")
+                                            .color(t.secondary)
+                                            .size(9.0),
+                                    );
+                                }
+                                if hit.examiner_confirmed {
+                                    ui.label(
+                                        egui::RichText::new("✓ CONFIRMED")
+                                            .color(t.active)
+                                            .size(9.0)
+                                            .strong(),
+                                    );
+                                }
+                            });
+                            ui.horizontal(|ui| {
+                                if ui.small_button("REVIEW").clicked() {
+                                    click_review = Some(hit_id.clone());
+                                }
+                                if ui.small_button("CONFIRM").clicked() {
+                                    click_confirm = Some(hit_id.clone());
+                                }
+                                if ui.small_button("DISMISS").clicked() {
+                                    click_dismiss = Some(hit_id.clone());
+                                }
+                            });
+                        });
+                    ui.add_space(2.0);
+                }
+
+                // Apply collected actions after the iteration so the
+                // mutable state borrow is no longer in flight.
+                if let Some(id) = click_review {
+                    // Setting csam_pending_review opens the warning
+                    // modal at the bottom of this function. The audit
+                    // log entry is recorded only when the examiner
+                    // acknowledges the modal — clicking REVIEW alone
+                    // is not yet a "viewed" event.
+                    state.csam_pending_review = Some(id);
+                }
+                if let Some(id) = click_confirm {
+                    state.csam_confirm_hit(&id);
+                }
+                if let Some(id) = click_dismiss {
+                    state.csam_dismiss_hit(&id, "examiner_dismissed");
+                }
+            }
+
+            ui.add_space(10.0);
+
+            // ── Footer buttons ─────────────────────────────────────
+            ui.horizontal(|ui| {
+                if ui.button("GENERATE REPORT").clicked() {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .set_title("Save CSAM report PDF")
+                        .add_filter("PDF", &["pdf"])
+                        .save_file()
+                    {
+                        state.generate_csam_report(&path);
+                    }
+                }
+                if ui.button("EXPORT AUDIT LOG").clicked() {
+                    if let Some(path) = rfd::FileDialog::new()
+                        .set_title("Save CSAM audit log JSON")
+                        .add_filter("JSON", &["json"])
+                        .save_file()
+                    {
+                        // Filtered from the unified case audit log:
+                        // only entries with `CSAM_*` action_type are
+                        // exported. The full case chain remains the
+                        // source of truth — see state_csam.rs.
+                        match state.export_csam_audit_log(&path) {
+                            Ok(()) => {
+                                state.csam_status =
+                                    format!("Audit log exported to {}", path.display());
+                            }
+                            Err(e) => {
+                                state.csam_status = format!("Export failed: {}", e);
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+    // ── REVIEW warning modal ───────────────────────────────────────
+    // Rendered last so it floats above the rest of the panel. The
+    // modal is the ONLY path that flips a hit's `examiner_reviewed`
+    // flag — the [REVIEW] button alone does not.
+    if let Some(pending_id) = state.csam_pending_review.clone() {
+        let mut acknowledged = false;
+        let mut cancelled = false;
+        egui::Window::new("Review flagged content")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ui.ctx(), |ui| {
+                ui.label(
+                    egui::RichText::new("⚠ You are about to review flagged content.")
+                        .color(egui::Color32::from_rgb(220, 80, 80))
+                        .strong()
+                        .size(12.0),
+                );
+                ui.add_space(4.0);
+                ui.label(
+                    "This action will be recorded in the immutable\n\
+                     audit trail with your examiner identity and a\n\
+                     UTC timestamp. Strata does NOT auto-display the\n\
+                     image — opening any viewer is a separate action\n\
+                     you must take explicitly.",
+                );
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui.button("Continue (will be logged)").clicked() {
+                        acknowledged = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        cancelled = true;
+                    }
+                });
+            });
+
+        if acknowledged {
+            state.csam_mark_reviewed(&pending_id);
+        } else if cancelled {
+            state.csam_pending_review = None;
         }
     }
 }
