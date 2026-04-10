@@ -26,16 +26,26 @@ pub mod chrome_top_sites;
 pub mod clipboard;
 pub mod contacts;
 pub mod device_info;
+pub mod discord;
+pub mod facebook_messenger;
 pub mod gmail;
 pub mod google_chrome;
 pub mod google_maps;
 pub mod google_photos;
 pub mod google_play;
+pub mod imo_messenger;
 pub mod installed_apps;
 pub mod keyboard_cache;
+pub mod line_messenger;
 pub mod location_history;
 pub mod notifications;
+pub mod skype;
 pub mod sms;
+pub mod snapchat;
+pub mod telegram;
+pub mod textnow;
+pub mod viber;
+pub mod whatsapp;
 pub mod wifi_profiles;
 
 /// A single Android parser binding — name, matcher, and runner.
@@ -184,5 +194,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "google_play",
         matches_any: google_play::MATCHES,
         run: google_play::parse,
+    },
+    ParserEntry {
+        name: "whatsapp",
+        matches_any: whatsapp::MATCHES,
+        run: whatsapp::parse,
+    },
+    ParserEntry {
+        name: "facebook_messenger",
+        matches_any: facebook_messenger::MATCHES,
+        run: facebook_messenger::parse,
+    },
+    ParserEntry {
+        name: "discord",
+        matches_any: discord::MATCHES,
+        run: discord::parse,
+    },
+    ParserEntry {
+        name: "snapchat",
+        matches_any: snapchat::MATCHES,
+        run: snapchat::parse,
+    },
+    ParserEntry {
+        name: "telegram",
+        matches_any: telegram::MATCHES,
+        run: telegram::parse,
+    },
+    ParserEntry {
+        name: "skype",
+        matches_any: skype::MATCHES,
+        run: skype::parse,
+    },
+    ParserEntry {
+        name: "textnow",
+        matches_any: textnow::MATCHES,
+        run: textnow::parse,
+    },
+    ParserEntry {
+        name: "viber",
+        matches_any: viber::MATCHES,
+        run: viber::parse,
+    },
+    ParserEntry {
+        name: "line_messenger",
+        matches_any: line_messenger::MATCHES,
+        run: line_messenger::parse,
+    },
+    ParserEntry {
+        name: "imo_messenger",
+        matches_any: imo_messenger::MATCHES,
+        run: imo_messenger::parse,
     },
 ];
