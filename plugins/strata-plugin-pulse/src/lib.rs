@@ -125,11 +125,14 @@ impl StrataPlugin for PulsePlugin {
             warnings.push("No Android artifacts detected under evidence root".to_string());
         }
 
+        let category_count = categories.len();
+        let categories_vec: Vec<String> = categories.into_iter().collect();
+
         let headline = format!(
             "Pulse: {} Android artifacts ({} suspicious) across {} categories",
             records.len(),
             suspicious_count,
-            categories.len()
+            category_count
         );
 
         Ok(PluginOutput {
@@ -141,7 +144,7 @@ impl StrataPlugin for PulsePlugin {
             summary: PluginSummary {
                 total_artifacts: records.len(),
                 suspicious_count,
-                categories_populated: categories,
+                categories_populated: categories_vec,
                 headline,
             },
             warnings,
