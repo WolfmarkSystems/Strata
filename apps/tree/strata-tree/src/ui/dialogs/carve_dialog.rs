@@ -263,8 +263,16 @@ fn default_carve_output_dir(evidence_path: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    // Windows-only imports; the only test in this module is gated on `target_os = "windows"`,
+    // so on other targets there are no consumers of `default_carve_output_dir` and the
+    // unused-import warning would fire if this were unconditional.
+    #[cfg(target_os = "windows")]
     use super::default_carve_output_dir;
 
+    // Windows-only: asserts Windows drive letter semantics (e.g. "F:" → "F:/strata-carved").
+    // On non-Windows platforms `default_carve_output_dir` returns None for any input, so
+    // the Some("F:/strata-carved") assertion cannot hold.
+    #[cfg(target_os = "windows")]
     #[test]
     fn carve_default_output_uses_non_c_evidence_drive() {
         let derived = default_carve_output_dir(r"F:\cases\sample.E01");

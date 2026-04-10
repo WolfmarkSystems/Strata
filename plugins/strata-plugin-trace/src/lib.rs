@@ -5,6 +5,8 @@ use strata_plugin_sdk::{
     PluginOutput, PluginResult, PluginSummary, PluginType, StrataPlugin,
 };
 
+pub mod srum;
+
 /// (binary_name, description, mitre_technique)
 const LOLBINS: &[(&str, &str, &str)] = &[
     ("certutil", "Certificate utility — can decode/download payloads", "T1140"),
@@ -231,8 +233,17 @@ impl TracePlugin {
     }
 
     /// Detect and parse SRUM (System Resource Usage Monitor) database.
-    /// Uses binary pattern scanning to extract application names from the ESE
-    /// database since no pure-Rust ESE parser is available.
+    ///
+    /// Delegates the structural parsing to [`crate::srum::SrumDatabase`],
+    /// which validates the ESE header, walks pages, and extracts:
+    ///   - Application paths and basenames
+    ///   - User SIDs
+    ///   - Which SRUM extension table providers are present
+    ///   - The FILETIME range observed across pages
+    ///
+    /// On parse failure (bad magic, wrong file type, implausible page
+    /// size, unreadable file) Strata still emits a single detection
+    /// artifact so the examiner sees that a SRUM file existed.
     fn detect_srum(path: &Path, name: &str, _path_str: &str) -> Vec<Artifact> {
         let mut results = Vec::new();
         let lower_name = name.to_lowercase();
@@ -243,19 +254,20 @@ impl TracePlugin {
 
         let path_str = path.to_string_lossy().to_string();
 
-        // Try to read the file for binary scanning
-        let data = match std::fs::read(path) {
-            Ok(d) => d,
-            Err(_) => {
-                // Can't read — just report detection
+        let parsed = match crate::srum::SrumDatabase::parse(path) {
+            Ok(p) => p,
+            Err(reason) => {
+                // Detection-only fallback: file exists but can't be parsed.
                 let mut a = Artifact::new("Execution", &path_str);
                 a.add_field("category", "SRUM Database");
                 a.add_field("file_type", "SRUM Database");
                 a.add_field("title", &format!("SRUM: {}", path.display()));
                 a.add_field(
                     "detail",
-                    "System Resource Usage Monitor database detected (ESE format). \
-                     File could not be read for content extraction.",
+                    &format!(
+                        "System Resource Usage Monitor database detected (ESE format). \
+                         Structural parse failed: {reason}"
+                    ),
                 );
                 a.add_field("mitre", "T1048");
                 results.push(a);
@@ -263,130 +275,19 @@ impl TracePlugin {
             }
         };
 
-        // ESE database header check: first 4 bytes should be checksum,
-        // and page signature 0xEF at specific offsets
-        let file_size = data.len();
-
-        // Scan for application path strings in the IdMapTable
-        // ESE stores string values as UTF-16LE. Look for common app path patterns.
-        let mut app_names: Vec<String> = Vec::new();
-        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-
-        // Patterns to search for (as UTF-16LE byte sequences)
-        let search_patterns: &[&[u8]] = &[
-            // "C:\" as UTF-16LE
-            &[0x43, 0x00, 0x3A, 0x00, 0x5C, 0x00],
-            // "\Device\HarddiskVolume" as UTF-16LE prefix
-            &[0x5C, 0x00, 0x44, 0x00, 0x65, 0x00, 0x76, 0x00, 0x69, 0x00, 0x63, 0x00, 0x65, 0x00],
-            // "%SystemRoot%" as UTF-16LE prefix
-            &[0x25, 0x00, 0x53, 0x00, 0x79, 0x00, 0x73, 0x00, 0x74, 0x00, 0x65, 0x00, 0x6D, 0x00],
-        ];
-
-        for pattern in search_patterns {
-            let mut offset = 0usize;
-            while offset + pattern.len() < data.len() {
-                if app_names.len() >= 500 {
-                    break;
-                }
-                if let Some(pos) = data[offset..]
-                    .windows(pattern.len())
-                    .position(|w| w == *pattern)
-                {
-                    let abs_pos = offset + pos;
-                    // Extract the UTF-16LE string starting from this position
-                    let str_end = (abs_pos + 520).min(data.len());
-                    let str_data = &data[abs_pos..str_end];
-                    let u16s: Vec<u16> = str_data
-                        .chunks_exact(2)
-                        .map(|c| u16::from_le_bytes([c[0], c[1]]))
-                        .take_while(|&ch| ch != 0 && ch > 0x1F && ch < 0xFFFE)
-                        .collect();
-                    let s = String::from_utf16_lossy(&u16s);
-
-                    // Filter: must look like a path (contains backslash + extension or exe)
-                    if s.len() > 5 && s.contains('\\') && !seen.contains(&s) {
-                        seen.insert(s.clone());
-                        app_names.push(s);
-                    }
-                    offset = abs_pos + pattern.len();
-                } else {
-                    break;
-                }
-            }
-        }
-
-        // Also scan for FILETIME timestamps to estimate data range
-        let mut earliest_ts: Option<i64> = None;
-        let mut latest_ts: Option<i64> = None;
-        let mut ts_count = 0usize;
-
-        // Sample every 4096 bytes for timestamp patterns (ESE page boundaries)
-        let page_size = if data.len() >= 8 {
-            let ps = u32::from_le_bytes(data[4..8].try_into().unwrap_or([0; 4]));
-            if ps == 4096 || ps == 8192 || ps == 16384 || ps == 32768 {
-                ps as usize
-            } else {
-                4096
-            }
+        let date_range = parsed.date_range();
+        let providers_listed = if parsed.providers_present.is_empty() {
+            "(none detected)".to_string()
         } else {
-            4096
+            parsed.providers_present.join(", ")
+        };
+        let sids_listed = if parsed.user_sids.is_empty() {
+            "(none recovered)".to_string()
+        } else {
+            parsed.user_sids.join(", ")
         };
 
-        let mut scan_off = 0usize;
-        while scan_off + 8 <= data.len() && ts_count < 10000 {
-            let ft = i64::from_le_bytes(
-                data[scan_off..scan_off + 8].try_into().unwrap_or([0; 8]),
-            );
-            // Valid FILETIME range: ~2010 to ~2030
-            if ft > 129_000_000_000_000_000 && ft < 140_000_000_000_000_000 {
-                let unix = (ft - 116_444_736_000_000_000) / 10_000_000;
-                if unix > 0 {
-                    ts_count += 1;
-                    match earliest_ts {
-                        None => earliest_ts = Some(unix),
-                        Some(e) if unix < e => earliest_ts = Some(unix),
-                        _ => {}
-                    }
-                    match latest_ts {
-                        None => latest_ts = Some(unix),
-                        Some(l) if unix > l => latest_ts = Some(unix),
-                        _ => {}
-                    }
-                }
-            }
-            scan_off += 8; // Step by 8 bytes (FILETIME aligned)
-        }
-
-        // Deduplicate and extract just the application names
-        let mut unique_apps: Vec<String> = Vec::new();
-        for app in &app_names {
-            // Extract just the exe/app name from the full path
-            let app_name = app
-                .rsplit('\\')
-                .next()
-                .unwrap_or(app)
-                .to_string();
-            if !app_name.is_empty() && !unique_apps.contains(&app_name) {
-                unique_apps.push(app_name);
-            }
-        }
-        unique_apps.sort();
-
-        // Build date range string
-        let date_range = match (earliest_ts, latest_ts) {
-            (Some(e), Some(l)) => {
-                let e_dt = chrono::DateTime::from_timestamp(e, 0)
-                    .map(|d| d.format("%Y-%m-%d").to_string())
-                    .unwrap_or_else(|| "unknown".to_string());
-                let l_dt = chrono::DateTime::from_timestamp(l, 0)
-                    .map(|d| d.format("%Y-%m-%d").to_string())
-                    .unwrap_or_else(|| "unknown".to_string());
-                format!("{} to {}", e_dt, l_dt)
-            }
-            _ => "unknown range".to_string(),
-        };
-
-        // Summary artifact
+        // Database summary artifact.
         let mut summary = Artifact::new("Execution", &path_str);
         summary.add_field("category", "SRUM Database");
         summary.add_field("file_type", "SRUM Database");
@@ -394,52 +295,86 @@ impl TracePlugin {
         summary.add_field(
             "detail",
             &format!(
-                "ESE database: {} bytes | {} application paths extracted | \
-                 {} timestamps found ({}) | Page size: {} | \
-                 Tables: Network Data Usage, Application Resource Usage, Network Connectivity",
-                file_size,
-                app_names.len(),
-                ts_count,
+                "ESE database parsed: {} bytes | format 0x{:X} | page size {} | \
+                 {} pages walked ({} long-value pages) | {} application paths | \
+                 {} user SIDs recovered | {} FILETIMEs sampled ({}) | \
+                 Providers present: {}",
+                parsed.file_size,
+                parsed.format_version,
+                parsed.page_size,
+                parsed.page_count,
+                parsed.long_value_pages,
+                parsed.apps.len(),
+                parsed.user_sids.len(),
+                parsed.timestamp_count,
                 date_range,
-                page_size,
+                providers_listed,
             ),
         );
         summary.add_field("forensic_value", "Critical");
         summary.add_field("mitre", "T1048");
         results.push(summary);
 
-        // Individual application artifacts (limit to 100 most interesting)
-        let display_limit = unique_apps.len().min(100);
-        for app_name in &unique_apps[..display_limit] {
-            let lower_app = app_name.to_lowercase();
-            let is_suspicious = lower_app.contains("powershell")
-                || lower_app.contains("cmd.exe")
-                || lower_app.contains("wscript")
-                || lower_app.contains("cscript")
-                || lower_app.contains("mshta")
-                || lower_app.contains("certutil")
-                || lower_app.contains("bitsadmin")
-                || lower_app.contains("regsvr32")
-                || lower_app.contains("rundll32")
-                || lower_app.ends_with(".tmp")
-                || lower_app.contains("tor");
-
+        // One artifact per detected SRUM extension provider so the
+        // examiner sees exactly which datasets are available.
+        for provider in &parsed.providers_present {
             let mut a = Artifact::new("Execution", &path_str);
-            a.add_field("category", "SRUM Activity");
-            a.add_field("file_type", "SRUM Activity");
-            a.add_field("title", app_name);
+            a.add_field("category", "SRUM Provider");
+            a.add_field("file_type", "SRUM Provider");
+            a.add_field("title", &format!("SRUM Provider: {provider}"));
             a.add_field(
                 "detail",
                 &format!(
-                    "Application recorded in SRUM: {} | Network usage tracked over {}",
-                    app_name, date_range,
+                    "Extension table {provider} detected in {}. \
+                     Date range: {date_range}.",
+                    path.display()
+                ),
+            );
+            a.add_field("forensic_value", "High");
+            a.add_field("mitre", "T1048");
+            results.push(a);
+        }
+
+        // One artifact per recovered user SID — useful for attribution
+        // when SRUM is the only artifact a host has retained.
+        for sid in &parsed.user_sids {
+            let mut a = Artifact::new("Execution", &path_str);
+            a.add_field("category", "SRUM User");
+            a.add_field("file_type", "SRUM User");
+            a.add_field("title", &format!("SRUM User: {sid}"));
+            a.add_field(
+                "detail",
+                &format!(
+                    "User SID recovered from SRUM IdMap: {sid}. \
+                     This user owned at least one SRUM-tracked process \
+                     during {date_range}."
+                ),
+            );
+            a.add_field("forensic_value", "High");
+            a.add_field("mitre", "T1087.001");
+            results.push(a);
+        }
+
+        // Individual application artifacts (cap at 200 to bound report size).
+        let display_limit = parsed.apps.len().min(200);
+        for app in parsed.apps.iter().take(display_limit) {
+            let mut a = Artifact::new("Execution", &path_str);
+            a.add_field("category", "SRUM Activity");
+            a.add_field("file_type", "SRUM Activity");
+            a.add_field("title", &app.basename);
+            a.add_field(
+                "detail",
+                &format!(
+                    "Application recovered from SRUM: {} | Database date range: {date_range} | \
+                     Detected providers: {providers_listed} | User scope: {sids_listed}",
+                    app.full_path,
                 ),
             );
             a.add_field(
                 "forensic_value",
-                if is_suspicious { "Critical" } else { "High" },
+                if app.is_suspicious { "Critical" } else { "High" },
             );
-            if is_suspicious {
+            if app.is_suspicious {
                 a.add_field("suspicious", "true");
                 a.add_field("mitre", "T1059");
             }
@@ -774,6 +709,8 @@ impl StrataPlugin for TracePlugin {
                 "Autorun Entry" => (ArtifactCategory::SystemActivity, ForensicValue::Critical),
                 "BITS Job" => (ArtifactCategory::SystemActivity, ForensicValue::Critical),
                 "SRUM Database" => (ArtifactCategory::SystemActivity, ForensicValue::Critical),
+                "SRUM Provider" => (ArtifactCategory::SystemActivity, ForensicValue::High),
+                "SRUM User" => (ArtifactCategory::SystemActivity, ForensicValue::High),
                 "SRUM Activity" => (ArtifactCategory::SystemActivity, ForensicValue::High),
                 "Timestomp Detected" => (ArtifactCategory::ExecutionHistory, ForensicValue::Critical),
                 _ => (ArtifactCategory::ExecutionHistory, ForensicValue::Medium),

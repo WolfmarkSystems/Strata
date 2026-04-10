@@ -578,6 +578,11 @@ fn looks_like_sid(value: &str) -> bool {
 mod tests {
     use super::*;
 
+    // Windows-only: `extract_sid_from_path` splits on backslashes and inspects
+    // Windows-style `$Recycle.Bin` path segments. On Unix-like targets the raw
+    // string literal is treated as a single component, so the SID extraction
+    // returns None and this assertion cannot hold.
+    #[cfg(target_os = "windows")]
     #[test]
     fn extract_sid_from_path_detects_sid_component() {
         let path = Path::new(r"C:\$Recycle.Bin\S-1-5-21-1000-2000-3000-1001");

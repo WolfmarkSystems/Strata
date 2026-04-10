@@ -261,14 +261,42 @@ fn register_container_entry(
 mod tests {
     use super::{is_evidence_file, start_indexing};
     use crate::state::IndexBatch;
+    use std::io::Write;
     use std::path::PathBuf;
     use std::time::{Duration, Instant};
 
+    /// Build (or return, if already present) the synthetic E01 fixture the loader
+    /// smoke test needs. The repo-committed fixture path under `testdata/` was
+    /// historically used, but `*.E01` is gitignored workspace-wide so the 1 MiB
+    /// binary is never actually committed — meaning fresh clones hit a missing-file
+    /// panic. Rebuilding it deterministically under the OS temp dir makes the test
+    /// hermetic and avoids committing binary evidence fixtures.
+    ///
+    /// The shape is documented in `testdata/synthetic_e01/README.md`:
+    ///   - 1,048,576 bytes (1 MiB), zero-filled
+    ///   - Magic bytes `45 57 46 2D 53 30 31` (`EWF-S01`) at offset 0x00
     fn synthetic_e01_path() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("testdata")
-            .join("synthetic_e01")
-            .join("synthetic_minimal.E01")
+        const SIZE: usize = 1024 * 1024;
+        const MAGIC: &[u8] = &[0x45, 0x57, 0x46, 0x2D, 0x53, 0x30, 0x31];
+
+        let dir = std::env::temp_dir().join("strata_synthetic_e01_fixture");
+        std::fs::create_dir_all(&dir).expect("create synthetic fixture dir");
+        let file_path = dir.join("synthetic_minimal.E01");
+
+        let needs_rebuild = match std::fs::metadata(&file_path) {
+            Ok(meta) => meta.len() as usize != SIZE,
+            Err(_) => true,
+        };
+
+        if needs_rebuild {
+            let mut buf = vec![0u8; SIZE];
+            buf[..MAGIC.len()].copy_from_slice(MAGIC);
+            let mut f = std::fs::File::create(&file_path).expect("create synthetic E01");
+            f.write_all(&buf).expect("write synthetic E01");
+            f.flush().expect("flush synthetic E01");
+        }
+
+        file_path
     }
 
     #[test]
