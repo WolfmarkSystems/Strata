@@ -137,6 +137,65 @@ impl MacTracePlugin {
             return Some(("Telegram", "Communications"));
         }
 
+        // ── v1.5.0 macOS expansion ───────────────────────────────────
+        if lc_name == "bookmarks.plist" && lc_path.contains("/safari/") {
+            return Some(("Safari Bookmarks", "Web Activity"));
+        }
+        if lc_name == "topsites.plist" && lc_path.contains("/safari/") {
+            return Some(("Safari TopSites", "Web Activity"));
+        }
+        if lc_name == "downloads.plist" && lc_path.contains("/safari/") {
+            return Some(("Safari Downloads (plist)", "Web Activity"));
+        }
+        if lc_name == "history" && lc_path.contains("/google/chrome/") {
+            return Some(("Chrome History (macOS)", "Web Activity"));
+        }
+        if lc_name == "preferences" && lc_path.contains("/google/chrome/") {
+            return Some(("Chrome Preferences (macOS)", "Web Activity"));
+        }
+        if lc_name == "places.sqlite" && lc_path.contains("/firefox/") {
+            return Some(("Firefox Places (macOS)", "Web Activity"));
+        }
+        if lc_name == "extensions.json" && lc_path.contains("/firefox/") {
+            return Some(("Firefox Extensions (macOS)", "Web Activity"));
+        }
+        if lc_name == "client.db" && lc_path.contains("clouddocs") {
+            return Some(("iCloud CloudDocs Client DB", "Cloud Storage"));
+        }
+        if lc_name == "com.apple.bird.plist" {
+            return Some(("iCloud Bird Daemon Prefs", "Cloud Storage"));
+        }
+        if lc_name == "com.apple.dock.plist" {
+            return Some(("macOS Dock", "User Activity"));
+        }
+        if lc_name == "db.sqlite" && lc_path.contains(".documentrevisions-v100") {
+            return Some(("Document Revisions", "User Activity"));
+        }
+        if lc_name == "knowledgec.db" && lc_path.contains("/knowledge/") {
+            return Some(("Screen Time KnowledgeC", "User Activity"));
+        }
+        if lc_name == "com.apple.ssh.plist" {
+            return Some(("macOS SSH Prefs", "Remote Access"));
+        }
+        if lc_name == "authorized_keys" && lc_path.contains("/users/") {
+            return Some(("macOS authorized_keys", "Remote Access"));
+        }
+        if lc_name == "known_hosts" && lc_path.contains("/users/") {
+            return Some(("macOS known_hosts", "Remote Access"));
+        }
+        if lc_path.contains("/.zsh_sessions/") || lc_path.contains("/.bash_sessions/") {
+            return Some(("Shell Session History", "User Activity"));
+        }
+        if lc_name == "fish_history" {
+            return Some(("Fish Shell History", "User Activity"));
+        }
+        if lc_path.contains("kmditem") || lc_name == ".com.apple.metadata.plist" {
+            return Some(("Spotlight Metadata Xattr", "Metadata"));
+        }
+        if lc_path.ends_with(".ufdr") {
+            return Some(("UFDR Container", "Mobile Extraction"));
+        }
+
         None
     }
 
@@ -342,6 +401,140 @@ impl StrataPlugin for MacTracePlugin {
                     "Telegram local storage (messages, chats, media metadata)".to_string(),
                     Some("T1005"),
                     "High",
+                    false,
+                ),
+
+                "Safari Bookmarks" => (
+                    "Safari bookmarks tree".to_string(),
+                    "Bookmarks.plist — folder hierarchy of saved URLs".to_string(),
+                    None,
+                    "Medium",
+                    false,
+                ),
+                "Safari TopSites" => (
+                    "Safari TopSites".to_string(),
+                    "User's frequently visited sites — surfaces the homepage tile data".to_string(),
+                    None,
+                    "Medium",
+                    false,
+                ),
+                "Safari Downloads (plist)" => (
+                    "Safari downloads (plist)".to_string(),
+                    "Legacy downloads.plist — pre-Yosemite or synced".to_string(),
+                    None,
+                    "High",
+                    false,
+                ),
+                "Chrome History (macOS)" => (
+                    "Chrome History DB (macOS)".to_string(),
+                    "Chromium history SQLite — urls + downloads + visits".to_string(),
+                    None,
+                    "High",
+                    false,
+                ),
+                "Chrome Preferences (macOS)" => (
+                    "Chrome Preferences (macOS)".to_string(),
+                    "Chromium Preferences JSON — extensions + sync settings".to_string(),
+                    None,
+                    "Medium",
+                    false,
+                ),
+                "Firefox Places (macOS)" => (
+                    "Firefox places.sqlite (macOS)".to_string(),
+                    "Firefox URL history + bookmarks + visits".to_string(),
+                    None,
+                    "High",
+                    false,
+                ),
+                "Firefox Extensions (macOS)" => (
+                    "Firefox extensions.json (macOS)".to_string(),
+                    "Installed Firefox add-ons with sourceURI".to_string(),
+                    None,
+                    "Medium",
+                    false,
+                ),
+                "iCloud CloudDocs Client DB" => (
+                    "iCloud CloudDocs client.db".to_string(),
+                    "Local cache of synced iCloud Drive items + timestamps".to_string(),
+                    None,
+                    "High",
+                    false,
+                ),
+                "iCloud Bird Daemon Prefs" => (
+                    "iCloud bird daemon plist".to_string(),
+                    "Identifies the active iCloud account and default container".to_string(),
+                    None,
+                    "Medium",
+                    false,
+                ),
+                "macOS Dock" => (
+                    "macOS Dock plist".to_string(),
+                    "persistent-apps + recent-apps — pinned and recent application icons".to_string(),
+                    Some("T1083"),
+                    "Medium",
+                    false,
+                ),
+                "Document Revisions" => (
+                    "DocumentRevisions snapshot DB".to_string(),
+                    "macOS document versioning DB — recovers prior versions of edited documents".to_string(),
+                    Some("T1005"),
+                    "High",
+                    false,
+                ),
+                "Screen Time KnowledgeC" => (
+                    "Screen Time KnowledgeC".to_string(),
+                    "macOS Knowledge graph — per-app foreground/usage events".to_string(),
+                    Some("T1005"),
+                    "Critical",
+                    false,
+                ),
+                "macOS SSH Prefs" => (
+                    "macOS com.apple.ssh.plist".to_string(),
+                    "User-level SSH client preferences and cached host keys".to_string(),
+                    Some("T1021.004"),
+                    "Medium",
+                    false,
+                ),
+                "macOS authorized_keys" => (
+                    "macOS authorized_keys".to_string(),
+                    "Public keys authorised for remote login on this account".to_string(),
+                    Some("T1098.004"),
+                    "High",
+                    true,
+                ),
+                "macOS known_hosts" => (
+                    "macOS known_hosts".to_string(),
+                    "Servers this account previously SSH'd to (proves outbound activity)".to_string(),
+                    Some("T1021.004"),
+                    "Medium",
+                    false,
+                ),
+                "Shell Session History" => (
+                    "Shell session history file".to_string(),
+                    "Per-session zsh/bash history (commonly missed by .zsh_history-only sweeps)".to_string(),
+                    Some("T1059.004"),
+                    "High",
+                    false,
+                ),
+                "Fish Shell History" => (
+                    "Fish shell history".to_string(),
+                    "Fish shell command history with timestamps".to_string(),
+                    Some("T1059.004"),
+                    "High",
+                    false,
+                ),
+                "Spotlight Metadata Xattr" => (
+                    "Spotlight metadata xattr".to_string(),
+                    "kMDItemWhereFroms / DownloadedDate — proves origin and provenance".to_string(),
+                    None,
+                    "High",
+                    false,
+                ),
+                "UFDR Container" => (
+                    "Cellebrite UFDR container".to_string(),
+                    "Mobile extraction archive — original device paths reconstructed by UFDR parser".to_string(),
+                    None,
+                    "Critical",
                     false,
                 ),
 
