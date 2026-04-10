@@ -12,14 +12,19 @@ pub mod util;
 
 pub mod accounts;
 pub mod appinstall;
+pub mod biome;
+pub mod bluetooth;
 pub mod calendar;
 pub mod callhistory;
 pub mod contacts;
+pub mod discord;
+pub mod findmy;
 pub mod health;
 pub mod icloudbackup;
 pub mod keyboard;
 pub mod knowledgec;
 pub mod location;
+pub mod mail;
 pub mod maps;
 pub mod notes;
 pub mod notifications;
@@ -28,9 +33,12 @@ pub mod powerlog;
 pub mod reminders;
 pub mod safari;
 pub mod screentime;
+pub mod signal;
 pub mod sms;
+pub mod telegram;
 pub mod voicemail;
 pub mod wallet;
+pub mod whatsapp;
 pub mod wifi;
 
 /// Run every registered parser against a single path. Parsers whose
@@ -103,6 +111,30 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if powerlog::matches(path) {
         out.extend(powerlog::parse(path));
+    }
+    if whatsapp::matches(path) {
+        out.extend(whatsapp::parse(path));
+    }
+    if signal::matches(path) {
+        out.extend(signal::parse(path));
+    }
+    if telegram::matches(path) {
+        out.extend(telegram::parse(path));
+    }
+    if mail::matches(path) {
+        out.extend(mail::parse(path));
+    }
+    if findmy::matches(path) {
+        out.extend(findmy::parse(path));
+    }
+    if bluetooth::matches(path) {
+        out.extend(bluetooth::parse(path));
+    }
+    if discord::matches(path) {
+        out.extend(discord::parse(path));
+    }
+    if biome::matches(path) {
+        out.extend(biome::parse(path));
     }
     out
 }
