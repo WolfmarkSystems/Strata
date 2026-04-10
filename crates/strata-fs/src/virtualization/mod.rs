@@ -1054,6 +1054,35 @@ impl RawVfs {
     }
 }
 
+impl crate::container::EvidenceContainerRO for RawVfs {
+    fn description(&self) -> &str {
+        "RawVfs"
+    }
+    fn source_path(&self) -> &Path {
+        &self.root
+    }
+    fn size(&self) -> u64 {
+        self.size
+    }
+    fn sector_size(&self) -> u64 {
+        512
+    }
+    fn read_into(&self, offset: u64, buf: &mut [u8]) -> Result<(), ForensicError> {
+        let start = offset as usize;
+        let end = start + buf.len();
+        if end > self.data.len() {
+            return Err(ForensicError::OutOfRange(format!(
+                "RawVfs read at {} len {} exceeds mapped size {}",
+                start,
+                buf.len(),
+                self.data.len()
+            )));
+        }
+        buf.copy_from_slice(&self.data[start..end]);
+        Ok(())
+    }
+}
+
 impl VirtualFileSystem for RawVfs {
     fn root(&self) -> &PathBuf {
         &self.root
@@ -1325,6 +1354,39 @@ impl VirtualFileSystem for RawVfs {
                                 serial_number: None,
                             });
                         }
+                    }
+                }
+            }
+
+            // If NTFS, try to find VSS (Volume Shadow Copy) snapshots
+            if final_fs == FileSystemType::NTFS {
+                if let Ok(snaps) = crate::shadowcopy::enumerate_vss_snapshots(self, filesystem_offset) {
+                    for snap in &snaps {
+                        let label = match snap.creation_time {
+                            Some(ts) => {
+                                let dt = chrono::DateTime::from_timestamp(ts, 0);
+                                format!(
+                                    "VSS Snapshot {} ({})",
+                                    snap.snapshot_id,
+                                    dt.map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                        .unwrap_or_else(|| format!("epoch {}", ts)),
+                                )
+                            }
+                            None => format!("VSS Snapshot {}", snap.snapshot_id),
+                        };
+                        base_volumes.push(VolumeInfo {
+                            // 1000+ range reserved for VSS snapshots
+                            volume_index: 1000 + snap.index,
+                            offset: filesystem_offset,
+                            size: self.size.saturating_sub(filesystem_offset),
+                            sector_size: 512,
+                            filesystem: FileSystemType::NTFS,
+                            label: Some(label),
+                            cluster_size: None,
+                            mft_offset: None,
+                            mft_record_size: None,
+                            serial_number: None,
+                        });
                     }
                 }
             }
@@ -1747,6 +1809,34 @@ fn identify_gpt_type_guid(guid: &[u8]) -> &'static str {
         0x48465300 => "Apple HFS/HFS+",
         0x7C3457EF => "Apple APFS",
         _ => "Data",
+    }
+}
+
+impl crate::container::EvidenceContainerRO for EwfVfs {
+    fn description(&self) -> &str {
+        "EwfVfs"
+    }
+    fn source_path(&self) -> &Path {
+        &self.root
+    }
+    fn size(&self) -> u64 {
+        self.volumes.first().map(|v| v.size).unwrap_or(0)
+    }
+    fn sector_size(&self) -> u64 {
+        512
+    }
+    fn read_into(&self, offset: u64, buf: &mut [u8]) -> Result<(), ForensicError> {
+        let data = self.read_at(offset, buf.len())?;
+        if data.len() < buf.len() {
+            return Err(ForensicError::OutOfRange(format!(
+                "EwfVfs read_into: requested {} bytes at offset {}, got {}",
+                buf.len(),
+                offset,
+                data.len()
+            )));
+        }
+        buf.copy_from_slice(&data[..buf.len()]);
+        Ok(())
     }
 }
 
@@ -2973,7 +3063,7 @@ impl VirtualFileSystem for EwfVfs {
     }
 
     fn get_volumes(&self) -> Vec<VolumeInfo> {
-        self.volumes
+        let mut volumes: Vec<VolumeInfo> = self.volumes
             .iter()
             .map(|v| {
                 let fs_type = v
@@ -3004,7 +3094,43 @@ impl VirtualFileSystem for EwfVfs {
                     serial_number: None,
                 }
             })
-            .collect()
+            .collect();
+
+        // Scan NTFS volumes for VSS snapshots
+        for vol in volumes.clone() {
+            if vol.filesystem == FileSystemType::NTFS {
+                if let Ok(snaps) = crate::shadowcopy::enumerate_vss_snapshots(self, vol.offset) {
+                    for snap in &snaps {
+                        let label = match snap.creation_time {
+                            Some(ts) => {
+                                let dt = chrono::DateTime::from_timestamp(ts, 0);
+                                format!(
+                                    "VSS Snapshot {} ({})",
+                                    snap.snapshot_id,
+                                    dt.map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                        .unwrap_or_else(|| format!("epoch {}", ts)),
+                                )
+                            }
+                            None => format!("VSS Snapshot {}", snap.snapshot_id),
+                        };
+                        volumes.push(VolumeInfo {
+                            volume_index: 1000 + snap.index,
+                            offset: vol.offset,
+                            size: vol.size,
+                            sector_size: 512,
+                            filesystem: FileSystemType::NTFS,
+                            label: Some(label),
+                            cluster_size: None,
+                            mft_offset: None,
+                            mft_record_size: None,
+                            serial_number: None,
+                        });
+                    }
+                }
+            }
+        }
+
+        volumes
     }
 }
 
@@ -3906,6 +4032,44 @@ impl VirtualFileSystem for EwfVfs {
                 }
             }
         }
+
+        // Scan NTFS volumes for VSS snapshots
+        let vss_additions: Vec<VolumeInfo> = volumes
+            .iter()
+            .filter(|v| v.filesystem == FileSystemType::NTFS)
+            .flat_map(|vol| {
+                crate::shadowcopy::enumerate_vss_snapshots(self, vol.offset)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(move |snap| {
+                        let label = match snap.creation_time {
+                            Some(ts) => {
+                                let dt = chrono::DateTime::from_timestamp(ts, 0);
+                                format!(
+                                    "VSS Snapshot {} ({})",
+                                    snap.snapshot_id,
+                                    dt.map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                        .unwrap_or_else(|| format!("epoch {}", ts)),
+                                )
+                            }
+                            None => format!("VSS Snapshot {}", snap.snapshot_id),
+                        };
+                        VolumeInfo {
+                            volume_index: 1000 + snap.index,
+                            offset: vol.offset,
+                            size: vol.size,
+                            sector_size: 512,
+                            filesystem: FileSystemType::NTFS,
+                            label: Some(label),
+                            cluster_size: None,
+                            mft_offset: None,
+                            mft_record_size: None,
+                            serial_number: None,
+                        }
+                    })
+            })
+            .collect();
+        volumes.extend(vss_additions);
 
         if let Ok(mut cache) = self.volume_cache.lock() {
             *cache = Some(volumes.clone());

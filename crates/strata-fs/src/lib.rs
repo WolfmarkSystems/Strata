@@ -65,7 +65,8 @@ pub use ntfs::{
 };
 pub use ntfs_parser::{MftMetadata, NtfsParser};
 pub use shadowcopy::{
-    detect_shadow_copies, list_shadow_volume_offsets, ShadowCopyInfo, ShadowCopyType,
+    detect_shadow_copies, enumerate_vss_snapshots, list_shadow_volume_offsets, read_vss_header,
+    ShadowCopyInfo, ShadowCopyType, VssSnapshot, VssVolumeHeader,
 };
 pub use snapshot::{
     SnapshotEntry, SnapshotStats, VolumeSnapshot, MAX_SNAPSHOT_ENTRIES, MAX_WALK_DEPTH,
