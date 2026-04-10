@@ -64,3 +64,6 @@ pub mod zone_identifier;
 pub mod setupapi_log;
 pub mod i30_index;
 pub mod ual;
+
+// ── v1.5.0 additions ───────────────────────────────────────────────────────
+pub mod ufdr;

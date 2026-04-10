@@ -532,6 +532,41 @@ impl ParserRegistry {
         self.register(Box::new(
             crate::parsers::execution_correlation::ExecutionCorrelationParser::new(),
         ));
+
+        // === macOS expansion (v1.5.0) ===
+        self.register(Box::new(
+            crate::parsers::macos::safari_full::SafariFullParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::macos::chrome_macos::ChromeMacOsParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::macos::firefox_macos::FirefoxMacOsParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::macos::icloud_drive::ICloudDriveParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::macos::spotlight_metadata::SpotlightMetadataParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::macos::dock::MacosDockParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::macos::document_revisions::MacosDocumentRevisionsParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::macos::screentime_full::MacosScreentimeFullParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::macos::terminal_history::MacosTerminalHistoryParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::macos::ssh_macos::MacosSshParser::new(),
+        ));
+
+        // === UFDR ingestion (v1.5.0) ===
+        self.register(Box::new(crate::parsers::ufdr::UfdrParser::new()));
     }
 
     pub fn parsers(&self) -> &[Box<dyn ArtifactParser>] {
