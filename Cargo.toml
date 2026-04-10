@@ -35,6 +35,7 @@ members = [
     "plugins/strata-plugin-netflow",
     "plugins/strata-plugin-mactrace",
     "plugins/strata-plugin-csam",
+    "plugins/strata-plugin-pulse",
     "crates/strata-engine-adapter",
     "crates/strata-csam",
 ]
