@@ -89,16 +89,13 @@ fn test_vhdx_basic_open() {
     // VhdxContainer::open will fail because we didn't write a real region table,
     // but the error should be from missing region table, not "InvalidImageFormat"
     let result = VhdxContainer::open(file.path());
-    match result {
-        Err(e) => {
-            let msg = e.to_string();
-            // Should fail with VHDX missing/unsupported region table instead of magic failure
-            assert!(
-                msg.contains("VHDX") || msg.contains("Region Table"),
-                "Unexpected error: {}",
-                msg
-            );
-        }
-        _ => {}
+    if let Err(e) = result {
+        let msg = e.to_string();
+        // Should fail with VHDX missing/unsupported region table instead of magic failure
+        assert!(
+            msg.contains("VHDX") || msg.contains("Region Table"),
+            "Unexpected error: {}",
+            msg
+        );
     }
 }

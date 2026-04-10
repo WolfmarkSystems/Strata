@@ -11,9 +11,9 @@
 //!   * SAM         — Local accounts, Microsoft email, last login
 //!   * SECURITY    — Audit policy, LSA secrets metadata
 //!   * AmCache.hve — InventoryApplicationFile (SHA1 + execution evidence),
-//!                   InventoryDriverBinary (signed/unsigned drivers)
+//!     InventoryDriverBinary (signed/unsigned drivers)
 //!   * USRCLASS.DAT — Network shellbags, MuiCache, UserChoice (default app
-//!                    associations)
+//!     associations)
 //!
 //! Phantom is intentionally synchronous and pure-Rust. All parsing happens via
 //! the `nt-hive` crate; no Windows API calls.
@@ -282,9 +282,7 @@ mod parsers {
     /// Open a hive from raw bytes. The caller must hold the `Hive` for the
     /// lifetime of any derived `KeyNode` since `root_key_node()` borrows the
     /// hive.
-    pub(super) fn open_hive<'a>(
-        data: &'a [u8],
-    ) -> Option<nt_hive::Hive<&'a [u8]>> {
+    pub(super) fn open_hive(data: &[u8]) -> Option<nt_hive::Hive<&[u8]>> {
         nt_hive::Hive::new(data).ok()
     }
 
@@ -475,7 +473,7 @@ mod parsers {
                         let in_system = lower_path.contains("system32")
                             || lower_path.contains("syswow64")
                             || lower_path.contains("\\windows\\");
-                        let auto_start = matches!(start_type, 0 | 1 | 2);
+                        let auto_start = matches!(start_type, 0..=2);
                         let suspicious = !in_system && auto_start;
 
                         let start_label = match start_type {
@@ -2728,7 +2726,7 @@ mod parsers {
         //!   * Software\WinRAR\ArcHistory        (MRU archive paths)
         //!   * Software\Nico Mak Computing\WinZip\
         //!   * Software\Microsoft\Windows\CurrentVersion\Explorer\FeatureUsage\
-        //!       AppLaunch / AppSwitched (per-app counters)
+        //!     AppLaunch / AppSwitched (per-app counters)
 
         use super::*;
 
