@@ -19,18 +19,27 @@ pub mod bluetooth;
 pub mod browser_history;
 pub mod calendar;
 pub mod call_logs;
+pub mod cash_app;
+pub mod chrome_autofill;
+pub mod chrome_bookmarks;
 pub mod chrome_cookies;
 pub mod chrome_downloads;
 pub mod chrome_login_data;
+pub mod chrome_media_history;
 pub mod chrome_top_sites;
 pub mod clipboard;
 pub mod contacts;
 pub mod device_info;
 pub mod discord;
 pub mod facebook_messenger;
+pub mod firefox;
+pub mod firefox_cookies;
 pub mod gmail;
+pub mod google_calendar_events;
 pub mod google_chrome;
+pub mod google_keep;
 pub mod google_maps;
+pub mod google_messages;
 pub mod google_photos;
 pub mod google_play;
 pub mod imo_messenger;
@@ -45,6 +54,7 @@ pub mod snapchat;
 pub mod telegram;
 pub mod textnow;
 pub mod viber;
+pub mod waze;
 pub mod whatsapp;
 pub mod wifi_profiles;
 
@@ -244,5 +254,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "imo_messenger",
         matches_any: imo_messenger::MATCHES,
         run: imo_messenger::parse,
+    },
+    ParserEntry {
+        name: "firefox",
+        matches_any: firefox::MATCHES,
+        run: firefox::parse,
+    },
+    ParserEntry {
+        name: "firefox_cookies",
+        matches_any: firefox_cookies::MATCHES,
+        run: firefox_cookies::parse,
+    },
+    ParserEntry {
+        name: "chrome_autofill",
+        matches_any: chrome_autofill::MATCHES,
+        run: chrome_autofill::parse,
+    },
+    ParserEntry {
+        name: "chrome_bookmarks",
+        matches_any: chrome_bookmarks::MATCHES,
+        run: chrome_bookmarks::parse,
+    },
+    ParserEntry {
+        name: "chrome_media_history",
+        matches_any: chrome_media_history::MATCHES,
+        run: chrome_media_history::parse,
+    },
+    ParserEntry {
+        name: "waze",
+        matches_any: waze::MATCHES,
+        run: waze::parse,
+    },
+    ParserEntry {
+        name: "cash_app",
+        matches_any: cash_app::MATCHES,
+        run: cash_app::parse,
+    },
+    ParserEntry {
+        name: "google_keep",
+        matches_any: google_keep::MATCHES,
+        run: google_keep::parse,
+    },
+    ParserEntry {
+        name: "google_calendar_events",
+        matches_any: google_calendar_events::MATCHES,
+        run: google_calendar_events::parse,
+    },
+    ParserEntry {
+        name: "google_messages",
+        matches_any: google_messages::MATCHES,
+        run: google_messages::parse,
     },
 ];
