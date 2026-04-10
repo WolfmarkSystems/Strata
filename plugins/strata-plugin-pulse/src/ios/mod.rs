@@ -12,6 +12,7 @@ pub mod util;
 
 pub mod accounts;
 pub mod appinstall;
+pub mod appstate;
 pub mod biome;
 pub mod bluetooth;
 pub mod calendar;
@@ -20,6 +21,8 @@ pub mod chrome;
 pub mod crashlogs;
 pub mod callhistory;
 pub mod contacts;
+pub mod cookies;
+pub mod deviceinfo;
 pub mod discord;
 pub mod facebook;
 pub mod findmy;
@@ -32,21 +35,27 @@ pub mod knowledgec;
 pub mod line;
 pub mod location;
 pub mod mail;
+pub mod medialibrary;
 pub mod maps;
 pub mod notes;
 pub mod notifications;
 pub mod photos;
+pub mod podcasts;
 pub mod powerlog;
 pub mod reddit;
 pub mod reminders;
 pub mod safari;
+pub mod safaritabs;
 pub mod screentime;
+pub mod siminfo;
+pub mod spotify;
 pub mod signal;
 pub mod sms;
 pub mod snapchat;
 pub mod telegram;
 pub mod tiktok;
 pub mod tinder;
+pub mod tcc;
 pub mod twitter;
 pub mod viber;
 pub mod voicemail;
@@ -54,6 +63,7 @@ pub mod wallet;
 pub mod wechat;
 pub mod whatsapp;
 pub mod wifi;
+pub mod youtube;
 
 /// Run every registered parser against a single path. Parsers whose
 /// `matches()` returns `false` are skipped. Parsers that match but find
@@ -191,6 +201,36 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if tinder::matches(path) {
         out.extend(tinder::parse(path));
+    }
+    if tcc::matches(path) {
+        out.extend(tcc::parse(path));
+    }
+    if appstate::matches(path) {
+        out.extend(appstate::parse(path));
+    }
+    if deviceinfo::matches(path) {
+        out.extend(deviceinfo::parse(path));
+    }
+    if siminfo::matches(path) {
+        out.extend(siminfo::parse(path));
+    }
+    if safaritabs::matches(path) {
+        out.extend(safaritabs::parse(path));
+    }
+    if podcasts::matches(path) {
+        out.extend(podcasts::parse(path));
+    }
+    if spotify::matches(path) {
+        out.extend(spotify::parse(path));
+    }
+    if youtube::matches(path) {
+        out.extend(youtube::parse(path));
+    }
+    if medialibrary::matches(path) {
+        out.extend(medialibrary::parse(path));
+    }
+    if cookies::matches(path) {
+        out.extend(cookies::parse(path));
     }
     out
 }
