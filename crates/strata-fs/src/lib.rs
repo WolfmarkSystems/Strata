@@ -29,6 +29,7 @@ pub mod ntfs_parser;
 pub mod ntfs_usn;
 pub mod regions;
 pub mod shadowcopy;
+pub mod snapshot;
 pub mod summary;
 pub mod timeline;
 pub mod xfs;
@@ -65,6 +66,9 @@ pub use ntfs::{
 pub use ntfs_parser::{MftMetadata, NtfsParser};
 pub use shadowcopy::{
     detect_shadow_copies, list_shadow_volume_offsets, ShadowCopyInfo, ShadowCopyType,
+};
+pub use snapshot::{
+    SnapshotEntry, SnapshotStats, VolumeSnapshot, MAX_SNAPSHOT_ENTRIES, MAX_WALK_DEPTH,
 };
 pub use timeline::{
     export_timeline_csv, TimelineEventType, TimelineSource, UnifiedTimeline, UnifiedTimelineEvent,
