@@ -11,39 +11,68 @@ use strata_plugin_sdk::ArtifactRecord;
 pub mod util;
 
 pub mod accounts;
+pub mod airdrop;
 pub mod appinstall;
+pub mod appstate;
 pub mod biome;
 pub mod bluetooth;
 pub mod calendar;
+pub mod cashapp;
 pub mod cellular;
 pub mod chrome;
 pub mod crashlogs;
 pub mod callhistory;
 pub mod contacts;
+pub mod cookies;
+pub mod deviceinfo;
 pub mod discord;
+pub mod facebook;
 pub mod findmy;
+pub mod googlemaps;
 pub mod health;
 pub mod icloudbackup;
+pub mod instagram;
+pub mod interactionc;
 pub mod keyboard;
+pub mod kik;
 pub mod knowledgec;
+pub mod line;
 pub mod location;
 pub mod mail;
+pub mod medialibrary;
 pub mod maps;
+pub mod netflix;
 pub mod notes;
 pub mod notifications;
 pub mod photos;
+pub mod podcasts;
 pub mod powerlog;
+pub mod reddit;
 pub mod reminders;
 pub mod safari;
+pub mod safaritabs;
 pub mod screentime;
+pub mod siminfo;
+pub mod spotlight;
+pub mod spotify;
 pub mod signal;
 pub mod sms;
 pub mod snapchat;
 pub mod telegram;
+pub mod tiktok;
+pub mod tinder;
+pub mod tcc;
+pub mod twitter;
+pub mod viber;
+pub mod uber;
+pub mod venmo;
 pub mod voicemail;
 pub mod wallet;
+pub mod waze;
+pub mod wechat;
 pub mod whatsapp;
 pub mod wifi;
+pub mod youtube;
 
 /// Run every registered parser against a single path. Parsers whose
 /// `matches()` returns `false` are skipped. Parsers that match but find
@@ -151,6 +180,93 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if crashlogs::matches(path) {
         out.extend(crashlogs::parse(path));
+    }
+    if tiktok::matches(path) {
+        out.extend(tiktok::parse(path));
+    }
+    if instagram::matches(path) {
+        out.extend(instagram::parse(path));
+    }
+    if facebook::matches(path) {
+        out.extend(facebook::parse(path));
+    }
+    if twitter::matches(path) {
+        out.extend(twitter::parse(path));
+    }
+    if reddit::matches(path) {
+        out.extend(reddit::parse(path));
+    }
+    if kik::matches(path) {
+        out.extend(kik::parse(path));
+    }
+    if wechat::matches(path) {
+        out.extend(wechat::parse(path));
+    }
+    if line::matches(path) {
+        out.extend(line::parse(path));
+    }
+    if viber::matches(path) {
+        out.extend(viber::parse(path));
+    }
+    if tinder::matches(path) {
+        out.extend(tinder::parse(path));
+    }
+    if tcc::matches(path) {
+        out.extend(tcc::parse(path));
+    }
+    if appstate::matches(path) {
+        out.extend(appstate::parse(path));
+    }
+    if deviceinfo::matches(path) {
+        out.extend(deviceinfo::parse(path));
+    }
+    if siminfo::matches(path) {
+        out.extend(siminfo::parse(path));
+    }
+    if safaritabs::matches(path) {
+        out.extend(safaritabs::parse(path));
+    }
+    if podcasts::matches(path) {
+        out.extend(podcasts::parse(path));
+    }
+    if spotify::matches(path) {
+        out.extend(spotify::parse(path));
+    }
+    if youtube::matches(path) {
+        out.extend(youtube::parse(path));
+    }
+    if medialibrary::matches(path) {
+        out.extend(medialibrary::parse(path));
+    }
+    if cookies::matches(path) {
+        out.extend(cookies::parse(path));
+    }
+    if uber::matches(path) {
+        out.extend(uber::parse(path));
+    }
+    if cashapp::matches(path) {
+        out.extend(cashapp::parse(path));
+    }
+    if venmo::matches(path) {
+        out.extend(venmo::parse(path));
+    }
+    if googlemaps::matches(path) {
+        out.extend(googlemaps::parse(path));
+    }
+    if waze::matches(path) {
+        out.extend(waze::parse(path));
+    }
+    if netflix::matches(path) {
+        out.extend(netflix::parse(path));
+    }
+    if interactionc::matches(path) {
+        out.extend(interactionc::parse(path));
+    }
+    if airdrop::matches(path) {
+        out.extend(airdrop::parse(path));
+    }
+    if spotlight::matches(path) {
+        out.extend(spotlight::parse(path));
     }
     out
 }
