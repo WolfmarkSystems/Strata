@@ -1,11 +1,20 @@
 use crate::free_tier::{FREE_FEATURES, PRO_FEATURES, TRIAL_FEATURES};
+use crate::generate_machine_id;
 use crate::license::{LicenseTier, StrataLicense};
 use crate::trial::{TrialState, is_trial_expired, trial_days_remaining};
 use crate::validator::LicenseValidator;
-use crate::{generate_machine_id, machine_id_matches};
+// `machine_id_matches` is only exercised by the Windows-only
+// `test_machine_id_consistency` test below, so gate the import to avoid
+// an unused-import warning on macOS/Linux.
+#[cfg(target_os = "windows")]
+use crate::machine_id_matches;
 use chrono::{Duration, Utc};
 use serde_json::Value;
 
+// Windows-only: the machine-ID generator currently relies on a Windows-specific
+// hardware identifier source. On macOS/Linux the generator returns Err(..) or a
+// different-length value, so these assertions can only be validated on Windows.
+#[cfg(target_os = "windows")]
 #[test]
 fn test_machine_id_generation() {
     let machine_id = generate_machine_id().expect("machine id should generate");
@@ -13,6 +22,7 @@ fn test_machine_id_generation() {
     assert!(machine_id.chars().all(|c| c.is_ascii_hexdigit()));
 }
 
+#[cfg(target_os = "windows")]
 #[test]
 fn test_machine_id_consistency() {
     let first = generate_machine_id().expect("first machine id");
