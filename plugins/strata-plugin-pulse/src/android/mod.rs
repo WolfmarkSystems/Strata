@@ -32,6 +32,7 @@ pub mod contacts;
 pub mod device_info;
 pub mod discord;
 pub mod facebook_messenger;
+pub mod factory_reset;
 pub mod firefox;
 pub mod firefox_cookies;
 pub mod gmail;
@@ -48,13 +49,22 @@ pub mod keyboard_cache;
 pub mod line_messenger;
 pub mod location_history;
 pub mod notifications;
+pub mod permissions;
+pub mod recent_activity;
+pub mod samsung_notes;
+pub mod sim_info;
 pub mod skype;
 pub mod sms;
 pub mod snapchat;
 pub mod telegram;
 pub mod textnow;
+pub mod tiktok;
+pub mod twitter;
+pub mod usage_stats;
 pub mod viber;
+pub mod vlc_media;
 pub mod waze;
+pub mod wellbeing;
 pub mod whatsapp;
 pub mod wifi_profiles;
 
@@ -304,5 +314,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "google_messages",
         matches_any: google_messages::MATCHES,
         run: google_messages::parse,
+    },
+    ParserEntry {
+        name: "sim_info",
+        matches_any: sim_info::MATCHES,
+        run: sim_info::parse,
+    },
+    ParserEntry {
+        name: "wellbeing",
+        matches_any: wellbeing::MATCHES,
+        run: wellbeing::parse,
+    },
+    ParserEntry {
+        name: "usage_stats",
+        matches_any: usage_stats::MATCHES,
+        run: usage_stats::parse,
+    },
+    ParserEntry {
+        name: "samsung_notes",
+        matches_any: samsung_notes::MATCHES,
+        run: samsung_notes::parse,
+    },
+    ParserEntry {
+        name: "recent_activity",
+        matches_any: recent_activity::MATCHES,
+        run: recent_activity::parse,
+    },
+    ParserEntry {
+        name: "tiktok",
+        matches_any: tiktok::MATCHES,
+        run: tiktok::parse,
+    },
+    ParserEntry {
+        name: "permissions",
+        matches_any: permissions::MATCHES,
+        run: permissions::parse,
+    },
+    ParserEntry {
+        name: "factory_reset",
+        matches_any: factory_reset::MATCHES,
+        run: factory_reset::parse,
+    },
+    ParserEntry {
+        name: "vlc_media",
+        matches_any: vlc_media::MATCHES,
+        run: vlc_media::parse,
+    },
+    ParserEntry {
+        name: "twitter",
+        matches_any: twitter::MATCHES,
+        run: twitter::parse,
     },
 ];
