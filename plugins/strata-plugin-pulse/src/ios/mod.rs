@@ -15,6 +15,9 @@ pub mod appinstall;
 pub mod biome;
 pub mod bluetooth;
 pub mod calendar;
+pub mod cellular;
+pub mod chrome;
+pub mod crashlogs;
 pub mod callhistory;
 pub mod contacts;
 pub mod discord;
@@ -35,6 +38,7 @@ pub mod safari;
 pub mod screentime;
 pub mod signal;
 pub mod sms;
+pub mod snapchat;
 pub mod telegram;
 pub mod voicemail;
 pub mod wallet;
@@ -135,6 +139,18 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if biome::matches(path) {
         out.extend(biome::parse(path));
+    }
+    if cellular::matches(path) {
+        out.extend(cellular::parse(path));
+    }
+    if chrome::matches(path) {
+        out.extend(chrome::parse(path));
+    }
+    if snapchat::matches(path) {
+        out.extend(snapchat::parse(path));
+    }
+    if crashlogs::matches(path) {
+        out.extend(crashlogs::parse(path));
     }
     out
 }
