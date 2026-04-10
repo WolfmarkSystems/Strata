@@ -6,16 +6,16 @@
 //!
 //! Sources:
 //!   * Windows Defender:
-//!       %ProgramData%\Microsoft\Windows Defender\Support\MpEventLog.evtx
-//!       %ProgramData%\Microsoft\Windows Defender\Quarantine\
+//!     %ProgramData%\Microsoft\Windows Defender\Support\MpEventLog.evtx
+//!     %ProgramData%\Microsoft\Windows Defender\Quarantine\
 //!   * Avast logs:
-//!       %ProgramData%\Avast Software\Avast\Log\aswAr*.log
-//!       %ProgramData%\Avast Software\Avast\Chest\index.xml
+//!     %ProgramData%\Avast Software\Avast\Log\aswAr*.log
+//!     %ProgramData%\Avast Software\Avast\Chest\index.xml
 //!   * MalwareBytes:
-//!       %ProgramData%\Malwarebytes\MBAMService\logs\
+//!     %ProgramData%\Malwarebytes\MBAMService\logs\
 //!   * Windows Error Reporting:
-//!       %ProgramData%\Microsoft\Windows\WER\ReportArchive\
-//!       *.wer files (key=value plaintext format)
+//!     %ProgramData%\Microsoft\Windows\WER\ReportArchive\
+//!     *.wer files (key=value plaintext format)
 //!
 //! v1.0 implementation: filename detection + plaintext log scraping. Full EVTX
 //! and binary quarantine parsing is wired through the EVTX layer in v0.6.0+.

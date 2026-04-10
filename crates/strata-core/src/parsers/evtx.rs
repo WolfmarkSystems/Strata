@@ -73,7 +73,7 @@ fn is_high_value_event(channel: &str, event_id: u32) -> bool {
         ),
         // PowerShell operational
         s if s.eq_ignore_ascii_case("Microsoft-Windows-PowerShell/Operational") => {
-            matches!(event_id, 4103 | 4104 | 4105 | 4106)
+            matches!(event_id, 4103..=4106)
         }
         // Sysmon
         s if s.eq_ignore_ascii_case("Microsoft-Windows-Sysmon/Operational") => {

@@ -46,9 +46,13 @@ fn build_plugins() -> Vec<Box<dyn StrataPlugin>> {
     ]
 }
 
+/// Cache key: (evidence_id, plugin_name).
+type ArtifactCacheKey = (String, String);
+/// Cache map: plugin artifacts keyed by evidence+plugin.
+type ArtifactCacheMap = HashMap<ArtifactCacheKey, Vec<PluginArtifact>>;
+
 /// Cached results keyed by (evidence_id, plugin_name).
-static ARTIFACT_CACHE: Lazy<Mutex<HashMap<(String, String), Vec<PluginArtifact>>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+static ARTIFACT_CACHE: Lazy<Mutex<ArtifactCacheMap>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub fn list_plugins() -> Vec<String> {
     build_plugins().iter().map(|p| p.name().to_string()).collect()
