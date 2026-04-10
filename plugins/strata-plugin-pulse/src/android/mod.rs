@@ -15,14 +15,28 @@ pub mod walker;
 // Individual parsers — one module per ALEAPP-equivalent artifact.
 pub mod accounts_google;
 pub mod app_usage;
+pub mod bluetooth;
 pub mod browser_history;
+pub mod calendar;
 pub mod call_logs;
+pub mod chrome_cookies;
+pub mod chrome_downloads;
+pub mod chrome_login_data;
+pub mod chrome_top_sites;
+pub mod clipboard;
 pub mod contacts;
+pub mod device_info;
 pub mod gmail;
 pub mod google_chrome;
 pub mod google_maps;
 pub mod google_photos;
+pub mod google_play;
+pub mod installed_apps;
+pub mod keyboard_cache;
+pub mod location_history;
+pub mod notifications;
 pub mod sms;
+pub mod wifi_profiles;
 
 /// A single Android parser binding — name, matcher, and runner.
 pub struct ParserEntry {
@@ -100,5 +114,75 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "google_chrome",
         matches_any: google_chrome::MATCHES,
         run: google_chrome::parse,
+    },
+    ParserEntry {
+        name: "wifi_profiles",
+        matches_any: wifi_profiles::MATCHES,
+        run: wifi_profiles::parse,
+    },
+    ParserEntry {
+        name: "bluetooth",
+        matches_any: bluetooth::MATCHES,
+        run: bluetooth::parse,
+    },
+    ParserEntry {
+        name: "installed_apps",
+        matches_any: installed_apps::MATCHES,
+        run: installed_apps::parse,
+    },
+    ParserEntry {
+        name: "clipboard",
+        matches_any: clipboard::MATCHES,
+        run: clipboard::parse,
+    },
+    ParserEntry {
+        name: "chrome_downloads",
+        matches_any: chrome_downloads::MATCHES,
+        run: chrome_downloads::parse,
+    },
+    ParserEntry {
+        name: "calendar",
+        matches_any: calendar::MATCHES,
+        run: calendar::parse,
+    },
+    ParserEntry {
+        name: "notifications",
+        matches_any: notifications::MATCHES,
+        run: notifications::parse,
+    },
+    ParserEntry {
+        name: "keyboard_cache",
+        matches_any: keyboard_cache::MATCHES,
+        run: keyboard_cache::parse,
+    },
+    ParserEntry {
+        name: "location_history",
+        matches_any: location_history::MATCHES,
+        run: location_history::parse,
+    },
+    ParserEntry {
+        name: "device_info",
+        matches_any: device_info::MATCHES,
+        run: device_info::parse,
+    },
+    ParserEntry {
+        name: "chrome_cookies",
+        matches_any: chrome_cookies::MATCHES,
+        run: chrome_cookies::parse,
+    },
+    ParserEntry {
+        name: "chrome_login_data",
+        matches_any: chrome_login_data::MATCHES,
+        run: chrome_login_data::parse,
+    },
+    ParserEntry {
+        name: "chrome_top_sites",
+        matches_any: chrome_top_sites::MATCHES,
+        run: chrome_top_sites::parse,
+    },
+    ParserEntry {
+        name: "google_play",
+        matches_any: google_play::MATCHES,
+        run: google_play::parse,
     },
 ];
