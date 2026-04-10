@@ -21,11 +21,15 @@ pub mod crashlogs;
 pub mod callhistory;
 pub mod contacts;
 pub mod discord;
+pub mod facebook;
 pub mod findmy;
 pub mod health;
 pub mod icloudbackup;
+pub mod instagram;
 pub mod keyboard;
+pub mod kik;
 pub mod knowledgec;
+pub mod line;
 pub mod location;
 pub mod mail;
 pub mod maps;
@@ -33,6 +37,7 @@ pub mod notes;
 pub mod notifications;
 pub mod photos;
 pub mod powerlog;
+pub mod reddit;
 pub mod reminders;
 pub mod safari;
 pub mod screentime;
@@ -40,8 +45,13 @@ pub mod signal;
 pub mod sms;
 pub mod snapchat;
 pub mod telegram;
+pub mod tiktok;
+pub mod tinder;
+pub mod twitter;
+pub mod viber;
 pub mod voicemail;
 pub mod wallet;
+pub mod wechat;
 pub mod whatsapp;
 pub mod wifi;
 
@@ -151,6 +161,36 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if crashlogs::matches(path) {
         out.extend(crashlogs::parse(path));
+    }
+    if tiktok::matches(path) {
+        out.extend(tiktok::parse(path));
+    }
+    if instagram::matches(path) {
+        out.extend(instagram::parse(path));
+    }
+    if facebook::matches(path) {
+        out.extend(facebook::parse(path));
+    }
+    if twitter::matches(path) {
+        out.extend(twitter::parse(path));
+    }
+    if reddit::matches(path) {
+        out.extend(reddit::parse(path));
+    }
+    if kik::matches(path) {
+        out.extend(kik::parse(path));
+    }
+    if wechat::matches(path) {
+        out.extend(wechat::parse(path));
+    }
+    if line::matches(path) {
+        out.extend(line::parse(path));
+    }
+    if viber::matches(path) {
+        out.extend(viber::parse(path));
+    }
+    if tinder::matches(path) {
+        out.extend(tinder::parse(path));
     }
     out
 }
