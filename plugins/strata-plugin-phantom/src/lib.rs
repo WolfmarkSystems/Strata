@@ -143,11 +143,20 @@ impl StrataPlugin for PhantomPlugin {
         for a in &artifacts {
             let file_type = a.data.get("file_type").cloned().unwrap_or_default();
             let category = match file_type.as_str() {
-                "ShimCache" | "AmCache File" | "Service" => ArtifactCategory::ExecutionHistory,
+                "ShimCache" | "AmCache File" | "Service" | "AmCache Legacy File" => {
+                    ArtifactCategory::ExecutionHistory
+                }
                 "USB Device" | "Network Adapter" => ArtifactCategory::NetworkArtifacts,
                 "SAM Account" | "Cloud Identity" => ArtifactCategory::AccountsCredentials,
-                "Installed Program" | "OS Version" => ArtifactCategory::SystemActivity,
-                "AmCache Driver" => ArtifactCategory::ExecutionHistory,
+                "Installed Program"
+                | "OS Version"
+                | "AmCache Installed App"
+                | "AmCache Legacy Program" => ArtifactCategory::SystemActivity,
+                "AmCache Driver" | "AmCache Driver Package" => ArtifactCategory::ExecutionHistory,
+                "AmCache Device Container" | "AmCache PnP Device" => {
+                    ArtifactCategory::NetworkArtifacts
+                }
+                "AmCache Shortcut" => ArtifactCategory::UserActivity,
                 "Shellbag" | "MuiCache" | "UserChoice" => ArtifactCategory::UserActivity,
                 _ => ArtifactCategory::SystemActivity,
             };
@@ -839,7 +848,76 @@ mod parsers {
     }
 
     pub mod amcache {
+        //! Full AmCache.hve parser modeled on EricZimmerman's AmcacheParser.
+        //!
+        //! Subkeys covered (modern Win10/11 layout, all under `Root\`):
+        //!   - InventoryApplicationFile — per-file SHA1 + execution evidence
+        //!   - InventoryApplication     — installed application metadata
+        //!   - InventoryApplicationShortcut — Start-Menu / desktop shortcuts
+        //!   - InventoryDriverBinary    — driver binary inventory
+        //!   - InventoryDriverPackage   — driver package provenance
+        //!   - InventoryDeviceContainer — connected device containers (USB hubs, etc.)
+        //!   - InventoryDevicePnp       — PnP device inventory (with class GUIDs)
+        //!
+        //! Legacy (Win7-style) subkeys also covered:
+        //!   - Root\File\<volume_GUID>\<file_id>  — pre-Win10 file records
+        //!   - Root\Programs\<install_id>         — pre-Win10 installed programs
+        //!
+        //! All parsers cap at sane limits (5000 files, 1000 drivers, 2000
+        //! per other category) so a corrupt or huge hive can't blow up
+        //! report size.
+
         use super::*;
+
+        /// FileId values in `InventoryApplicationFile` are recorded as
+        /// `"0000" + sha1_hex`. Strip the four leading zeros and return
+        /// the underlying hash. Anything shorter is returned unchanged.
+        pub fn strip_file_id_prefix(file_id: &str) -> String {
+            if file_id.len() > 4 && file_id.starts_with("0000") {
+                file_id[4..].to_string()
+            } else {
+                file_id.to_string()
+            }
+        }
+
+        /// Apply Strata's "this AmCache file is interesting" heuristic.
+        /// Empty publisher OR path inside Temp/AppData/Downloads/Public is
+        /// the trigger — these are the high-signal locations malware drops
+        /// itself into.
+        pub fn is_suspicious_amcache_path(path_lower: &str, publisher: &str) -> bool {
+            if publisher.trim().is_empty() {
+                return true;
+            }
+            path_lower.contains("\\temp\\")
+                || path_lower.contains("\\appdata\\")
+                || path_lower.contains("\\downloads\\")
+                || path_lower.contains("\\public\\")
+                || path_lower.contains("\\users\\public\\")
+                || path_lower.contains("\\programdata\\")
+        }
+
+        /// Map a Microsoft device-setup class GUID to a human-readable
+        /// label. Used by `InventoryDevicePnp` to give the examiner a
+        /// quick "USB controller / Disk drive / Display adapter" string
+        /// instead of an opaque GUID.
+        pub fn device_class_label(class_guid: &str) -> &'static str {
+            match class_guid.to_ascii_uppercase().as_str() {
+                "{36FC9E60-C465-11CF-8056-444553540000}" => "USB Controller",
+                "{4D36E967-E325-11CE-BFC1-08002BE10318}" => "Disk Drive",
+                "{4D36E968-E325-11CE-BFC1-08002BE10318}" => "Display Adapter",
+                "{4D36E96E-E325-11CE-BFC1-08002BE10318}" => "Modem",
+                "{4D36E972-E325-11CE-BFC1-08002BE10318}" => "Network Adapter",
+                "{4D36E96F-E325-11CE-BFC1-08002BE10318}" => "Mouse",
+                "{4D36E96B-E325-11CE-BFC1-08002BE10318}" => "Keyboard",
+                "{6BDD1FC6-810F-11D0-BEC7-08002BE2092F}" => "Image Device",
+                "{4D36E97D-E325-11CE-BFC1-08002BE10318}" => "System Device",
+                "{4D36E96C-E325-11CE-BFC1-08002BE10318}" => "Sound, Video & Game Controller",
+                "{4D36E978-E325-11CE-BFC1-08002BE10318}" => "Port (COM/LPT)",
+                "{745A17A0-74D3-11D0-B6FE-00A0C90F57DA}" => "HID",
+                "{EEC5AD98-8080-425F-922A-DABF3DE3F69A}" => "Portable Device",
+                _ => "Unknown class",
+            }
+        }
 
         pub fn parse(path: &Path, data: &[u8]) -> Vec<Artifact> {
             let mut out = Vec::new();
@@ -852,98 +930,541 @@ mod parsers {
                 return out;
             };
 
-            // ── InventoryApplicationFile — execution evidence + SHA1 ────
-            if let Some(node) = walk(&root, &["Root", "InventoryApplicationFile"]) {
-                if let Some(Ok(iter)) = node.subkeys() {
-                    let mut count = 0;
-                    for k_res in iter {
-                        let Ok(k) = k_res else { continue };
-                        let name = read_value_string(&k, "Name").unwrap_or_default();
-                        let path_l = read_value_string(&k, "LowerCaseLongPath").unwrap_or_default();
-                        let mut sha1 = read_value_string(&k, "FileId").unwrap_or_default();
-                        // FileId is "0000<sha1>" — strip the leading zeros.
-                        if sha1.len() > 4 {
-                            sha1 = sha1[4..].to_string();
-                        }
-                        let publisher = read_value_string(&k, "Publisher").unwrap_or_default();
-                        let product = read_value_string(&k, "ProductName").unwrap_or_default();
-                        let version = read_value_string(&k, "ProductVersion").unwrap_or_default();
-                        if name.is_empty() && path_l.is_empty() {
-                            continue;
-                        }
-                        let suspicious = publisher.is_empty()
-                            || path_l.to_lowercase().contains("\\temp\\")
-                            || path_l.to_lowercase().contains("\\appdata\\");
-                        let mut a = Artifact::new("AmCache File", &path_str);
-                        a.add_field(
-                            "title",
-                            &format!("AmCache: {}", if !name.is_empty() { &name } else { &path_l }),
-                        );
-                        a.add_field(
-                            "detail",
-                            &format!(
-                                "Path: {} | SHA1: {} | Publisher: {} | Product: {} {}",
-                                path_l, sha1, publisher, product, version
-                            ),
-                        );
-                        a.add_field("file_type", "AmCache File");
-                        a.add_field("mitre", "T1059");
-                        if suspicious {
-                            a.add_field("forensic_value", "High");
-                            a.add_field("suspicious", "true");
-                        } else {
-                            a.add_field("forensic_value", "Medium");
-                        }
-                        out.push(a);
-                        count += 1;
-                        if count > 5000 {
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // ── InventoryDriverBinary — driver execution evidence ──────
-            if let Some(node) = walk(&root, &["Root", "InventoryDriverBinary"]) {
-                if let Some(Ok(iter)) = node.subkeys() {
-                    let mut count = 0;
-                    for k_res in iter {
-                        let Ok(k) = k_res else { continue };
-                        let driver = read_value_string(&k, "DriverName").unwrap_or_default();
-                        let company = read_value_string(&k, "DriverCompany").unwrap_or_default();
-                        let signed = read_value_string(&k, "DriverSigned").unwrap_or_default();
-                        if driver.is_empty() {
-                            continue;
-                        }
-                        let unsigned = signed != "1";
-                        let mut a = Artifact::new("AmCache Driver", &path_str);
-                        a.add_field("title", &format!("Driver: {}", driver));
-                        a.add_field(
-                            "detail",
-                            &format!(
-                                "Company: {} | Signed: {}",
-                                company,
-                                if unsigned { "NO (unsigned)" } else { "yes" }
-                            ),
-                        );
-                        a.add_field("file_type", "AmCache Driver");
-                        a.add_field("mitre", "T1014");
-                        if unsigned {
-                            a.add_field("forensic_value", "High");
-                            a.add_field("suspicious", "true");
-                        } else {
-                            a.add_field("forensic_value", "Medium");
-                        }
-                        out.push(a);
-                        count += 1;
-                        if count > 1000 {
-                            break;
-                        }
-                    }
-                }
-            }
+            parse_inventory_application_file(&root, &path_str, &mut out);
+            parse_inventory_application(&root, &path_str, &mut out);
+            parse_inventory_application_shortcut(&root, &path_str, &mut out);
+            parse_inventory_driver_binary(&root, &path_str, &mut out);
+            parse_inventory_driver_package(&root, &path_str, &mut out);
+            parse_inventory_device_container(&root, &path_str, &mut out);
+            parse_inventory_device_pnp(&root, &path_str, &mut out);
+            parse_legacy_file(&root, &path_str, &mut out);
+            parse_legacy_programs(&root, &path_str, &mut out);
 
             out
+        }
+
+        // ── Modern: Root\InventoryApplicationFile ───────────────────────
+        fn parse_inventory_application_file(
+            root: &nt_hive::KeyNode<'_, &[u8]>,
+            path_str: &str,
+            out: &mut Vec<Artifact>,
+        ) {
+            let Some(node) = walk(root, &["Root", "InventoryApplicationFile"]) else {
+                return;
+            };
+            let Some(Ok(iter)) = node.subkeys() else {
+                return;
+            };
+            let mut count = 0;
+            for k_res in iter {
+                let Ok(k) = k_res else { continue };
+                let name = read_value_string(&k, "Name").unwrap_or_default();
+                let path_l = read_value_string(&k, "LowerCaseLongPath").unwrap_or_default();
+                let sha1 =
+                    strip_file_id_prefix(&read_value_string(&k, "FileId").unwrap_or_default());
+                let publisher = read_value_string(&k, "Publisher").unwrap_or_default();
+                let product = read_value_string(&k, "ProductName").unwrap_or_default();
+                let version = read_value_string(&k, "ProductVersion").unwrap_or_default();
+                if name.is_empty() && path_l.is_empty() {
+                    continue;
+                }
+                let suspicious = is_suspicious_amcache_path(&path_l.to_lowercase(), &publisher);
+                let mut a = Artifact::new("AmCache File", path_str);
+                a.add_field(
+                    "title",
+                    &format!(
+                        "AmCache: {}",
+                        if !name.is_empty() { &name } else { &path_l }
+                    ),
+                );
+                a.add_field(
+                    "detail",
+                    &format!(
+                        "Path: {} | SHA1: {} | Publisher: {} | Product: {} {}",
+                        path_l, sha1, publisher, product, version
+                    ),
+                );
+                a.add_field("file_type", "AmCache File");
+                a.add_field("mitre", "T1059");
+                if suspicious {
+                    a.add_field("forensic_value", "High");
+                    a.add_field("suspicious", "true");
+                } else {
+                    a.add_field("forensic_value", "Medium");
+                }
+                out.push(a);
+                count += 1;
+                if count > 5000 {
+                    break;
+                }
+            }
+        }
+
+        // ── Modern: Root\InventoryApplication ──────────────────────────
+        fn parse_inventory_application(
+            root: &nt_hive::KeyNode<'_, &[u8]>,
+            path_str: &str,
+            out: &mut Vec<Artifact>,
+        ) {
+            let Some(node) = walk(root, &["Root", "InventoryApplication"]) else {
+                return;
+            };
+            let Some(Ok(iter)) = node.subkeys() else {
+                return;
+            };
+            let mut count = 0;
+            for k_res in iter {
+                let Ok(k) = k_res else { continue };
+                let name = read_value_string(&k, "Name").unwrap_or_default();
+                let publisher = read_value_string(&k, "Publisher").unwrap_or_default();
+                let version = read_value_string(&k, "Version").unwrap_or_default();
+                let install_date = read_value_string(&k, "InstallDate").unwrap_or_default();
+                let root_dir = read_value_string(&k, "RootDirPath").unwrap_or_default();
+                let install_source = read_value_string(&k, "Source").unwrap_or_default();
+                let install_type = read_value_string(&k, "Type").unwrap_or_default();
+                let registry_key = read_value_string(&k, "RegistryKeyPath").unwrap_or_default();
+                if name.is_empty() && root_dir.is_empty() {
+                    continue;
+                }
+
+                let lc = root_dir.to_lowercase();
+                let suspicious = is_suspicious_amcache_path(&lc, &publisher)
+                    || install_source.eq_ignore_ascii_case("WindowsUpdate") && publisher.is_empty();
+
+                let mut a = Artifact::new("AmCache Installed App", path_str);
+                a.add_field(
+                    "title",
+                    &format!("Installed: {}", if !name.is_empty() { &name } else { &root_dir }),
+                );
+                a.add_field(
+                    "detail",
+                    &format!(
+                        "Publisher: {} | Version: {} | InstallDate: {} | Type: {} | Source: {} \
+                         | RootDir: {} | RegKey: {}",
+                        publisher, version, install_date, install_type, install_source, root_dir,
+                        registry_key
+                    ),
+                );
+                a.add_field("file_type", "AmCache Installed App");
+                a.add_field("mitre", "T1518");
+                if suspicious {
+                    a.add_field("forensic_value", "High");
+                    a.add_field("suspicious", "true");
+                } else {
+                    a.add_field("forensic_value", "Medium");
+                }
+                out.push(a);
+                count += 1;
+                if count > 2000 {
+                    break;
+                }
+            }
+        }
+
+        // ── Modern: Root\InventoryApplicationShortcut ──────────────────
+        fn parse_inventory_application_shortcut(
+            root: &nt_hive::KeyNode<'_, &[u8]>,
+            path_str: &str,
+            out: &mut Vec<Artifact>,
+        ) {
+            let Some(node) = walk(root, &["Root", "InventoryApplicationShortcut"]) else {
+                return;
+            };
+            let Some(Ok(iter)) = node.subkeys() else {
+                return;
+            };
+            let mut count = 0;
+            for k_res in iter {
+                let Ok(k) = k_res else { continue };
+                let target = read_value_string(&k, "ShortcutTargetPath").unwrap_or_default();
+                if target.is_empty() {
+                    continue;
+                }
+                let lc = target.to_lowercase();
+                let suspicious = is_suspicious_amcache_path(&lc, "");
+                let mut a = Artifact::new("AmCache Shortcut", path_str);
+                a.add_field("title", &format!("Shortcut: {}", target));
+                a.add_field("detail", "InventoryApplicationShortcut target");
+                a.add_field("file_type", "AmCache Shortcut");
+                a.add_field("mitre", "T1547.009");
+                if suspicious {
+                    a.add_field("forensic_value", "High");
+                    a.add_field("suspicious", "true");
+                } else {
+                    a.add_field("forensic_value", "Medium");
+                }
+                out.push(a);
+                count += 1;
+                if count > 2000 {
+                    break;
+                }
+            }
+        }
+
+        // ── Modern: Root\InventoryDriverBinary ─────────────────────────
+        fn parse_inventory_driver_binary(
+            root: &nt_hive::KeyNode<'_, &[u8]>,
+            path_str: &str,
+            out: &mut Vec<Artifact>,
+        ) {
+            let Some(node) = walk(root, &["Root", "InventoryDriverBinary"]) else {
+                return;
+            };
+            let Some(Ok(iter)) = node.subkeys() else {
+                return;
+            };
+            let mut count = 0;
+            for k_res in iter {
+                let Ok(k) = k_res else { continue };
+                let driver = read_value_string(&k, "DriverName").unwrap_or_default();
+                let company = read_value_string(&k, "DriverCompany").unwrap_or_default();
+                let signed = read_value_string(&k, "DriverSigned").unwrap_or_default();
+                if driver.is_empty() {
+                    continue;
+                }
+                let unsigned = signed != "1";
+                let mut a = Artifact::new("AmCache Driver", path_str);
+                a.add_field("title", &format!("Driver: {}", driver));
+                a.add_field(
+                    "detail",
+                    &format!(
+                        "Company: {} | Signed: {}",
+                        company,
+                        if unsigned { "NO (unsigned)" } else { "yes" }
+                    ),
+                );
+                a.add_field("file_type", "AmCache Driver");
+                a.add_field("mitre", "T1014");
+                if unsigned {
+                    a.add_field("forensic_value", "High");
+                    a.add_field("suspicious", "true");
+                } else {
+                    a.add_field("forensic_value", "Medium");
+                }
+                out.push(a);
+                count += 1;
+                if count > 1000 {
+                    break;
+                }
+            }
+        }
+
+        // ── Modern: Root\InventoryDriverPackage ────────────────────────
+        fn parse_inventory_driver_package(
+            root: &nt_hive::KeyNode<'_, &[u8]>,
+            path_str: &str,
+            out: &mut Vec<Artifact>,
+        ) {
+            let Some(node) = walk(root, &["Root", "InventoryDriverPackage"]) else {
+                return;
+            };
+            let Some(Ok(iter)) = node.subkeys() else {
+                return;
+            };
+            let mut count = 0;
+            for k_res in iter {
+                let Ok(k) = k_res else { continue };
+                let pkg_id = k.name().ok().map(|n| n.to_string_lossy()).unwrap_or_default();
+                let provider = read_value_string(&k, "ProviderName").unwrap_or_default();
+                let inf = read_value_string(&k, "Inf").unwrap_or_default();
+                let class = read_value_string(&k, "Class").unwrap_or_default();
+                let version = read_value_string(&k, "Version").unwrap_or_default();
+                let date = read_value_string(&k, "Date").unwrap_or_default();
+                if provider.is_empty() && inf.is_empty() {
+                    continue;
+                }
+                let mut a = Artifact::new("AmCache Driver Package", path_str);
+                a.add_field("title", &format!("Driver pkg: {} ({})", inf, provider));
+                a.add_field(
+                    "detail",
+                    &format!(
+                        "Provider: {} | Class: {} | Version: {} | Date: {} | PackageId: {}",
+                        provider, class, version, date, pkg_id
+                    ),
+                );
+                a.add_field("file_type", "AmCache Driver Package");
+                a.add_field("mitre", "T1014");
+                a.add_field("forensic_value", "Medium");
+                out.push(a);
+                count += 1;
+                if count > 2000 {
+                    break;
+                }
+            }
+        }
+
+        // ── Modern: Root\InventoryDeviceContainer ──────────────────────
+        fn parse_inventory_device_container(
+            root: &nt_hive::KeyNode<'_, &[u8]>,
+            path_str: &str,
+            out: &mut Vec<Artifact>,
+        ) {
+            let Some(node) = walk(root, &["Root", "InventoryDeviceContainer"]) else {
+                return;
+            };
+            let Some(Ok(iter)) = node.subkeys() else {
+                return;
+            };
+            let mut count = 0;
+            for k_res in iter {
+                let Ok(k) = k_res else { continue };
+                let model = read_value_string(&k, "ModelName").unwrap_or_default();
+                let manufacturer = read_value_string(&k, "Manufacturer").unwrap_or_default();
+                let category = read_value_string(&k, "Categories").unwrap_or_default();
+                let primary = read_value_string(&k, "PrimaryCategory").unwrap_or_default();
+                let networked = read_value_string(&k, "Networked").unwrap_or_default();
+                if model.is_empty() && manufacturer.is_empty() {
+                    continue;
+                }
+                let mut a = Artifact::new("AmCache Device Container", path_str);
+                a.add_field(
+                    "title",
+                    &format!("Device: {} ({})", model, manufacturer),
+                );
+                a.add_field(
+                    "detail",
+                    &format!(
+                        "Categories: {} | Primary: {} | Networked: {}",
+                        category, primary, networked
+                    ),
+                );
+                a.add_field("file_type", "AmCache Device Container");
+                a.add_field("mitre", "T1052.001");
+                a.add_field("forensic_value", "Medium");
+                out.push(a);
+                count += 1;
+                if count > 2000 {
+                    break;
+                }
+            }
+        }
+
+        // ── Modern: Root\InventoryDevicePnp ────────────────────────────
+        fn parse_inventory_device_pnp(
+            root: &nt_hive::KeyNode<'_, &[u8]>,
+            path_str: &str,
+            out: &mut Vec<Artifact>,
+        ) {
+            let Some(node) = walk(root, &["Root", "InventoryDevicePnp"]) else {
+                return;
+            };
+            let Some(Ok(iter)) = node.subkeys() else {
+                return;
+            };
+            let mut count = 0;
+            for k_res in iter {
+                let Ok(k) = k_res else { continue };
+                let description = read_value_string(&k, "Description").unwrap_or_default();
+                let class = read_value_string(&k, "Class").unwrap_or_default();
+                let class_guid = read_value_string(&k, "ClassGuid").unwrap_or_default();
+                let manufacturer = read_value_string(&k, "Manufacturer").unwrap_or_default();
+                let device_id = read_value_string(&k, "ParentId").unwrap_or_default();
+                if description.is_empty() && class.is_empty() {
+                    continue;
+                }
+                let class_label = device_class_label(&class_guid);
+                let mut a = Artifact::new("AmCache PnP Device", path_str);
+                a.add_field(
+                    "title",
+                    &format!("PnP: {} ({})", description, class_label),
+                );
+                a.add_field(
+                    "detail",
+                    &format!(
+                        "Class: {} | ClassGuid: {} ({}) | Manufacturer: {} | ParentId: {}",
+                        class, class_guid, class_label, manufacturer, device_id
+                    ),
+                );
+                a.add_field("file_type", "AmCache PnP Device");
+                a.add_field("mitre", "T1120");
+                a.add_field("forensic_value", "Medium");
+                out.push(a);
+                count += 1;
+                if count > 2000 {
+                    break;
+                }
+            }
+        }
+
+        // ── Legacy (Win7/8): Root\File\<volume_GUID>\<file_id> ─────────
+        fn parse_legacy_file(
+            root: &nt_hive::KeyNode<'_, &[u8]>,
+            path_str: &str,
+            out: &mut Vec<Artifact>,
+        ) {
+            let Some(file_root) = walk(root, &["Root", "File"]) else {
+                return;
+            };
+            let Some(Ok(vol_iter)) = file_root.subkeys() else {
+                return;
+            };
+            let mut count = 0;
+            for vol_res in vol_iter {
+                let Ok(vol_node) = vol_res else { continue };
+                let vol_guid = vol_node
+                    .name()
+                    .ok()
+                    .map(|n| n.to_string_lossy())
+                    .unwrap_or_default();
+                let Some(Ok(file_iter)) = vol_node.subkeys() else {
+                    continue;
+                };
+                for file_res in file_iter {
+                    let Ok(file_node) = file_res else { continue };
+                    // Common values across the legacy schema. Numeric value
+                    // names ("0", "100", etc.) hold the path/sha1/etc.
+                    let path_l = read_value_string(&file_node, "15").unwrap_or_default();
+                    let sha1 = read_value_string(&file_node, "101").unwrap_or_default();
+                    let publisher = read_value_string(&file_node, "0").unwrap_or_default();
+                    if path_l.is_empty() && sha1.is_empty() {
+                        continue;
+                    }
+                    let suspicious = is_suspicious_amcache_path(&path_l.to_lowercase(), &publisher);
+                    let mut a = Artifact::new("AmCache Legacy File", path_str);
+                    a.add_field("title", &format!("Legacy AmCache: {}", path_l));
+                    a.add_field(
+                        "detail",
+                        &format!("Vol: {} | SHA1: {} | Publisher: {}", vol_guid, sha1, publisher),
+                    );
+                    a.add_field("file_type", "AmCache Legacy File");
+                    a.add_field("mitre", "T1059");
+                    if suspicious {
+                        a.add_field("forensic_value", "High");
+                        a.add_field("suspicious", "true");
+                    } else {
+                        a.add_field("forensic_value", "Medium");
+                    }
+                    out.push(a);
+                    count += 1;
+                    if count > 5000 {
+                        return;
+                    }
+                }
+            }
+        }
+
+        // ── Legacy (Win7/8): Root\Programs\<install_id> ────────────────
+        fn parse_legacy_programs(
+            root: &nt_hive::KeyNode<'_, &[u8]>,
+            path_str: &str,
+            out: &mut Vec<Artifact>,
+        ) {
+            let Some(node) = walk(root, &["Root", "Programs"]) else {
+                return;
+            };
+            let Some(Ok(iter)) = node.subkeys() else {
+                return;
+            };
+            let mut count = 0;
+            for k_res in iter {
+                let Ok(k) = k_res else { continue };
+                let name = read_value_string(&k, "0").unwrap_or_default();
+                let version = read_value_string(&k, "1").unwrap_or_default();
+                let publisher = read_value_string(&k, "2").unwrap_or_default();
+                let install_date = read_value_string(&k, "a").unwrap_or_default();
+                if name.is_empty() {
+                    continue;
+                }
+                let suspicious = publisher.trim().is_empty();
+                let mut a = Artifact::new("AmCache Legacy Program", path_str);
+                a.add_field("title", &format!("Legacy installed: {}", name));
+                a.add_field(
+                    "detail",
+                    &format!(
+                        "Version: {} | Publisher: {} | InstallDate: {}",
+                        version, publisher, install_date
+                    ),
+                );
+                a.add_field("file_type", "AmCache Legacy Program");
+                a.add_field("mitre", "T1518");
+                if suspicious {
+                    a.add_field("forensic_value", "High");
+                    a.add_field("suspicious", "true");
+                } else {
+                    a.add_field("forensic_value", "Medium");
+                }
+                out.push(a);
+                count += 1;
+                if count > 2000 {
+                    break;
+                }
+            }
+        }
+
+        #[cfg(test)]
+        mod tests {
+            use super::*;
+
+            #[test]
+            fn strip_file_id_prefix_strips_leading_zeros_only_when_present() {
+                assert_eq!(
+                    strip_file_id_prefix("0000abcdef1234567890abcdef1234567890abcd"),
+                    "abcdef1234567890abcdef1234567890abcd"
+                );
+                // Already raw — leave alone.
+                assert_eq!(strip_file_id_prefix("abcd"), "abcd");
+                // Empty — leave alone.
+                assert_eq!(strip_file_id_prefix(""), "");
+                // No leading zeros — leave alone.
+                assert_eq!(strip_file_id_prefix("1111deadbeef"), "1111deadbeef");
+            }
+
+            #[test]
+            fn is_suspicious_amcache_path_flags_drop_locations() {
+                // Empty publisher — always suspicious.
+                assert!(is_suspicious_amcache_path("c:\\windows\\notepad.exe", ""));
+                assert!(is_suspicious_amcache_path("c:\\windows\\notepad.exe", "   "));
+                // Temp / AppData / Downloads / Public / ProgramData
+                assert!(is_suspicious_amcache_path(
+                    "c:\\users\\victim\\appdata\\local\\temp\\foo.exe",
+                    "Microsoft"
+                ));
+                assert!(is_suspicious_amcache_path(
+                    "c:\\users\\victim\\downloads\\setup.exe",
+                    "Microsoft"
+                ));
+                assert!(is_suspicious_amcache_path(
+                    "c:\\programdata\\stage.exe",
+                    "Microsoft"
+                ));
+                // Clean: signed publisher in normal install path.
+                assert!(!is_suspicious_amcache_path(
+                    "c:\\program files\\microsoft\\office\\winword.exe",
+                    "Microsoft Corporation"
+                ));
+            }
+
+            #[test]
+            fn device_class_label_resolves_known_guids_case_insensitive() {
+                assert_eq!(
+                    device_class_label("{36FC9E60-C465-11CF-8056-444553540000}"),
+                    "USB Controller"
+                );
+                // Lowercase variant — should still resolve.
+                assert_eq!(
+                    device_class_label("{36fc9e60-c465-11cf-8056-444553540000}"),
+                    "USB Controller"
+                );
+                assert_eq!(
+                    device_class_label("{4D36E972-E325-11CE-BFC1-08002BE10318}"),
+                    "Network Adapter"
+                );
+                // Unknown GUID falls through to generic label.
+                assert_eq!(
+                    device_class_label("{00000000-0000-0000-0000-000000000000}"),
+                    "Unknown class"
+                );
+            }
+
+            #[test]
+            fn parse_returns_empty_for_garbage_data() {
+                // A garbage buffer is not a valid hive — open_hive returns
+                // None, parse should return an empty vec rather than panic.
+                use std::path::PathBuf;
+                let p = PathBuf::from("/tmp/AmCache.hve");
+                let out = parse(&p, &[0u8; 32]);
+                assert!(out.is_empty());
+            }
         }
     }
 
