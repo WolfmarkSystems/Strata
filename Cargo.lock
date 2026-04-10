@@ -8028,6 +8028,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "strata-plugin-pulse"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "rusqlite",
+ "serde_json",
+ "strata-plugin-sdk",
+ "tempfile",
+]
+
+[[package]]
 name = "strata-plugin-recon"
 version = "1.0.0"
 dependencies = [
