@@ -114,7 +114,7 @@ impl StrataPlugin for PulsePlugin {
 
         if records.is_empty() {
             warnings.push(
-                "No mobile artifacts detected under evidence root".to_string()
+                "No mobile artifacts detected under evidence root".to_string(),
             );
         }
 
