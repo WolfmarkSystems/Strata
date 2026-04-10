@@ -10,16 +10,28 @@ use strata_plugin_sdk::ArtifactRecord;
 
 pub mod util;
 
+pub mod accounts;
 pub mod appinstall;
+pub mod calendar;
 pub mod callhistory;
 pub mod contacts;
 pub mod health;
+pub mod icloudbackup;
+pub mod keyboard;
 pub mod knowledgec;
 pub mod location;
+pub mod maps;
 pub mod notes;
+pub mod notifications;
 pub mod photos;
+pub mod powerlog;
+pub mod reminders;
 pub mod safari;
+pub mod screentime;
 pub mod sms;
+pub mod voicemail;
+pub mod wallet;
+pub mod wifi;
 
 /// Run every registered parser against a single path. Parsers whose
 /// `matches()` returns `false` are skipped. Parsers that match but find
@@ -55,6 +67,42 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if notes::matches(path) {
         out.extend(notes::parse(path));
+    }
+    if notifications::matches(path) {
+        out.extend(notifications::parse(path));
+    }
+    if screentime::matches(path) {
+        out.extend(screentime::parse(path));
+    }
+    if wifi::matches(path) {
+        out.extend(wifi::parse(path));
+    }
+    if calendar::matches(path) {
+        out.extend(calendar::parse(path));
+    }
+    if voicemail::matches(path) {
+        out.extend(voicemail::parse(path));
+    }
+    if reminders::matches(path) {
+        out.extend(reminders::parse(path));
+    }
+    if wallet::matches(path) {
+        out.extend(wallet::parse(path));
+    }
+    if maps::matches(path) {
+        out.extend(maps::parse(path));
+    }
+    if accounts::matches(path) {
+        out.extend(accounts::parse(path));
+    }
+    if keyboard::matches(path) {
+        out.extend(keyboard::parse(path));
+    }
+    if icloudbackup::matches(path) {
+        out.extend(icloudbackup::parse(path));
+    }
+    if powerlog::matches(path) {
+        out.extend(powerlog::parse(path));
     }
     out
 }
