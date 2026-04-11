@@ -18,6 +18,7 @@ pub mod adidas_running;
 pub mod amazon_shopping;
 pub mod app_usage;
 pub mod badoo;
+pub mod bank_of_america;
 pub mod bereal;
 pub mod bitcoin_wallet;
 pub mod bluetooth;
@@ -25,7 +26,9 @@ pub mod browser_history;
 pub mod bumble;
 pub mod calendar;
 pub mod call_logs;
+pub mod capital_one;
 pub mod cash_app;
+pub mod chase_bank;
 pub mod chess_com;
 pub mod chess_with_friends;
 pub mod citymapper;
@@ -42,6 +45,7 @@ pub mod contacts;
 pub mod device_info;
 pub mod discord;
 pub mod dji_flight;
+pub mod dmv_app;
 pub mod doordash;
 pub mod ebay;
 pub mod facebook_messenger;
@@ -65,6 +69,7 @@ pub mod grubhub;
 pub mod imo_messenger;
 pub mod installed_apps;
 pub mod instacart;
+pub mod irs2go;
 pub mod keyboard_cache;
 pub mod life360;
 pub mod line_messenger;
@@ -72,11 +77,13 @@ pub mod linkedin;
 pub mod location_history;
 pub mod lyft;
 pub mod mapmywalk;
+pub mod medicare;
 pub mod meetme;
 pub mod mega_chat;
 pub mod metamask;
 pub mod miui_gallery;
 pub mod miui_security;
+pub mod mychart;
 pub mod nike_activities;
 pub mod nike_moments;
 pub mod notifications;
@@ -116,16 +123,19 @@ pub mod twitter;
 pub mod twitter_spaces;
 pub mod uber;
 pub mod uber_eats;
+pub mod united_healthcare;
 pub mod usage_stats;
 pub mod venmo;
 pub mod viber;
 pub mod vlc_media;
 pub mod waze;
 pub mod wellbeing;
+pub mod wells_fargo;
 pub mod whatsapp;
 pub mod wifi_profiles;
 pub mod withings;
 pub mod words_with_friends;
+pub mod zelle;
 pub mod zepp_life;
 
 /// A single Android parser binding — name, matcher, and runner.
@@ -724,5 +734,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "twitch",
         matches_any: twitch::MATCHES,
         run: twitch::parse,
+    },
+    ParserEntry {
+        name: "chase_bank",
+        matches_any: chase_bank::MATCHES,
+        run: chase_bank::parse,
+    },
+    ParserEntry {
+        name: "bank_of_america",
+        matches_any: bank_of_america::MATCHES,
+        run: bank_of_america::parse,
+    },
+    ParserEntry {
+        name: "wells_fargo",
+        matches_any: wells_fargo::MATCHES,
+        run: wells_fargo::parse,
+    },
+    ParserEntry {
+        name: "capital_one",
+        matches_any: capital_one::MATCHES,
+        run: capital_one::parse,
+    },
+    ParserEntry {
+        name: "zelle",
+        matches_any: zelle::MATCHES,
+        run: zelle::parse,
+    },
+    ParserEntry {
+        name: "united_healthcare",
+        matches_any: united_healthcare::MATCHES,
+        run: united_healthcare::parse,
+    },
+    ParserEntry {
+        name: "irs2go",
+        matches_any: irs2go::MATCHES,
+        run: irs2go::parse,
+    },
+    ParserEntry {
+        name: "mychart",
+        matches_any: mychart::MATCHES,
+        run: mychart::parse,
+    },
+    ParserEntry {
+        name: "medicare",
+        matches_any: medicare::MATCHES,
+        run: medicare::parse,
+    },
+    ParserEntry {
+        name: "dmv_app",
+        matches_any: dmv_app::MATCHES,
+        run: dmv_app::parse,
     },
 ];
