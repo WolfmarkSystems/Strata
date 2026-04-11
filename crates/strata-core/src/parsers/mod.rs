@@ -7,6 +7,7 @@ pub mod bam;
 pub mod bits_parser;
 pub mod browser;
 pub mod browser_autofill;
+pub mod browser_forensic;
 pub mod browser_storage;
 pub mod chat;
 pub mod cloud;

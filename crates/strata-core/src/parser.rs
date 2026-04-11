@@ -567,6 +567,23 @@ impl ParserRegistry {
 
         // === UFDR ingestion (v1.5.0) ===
         self.register(Box::new(crate::parsers::ufdr::UfdrParser::new()));
+
+        // === Browser forensic parsers (v1.5.0) ===
+        self.register(Box::new(
+            crate::parsers::browser_forensic::ChromiumForensicParser::chrome(),
+        ));
+        self.register(Box::new(
+            crate::parsers::browser_forensic::ChromiumForensicParser::edge(),
+        ));
+        self.register(Box::new(
+            crate::parsers::browser_forensic::ChromiumForensicParser::brave(),
+        ));
+        self.register(Box::new(
+            crate::parsers::browser_forensic::FirefoxForensicParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::browser_forensic::SafariForensicParser::new(),
+        ));
     }
 
     pub fn parsers(&self) -> &[Box<dyn ArtifactParser>] {
