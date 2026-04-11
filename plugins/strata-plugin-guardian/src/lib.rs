@@ -127,8 +127,12 @@ impl StrataPlugin for GuardianPlugin {
             if name.starts_with("aswar") && name.ends_with(".log")
                 || lc_path.contains("\\avast software\\avast\\log\\")
             {
-                if let Ok(content) = std::fs::read_to_string(&path) {
-                    for line in content.lines().take(500) {
+                // Stream line-by-line — enterprise AV logs can be 100+ MB.
+                if let Ok(f) = std::fs::File::open(&path) {
+                    use std::io::{BufRead, BufReader};
+                    let reader = BufReader::new(f);
+                    for line in reader.lines().take(500) {
+                        let Ok(line) = line else { break };
                         let lower = line.to_lowercase();
                         if lower.contains("infection")
                             || lower.contains("threat")
