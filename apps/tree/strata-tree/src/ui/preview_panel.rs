@@ -554,6 +554,8 @@ fn render_image_preview(
         ext.as_str(),
         "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "tiff" | "tif"
     );
+    const MAX_IMAGE_BYTES: u64 = 20 * 1024 * 1024; // 20 MB
+
     if !is_img {
         ui.label(
             egui::RichText::new("Not an image file.")
@@ -561,6 +563,19 @@ fn render_image_preview(
                 .size(9.5),
         );
         return;
+    }
+    if let Some(size) = f.size {
+        if size > MAX_IMAGE_BYTES {
+            ui.label(
+                egui::RichText::new(format!(
+                    "File too large for image preview ({:.1} MB). Max: 20 MB.",
+                    size as f64 / (1024.0 * 1024.0)
+                ))
+                .color(t.suspicious)
+                .size(9.5),
+            );
+            return;
+        }
     }
     let data = match read_all(state, f) {
         Ok(d) => d,

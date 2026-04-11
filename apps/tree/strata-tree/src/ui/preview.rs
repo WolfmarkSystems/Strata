@@ -267,7 +267,29 @@ fn render_hex(ui: &mut egui::Ui, f: &crate::state::IndexedFile) {
 // ─── Image preview ────────────────────────────────────────────────────────────
 
 fn render_image(ui: &mut egui::Ui, f: &crate::state::IndexedFile) {
+    const MAX_IMAGE_BYTES: u64 = 20 * 1024 * 1024; // 20 MB
+
     let path = std::path::Path::new(&f.path);
+    match std::fs::metadata(path) {
+        Ok(meta) if meta.len() > MAX_IMAGE_BYTES => {
+            ui.colored_label(
+                egui::Color32::from_rgb(200, 160, 60),
+                format!(
+                    "File too large for image preview ({:.1} MB). Max: 20 MB.",
+                    meta.len() as f64 / (1024.0 * 1024.0)
+                ),
+            );
+            return;
+        }
+        Err(e) => {
+            ui.colored_label(
+                egui::Color32::from_rgb(200, 60, 60),
+                format!("Cannot stat file: {}", e),
+            );
+            return;
+        }
+        _ => {}
+    }
     let data = match std::fs::read(path) {
         Err(e) => {
             ui.colored_label(egui::Color32::from_rgb(200, 60, 60),
