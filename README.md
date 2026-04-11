@@ -1,6 +1,6 @@
 # Strata
 
-**Professional digital forensics platform — 16 plugins, MITRE ATT&CK, court-ready reporting.**
+**Professional digital forensics platform — 17 plugins, 178 mobile parsers, MITRE ATT&CK, court-ready reporting.**
 
 Built by a US Army Counterintelligence Special Agent and Digital Forensic Examiner.  
 Free for US military and law enforcement. Commercial licensing available.
@@ -17,13 +17,14 @@ The tools that exist were built for enterprise budgets and conference demos. Str
 
 ## Features
 
-- **16 forensic plugins** covering Windows, macOS, iOS, Android, cloud, network, memory, and malware
+- **17 forensic plugins** covering Windows, macOS, iOS, Android, cloud, network, memory, and malware
+- **178 mobile artifact parsers** — 87 Android (ALEAPP-equivalent) + 91 iOS (iLEAPP-equivalent), all read-only SQLite
 - **29 Sigma correlation rules** with full MITRE ATT&CK kill chain coverage
 - **CSAM detection module** — hash-based and perceptual detection, NCMEC/Project VIC compatible, immutable audit trail, free on all license tiers
 - **Court-ready reporting** — Word and PDF export, chain-of-custody audit log, evidence integrity verification
 - **Air-gap deployable** — single binary, USB portable, no cloud dependency, no telemetry
 - **Cross-platform** — Windows, macOS, Linux. Parses evidence from iOS and Android devices
-- **89% pure Rust** — 871 tests, zero unsafe blocks in production paths
+- **89% pure Rust** — 878+ tests, zero unsafe blocks in production paths, zero clippy warnings
 
 ---
 
@@ -31,10 +32,10 @@ The tools that exist were built for enterprise budgets and conference demos. Str
 
 | Plugin | Coverage |
 |---|---|
-| Phantom | Registry hives, USBSTOR, ShimCache, WDigest, NTDS.dit, WMI persistence |
+| Phantom | Registry hives (SYSTEM/SOFTWARE/SAM/NTUSER/AmCache/USRCLASS), USBSTOR, ShimCache, WDigest, 23 persistence/credential/lateral-movement parsers, full AmCache schema |
 | Chronicle | UserAssist, Jump Lists, LNK files, Shellbags, Windows Timeline |
 | Sentinel | Security.evtx, PowerShell 4103/4104, Sysmon, RDP, Kerberos, lateral movement |
-| Trace | Prefetch, BAM/DAM, Scheduled Tasks, BITS jobs, timestomp detection, SRUM |
+| Trace | Prefetch, BAM/DAM, Scheduled Tasks, BITS jobs, timestomp detection, structural SRUM ESE parser |
 | Remnant | Recycle Bin, USN Journal, ADS, anti-forensic tool detection, VSS deletion |
 | Guardian | Windows Defender, AV/EDR logs, WER crash files, firewall configuration |
 | Cipher | WiFi passwords, browser credentials, SSH keys, AWS/Azure keys |
@@ -45,7 +46,8 @@ The tools that exist were built for enterprise budgets and conference demos. Str
 | Vector | PE headers, VBA macros, PowerShell obfuscation, Mimikatz/Cobalt Strike |
 | Wraith | hiberfil.sys, LSASS dump detection, crash dump analysis |
 | Recon | Username/email/IP extraction, AWS AKIA key detection, SID history |
-| Pulse | WhatsApp, Signal, Telegram, Discord, TikTok, Instagram — iOS/Android/Windows/macOS |
+| Specter | Android backup (`.ab`), package inventory, Wi-Fi config, device profile |
+| Pulse | **87 Android parsers** (SMS, calls, contacts, Gmail, Chrome, photos, location, clipboard, keyboard cache, Wi-Fi, Bluetooth, calendar, notifications + more) · **91 iOS parsers** (KnowledgeC, iMessage, Safari, Health, Significant Locations, Notes, WhatsApp, Signal, Telegram, Snapchat, Find My, Biome, PowerLog + more) — all read-only SQLite, UFDR-compatible |
 | **Sigma** | **29 correlation rules. Always runs last. Full MITRE ATT&CK kill chain.** |
 
 ---
