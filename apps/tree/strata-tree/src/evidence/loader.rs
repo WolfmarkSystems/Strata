@@ -122,8 +122,11 @@ pub fn start_indexing(path: &str, evidence_id: &str) -> Result<Receiver<IndexBat
                                     Some(l) if !l.is_empty() => format!("{} {}", fs_name, l),
                                     _ => format!("{} Volume {}", fs_name, vol.volume_index + 1),
                                 };
-                                let n = super::indexer::send_vfs_entries_count(
-                                    &vfs_entries,
+                                // Stream entries in batches of 10K to
+                                // bound peak memory. The Vec is consumed
+                                // and freed progressively.
+                                let n = super::indexer::send_vfs_entries_streaming(
+                                    vfs_entries,
                                     &ev_id,
                                     &tx,
                                     &label,
