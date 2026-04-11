@@ -14,7 +14,9 @@ pub mod accessibility;
 pub mod accounts;
 pub mod aggregate;
 pub mod airdrop;
+pub mod alltrails;
 pub mod appinstall;
+pub mod appletv;
 pub mod apppermissions;
 pub mod appstate;
 pub mod biome;
@@ -41,12 +43,16 @@ pub mod duetactivity;
 pub mod discord;
 pub mod facebook;
 pub mod fileprovider;
+pub mod firefox;
+pub mod fitbit;
 pub mod findmy;
 pub mod googlemaps;
 pub mod health;
+pub mod healthsamples;
+pub mod healthsources;
+pub mod healthworkouts;
 pub mod hinge;
 pub mod hulu;
-pub mod healthworkouts;
 pub mod icloudbackup;
 pub mod instagram;
 pub mod interactionc;
@@ -57,6 +63,7 @@ pub mod knowledgec;
 pub mod line;
 pub mod linkedin;
 pub mod location;
+pub mod lyft;
 pub mod mail;
 pub mod medialibrary;
 pub mod maps;
@@ -68,6 +75,7 @@ pub mod notifications;
 pub mod amazonprime;
 pub mod photoanalysis;
 pub mod photos;
+pub mod pinterest;
 pub mod pokemongo;
 pub mod protonmail;
 pub mod podcasts;
@@ -82,6 +90,7 @@ pub mod screentime;
 pub mod siminfo;
 pub mod spotlight;
 pub mod spotify;
+pub mod strava;
 pub mod shutdownlog;
 pub mod signal;
 pub mod skype;
@@ -415,6 +424,33 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if twitch::matches(path) {
         out.extend(twitch::parse(path));
+    }
+    if healthsamples::matches(path) {
+        out.extend(healthsamples::parse(path));
+    }
+    if healthsources::matches(path) {
+        out.extend(healthsources::parse(path));
+    }
+    if fitbit::matches(path) {
+        out.extend(fitbit::parse(path));
+    }
+    if strava::matches(path) {
+        out.extend(strava::parse(path));
+    }
+    if alltrails::matches(path) {
+        out.extend(alltrails::parse(path));
+    }
+    if appletv::matches(path) {
+        out.extend(appletv::parse(path));
+    }
+    if lyft::matches(path) {
+        out.extend(lyft::parse(path));
+    }
+    if pinterest::matches(path) {
+        out.extend(pinterest::parse(path));
+    }
+    if firefox::matches(path) {
+        out.extend(firefox::parse(path));
     }
     out
 }
