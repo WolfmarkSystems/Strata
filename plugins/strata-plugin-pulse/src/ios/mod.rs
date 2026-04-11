@@ -10,9 +10,12 @@ use strata_plugin_sdk::ArtifactRecord;
 
 pub mod util;
 
+pub mod accessibility;
 pub mod accounts;
+pub mod aggregate;
 pub mod airdrop;
 pub mod appinstall;
+pub mod apppermissions;
 pub mod appstate;
 pub mod biome;
 pub mod bluetooth;
@@ -22,9 +25,12 @@ pub mod cellular;
 pub mod chrome;
 pub mod crashlogs;
 pub mod callhistory;
+pub mod containermanager;
 pub mod contacts;
 pub mod cookies;
 pub mod deviceinfo;
+pub mod dhcpleases;
+pub mod duetactivity;
 pub mod discord;
 pub mod facebook;
 pub mod findmy;
@@ -55,6 +61,7 @@ pub mod screentime;
 pub mod siminfo;
 pub mod spotlight;
 pub mod spotify;
+pub mod shutdownlog;
 pub mod signal;
 pub mod sms;
 pub mod snapchat;
@@ -62,12 +69,15 @@ pub mod telegram;
 pub mod tiktok;
 pub mod tinder;
 pub mod tcc;
+pub mod textreplacement;
 pub mod twitter;
 pub mod viber;
 pub mod uber;
 pub mod venmo;
+pub mod voicememos;
 pub mod voicemail;
 pub mod wallet;
+pub mod webclips;
 pub mod waze;
 pub mod wechat;
 pub mod whatsapp;
@@ -267,6 +277,36 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if spotlight::matches(path) {
         out.extend(spotlight::parse(path));
+    }
+    if aggregate::matches(path) {
+        out.extend(aggregate::parse(path));
+    }
+    if containermanager::matches(path) {
+        out.extend(containermanager::parse(path));
+    }
+    if voicememos::matches(path) {
+        out.extend(voicememos::parse(path));
+    }
+    if webclips::matches(path) {
+        out.extend(webclips::parse(path));
+    }
+    if textreplacement::matches(path) {
+        out.extend(textreplacement::parse(path));
+    }
+    if duetactivity::matches(path) {
+        out.extend(duetactivity::parse(path));
+    }
+    if apppermissions::matches(path) {
+        out.extend(apppermissions::parse(path));
+    }
+    if dhcpleases::matches(path) {
+        out.extend(dhcpleases::parse(path));
+    }
+    if shutdownlog::matches(path) {
+        out.extend(shutdownlog::parse(path));
+    }
+    if accessibility::matches(path) {
+        out.extend(accessibility::parse(path));
     }
     out
 }
