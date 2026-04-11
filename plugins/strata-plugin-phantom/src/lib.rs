@@ -93,37 +93,35 @@ impl StrataPlugin for PhantomPlugin {
             let lower = name.to_lowercase();
 
             // Hive routing — match on filename, not extension. Hives have no
-            // extension or arbitrary ones.
+            // extension or arbitrary ones. Each read is gated at 512 MB to
+            // prevent OOM on enterprise hives (SYSTEM/SOFTWARE can exceed
+            // 256 MB on domain controllers).
             if lower == "system" {
-                if let Ok(data) = std::fs::read(&path) {
+                if let Some(data) = read_hive_gated(&path) {
                     results.extend(parsers::system::parse(&path, &data));
                 }
             } else if lower == "software" {
-                if let Ok(data) = std::fs::read(&path) {
+                if let Some(data) = read_hive_gated(&path) {
                     results.extend(parsers::software::parse(&path, &data));
                 }
             } else if lower == "sam" {
-                if let Ok(data) = std::fs::read(&path) {
+                if let Some(data) = read_hive_gated(&path) {
                     results.extend(parsers::sam::parse(&path, &data));
                 }
             } else if lower == "security" {
-                if let Ok(data) = std::fs::read(&path) {
+                if let Some(data) = read_hive_gated(&path) {
                     results.extend(parsers::security::parse(&path, &data));
                 }
             } else if lower == "amcache.hve" {
-                if let Ok(data) = std::fs::read(&path) {
+                if let Some(data) = read_hive_gated(&path) {
                     results.extend(parsers::amcache::parse(&path, &data));
                 }
             } else if lower == "usrclass.dat" {
-                if let Ok(data) = std::fs::read(&path) {
+                if let Some(data) = read_hive_gated(&path) {
                     results.extend(parsers::usrclass::parse(&path, &data));
                 }
             } else if lower == "ntuser.dat" {
-                // v1.1.0: Phantom owns the HKCU keys that aren't already
-                // claimed by Chronicle (UserAssist, RecentDocs) or Trace
-                // (BAM/DAM): CapabilityAccessManager, Archive Tool history,
-                // TaskBar FeatureUsage.
-                if let Ok(data) = std::fs::read(&path) {
+                if let Some(data) = read_hive_gated(&path) {
                     results.extend(parsers::ntuser::parse(&path, &data));
                 }
             }
@@ -3247,6 +3245,19 @@ mod parsers {
             None
         }
     }
+}
+
+/// Read a registry hive with a 512 MB size gate. Returns `None` if the
+/// file is unreadable or exceeds the cap. Enterprise SYSTEM/SOFTWARE
+/// hives can be 256--512 MB; NTUSER.DAT can be 100+ MB on domain
+/// controllers. Without this gate, Phantom would OOM on server images.
+fn read_hive_gated(path: &Path) -> Option<Vec<u8>> {
+    const MAX_HIVE_BYTES: u64 = 512 * 1024 * 1024;
+    let meta = path.metadata().ok()?;
+    if meta.len() > MAX_HIVE_BYTES {
+        return None;
+    }
+    std::fs::read(path).ok()
 }
 
 fn walk_dir(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {

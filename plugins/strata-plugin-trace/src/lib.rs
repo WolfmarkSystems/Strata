@@ -651,19 +651,26 @@ impl StrataPlugin for TracePlugin {
                 let path_str_srum = entry_path.to_string_lossy().to_string();
                 results.extend(Self::detect_srum(&entry_path, file_name, &path_str_srum));
 
-                // Timestomp detection for executables
+                // Timestomp detection for executables — bounded 256-byte read.
+                // Only the PE header (MZ + e_lfanew + compilation timestamp)
+                // is examined. Never load the full file — system DLLs can be
+                // hundreds of MB and there are thousands per image.
                 let lower_name = file_name.to_lowercase();
                 if lower_name.ends_with(".exe")
                     || lower_name.ends_with(".dll")
                     || lower_name.ends_with(".sys")
                 {
-                    if let Ok(data) = std::fs::read(&entry_path) {
-                        let read_len = data.len().min(256);
-                        results.extend(Self::detect_timestomp_indicators(
-                            &entry_path,
-                            file_name,
-                            &data[..read_len],
-                        ));
+                    if let Ok(mut f) = std::fs::File::open(&entry_path) {
+                        use std::io::Read;
+                        let mut buf = [0u8; 256];
+                        let n = f.read(&mut buf).unwrap_or(0);
+                        if n > 0 {
+                            results.extend(Self::detect_timestomp_indicators(
+                                &entry_path,
+                                file_name,
+                                &buf[..n],
+                            ));
+                        }
                     }
                 }
             }

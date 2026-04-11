@@ -104,7 +104,22 @@ pub struct SrumApp {
 
 impl SrumDatabase {
     /// Read the SRUM database file from disk and parse it.
+    ///
+    /// Rejects files larger than 512 MB to prevent OOM on corrupted or
+    /// atypically large databases. Long-running Windows 10/11 systems
+    /// can produce 300 MB SRUDB.dat files; 512 MB provides headroom.
     pub fn parse(path: &Path) -> Result<Self, String> {
+        const MAX_SRUM_BYTES: u64 = 512 * 1024 * 1024;
+        let file_size = path
+            .metadata()
+            .map(|m| m.len())
+            .map_err(|e| format!("metadata failed: {e}"))?;
+        if file_size > MAX_SRUM_BYTES {
+            return Err(format!(
+                "SRUM database too large ({} bytes, max {})",
+                file_size, MAX_SRUM_BYTES
+            ));
+        }
         let data = std::fs::read(path).map_err(|e| format!("read failed: {e}"))?;
         Self::parse_bytes(&data)
     }

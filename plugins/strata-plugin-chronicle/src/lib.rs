@@ -739,7 +739,7 @@ impl StrataPlugin for ChroniclePlugin {
                 results.extend(Self::detect_userassist(&entry_path, fn_, &ps));
                 results.extend(Self::detect_recentdocs_detailed(&entry_path, fn_, &ps));
                 results.extend(Self::detect_jumplist(&entry_path, fn_, &ps));
-                if fn_.eq_ignore_ascii_case("NTUSER.DAT") { if let Ok(data) = std::fs::read(&entry_path) { results.extend(Self::parse_ntuser_dat(&entry_path, &data)); } }
+                if fn_.eq_ignore_ascii_case("NTUSER.DAT") { let hive_ok = entry_path.metadata().map(|m| m.len() <= 512 * 1024 * 1024).unwrap_or(false); if hive_ok { if let Ok(data) = std::fs::read(&entry_path) { results.extend(Self::parse_ntuser_dat(&entry_path, &data)); } } }
 
                 // ── v1.1.0: Browser Media History (Chrome / Edge) ────
                 if fn_.eq_ignore_ascii_case("Media History") {
@@ -779,12 +779,13 @@ impl StrataPlugin for ChroniclePlugin {
                 }
 
                 if fn_.to_lowercase().ends_with(".automaticdestinations-ms") {
-                    if let Ok(data) = std::fs::read(&entry_path) {
+                    let jl_ok = entry_path.metadata().map(|m| m.len() <= 50 * 1024 * 1024).unwrap_or(false);
+                    if jl_ok { if let Ok(data) = std::fs::read(&entry_path) {
                         let aid = fn_.split('.').next().unwrap_or("unknown");
                         let known: &[(&str,&str)] = &[("1b4dd67f29cb1962","Windows Explorer"),("5f7b5f1e01b83767","Internet Explorer"),("b91c07e03a5a0a35","Google Chrome"),("5d696d521de238c3","Google Chrome"),("9b9cdc69c1c24e2b","Mozilla Firefox"),("9c764ede09a2f88e","Microsoft Edge"),("a7bd71699cd38d1c","Microsoft Word"),("f0275e1002be10b2","Microsoft Excel"),("ee9f71d9828e153e","Microsoft Outlook"),("d00655d2aa12ff6d","Excel 2016+"),("b0459d4b0fb86a58","Notepad"),("2e61e3e1604d0de3","Paint"),("6ec72ce0fdc76d9e","Windows Media Player"),("3dc09a3a42e88c38","Adobe Reader"),("7494a606a9eef18e","Adobe Acrobat"),("64bc1e327c5f8b8a","7-Zip"),("a1c8b4d3e2f09175","VLC Media Player"),("f38b1c0d3e9a7625","Visual Studio Code"),("4975d6798a1a4326","VS Code"),("1bc392b8e104a00e","Remote Desktop"),("bcc705e07d55efb0","PuTTY")];
                         let rn = known.iter().find(|(id,_)| id.eq_ignore_ascii_case(aid)).map(|(_,n)| *n).unwrap_or(aid);
                         results.extend(Self::parse_jumplist_cfb(&entry_path, &data, rn));
-                    }
+                    } }
                 }
             }
         }

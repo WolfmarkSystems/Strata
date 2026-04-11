@@ -319,10 +319,16 @@ impl StrataPlugin for NetFlowPlugin {
                 }
 
                 "IIS Log" | "Access Log" => {
-                    if let Ok(text) = std::fs::read_to_string(&path) {
+                    // Stream line-by-line via BufReader — production IIS
+                    // logs can be multi-GB. The previous read_to_string
+                    // loaded the entire file before .lines().take(50_000).
+                    if let Ok(f) = std::fs::File::open(&path) {
+                        use std::io::{BufRead, BufReader};
+                        let reader = BufReader::new(f);
                         let mut flagged = 0;
-                        for (_i, line) in text.lines().enumerate().take(50_000) {
-                            if let Some(reason) = Self::http_log_line_indicator(line) {
+                        for line in reader.lines().take(50_000) {
+                            let Ok(line) = line else { break };
+                            if let Some(reason) = Self::http_log_line_indicator(&line) {
                                 flagged += 1;
                                 if flagged > 100 {
                                     break;
@@ -352,7 +358,7 @@ impl StrataPlugin for NetFlowPlugin {
                         if flagged == 0 {
                             let mut a = Artifact::new("Web Server Log", &path_str);
                             a.add_field("title", &format!("{} present", file_type));
-                            a.add_field("detail", &format!("{} — no attack patterns matched", file_type));
+                            a.add_field("detail", &format!("{} \u{2014} no attack patterns matched", file_type));
                             a.add_field("file_type", file_type);
                             a.add_field("forensic_value", "Medium");
                             out.push(a);

@@ -221,6 +221,12 @@ impl VectorPlugin {
             .unwrap_or("")
             .to_lowercase();
 
+        // Size gate: skip scripts >10 MB. PowerShell transcripts
+        // can be 100+ MB; loading them fully into a String would OOM.
+        let file_size = path.metadata().map(|m| m.len()).unwrap_or(0);
+        if file_size > 10 * 1024 * 1024 {
+            return results;
+        }
         let content = match std::fs::read_to_string(path) {
             Ok(c) => c,
             Err(_) => return results,
@@ -418,20 +424,26 @@ impl VectorPlugin {
             }
         }
 
-        // Office document analysis
+        // Office document analysis — 50 MB size gate.
+        // OLE2 files are typically <20 MB but can be larger.
         if ext_lower == "doc" || ext_lower == "xls" || ext_lower == "ppt" {
-            if let Ok(data) = std::fs::read(path) {
-                results.extend(Self::analyze_ole(path, name, &data));
+            let file_size = path.metadata().map(|m| m.len()).unwrap_or(0);
+            if file_size <= 50 * 1024 * 1024 {
+                if let Ok(data) = std::fs::read(path) {
+                    results.extend(Self::analyze_ole(path, name, &data));
+                }
             }
         }
 
         // Script analysis
         if matches!(ext_lower.as_str(), "ps1" | "vbs" | "js" | "bat" | "cmd") {
             results.extend(Self::analyze_script(path, name));
-            // Also scan script content for malware strings
-            if let Ok(data) = std::fs::read(path) {
-                let scan_len = data.len().min(65536);
-                results.extend(Self::scan_for_malware_strings(path, name, &data[..scan_len]));
+            // Also scan script content for malware strings — bounded 64 KB read.
+            if let Ok(mut f) = std::fs::File::open(path) {
+                use std::io::Read;
+                let mut buf = [0u8; 65536];
+                let n = f.read(&mut buf).unwrap_or(0);
+                results.extend(Self::scan_for_malware_strings(path, name, &buf[..n]));
             }
         }
 

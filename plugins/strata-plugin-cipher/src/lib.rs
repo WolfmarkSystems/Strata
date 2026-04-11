@@ -9,6 +9,21 @@ use strata_plugin_sdk::{
 /// Sensitive URL keywords that flag a credential as suspicious.
 const SENSITIVE_URL_KEYWORDS: &[&str] = &["bank", "paypal", "gov", "vpn", "admin", "login"];
 
+/// Max file size for text credential/config reads (50 MB). AnyDesk
+/// ad.trace can grow large on heavily-used systems; anything above
+/// this cap is skipped to prevent OOM.
+const MAX_TEXT_READ_BYTES: u64 = 50 * 1024 * 1024;
+
+/// Size-gated `read_to_string` — returns `None` if the file exceeds
+/// `MAX_TEXT_READ_BYTES` or cannot be read.
+fn read_text_gated(path: &Path) -> Option<String> {
+    let meta = path.metadata().ok()?;
+    if meta.len() > MAX_TEXT_READ_BYTES {
+        return None;
+    }
+    std::fs::read_to_string(path).ok()
+}
+
 pub struct CipherPlugin {
     name: String,
     version: String,
@@ -133,9 +148,9 @@ impl CipherPlugin {
     ) -> Vec<(String, String, String, Option<i64>)> {
         let mut results = Vec::new();
 
-        let content = match std::fs::read_to_string(path) {
-            Ok(c) => c,
-            Err(_) => return results,
+        let content = match read_text_gated(path) {
+            Some(c) => c,
+            None => return results,
         };
 
         let json: serde_json::Value = match serde_json::from_str(&content) {
@@ -194,9 +209,9 @@ impl CipherPlugin {
     fn parse_ssh_known_hosts(path: &Path) -> Vec<(String, String)> {
         let mut results = Vec::new();
 
-        let content = match std::fs::read_to_string(path) {
-            Ok(c) => c,
-            Err(_) => return results,
+        let content = match read_text_gated(path) {
+            Some(c) => c,
+            None => return results,
         };
 
         for line in content.lines() {
@@ -222,9 +237,9 @@ impl CipherPlugin {
     fn parse_ssh_authorized_keys(path: &Path) -> Vec<(String, String)> {
         let mut results = Vec::new();
 
-        let content = match std::fs::read_to_string(path) {
-            Ok(c) => c,
-            Err(_) => return results,
+        let content = match read_text_gated(path) {
+            Some(c) => c,
+            None => return results,
         };
 
         for line in content.lines() {
@@ -410,9 +425,9 @@ impl CipherPlugin {
         }
 
         let path_str = path.to_string_lossy();
-        let content = match std::fs::read_to_string(path) {
-            Ok(c) => c,
-            Err(_) => {
+        let content = match read_text_gated(path) {
+            Some(c) => c,
+            None => {
                 // File unreadable — still record its presence
                 let mut artifact = Artifact::new("FTP Saved Credential", &path_str);
                 artifact.add_field("title", "FileZilla Credential File");
@@ -545,9 +560,9 @@ impl CipherPlugin {
                 "outgoing"
             };
 
-            let content = match std::fs::read_to_string(path) {
-                Ok(c) => c,
-                Err(_) => return results,
+            let content = match read_text_gated(path) {
+                Some(c) => c,
+                None => return results,
             };
 
             for line in content.lines() {
@@ -620,9 +635,9 @@ impl CipherPlugin {
 
         // connection_trace.txt — pipe-delimited structured log
         if lower_name == "connection_trace.txt" {
-            let content = match std::fs::read_to_string(path) {
-                Ok(c) => c,
-                Err(_) => return results,
+            let content = match read_text_gated(path) {
+                Some(c) => c,
+                None => return results,
             };
 
             for line in content.lines() {
@@ -663,9 +678,9 @@ impl CipherPlugin {
 
         // ad.trace — free-form log, scan for connection events
         if lower_name == "ad.trace" {
-            let content = match std::fs::read_to_string(path) {
-                Ok(c) => c,
-                Err(_) => return results,
+            let content = match read_text_gated(path) {
+                Some(c) => c,
+                None => return results,
             };
 
             let event_count = content
