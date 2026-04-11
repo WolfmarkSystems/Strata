@@ -10,69 +10,97 @@ use strata_plugin_sdk::ArtifactRecord;
 
 pub mod util;
 
+pub mod accessibility;
 pub mod accounts;
+pub mod aggregate;
 pub mod airdrop;
 pub mod appinstall;
+pub mod apppermissions;
 pub mod appstate;
 pub mod biome;
 pub mod bluetooth;
+pub mod bumble;
 pub mod calendar;
 pub mod cashapp;
 pub mod cellular;
+pub mod cloudkit;
 pub mod chrome;
 pub mod crashlogs;
 pub mod callhistory;
+pub mod containermanager;
 pub mod contacts;
 pub mod cookies;
+pub mod datausage;
 pub mod deviceinfo;
+pub mod dhcpleases;
+pub mod duetactivity;
 pub mod discord;
 pub mod facebook;
+pub mod fileprovider;
 pub mod findmy;
 pub mod googlemaps;
 pub mod health;
+pub mod hinge;
+pub mod healthworkouts;
 pub mod icloudbackup;
 pub mod instagram;
 pub mod interactionc;
+pub mod itunesstore;
 pub mod keyboard;
 pub mod kik;
 pub mod knowledgec;
 pub mod line;
+pub mod linkedin;
 pub mod location;
 pub mod mail;
 pub mod medialibrary;
 pub mod maps;
+pub mod mobileactivation;
+pub mod mobilebackup;
 pub mod netflix;
 pub mod notes;
 pub mod notifications;
+pub mod photoanalysis;
 pub mod photos;
+pub mod protonmail;
 pub mod podcasts;
 pub mod powerlog;
 pub mod reddit;
 pub mod reminders;
+pub mod restrictions;
 pub mod safari;
 pub mod safaritabs;
 pub mod screentime;
 pub mod siminfo;
 pub mod spotlight;
 pub mod spotify;
+pub mod shutdownlog;
 pub mod signal;
+pub mod skype;
+pub mod slack;
 pub mod sms;
 pub mod snapchat;
 pub mod telegram;
 pub mod tiktok;
 pub mod tinder;
 pub mod tcc;
+pub mod teams;
+pub mod textreplacement;
+pub mod threema;
 pub mod twitter;
 pub mod viber;
 pub mod uber;
 pub mod venmo;
+pub mod voicememos;
 pub mod voicemail;
 pub mod wallet;
+pub mod webclips;
 pub mod waze;
 pub mod wechat;
 pub mod whatsapp;
 pub mod wifi;
 pub mod youtube;
+pub mod zoom;
 
 /// Run every registered parser against a single path. Parsers whose
 /// `matches()` returns `false` are skipped. Parsers that match but find
@@ -267,6 +295,90 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if spotlight::matches(path) {
         out.extend(spotlight::parse(path));
+    }
+    if aggregate::matches(path) {
+        out.extend(aggregate::parse(path));
+    }
+    if containermanager::matches(path) {
+        out.extend(containermanager::parse(path));
+    }
+    if voicememos::matches(path) {
+        out.extend(voicememos::parse(path));
+    }
+    if webclips::matches(path) {
+        out.extend(webclips::parse(path));
+    }
+    if textreplacement::matches(path) {
+        out.extend(textreplacement::parse(path));
+    }
+    if duetactivity::matches(path) {
+        out.extend(duetactivity::parse(path));
+    }
+    if apppermissions::matches(path) {
+        out.extend(apppermissions::parse(path));
+    }
+    if dhcpleases::matches(path) {
+        out.extend(dhcpleases::parse(path));
+    }
+    if shutdownlog::matches(path) {
+        out.extend(shutdownlog::parse(path));
+    }
+    if accessibility::matches(path) {
+        out.extend(accessibility::parse(path));
+    }
+    if photoanalysis::matches(path) {
+        out.extend(photoanalysis::parse(path));
+    }
+    if fileprovider::matches(path) {
+        out.extend(fileprovider::parse(path));
+    }
+    if cloudkit::matches(path) {
+        out.extend(cloudkit::parse(path));
+    }
+    if mobileactivation::matches(path) {
+        out.extend(mobileactivation::parse(path));
+    }
+    if restrictions::matches(path) {
+        out.extend(restrictions::parse(path));
+    }
+    if itunesstore::matches(path) {
+        out.extend(itunesstore::parse(path));
+    }
+    if mobilebackup::matches(path) {
+        out.extend(mobilebackup::parse(path));
+    }
+    if healthworkouts::matches(path) {
+        out.extend(healthworkouts::parse(path));
+    }
+    if datausage::matches(path) {
+        out.extend(datausage::parse(path));
+    }
+    if bumble::matches(path) {
+        out.extend(bumble::parse(path));
+    }
+    if hinge::matches(path) {
+        out.extend(hinge::parse(path));
+    }
+    if slack::matches(path) {
+        out.extend(slack::parse(path));
+    }
+    if teams::matches(path) {
+        out.extend(teams::parse(path));
+    }
+    if zoom::matches(path) {
+        out.extend(zoom::parse(path));
+    }
+    if linkedin::matches(path) {
+        out.extend(linkedin::parse(path));
+    }
+    if skype::matches(path) {
+        out.extend(skype::parse(path));
+    }
+    if threema::matches(path) {
+        out.extend(threema::parse(path));
+    }
+    if protonmail::matches(path) {
+        out.extend(protonmail::parse(path));
     }
     out
 }
