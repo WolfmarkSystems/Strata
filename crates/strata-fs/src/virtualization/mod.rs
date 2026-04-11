@@ -429,9 +429,21 @@ pub struct FsVfs {
     root: PathBuf,
 }
 
+/// Maximum file size that `FsVfs::open_file` will load into memory.
+/// Files larger than this must be accessed via `read_file_range`.
+const MAX_OPEN_FILE_BYTES: u64 = 256 * 1024 * 1024; // 256 MB
+
 impl FsVfs {
     pub fn new(root: PathBuf) -> Self {
         Self { root }
+    }
+
+    fn resolve_path(&self, path: &Path) -> PathBuf {
+        if path == Path::new("/") || path.as_os_str().is_empty() {
+            self.root.clone()
+        } else {
+            self.root.join(path)
+        }
     }
 }
 
@@ -445,11 +457,7 @@ impl VirtualFileSystem for FsVfs {
     }
 
     fn read_dir(&self, path: &Path) -> Result<Vec<VfsEntry>, ForensicError> {
-        let dir_path = if path == Path::new("/") || path.as_os_str().is_empty() {
-            self.root.clone()
-        } else {
-            self.root.join(path)
-        };
+        let dir_path = self.resolve_path(path);
 
         if !dir_path.exists() {
             return Err(ForensicError::OutOfRange(dir_path.display().to_string()));
@@ -481,21 +489,51 @@ impl VirtualFileSystem for FsVfs {
     }
 
     fn open_file(&self, path: &Path) -> Result<Vec<u8>, ForensicError> {
-        let file_path = if path == Path::new("/") || path.as_os_str().is_empty() {
-            self.root.clone()
-        } else {
-            self.root.join(path)
-        };
+        let file_path = self.resolve_path(path);
+
+        let metadata = std::fs::metadata(&file_path).map_err(ForensicError::Io)?;
+        if metadata.len() > MAX_OPEN_FILE_BYTES {
+            return Err(ForensicError::OutOfRange(format!(
+                "File {} is {} bytes — exceeds {} byte open_file limit. Use read_file_range instead.",
+                file_path.display(),
+                metadata.len(),
+                MAX_OPEN_FILE_BYTES,
+            )));
+        }
 
         std::fs::read(&file_path).map_err(ForensicError::Io)
     }
 
+    /// Seek-based ranged read — does NOT load the full file into memory.
+    fn read_file_range(
+        &self,
+        path: &Path,
+        offset: u64,
+        len: usize,
+    ) -> Result<Vec<u8>, ForensicError> {
+        use std::io::{Read, Seek, SeekFrom};
+
+        let file_path = self.resolve_path(path);
+        let mut file = std::fs::File::open(&file_path).map_err(ForensicError::Io)?;
+
+        let file_len = file.metadata().map_err(ForensicError::Io)?.len();
+        if offset >= file_len {
+            return Ok(Vec::new());
+        }
+
+        let available = (file_len - offset) as usize;
+        let to_read = len.min(available);
+
+        file.seek(SeekFrom::Start(offset))
+            .map_err(ForensicError::Io)?;
+
+        let mut buf = vec![0u8; to_read];
+        file.read_exact(&mut buf).map_err(ForensicError::Io)?;
+        Ok(buf)
+    }
+
     fn file_metadata(&self, path: &Path) -> Result<VfsEntry, ForensicError> {
-        let file_path = if path == Path::new("/") || path.as_os_str().is_empty() {
-            self.root.clone()
-        } else {
-            self.root.join(path)
-        };
+        let file_path = self.resolve_path(path);
 
         let metadata = std::fs::metadata(&file_path).map_err(ForensicError::Io)?;
 
