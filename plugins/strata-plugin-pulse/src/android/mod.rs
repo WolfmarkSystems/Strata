@@ -17,6 +17,7 @@ pub mod accounts_google;
 pub mod adidas_running;
 pub mod app_usage;
 pub mod badoo;
+pub mod bitcoin_wallet;
 pub mod bluetooth;
 pub mod browser_history;
 pub mod bumble;
@@ -34,9 +35,11 @@ pub mod chrome_login_data;
 pub mod chrome_media_history;
 pub mod chrome_top_sites;
 pub mod clipboard;
+pub mod coinbase;
 pub mod contacts;
 pub mod device_info;
 pub mod discord;
+pub mod dji_flight;
 pub mod facebook_messenger;
 pub mod factory_reset;
 pub mod firefox;
@@ -64,6 +67,9 @@ pub mod location_history;
 pub mod mapmywalk;
 pub mod meetme;
 pub mod mega_chat;
+pub mod metamask;
+pub mod miui_gallery;
+pub mod miui_security;
 pub mod nike_activities;
 pub mod nike_moments;
 pub mod notifications;
@@ -74,11 +80,14 @@ pub mod randochat;
 pub mod recent_activity;
 pub mod romeo;
 pub mod runkeeper;
+pub mod samsung_health;
 pub mod samsung_notes;
+pub mod samsung_pay;
 pub mod sim_info;
 pub mod skout;
 pub mod skype;
 pub mod slopes;
+pub mod smartthings;
 pub mod sms;
 pub mod snapchat;
 pub mod speedtest;
@@ -86,6 +95,7 @@ pub mod strava;
 pub mod telegram;
 pub mod textnow;
 pub mod tiktok;
+pub mod trust_wallet;
 pub mod twitter;
 pub mod usage_stats;
 pub mod viber;
@@ -544,5 +554,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "linkedin",
         matches_any: linkedin::MATCHES,
         run: linkedin::parse,
+    },
+    ParserEntry {
+        name: "samsung_health",
+        matches_any: samsung_health::MATCHES,
+        run: samsung_health::parse,
+    },
+    ParserEntry {
+        name: "samsung_pay",
+        matches_any: samsung_pay::MATCHES,
+        run: samsung_pay::parse,
+    },
+    ParserEntry {
+        name: "smartthings",
+        matches_any: smartthings::MATCHES,
+        run: smartthings::parse,
+    },
+    ParserEntry {
+        name: "miui_security",
+        matches_any: miui_security::MATCHES,
+        run: miui_security::parse,
+    },
+    ParserEntry {
+        name: "miui_gallery",
+        matches_any: miui_gallery::MATCHES,
+        run: miui_gallery::parse,
+    },
+    ParserEntry {
+        name: "bitcoin_wallet",
+        matches_any: bitcoin_wallet::MATCHES,
+        run: bitcoin_wallet::parse,
+    },
+    ParserEntry {
+        name: "coinbase",
+        matches_any: coinbase::MATCHES,
+        run: coinbase::parse,
+    },
+    ParserEntry {
+        name: "trust_wallet",
+        matches_any: trust_wallet::MATCHES,
+        run: trust_wallet::parse,
+    },
+    ParserEntry {
+        name: "metamask",
+        matches_any: metamask::MATCHES,
+        run: metamask::parse,
+    },
+    ParserEntry {
+        name: "dji_flight",
+        matches_any: dji_flight::MATCHES,
+        run: dji_flight::parse,
     },
 ];
