@@ -612,6 +612,9 @@ pub struct AppState {
     /// Per-hit examiner notes buffer (keyed by hit_id) — bound to
     /// the text box that feeds into `csam_confirm_hit`.
     pub csam_note_buffers: std::collections::HashMap<String, String>,
+
+    // ── Obstruction Score ──
+    pub obstruction_assessment: Option<strata_ml_obstruction::ObstructionAssessment>,
 }
 
 #[derive(Debug)]
@@ -784,6 +787,7 @@ impl Default for AppState {
             csam_scan_config: strata_csam::ScanConfig::default(),
             csam_pending_review: None,
             csam_note_buffers: std::collections::HashMap::new(),
+            obstruction_assessment: None,
         }
     }
 }

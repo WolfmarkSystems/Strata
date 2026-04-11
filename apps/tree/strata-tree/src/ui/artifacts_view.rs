@@ -42,6 +42,9 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
     });
     ui.add_space(4.0);
 
+    render_obstruction_gauge(ui, state, &t);
+    ui.add_space(4.0);
+
     if state.artifact_total == 0 && state.artifact_counts.is_empty() {
         ui.add_space(20.0);
         ui.label(egui::RichText::new("No artifacts parsed yet.").color(t.muted).size(10.0));
@@ -256,4 +259,77 @@ fn detail_field(ui: &mut egui::Ui, t: &crate::theme::StrataTheme, key: &str, val
         ui.label(egui::RichText::new(format!("{}:", key)).color(t.muted).size(9.0));
         ui.label(egui::RichText::new(value).color(t.text).size(9.0));
     });
+}
+
+fn render_obstruction_gauge(
+    ui: &mut egui::Ui,
+    state: &AppState,
+    t: &crate::theme::StrataTheme,
+) {
+    let assessment = match &state.obstruction_assessment {
+        Some(a) if a.score > 0 => a,
+        _ => return,
+    };
+
+    let gauge_color = match assessment.score {
+        0..=20 => t.muted,
+        21..=40 => t.clean,
+        41..=60 => t.suspicious,
+        61..=80 => egui::Color32::from_rgb(0xe0, 0x70, 0x30),
+        _ => t.flagged,
+    };
+
+    egui::Frame::none()
+        .fill(t.elevated)
+        .rounding(crate::theme::RADIUS_MD)
+        .inner_margin(egui::Margin::symmetric(10.0, 6.0))
+        .stroke(egui::Stroke::new(1.0, t.border))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new("ANTI-FORENSIC ACTIVITY")
+                        .color(t.muted)
+                        .size(8.5)
+                        .strong(),
+                );
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(
+                        egui::RichText::new(assessment.severity.label())
+                            .color(gauge_color)
+                            .size(9.0)
+                            .strong(),
+                    );
+                });
+            });
+            ui.add_space(2.0);
+
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new(format!("{}/100", assessment.score))
+                        .color(t.text)
+                        .size(14.0)
+                        .strong(),
+                );
+                ui.add_space(8.0);
+
+                let avail_w = ui.available_width().min(200.0);
+                let (rect, _) =
+                    ui.allocate_exact_size(egui::vec2(avail_w, 8.0), egui::Sense::hover());
+                ui.painter().rect_filled(rect, 4.0, t.border);
+                let fill_w = avail_w * (assessment.score as f32 / 100.0);
+                let fill_rect = egui::Rect::from_min_size(rect.min, egui::vec2(fill_w, 8.0));
+                ui.painter().rect_filled(fill_rect, 4.0, gauge_color);
+            });
+            ui.add_space(2.0);
+
+            ui.label(
+                egui::RichText::new(format!(
+                    "{} contributing factor{}",
+                    assessment.factors.len(),
+                    if assessment.factors.len() == 1 { "" } else { "s" }
+                ))
+                .color(t.secondary)
+                .size(9.0),
+            );
+        });
 }

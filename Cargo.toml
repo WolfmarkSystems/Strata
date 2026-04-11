@@ -39,6 +39,7 @@ members = [
     "crates/strata-engine-adapter",
     "crates/strata-csam",
     "crates/strata-charges",
+    "crates/strata-ml-obstruction",
 ]
 
 [workspace.dependencies]

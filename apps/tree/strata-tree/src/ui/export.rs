@@ -581,6 +581,8 @@ pub fn export_case_html(state: &AppState, out_path: &Path) -> Result<()> {
         ));
     }
 
+    let obstruction_section = build_obstruction_html(state);
+
     let wolf_svg = wolf_head_svg_inline();
 
     let html = format!(
@@ -645,6 +647,8 @@ pub fn export_case_html(state: &AppState, out_path: &Path) -> Result<()> {
     <tr><th>Suspicious Events</th><td>{}</td></tr>
   </table>
 
+  {}
+
   <h2>Section 4 - Bookmarked Items</h2>
   <table>
     <tr><th>Tag</th><th>Target</th><th>Note</th><th>Examiner</th></tr>
@@ -704,6 +708,7 @@ pub fn export_case_html(state: &AppState, out_path: &Path) -> Result<()> {
         state.search_results.len(),
         state.timeline_entries.len(),
         state.suspicious_event_count,
+        obstruction_section,
         bookmark_rows,
         search_rows,
         suspicious_rows,
@@ -945,6 +950,60 @@ fn paginate_pdf_lines(
 }
 
 /// Inline SVG wolf head mark for HTML reports.
+fn build_obstruction_html(state: &AppState) -> String {
+    let assessment = match &state.obstruction_assessment {
+        Some(a) if a.score > 0 => a,
+        _ => return String::new(),
+    };
+
+    let severity_color = match assessment.score {
+        0..=20 => "#888",
+        21..=40 => "#5a9068",
+        41..=60 => "#c8855a",
+        61..=80 => "#e07030",
+        _ => "#b85050",
+    };
+
+    let mut factor_rows = String::new();
+    for f in &assessment.factors {
+        let ts = f.timestamp.as_deref().unwrap_or("-");
+        let mult = f
+            .multiplier_applied
+            .as_deref()
+            .unwrap_or("none");
+        factor_rows.push_str(&format!(
+            "<tr><td>+{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+            f.applied_weight,
+            esc(&f.description),
+            esc(&f.artifact_detail),
+            esc(ts),
+            esc(mult),
+        ));
+    }
+
+    format!(
+        r#"<h2>Section 3b - Anti-Forensic Activity Assessment</h2>
+  <div style="border:2px solid {color}; padding:10px; margin:8px 0;">
+    <p><strong>Obstruction Score:</strong> <span style="color:{color}; font-size:18px;">{score}/100</span>
+       &nbsp;&mdash;&nbsp; <span style="color:{color}; font-weight:bold;">{severity}</span></p>
+    <p>{interpretation}</p>
+    <table>
+      <tr><th>Weight</th><th>Factor</th><th>Detail</th><th>Timestamp</th><th>Multiplier</th></tr>
+      {rows}
+    </table>
+    <p style="margin-top:10px; font-size:11px; color:#666; border-top:1px solid #ccc; padding-top:6px;">
+      {advisory}
+    </p>
+  </div>"#,
+        color = severity_color,
+        score = assessment.score,
+        severity = assessment.severity.label(),
+        interpretation = esc(&assessment.interpretation),
+        rows = factor_rows,
+        advisory = esc(&assessment.advisory_notice),
+    )
+}
+
 fn wolf_head_svg_inline() -> &'static str {
     r##"<svg width="40" height="40" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
       <polygon points="4,14 7,3 11,11" fill="#8fa8c0" opacity="0.9"/>
