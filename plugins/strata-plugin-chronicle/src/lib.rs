@@ -739,7 +739,7 @@ impl StrataPlugin for ChroniclePlugin {
                 results.extend(Self::detect_userassist(&entry_path, fn_, &ps));
                 results.extend(Self::detect_recentdocs_detailed(&entry_path, fn_, &ps));
                 results.extend(Self::detect_jumplist(&entry_path, fn_, &ps));
-                if fn_.eq_ignore_ascii_case("NTUSER.DAT") { if let Ok(data) = std::fs::read(&entry_path) { results.extend(Self::parse_ntuser_dat(&entry_path, &data)); } }
+                if fn_.eq_ignore_ascii_case("NTUSER.DAT") { let hive_ok = entry_path.metadata().map(|m| m.len() <= 512 * 1024 * 1024).unwrap_or(false); if hive_ok { if let Ok(data) = std::fs::read(&entry_path) { results.extend(Self::parse_ntuser_dat(&entry_path, &data)); } } }
 
                 // ── v1.1.0: Browser Media History (Chrome / Edge) ────
                 if fn_.eq_ignore_ascii_case("Media History") {
