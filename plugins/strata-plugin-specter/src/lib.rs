@@ -516,14 +516,21 @@ impl SpecterPlugin {
             a.add_field("title", &format!("Snapchat: {}", name));
             results.push(a);
         }
-        // Android backup
+        // Android backup — bounded 15-byte magic check.
+        // ADB backups can be multi-GB; never load the full file.
         if name_lower.ends_with(".ab") {
-            if let Ok(data) = std::fs::read(path) {
-                if data.starts_with(b"ANDROID BACKUP\n") {
+            let file_size = path.metadata().map(|m| m.len()).unwrap_or(0);
+            if let Ok(mut f) = std::fs::File::open(path) {
+                use std::io::Read;
+                let mut magic = [0u8; 15];
+                if f.read_exact(&mut magic).is_ok() && magic.starts_with(b"ANDROID BACKUP\n") {
                     let mut a = Artifact::new("Communications", path_str);
                     a.add_field("subcategory", "Android ADB Backup");
                     a.add_field("title", &format!("ADB Backup: {}", name));
-                    a.add_field("detail", &format!("Android backup file — {} bytes", data.len()));
+                    a.add_field(
+                        "detail",
+                        &format!("Android backup file \u{2014} {} bytes", file_size),
+                    );
                     results.push(a);
                 }
             }
