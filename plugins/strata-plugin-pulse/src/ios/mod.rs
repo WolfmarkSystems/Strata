@@ -32,7 +32,9 @@ pub mod cloudkit;
 pub mod chrome;
 pub mod crashlogs;
 pub mod callhistory;
+pub mod carplay;
 pub mod containermanager;
+pub mod crashreporterdeep;
 pub mod contacts;
 pub mod cookies;
 pub mod datausage;
@@ -41,19 +43,25 @@ pub mod dhcpleases;
 pub mod disneyplus;
 pub mod duetactivity;
 pub mod discord;
+pub mod emergencysos;
 pub mod facebook;
+pub mod facetimedeep;
 pub mod fileprovider;
+pub mod findmy;
+pub mod findmynetwork;
 pub mod firefox;
 pub mod fitbit;
-pub mod findmy;
+pub mod focusmode;
 pub mod googlemaps;
 pub mod health;
 pub mod healthsamples;
 pub mod healthsources;
 pub mod healthworkouts;
 pub mod hinge;
+pub mod homekit;
 pub mod hulu;
 pub mod icloudbackup;
+pub mod imessageattach;
 pub mod instagram;
 pub mod interactionc;
 pub mod itunesstore;
@@ -86,7 +94,9 @@ pub mod restrictions;
 pub mod robinhood;
 pub mod safari;
 pub mod safaritabs;
+pub mod screenrecording;
 pub mod screentime;
+pub mod shortcuts;
 pub mod siminfo;
 pub mod spotlight;
 pub mod spotify;
@@ -451,6 +461,36 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if firefox::matches(path) {
         out.extend(firefox::parse(path));
+    }
+    if carplay::matches(path) {
+        out.extend(carplay::parse(path));
+    }
+    if homekit::matches(path) {
+        out.extend(homekit::parse(path));
+    }
+    if shortcuts::matches(path) {
+        out.extend(shortcuts::parse(path));
+    }
+    if screenrecording::matches(path) {
+        out.extend(screenrecording::parse(path));
+    }
+    if focusmode::matches(path) {
+        out.extend(focusmode::parse(path));
+    }
+    if emergencysos::matches(path) {
+        out.extend(emergencysos::parse(path));
+    }
+    if crashreporterdeep::matches(path) {
+        out.extend(crashreporterdeep::parse(path));
+    }
+    if imessageattach::matches(path) {
+        out.extend(imessageattach::parse(path));
+    }
+    if facetimedeep::matches(path) {
+        out.extend(facetimedeep::parse(path));
+    }
+    if findmynetwork::matches(path) {
+        out.extend(findmynetwork::parse(path));
     }
     out
 }
