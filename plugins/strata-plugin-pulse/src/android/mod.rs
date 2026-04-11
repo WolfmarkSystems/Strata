@@ -44,6 +44,7 @@ pub mod coinbase;
 pub mod contacts;
 pub mod device_info;
 pub mod discord;
+pub mod discord_voice;
 pub mod dji_flight;
 pub mod dmv_app;
 pub mod doordash;
@@ -66,6 +67,7 @@ pub mod google_messages;
 pub mod google_photos;
 pub mod google_play;
 pub mod grubhub;
+pub mod hinge;
 pub mod imo_messenger;
 pub mod installed_apps;
 pub mod instacart;
@@ -74,6 +76,7 @@ pub mod keyboard_cache;
 pub mod life360;
 pub mod line_messenger;
 pub mod linkedin;
+pub mod linkedin_jobs;
 pub mod location_history;
 pub mod lyft;
 pub mod mapmywalk;
@@ -100,6 +103,7 @@ pub mod runkeeper;
 pub mod samsung_health;
 pub mod samsung_notes;
 pub mod samsung_pay;
+pub mod signal_attachments;
 pub mod sim_info;
 pub mod skout;
 pub mod skype;
@@ -117,6 +121,7 @@ pub mod textnow;
 pub mod tiktok;
 pub mod tiktok_live;
 pub mod tiktok_search;
+pub mod tinder;
 pub mod trust_wallet;
 pub mod twitch;
 pub mod twitter;
@@ -784,5 +789,30 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "dmv_app",
         matches_any: dmv_app::MATCHES,
         run: dmv_app::parse,
+    },
+    ParserEntry {
+        name: "signal_attachments",
+        matches_any: signal_attachments::MATCHES,
+        run: signal_attachments::parse,
+    },
+    ParserEntry {
+        name: "linkedin_jobs",
+        matches_any: linkedin_jobs::MATCHES,
+        run: linkedin_jobs::parse,
+    },
+    ParserEntry {
+        name: "discord_voice",
+        matches_any: discord_voice::MATCHES,
+        run: discord_voice::parse,
+    },
+    ParserEntry {
+        name: "tinder",
+        matches_any: tinder::MATCHES,
+        run: tinder::parse,
+    },
+    ParserEntry {
+        name: "hinge",
+        matches_any: hinge::MATCHES,
+        run: hinge::parse,
     },
 ];
