@@ -25,18 +25,26 @@ impl HashSetManager {
     }
 
     /// Load an NSRL RDS hashset (MD5-based, CSV format).
+    ///
+    /// Streams line-by-line via `BufReader` so that 6+ GB NSRL RDS
+    /// files don't OOM the examiner's machine.
     pub fn load_nsrl(&mut self, path: &std::path::Path) -> anyhow::Result<usize> {
-        let content = std::fs::read_to_string(path)?;
+        use std::io::{BufRead, BufReader};
+        let file = std::fs::File::open(path)?;
+        let reader = BufReader::new(file);
         let mut count = 0usize;
 
-        for line in content.lines() {
+        for line_res in reader.lines() {
+            let line = match line_res {
+                Ok(l) => l,
+                Err(_) => break,
+            };
             let trimmed = line.trim();
             if trimmed.is_empty() {
                 continue;
             }
-            if trimmed.to_ascii_lowercase().contains("sha-1")
-                && trimmed.to_ascii_lowercase().contains("md5")
-            {
+            let lower_trimmed = trimmed.to_ascii_lowercase();
+            if lower_trimmed.contains("sha-1") && lower_trimmed.contains("md5") {
                 continue;
             }
 
@@ -72,17 +80,28 @@ impl HashSetManager {
     }
 
     /// Load a custom hash list from text/CSV formats.
+    ///
+    /// Streams line-by-line via `BufReader` to avoid loading multi-GB
+    /// hash sets into a single String. If the CSV parse produces no
+    /// results, a second pass re-opens the file and tries the simpler
+    /// one-hash-per-line fallback.
     pub fn load_custom(&mut self, path: &std::path::Path, category: &str) -> anyhow::Result<usize> {
-        let content = std::fs::read_to_string(path)?;
+        use std::io::{BufRead, BufReader};
+        let file = std::fs::File::open(path)?;
+        let reader = BufReader::new(file);
         let mut count = 0usize;
         let mut header_map: Option<std::collections::HashMap<String, usize>> = None;
 
-        for line in content.lines() {
-            let trimmed = line.trim();
+        for line_res in reader.lines() {
+            let line = match line_res {
+                Ok(l) => l,
+                Err(_) => break,
+            };
+            let trimmed = line.trim().to_string();
             if trimmed.is_empty() {
                 continue;
             }
-            let cols = split_csv_like(trimmed);
+            let cols = split_csv_like(&trimmed);
             if cols.is_empty() {
                 continue;
             }
@@ -133,10 +152,21 @@ impl HashSetManager {
             }
         }
 
-        // Fallback for one-hash-per-line files where CSV splitting returned one field.
+        // Fallback for one-hash-per-line files: re-open and stream a
+        // second time with the simpler parser.
         if count == 0 {
-            for line in content.lines().map(str::trim).filter(|l| !l.is_empty()) {
-                let hash = line.trim_matches('"').to_lowercase();
+            let file2 = std::fs::File::open(path)?;
+            let reader2 = BufReader::new(file2);
+            for line_res in reader2.lines() {
+                let line = match line_res {
+                    Ok(l) => l,
+                    Err(_) => break,
+                };
+                let trimmed = line.trim().to_string();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                let hash = trimmed.trim_matches('"').to_lowercase();
                 if !(is_md5(&hash) || is_sha256(&hash)) {
                     continue;
                 }
