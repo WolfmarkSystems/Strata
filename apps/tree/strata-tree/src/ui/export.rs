@@ -181,9 +181,15 @@ pub fn export_timeline_csv(state: &AppState, out_path: &Path) -> Result<()> {
 
 pub fn export_timeline_json(state: &AppState, out_path: &Path) -> Result<()> {
     guard_output_path(state, out_path)?;
-    let mut rows = Vec::with_capacity(state.timeline_entries.len());
-    for entry in &state.timeline_entries {
-        rows.push(serde_json::json!({
+    // Stream JSON array to disk one entry at a time. The previous
+    // implementation built a Vec<serde_json::Value> for every timeline
+    // entry before serializing — for 20M entries that was ~8 GB.
+    use std::io::Write;
+    let mut out = std::io::BufWriter::new(std::fs::File::create(out_path)?);
+    out.write_all(b"[\n")?;
+    let last = state.timeline_entries.len().saturating_sub(1);
+    for (i, entry) in state.timeline_entries.iter().enumerate() {
+        let row = serde_json::json!({
             "timestamp_utc": entry.timestamp.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             "event_type": event_type_label(&entry.event_type),
             "path": entry.path,
@@ -191,9 +197,15 @@ pub fn export_timeline_json(state: &AppState, out_path: &Path) -> Result<()> {
             "detail": entry.detail,
             "file_id": entry.file_id,
             "suspicious": entry.suspicious,
-        }));
+        });
+        serde_json::to_writer_pretty(&mut out, &row)?;
+        if i < last {
+            out.write_all(b",")?;
+        }
+        out.write_all(b"\n")?;
     }
-    std::fs::write(out_path, serde_json::to_string_pretty(&rows)?)?;
+    out.write_all(b"]\n")?;
+    out.flush()?;
     Ok(())
 }
 
