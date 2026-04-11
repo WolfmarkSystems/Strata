@@ -19,6 +19,7 @@ pub mod apppermissions;
 pub mod appstate;
 pub mod biome;
 pub mod bluetooth;
+pub mod bumble;
 pub mod calendar;
 pub mod cashapp;
 pub mod cellular;
@@ -39,6 +40,7 @@ pub mod fileprovider;
 pub mod findmy;
 pub mod googlemaps;
 pub mod health;
+pub mod hinge;
 pub mod healthworkouts;
 pub mod icloudbackup;
 pub mod instagram;
@@ -48,6 +50,7 @@ pub mod keyboard;
 pub mod kik;
 pub mod knowledgec;
 pub mod line;
+pub mod linkedin;
 pub mod location;
 pub mod mail;
 pub mod medialibrary;
@@ -59,6 +62,7 @@ pub mod notes;
 pub mod notifications;
 pub mod photoanalysis;
 pub mod photos;
+pub mod protonmail;
 pub mod podcasts;
 pub mod powerlog;
 pub mod reddit;
@@ -72,13 +76,17 @@ pub mod spotlight;
 pub mod spotify;
 pub mod shutdownlog;
 pub mod signal;
+pub mod skype;
+pub mod slack;
 pub mod sms;
 pub mod snapchat;
 pub mod telegram;
 pub mod tiktok;
 pub mod tinder;
 pub mod tcc;
+pub mod teams;
 pub mod textreplacement;
+pub mod threema;
 pub mod twitter;
 pub mod viber;
 pub mod uber;
@@ -92,6 +100,7 @@ pub mod wechat;
 pub mod whatsapp;
 pub mod wifi;
 pub mod youtube;
+pub mod zoom;
 
 /// Run every registered parser against a single path. Parsers whose
 /// `matches()` returns `false` are skipped. Parsers that match but find
@@ -343,6 +352,33 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if datausage::matches(path) {
         out.extend(datausage::parse(path));
+    }
+    if bumble::matches(path) {
+        out.extend(bumble::parse(path));
+    }
+    if hinge::matches(path) {
+        out.extend(hinge::parse(path));
+    }
+    if slack::matches(path) {
+        out.extend(slack::parse(path));
+    }
+    if teams::matches(path) {
+        out.extend(teams::parse(path));
+    }
+    if zoom::matches(path) {
+        out.extend(zoom::parse(path));
+    }
+    if linkedin::matches(path) {
+        out.extend(linkedin::parse(path));
+    }
+    if skype::matches(path) {
+        out.extend(skype::parse(path));
+    }
+    if threema::matches(path) {
+        out.extend(threema::parse(path));
+    }
+    if protonmail::matches(path) {
+        out.extend(protonmail::parse(path));
     }
     out
 }
