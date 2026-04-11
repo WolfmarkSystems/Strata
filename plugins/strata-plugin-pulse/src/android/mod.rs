@@ -14,6 +14,7 @@ pub mod walker;
 
 // Individual parsers — one module per ALEAPP-equivalent artifact.
 pub mod accounts_google;
+pub mod adidas_running;
 pub mod app_usage;
 pub mod bluetooth;
 pub mod browser_history;
@@ -35,6 +36,10 @@ pub mod facebook_messenger;
 pub mod factory_reset;
 pub mod firefox;
 pub mod firefox_cookies;
+pub mod fitbit;
+pub mod garmin_activities;
+pub mod garmin_dailies;
+pub mod garmin_sleep;
 pub mod gmail;
 pub mod google_calendar_events;
 pub mod google_chrome;
@@ -48,14 +53,19 @@ pub mod installed_apps;
 pub mod keyboard_cache;
 pub mod line_messenger;
 pub mod location_history;
+pub mod nike_activities;
+pub mod nike_moments;
 pub mod notifications;
 pub mod permissions;
+pub mod puma_trac;
 pub mod recent_activity;
+pub mod runkeeper;
 pub mod samsung_notes;
 pub mod sim_info;
 pub mod skype;
 pub mod sms;
 pub mod snapchat;
+pub mod strava;
 pub mod telegram;
 pub mod textnow;
 pub mod tiktok;
@@ -364,5 +374,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "twitter",
         matches_any: twitter::MATCHES,
         run: twitter::parse,
+    },
+    ParserEntry {
+        name: "garmin_activities",
+        matches_any: garmin_activities::MATCHES,
+        run: garmin_activities::parse,
+    },
+    ParserEntry {
+        name: "garmin_dailies",
+        matches_any: garmin_dailies::MATCHES,
+        run: garmin_dailies::parse,
+    },
+    ParserEntry {
+        name: "garmin_sleep",
+        matches_any: garmin_sleep::MATCHES,
+        run: garmin_sleep::parse,
+    },
+    ParserEntry {
+        name: "nike_activities",
+        matches_any: nike_activities::MATCHES,
+        run: nike_activities::parse,
+    },
+    ParserEntry {
+        name: "nike_moments",
+        matches_any: nike_moments::MATCHES,
+        run: nike_moments::parse,
+    },
+    ParserEntry {
+        name: "strava",
+        matches_any: strava::MATCHES,
+        run: strava::parse,
+    },
+    ParserEntry {
+        name: "adidas_running",
+        matches_any: adidas_running::MATCHES,
+        run: adidas_running::parse,
+    },
+    ParserEntry {
+        name: "puma_trac",
+        matches_any: puma_trac::MATCHES,
+        run: puma_trac::parse,
+    },
+    ParserEntry {
+        name: "runkeeper",
+        matches_any: runkeeper::MATCHES,
+        run: runkeeper::parse,
+    },
+    ParserEntry {
+        name: "fitbit",
+        matches_any: fitbit::MATCHES,
+        run: fitbit::parse,
     },
 ];
