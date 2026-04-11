@@ -492,9 +492,17 @@ fn render_shellbags_section(
 }
 
 fn parse_shellbags_from_path(path: &str, alias: &str) -> Result<Vec<ShellbagEntry>, String> {
+    const MAX_HIVE_BYTES: u64 = 512 * 1024 * 1024;
     let pb = PathBuf::from(path);
     if !pb.exists() {
         return Err(format!("Hive not found: {}", path));
+    }
+    let file_size = pb.metadata().map(|m| m.len()).unwrap_or(0);
+    if file_size > MAX_HIVE_BYTES {
+        return Err(format!(
+            "Hive too large ({} bytes, max {})",
+            file_size, MAX_HIVE_BYTES
+        ));
     }
 
     let mut data = Vec::new();
@@ -759,9 +767,17 @@ fn load_hive_from_path(panel: &mut RegistryPanelState, path: &str, state: &mut A
 }
 
 fn parse_hive(path: &str, alias: &str) -> Result<LoadedHive, String> {
+    const MAX_HIVE_BYTES: u64 = 512 * 1024 * 1024;
     let pb = PathBuf::from(path);
     if !pb.exists() {
         return Err(format!("Hive file not found: {}", path));
+    }
+    let file_size = pb.metadata().map(|m| m.len()).unwrap_or(0);
+    if file_size > MAX_HIVE_BYTES {
+        return Err(format!(
+            "Hive too large ({} bytes, max {})",
+            file_size, MAX_HIVE_BYTES
+        ));
     }
 
     let mut data = Vec::new();
