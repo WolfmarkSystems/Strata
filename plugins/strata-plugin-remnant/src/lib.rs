@@ -977,15 +977,25 @@ impl StrataPlugin for RemnantPlugin {
                 for entry in entries.flatten() {
                     let path = entry.path();
                     if path.is_file() {
-                        if let Ok(data) = std::fs::read(&path) {
-                            if data.len() >= 4 {
+                        // Bounded read: only load up to 64 KB for signature
+                        // matching + content analysis. File size comes from
+                        // metadata — never load the full file (OOM on multi-GB
+                        // evidence images sitting in the root directory).
+                        let file_size = path.metadata().map(|m| m.len()).unwrap_or(0);
+                        let Ok(mut f) = std::fs::File::open(&path) else { continue };
+                        use std::io::Read;
+                        let cap = (file_size as usize).min(65536);
+                        let mut buf = vec![0u8; cap];
+                        let n = f.read(&mut buf).unwrap_or(0);
+                        let data = &buf[..n];
+                        if data.len() >= 4 {
                                 for sig in &signatures::get_default_signatures() {
                                     if data.starts_with(&sig.header) {
                                         let mut artifact =
                                             Artifact::new("Carved Files", &path.to_string_lossy());
                                         artifact.add_field("file_type", &sig.name);
                                         artifact.add_field("extension", &sig.extension);
-                                        artifact.add_field("size", &data.len().to_string());
+                                        artifact.add_field("size", &file_size.to_string());
                                         artifact.add_field(
                                             "title",
                                             &format!("Carved: {} ({})", sig.name, sig.extension),
@@ -994,19 +1004,19 @@ impl StrataPlugin for RemnantPlugin {
                                         // ── Content analysis based on file type ──
                                         let analysis = match sig.name.as_str() {
                                             "PE Executable" => {
-                                                Self::analyze_pe(&data)
+                                                Self::analyze_pe(data)
                                             }
                                             "SQLite Database" => {
                                                 Self::analyze_sqlite(
-                                                    &data,
+                                                    data,
                                                     &path.to_string_lossy(),
                                                 )
                                             }
                                             "JPEG" | "TIFF LE" | "TIFF BE" => {
-                                                Self::analyze_image_exif(&data)
+                                                Self::analyze_image_exif(data)
                                             }
                                             "LNK Shortcut" => {
-                                                Self::analyze_lnk(&data)
+                                                Self::analyze_lnk(data)
                                             }
                                             _ => serde_json::Value::Null,
                                         };
@@ -1042,7 +1052,7 @@ impl StrataPlugin for RemnantPlugin {
                                     && file_name.starts_with("$I")
                                 {
                                     results
-                                        .extend(Self::parse_recycle_bin_entry(&path_str, &data));
+                                        .extend(Self::parse_recycle_bin_entry(&path_str, data));
                                 }
 
                                 // Anti-forensic tool detection
@@ -1055,7 +1065,7 @@ impl StrataPlugin for RemnantPlugin {
                                 // SQLite WAL recovery
                                 if file_name.ends_with("-wal") {
                                     if let Some(wal_artifact) =
-                                        Self::detect_sqlite_wal(&path_str, &file_name, &data)
+                                        Self::detect_sqlite_wal(&path_str, &file_name, data)
                                     {
                                         results.push(wal_artifact);
                                     }
@@ -1070,13 +1080,13 @@ impl StrataPlugin for RemnantPlugin {
                                     || lower_file_name == "$usnjrnl"
                                     || path_str.to_lowercase().contains("$extend/$usnjrnl")
                                 {
-                                    results.extend(Self::parse_usnjrnl_records(&data));
+                                    results.extend(Self::parse_usnjrnl_records(data));
                                 }
 
                                 // ── v1.1.0: Windows Search index (ESE) ────
                                 if lower_file_name == "windows.edb" {
                                     results.extend(Self::detect_windows_search_edb(
-                                        &path_str, &data,
+                                        &path_str, data,
                                     ));
                                 }
 
@@ -1085,11 +1095,10 @@ impl StrataPlugin for RemnantPlugin {
                                     && path_str.to_lowercase().contains("notepad++")
                                 {
                                     results.extend(Self::parse_notepadpp_session(
-                                        &path_str, &data,
+                                        &path_str, data,
                                     ));
                                 }
                             }
-                        }
                     }
                 }
             }
