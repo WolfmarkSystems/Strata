@@ -16,9 +16,11 @@ pub mod aggregate;
 pub mod airdrop;
 pub mod alltrails;
 pub mod appinstall;
+pub mod appclips;
 pub mod appletv;
 pub mod apppermissions;
 pub mod appstate;
+pub mod backgroundtasks;
 pub mod biome;
 pub mod bluetooth;
 pub mod bumble;
@@ -39,6 +41,7 @@ pub mod contacts;
 pub mod cookies;
 pub mod datausage;
 pub mod deviceinfo;
+pub mod devicelock;
 pub mod dhcpleases;
 pub mod disneyplus;
 pub mod duetactivity;
@@ -56,11 +59,13 @@ pub mod googlemaps;
 pub mod health;
 pub mod healthsamples;
 pub mod healthsources;
+pub mod healthecg;
 pub mod healthworkouts;
 pub mod hinge;
 pub mod homekit;
 pub mod hulu;
 pub mod icloudbackup;
+pub mod icloudtabs;
 pub mod imessageattach;
 pub mod instagram;
 pub mod interactionc;
@@ -73,6 +78,8 @@ pub mod linkedin;
 pub mod location;
 pub mod lyft;
 pub mod mail;
+pub mod mailattach;
+pub mod managedconfig;
 pub mod medialibrary;
 pub mod maps;
 pub mod mobileactivation;
@@ -93,10 +100,12 @@ pub mod reminders;
 pub mod restrictions;
 pub mod robinhood;
 pub mod safari;
+pub mod safarisearches;
 pub mod safaritabs;
 pub mod screenrecording;
 pub mod screentime;
 pub mod shortcuts;
+pub mod siri;
 pub mod siminfo;
 pub mod spotlight;
 pub mod spotify;
@@ -126,7 +135,9 @@ pub mod webclips;
 pub mod waze;
 pub mod wechat;
 pub mod whatsapp;
+pub mod widgetkit;
 pub mod wifi;
+pub mod wifigeo;
 pub mod youtube;
 pub mod zoom;
 
@@ -491,6 +502,39 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if findmynetwork::matches(path) {
         out.extend(findmynetwork::parse(path));
+    }
+    if siri::matches(path) {
+        out.extend(siri::parse(path));
+    }
+    if wifigeo::matches(path) {
+        out.extend(wifigeo::parse(path));
+    }
+    if safarisearches::matches(path) {
+        out.extend(safarisearches::parse(path));
+    }
+    if icloudtabs::matches(path) {
+        out.extend(icloudtabs::parse(path));
+    }
+    if healthecg::matches(path) {
+        out.extend(healthecg::parse(path));
+    }
+    if managedconfig::matches(path) {
+        out.extend(managedconfig::parse(path));
+    }
+    if devicelock::matches(path) {
+        out.extend(devicelock::parse(path));
+    }
+    if mailattach::matches(path) {
+        out.extend(mailattach::parse(path));
+    }
+    if appclips::matches(path) {
+        out.extend(appclips::parse(path));
+    }
+    if widgetkit::matches(path) {
+        out.extend(widgetkit::parse(path));
+    }
+    if backgroundtasks::matches(path) {
+        out.extend(backgroundtasks::parse(path));
     }
     out
 }
