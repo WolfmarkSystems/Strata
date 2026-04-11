@@ -18,6 +18,7 @@ pub mod adidas_running;
 pub mod amazon_shopping;
 pub mod app_usage;
 pub mod badoo;
+pub mod bereal;
 pub mod bitcoin_wallet;
 pub mod bluetooth;
 pub mod browser_history;
@@ -81,9 +82,11 @@ pub mod nike_moments;
 pub mod notifications;
 pub mod oruxmaps;
 pub mod permissions;
+pub mod pinterest;
 pub mod puma_trac;
 pub mod randochat;
 pub mod recent_activity;
+pub mod reddit;
 pub mod robinhood;
 pub mod romeo;
 pub mod runkeeper;
@@ -97,13 +100,20 @@ pub mod slopes;
 pub mod smartthings;
 pub mod sms;
 pub mod snapchat;
+pub mod snapchat_memories;
+pub mod snapchat_stories;
 pub mod speedtest;
 pub mod strava;
 pub mod telegram;
+pub mod telegram_channels;
 pub mod textnow;
 pub mod tiktok;
+pub mod tiktok_live;
+pub mod tiktok_search;
 pub mod trust_wallet;
+pub mod twitch;
 pub mod twitter;
+pub mod twitter_spaces;
 pub mod uber;
 pub mod uber_eats;
 pub mod usage_stats;
@@ -664,5 +674,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "instacart",
         matches_any: instacart::MATCHES,
         run: instacart::parse,
+    },
+    ParserEntry {
+        name: "snapchat_stories",
+        matches_any: snapchat_stories::MATCHES,
+        run: snapchat_stories::parse,
+    },
+    ParserEntry {
+        name: "snapchat_memories",
+        matches_any: snapchat_memories::MATCHES,
+        run: snapchat_memories::parse,
+    },
+    ParserEntry {
+        name: "bereal",
+        matches_any: bereal::MATCHES,
+        run: bereal::parse,
+    },
+    ParserEntry {
+        name: "telegram_channels",
+        matches_any: telegram_channels::MATCHES,
+        run: telegram_channels::parse,
+    },
+    ParserEntry {
+        name: "tiktok_search",
+        matches_any: tiktok_search::MATCHES,
+        run: tiktok_search::parse,
+    },
+    ParserEntry {
+        name: "tiktok_live",
+        matches_any: tiktok_live::MATCHES,
+        run: tiktok_live::parse,
+    },
+    ParserEntry {
+        name: "reddit",
+        matches_any: reddit::MATCHES,
+        run: reddit::parse,
+    },
+    ParserEntry {
+        name: "twitter_spaces",
+        matches_any: twitter_spaces::MATCHES,
+        run: twitter_spaces::parse,
+    },
+    ParserEntry {
+        name: "pinterest",
+        matches_any: pinterest::MATCHES,
+        run: pinterest::parse,
+    },
+    ParserEntry {
+        name: "twitch",
+        matches_any: twitch::MATCHES,
+        run: twitch::parse,
     },
 ];
