@@ -22,23 +22,28 @@ pub mod bluetooth;
 pub mod calendar;
 pub mod cashapp;
 pub mod cellular;
+pub mod cloudkit;
 pub mod chrome;
 pub mod crashlogs;
 pub mod callhistory;
 pub mod containermanager;
 pub mod contacts;
 pub mod cookies;
+pub mod datausage;
 pub mod deviceinfo;
 pub mod dhcpleases;
 pub mod duetactivity;
 pub mod discord;
 pub mod facebook;
+pub mod fileprovider;
 pub mod findmy;
 pub mod googlemaps;
 pub mod health;
+pub mod healthworkouts;
 pub mod icloudbackup;
 pub mod instagram;
 pub mod interactionc;
+pub mod itunesstore;
 pub mod keyboard;
 pub mod kik;
 pub mod knowledgec;
@@ -47,14 +52,18 @@ pub mod location;
 pub mod mail;
 pub mod medialibrary;
 pub mod maps;
+pub mod mobileactivation;
+pub mod mobilebackup;
 pub mod netflix;
 pub mod notes;
 pub mod notifications;
+pub mod photoanalysis;
 pub mod photos;
 pub mod podcasts;
 pub mod powerlog;
 pub mod reddit;
 pub mod reminders;
+pub mod restrictions;
 pub mod safari;
 pub mod safaritabs;
 pub mod screentime;
@@ -307,6 +316,33 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if accessibility::matches(path) {
         out.extend(accessibility::parse(path));
+    }
+    if photoanalysis::matches(path) {
+        out.extend(photoanalysis::parse(path));
+    }
+    if fileprovider::matches(path) {
+        out.extend(fileprovider::parse(path));
+    }
+    if cloudkit::matches(path) {
+        out.extend(cloudkit::parse(path));
+    }
+    if mobileactivation::matches(path) {
+        out.extend(mobileactivation::parse(path));
+    }
+    if restrictions::matches(path) {
+        out.extend(restrictions::parse(path));
+    }
+    if itunesstore::matches(path) {
+        out.extend(itunesstore::parse(path));
+    }
+    if mobilebackup::matches(path) {
+        out.extend(mobilebackup::parse(path));
+    }
+    if healthworkouts::matches(path) {
+        out.extend(healthworkouts::parse(path));
+    }
+    if datausage::matches(path) {
+        out.extend(datausage::parse(path));
     }
     out
 }
