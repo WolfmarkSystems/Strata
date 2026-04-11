@@ -136,6 +136,31 @@ fn walk(
 
 /// Convert strata-fs VfsEntry records to FileEntry and send them in batches.
 /// Returns the number of non-directory files sent. Does NOT send Done.
+/// Maximum number of VFS entries to hold in memory at once during
+/// streaming enumeration. The full Vec is consumed in chunks of this
+/// size so memory can be released progressively.
+const VFS_DRAIN_BATCH: usize = 10_000;
+
+/// Consume a VFS entry Vec in batches, converting and sending over the
+/// channel. The input Vec is taken by value and drained in chunks of
+/// `VFS_DRAIN_BATCH` so peak memory stays bounded even on volumes with
+/// millions of files.
+pub fn send_vfs_entries_streaming(
+    mut entries: Vec<strata_fs::virtualization::VfsEntry>,
+    evidence_id: &str,
+    tx: &Sender<IndexBatch>,
+    fs_label: &str,
+) -> u64 {
+    let mut total = 0u64;
+    while !entries.is_empty() {
+        let drain_end = VFS_DRAIN_BATCH.min(entries.len());
+        let chunk: Vec<_> = entries.drain(..drain_end).collect();
+        total += send_vfs_entries_count(&chunk, evidence_id, tx, fs_label);
+    }
+    // After drain, the Vec is empty; dropping it releases the allocation.
+    total
+}
+
 pub fn send_vfs_entries_count(
     entries: &[strata_fs::virtualization::VfsEntry],
     evidence_id: &str,

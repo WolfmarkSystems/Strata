@@ -2,6 +2,7 @@
 // Full implementation in Task 1.6.
 
 use std::collections::HashSet;
+use std::io::{BufRead, BufReader};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum HashMatch {
@@ -25,11 +26,15 @@ impl HashSetManager {
     }
 
     /// Load an NSRL RDS hashset (MD5-based, CSV format).
+    ///
+    /// Streams line-by-line via `BufReader` — safe for 6 GB+ NSRL files.
     pub fn load_nsrl(&mut self, path: &std::path::Path) -> anyhow::Result<usize> {
-        let content = std::fs::read_to_string(path)?;
+        let file = std::fs::File::open(path)?;
+        let reader = BufReader::new(file);
         let mut count = 0usize;
 
-        for line in content.lines() {
+        for line_result in reader.lines() {
+            let line = line_result?;
             let trimmed = line.trim();
             if trimmed.is_empty() {
                 continue;
@@ -72,17 +77,21 @@ impl HashSetManager {
     }
 
     /// Load a custom hash list from text/CSV formats.
+    ///
+    /// Streams line-by-line via `BufReader` — safe for arbitrarily large files.
     pub fn load_custom(&mut self, path: &std::path::Path, category: &str) -> anyhow::Result<usize> {
-        let content = std::fs::read_to_string(path)?;
+        let file = std::fs::File::open(path)?;
+        let reader = BufReader::new(file);
         let mut count = 0usize;
         let mut header_map: Option<std::collections::HashMap<String, usize>> = None;
 
-        for line in content.lines() {
-            let trimmed = line.trim();
+        for line_result in reader.lines() {
+            let line = line_result?;
+            let trimmed = line.trim().to_string();
             if trimmed.is_empty() {
                 continue;
             }
-            let cols = split_csv_like(trimmed);
+            let cols = split_csv_like(&trimmed);
             if cols.is_empty() {
                 continue;
             }
@@ -121,29 +130,21 @@ impl HashSetManager {
                 }
             }
 
+            // Fallback: if CSV splitting found no hash columns, try the
+            // whole trimmed line as a bare hash. This handles one-hash-per-line
+            // files in a single pass (no re-read needed).
+            if hashes.is_empty() {
+                let bare = trimmed.trim_matches('"').to_lowercase();
+                if is_md5(&bare) || is_sha256(&bare) {
+                    hashes.push(bare);
+                }
+            }
+
             for h in hashes {
                 let inserted = match category {
                     "KnownGood" => self.known_good.insert(h),
                     "KnownBad" => self.known_bad.insert(h),
                     _ => self.notable.insert(h),
-                };
-                if inserted {
-                    count += 1;
-                }
-            }
-        }
-
-        // Fallback for one-hash-per-line files where CSV splitting returned one field.
-        if count == 0 {
-            for line in content.lines().map(str::trim).filter(|l| !l.is_empty()) {
-                let hash = line.trim_matches('"').to_lowercase();
-                if !(is_md5(&hash) || is_sha256(&hash)) {
-                    continue;
-                }
-                let inserted = match category {
-                    "KnownGood" => self.known_good.insert(hash),
-                    "KnownBad" => self.known_bad.insert(hash),
-                    _ => self.notable.insert(hash),
                 };
                 if inserted {
                     count += 1;
