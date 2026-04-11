@@ -402,14 +402,19 @@ impl VectorPlugin {
             .unwrap_or("");
         let ext_lower = ext.to_lowercase();
 
-        // PE analysis for .exe/.dll
+        // PE analysis for .exe/.dll — bounded 64 KB read.
+        // Only the PE header (first 4 KB) and malware strings (first
+        // 64 KB) are examined. Never load the full file — chrome.dll
+        // alone is ~200 MB and would OOM on large evidence images.
         if ext_lower == "exe" || ext_lower == "dll" {
-            if let Ok(data) = std::fs::read(path) {
+            if let Ok(mut f) = std::fs::File::open(path) {
+                use std::io::Read;
+                let mut buf = [0u8; 65536];
+                let n = f.read(&mut buf).unwrap_or(0);
+                let data = &buf[..n];
                 let read_len = data.len().min(4096);
                 results.extend(Self::analyze_pe(path, name, &data[..read_len]));
-                // Also scan for malware strings in first 64KB
-                let malware_len = data.len().min(65536);
-                results.extend(Self::scan_for_malware_strings(path, name, &data[..malware_len]));
+                results.extend(Self::scan_for_malware_strings(path, name, data));
             }
         }
 
