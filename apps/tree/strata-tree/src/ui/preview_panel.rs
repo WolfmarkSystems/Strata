@@ -562,6 +562,22 @@ fn render_image_preview(
         );
         return;
     }
+    // Size gate: refuse to decode images >20 MB to prevent OOM.
+    // A crafted large TIFF could allocate hundreds of MB for the
+    // decoded RGBA bitmap on top of the raw file bytes.
+    const MAX_IMAGE_PREVIEW_BYTES: u64 = 20 * 1024 * 1024;
+    if f.size.unwrap_or(0) > MAX_IMAGE_PREVIEW_BYTES {
+        ui.label(
+            egui::RichText::new(format!(
+                "Image too large for preview ({} bytes, max {} MB). Use an external viewer.",
+                f.size.unwrap_or(0),
+                MAX_IMAGE_PREVIEW_BYTES / (1024 * 1024)
+            ))
+            .color(t.muted)
+            .size(9.5),
+        );
+        return;
+    }
     let data = match read_all(state, f) {
         Ok(d) => d,
         Err(_) => {
