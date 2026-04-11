@@ -14,14 +14,19 @@ pub mod accessibility;
 pub mod accounts;
 pub mod aggregate;
 pub mod airdrop;
+pub mod alltrails;
 pub mod appinstall;
+pub mod appletv;
 pub mod apppermissions;
 pub mod appstate;
 pub mod biome;
 pub mod bluetooth;
 pub mod bumble;
 pub mod calendar;
+pub mod candycrush;
 pub mod cashapp;
+pub mod clashofclans;
+pub mod coinbase;
 pub mod cellular;
 pub mod cloudkit;
 pub mod chrome;
@@ -33,15 +38,21 @@ pub mod cookies;
 pub mod datausage;
 pub mod deviceinfo;
 pub mod dhcpleases;
+pub mod disneyplus;
 pub mod duetactivity;
 pub mod discord;
 pub mod facebook;
 pub mod fileprovider;
+pub mod firefox;
+pub mod fitbit;
 pub mod findmy;
 pub mod googlemaps;
 pub mod health;
-pub mod hinge;
+pub mod healthsamples;
+pub mod healthsources;
 pub mod healthworkouts;
+pub mod hinge;
+pub mod hulu;
 pub mod icloudbackup;
 pub mod instagram;
 pub mod interactionc;
@@ -52,6 +63,7 @@ pub mod knowledgec;
 pub mod line;
 pub mod linkedin;
 pub mod location;
+pub mod lyft;
 pub mod mail;
 pub mod medialibrary;
 pub mod maps;
@@ -60,20 +72,25 @@ pub mod mobilebackup;
 pub mod netflix;
 pub mod notes;
 pub mod notifications;
+pub mod amazonprime;
 pub mod photoanalysis;
 pub mod photos;
+pub mod pinterest;
+pub mod pokemongo;
 pub mod protonmail;
 pub mod podcasts;
 pub mod powerlog;
 pub mod reddit;
 pub mod reminders;
 pub mod restrictions;
+pub mod robinhood;
 pub mod safari;
 pub mod safaritabs;
 pub mod screentime;
 pub mod siminfo;
 pub mod spotlight;
 pub mod spotify;
+pub mod strava;
 pub mod shutdownlog;
 pub mod signal;
 pub mod skype;
@@ -87,6 +104,7 @@ pub mod tcc;
 pub mod teams;
 pub mod textreplacement;
 pub mod threema;
+pub mod twitch;
 pub mod twitter;
 pub mod viber;
 pub mod uber;
@@ -379,6 +397,60 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if protonmail::matches(path) {
         out.extend(protonmail::parse(path));
+    }
+    if pokemongo::matches(path) {
+        out.extend(pokemongo::parse(path));
+    }
+    if clashofclans::matches(path) {
+        out.extend(clashofclans::parse(path));
+    }
+    if candycrush::matches(path) {
+        out.extend(candycrush::parse(path));
+    }
+    if robinhood::matches(path) {
+        out.extend(robinhood::parse(path));
+    }
+    if coinbase::matches(path) {
+        out.extend(coinbase::parse(path));
+    }
+    if hulu::matches(path) {
+        out.extend(hulu::parse(path));
+    }
+    if disneyplus::matches(path) {
+        out.extend(disneyplus::parse(path));
+    }
+    if amazonprime::matches(path) {
+        out.extend(amazonprime::parse(path));
+    }
+    if twitch::matches(path) {
+        out.extend(twitch::parse(path));
+    }
+    if healthsamples::matches(path) {
+        out.extend(healthsamples::parse(path));
+    }
+    if healthsources::matches(path) {
+        out.extend(healthsources::parse(path));
+    }
+    if fitbit::matches(path) {
+        out.extend(fitbit::parse(path));
+    }
+    if strava::matches(path) {
+        out.extend(strava::parse(path));
+    }
+    if alltrails::matches(path) {
+        out.extend(alltrails::parse(path));
+    }
+    if appletv::matches(path) {
+        out.extend(appletv::parse(path));
+    }
+    if lyft::matches(path) {
+        out.extend(lyft::parse(path));
+    }
+    if pinterest::matches(path) {
+        out.extend(pinterest::parse(path));
+    }
+    if firefox::matches(path) {
+        out.extend(firefox::parse(path));
     }
     out
 }
