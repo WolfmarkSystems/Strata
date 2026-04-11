@@ -37,6 +37,7 @@ members = [
     "plugins/strata-plugin-csam",
     "crates/strata-engine-adapter",
     "crates/strata-csam",
+    "crates/strata-charges",
 ]
 
 [workspace.dependencies]
