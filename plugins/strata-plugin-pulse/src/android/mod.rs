@@ -15,6 +15,7 @@ pub mod walker;
 // Individual parsers — one module per ALEAPP-equivalent artifact.
 pub mod accounts_google;
 pub mod adidas_running;
+pub mod amazon_shopping;
 pub mod app_usage;
 pub mod badoo;
 pub mod bitcoin_wallet;
@@ -40,6 +41,8 @@ pub mod contacts;
 pub mod device_info;
 pub mod discord;
 pub mod dji_flight;
+pub mod doordash;
+pub mod ebay;
 pub mod facebook_messenger;
 pub mod factory_reset;
 pub mod firefox;
@@ -57,13 +60,16 @@ pub mod google_maps;
 pub mod google_messages;
 pub mod google_photos;
 pub mod google_play;
+pub mod grubhub;
 pub mod imo_messenger;
 pub mod installed_apps;
+pub mod instacart;
 pub mod keyboard_cache;
 pub mod life360;
 pub mod line_messenger;
 pub mod linkedin;
 pub mod location_history;
+pub mod lyft;
 pub mod mapmywalk;
 pub mod meetme;
 pub mod mega_chat;
@@ -78,6 +84,7 @@ pub mod permissions;
 pub mod puma_trac;
 pub mod randochat;
 pub mod recent_activity;
+pub mod robinhood;
 pub mod romeo;
 pub mod runkeeper;
 pub mod samsung_health;
@@ -97,7 +104,10 @@ pub mod textnow;
 pub mod tiktok;
 pub mod trust_wallet;
 pub mod twitter;
+pub mod uber;
+pub mod uber_eats;
 pub mod usage_stats;
+pub mod venmo;
 pub mod viber;
 pub mod vlc_media;
 pub mod waze;
@@ -604,5 +614,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "dji_flight",
         matches_any: dji_flight::MATCHES,
         run: dji_flight::parse,
+    },
+    ParserEntry {
+        name: "amazon_shopping",
+        matches_any: amazon_shopping::MATCHES,
+        run: amazon_shopping::parse,
+    },
+    ParserEntry {
+        name: "ebay",
+        matches_any: ebay::MATCHES,
+        run: ebay::parse,
+    },
+    ParserEntry {
+        name: "uber",
+        matches_any: uber::MATCHES,
+        run: uber::parse,
+    },
+    ParserEntry {
+        name: "uber_eats",
+        matches_any: uber_eats::MATCHES,
+        run: uber_eats::parse,
+    },
+    ParserEntry {
+        name: "doordash",
+        matches_any: doordash::MATCHES,
+        run: doordash::parse,
+    },
+    ParserEntry {
+        name: "lyft",
+        matches_any: lyft::MATCHES,
+        run: lyft::parse,
+    },
+    ParserEntry {
+        name: "grubhub",
+        matches_any: grubhub::MATCHES,
+        run: grubhub::parse,
+    },
+    ParserEntry {
+        name: "venmo",
+        matches_any: venmo::MATCHES,
+        run: venmo::parse,
+    },
+    ParserEntry {
+        name: "robinhood",
+        matches_any: robinhood::MATCHES,
+        run: robinhood::parse,
+    },
+    ParserEntry {
+        name: "instacart",
+        matches_any: instacart::MATCHES,
+        run: instacart::parse,
     },
 ];
