@@ -389,6 +389,13 @@ pub struct AppState {
     pub case: Option<ActiveCase>,
     pub examiner_name: String,
 
+    // ── Charges (Gov/Mil only) ──
+    pub selected_charges: strata_charges::SelectedCharges,
+    pub charge_highlight_map: strata_charges::ChargeHighlightMap,
+    pub charge_search_query: String,
+    pub charge_search_results: Vec<strata_charges::ChargeEntry>,
+    pub charge_db: Option<strata_charges::ChargeDatabase>,
+
     // ── Evidence ──
     pub evidence_sources: Vec<EvidenceSource>,
     pub vfs_context: Option<std::sync::Arc<crate::evidence::vfs_context::VfsReadContext>>,
@@ -619,6 +626,11 @@ impl Default for AppState {
         Self {
             case: None,
             examiner_name: "Unidentified Examiner".to_string(),
+            selected_charges: strata_charges::SelectedCharges::default(),
+            charge_highlight_map: strata_charges::ChargeHighlightMap::default(),
+            charge_search_query: String::new(),
+            charge_search_results: Vec::new(),
+            charge_db: None,
             evidence_sources: Vec::new(),
             vfs_context: None,
             file_index: Vec::new(),
@@ -779,6 +791,64 @@ impl Default for AppState {
 impl AppState {
     pub fn has_feature(&self, feature: &str) -> bool {
         self.license_state.has_feature(feature)
+    }
+
+    /// Returns true if the current license tier includes charge tracking.
+    /// Gov/Mil (.gov/.mil Free tier) always has access; commercial tiers
+    /// do not.
+    pub fn charges_available(&self) -> bool {
+        self.license_state.has_feature("charges")
+    }
+
+    /// Add a charge to the current case and recalculate highlights.
+    pub fn add_charge(&mut self, charge: strata_charges::ChargeEntry) {
+        if self
+            .selected_charges
+            .charges
+            .iter()
+            .any(|c| c.citation == charge.citation)
+        {
+            return;
+        }
+        self.selected_charges.charges.push(charge);
+        self.selected_charges.selected_at =
+            chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        self.charge_highlight_map =
+            strata_charges::ChargeHighlightMap::from_selected(&self.selected_charges.charges);
+    }
+
+    /// Remove a charge from the current case by citation and recalculate highlights.
+    pub fn remove_charge(&mut self, citation: &str) {
+        self.selected_charges
+            .charges
+            .retain(|c| c.citation != citation);
+        self.selected_charges.selected_at =
+            chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        self.charge_highlight_map =
+            strata_charges::ChargeHighlightMap::from_selected(&self.selected_charges.charges);
+    }
+
+    /// Initialize the charge database (call once at startup).
+    pub fn init_charge_db(&mut self) {
+        if self.charge_db.is_some() {
+            return;
+        }
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        let db_dir = std::path::PathBuf::from(home)
+            .join(".strata")
+            .join("charges");
+        let _ = std::fs::create_dir_all(&db_dir);
+        let db_path = db_dir.join("federal.db");
+        match strata_charges::ChargeDatabase::open(&db_path) {
+            Ok(db) => {
+                self.charge_db = Some(db);
+            }
+            Err(e) => {
+                tracing::error!("Failed to open charge database: {}", e);
+            }
+        }
     }
 
     pub fn refresh_license_state(&mut self) {

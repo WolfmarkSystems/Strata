@@ -38,6 +38,7 @@ members = [
     "plugins/strata-plugin-pulse",
     "crates/strata-engine-adapter",
     "crates/strata-csam",
+    "crates/strata-charges",
 ]
 
 [workspace.dependencies]
@@ -87,4 +88,5 @@ strata-forge-core = { path = "crates/strata-forge-core" }
 strata-shield-engine = { path = "crates/strata-shield-engine" }
 strata-shield-cli = { path = "crates/strata-shield-cli" }
 strata-csam = { path = "crates/strata-csam" }
+strata-charges = { path = "crates/strata-charges" }
 vt-core = { path = "apps/tree/vt-core" }

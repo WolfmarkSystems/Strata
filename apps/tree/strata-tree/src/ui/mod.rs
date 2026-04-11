@@ -18,6 +18,7 @@ pub mod artifacts_view;
 pub mod audit_view;
 pub mod bookmarks_view;
 pub mod browser_history_view;
+pub mod charges_view;
 pub mod compare_view;
 pub mod event_logs_view;
 pub mod gallery_view;
