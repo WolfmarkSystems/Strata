@@ -25,6 +25,7 @@ pub mod call_logs;
 pub mod cash_app;
 pub mod chess_com;
 pub mod chess_with_friends;
+pub mod citymapper;
 pub mod chrome_autofill;
 pub mod chrome_bookmarks;
 pub mod chrome_cookies;
@@ -44,6 +45,7 @@ pub mod fitbit;
 pub mod garmin_activities;
 pub mod garmin_dailies;
 pub mod garmin_sleep;
+pub mod garmin_weight;
 pub mod gmail;
 pub mod google_calendar_events;
 pub mod google_chrome;
@@ -55,13 +57,17 @@ pub mod google_play;
 pub mod imo_messenger;
 pub mod installed_apps;
 pub mod keyboard_cache;
+pub mod life360;
 pub mod line_messenger;
+pub mod linkedin;
 pub mod location_history;
+pub mod mapmywalk;
 pub mod meetme;
 pub mod mega_chat;
 pub mod nike_activities;
 pub mod nike_moments;
 pub mod notifications;
+pub mod oruxmaps;
 pub mod permissions;
 pub mod puma_trac;
 pub mod randochat;
@@ -72,8 +78,10 @@ pub mod samsung_notes;
 pub mod sim_info;
 pub mod skout;
 pub mod skype;
+pub mod slopes;
 pub mod sms;
 pub mod snapchat;
+pub mod speedtest;
 pub mod strava;
 pub mod telegram;
 pub mod textnow;
@@ -86,7 +94,9 @@ pub mod waze;
 pub mod wellbeing;
 pub mod whatsapp;
 pub mod wifi_profiles;
+pub mod withings;
 pub mod words_with_friends;
+pub mod zepp_life;
 
 /// A single Android parser binding — name, matcher, and runner.
 pub struct ParserEntry {
@@ -484,5 +494,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "mega_chat",
         matches_any: mega_chat::MATCHES,
         run: mega_chat::parse,
+    },
+    ParserEntry {
+        name: "life360",
+        matches_any: life360::MATCHES,
+        run: life360::parse,
+    },
+    ParserEntry {
+        name: "withings",
+        matches_any: withings::MATCHES,
+        run: withings::parse,
+    },
+    ParserEntry {
+        name: "zepp_life",
+        matches_any: zepp_life::MATCHES,
+        run: zepp_life::parse,
+    },
+    ParserEntry {
+        name: "oruxmaps",
+        matches_any: oruxmaps::MATCHES,
+        run: oruxmaps::parse,
+    },
+    ParserEntry {
+        name: "slopes",
+        matches_any: slopes::MATCHES,
+        run: slopes::parse,
+    },
+    ParserEntry {
+        name: "speedtest",
+        matches_any: speedtest::MATCHES,
+        run: speedtest::parse,
+    },
+    ParserEntry {
+        name: "mapmywalk",
+        matches_any: mapmywalk::MATCHES,
+        run: mapmywalk::parse,
+    },
+    ParserEntry {
+        name: "citymapper",
+        matches_any: citymapper::MATCHES,
+        run: citymapper::parse,
+    },
+    ParserEntry {
+        name: "garmin_weight",
+        matches_any: garmin_weight::MATCHES,
+        run: garmin_weight::parse,
+    },
+    ParserEntry {
+        name: "linkedin",
+        matches_any: linkedin::MATCHES,
+        run: linkedin::parse,
     },
 ];
