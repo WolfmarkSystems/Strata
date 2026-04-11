@@ -3,9 +3,14 @@
 use crate::state::{colors::*, AppState};
 
 pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
+    let has_charges = state.charges_available();
+
     // Tab bar
     ui.horizontal(|ui| {
-        let tabs = ["Appearance", "Examiner", "Hash Sets", "License", "About"];
+        let mut tabs: Vec<&str> = vec!["Appearance", "Examiner", "Hash Sets", "License", "About"];
+        if has_charges {
+            tabs.push("Charges");
+        }
         for (i, label) in tabs.iter().enumerate() {
             let selected = state.settings_tab == i as u8;
             let resp = ui.selectable_label(
@@ -30,6 +35,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
             2 => render_hashsets_tab(ui, state),
             3 => render_license_tab(ui, state),
             4 => render_about_tab(ui, state),
+            5 if has_charges => super::charges_view::render(ui, state),
             _ => {}
         }
     });

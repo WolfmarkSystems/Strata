@@ -138,6 +138,8 @@ tr:nth-child(even) {{ background: #fafafa; }}
 <tr><th>Tool</th><td>Strata v{version}</td></tr>
 </table>
 
+{charges_section}
+
 <h2>Section 2 — Evidence Integrity</h2>
 <table>
 <tr><th>Source Path</th><th>Format</th><th>SHA-256</th><th>Verification</th><th>Loaded (UTC)</th></tr>
@@ -268,6 +270,7 @@ Examiner: {examiner} &nbsp;|&nbsp; This report is self-contained. No external re
         } else {
             String::new()
         },
+        charges_section = generate_charges_html(state),
         first_action = state.audit_log.first()
             .map(|e| format!("{} — {}", e.timestamp_utc, e.action))
             .unwrap_or_else(|| "N/A".to_string()),
@@ -343,4 +346,66 @@ fn escape_html(s: &str) -> String {
      .replace('<', "&lt;")
      .replace('>', "&gt;")
      .replace('"', "&quot;")
+}
+
+fn generate_charges_html(state: &AppState) -> String {
+    if state.selected_charges.charges.is_empty() {
+        return String::new();
+    }
+
+    let mut html = String::from(
+        "<h2>CHARGES UNDER INVESTIGATION</h2>\n\
+         <p>The following charges have been identified as relevant to this examination. \
+         Digital evidence recovered during this examination should be evaluated in the \
+         context of these statutes.</p>\n",
+    );
+
+    let usc: Vec<_> = state.selected_charges.charges.iter()
+        .filter(|c| c.code_set == strata_charges::ChargeSet::USC)
+        .collect();
+    let ucmj: Vec<_> = state.selected_charges.charges.iter()
+        .filter(|c| c.code_set == strata_charges::ChargeSet::UCMJ)
+        .collect();
+
+    if !usc.is_empty() {
+        html.push_str("<h3>Federal Charges (USC)</h3>\n<table>\n\
+            <tr><th>Citation</th><th>Offense</th><th>Penalty</th></tr>\n");
+        for c in &usc {
+            html.push_str(&format!(
+                "<tr><td><strong>{}</strong></td><td>{}</td><td>{}</td></tr>\n",
+                escape_html(&c.citation),
+                escape_html(&c.short_title),
+                escape_html(c.max_penalty.as_deref().unwrap_or("—")),
+            ));
+        }
+        html.push_str("</table>\n");
+    }
+
+    if !ucmj.is_empty() {
+        html.push_str("<h3>Military Charges (UCMJ)</h3>\n<table>\n\
+            <tr><th>Citation</th><th>Offense</th><th>Penalty</th></tr>\n");
+        for c in &ucmj {
+            html.push_str(&format!(
+                "<tr><td><strong>{}</strong></td><td>{}</td><td>{}</td></tr>\n",
+                escape_html(&c.citation),
+                escape_html(&c.short_title),
+                escape_html(c.max_penalty.as_deref().unwrap_or("—")),
+            ));
+        }
+        html.push_str("</table>\n");
+    }
+
+    if !state.selected_charges.examiner_notes.is_empty() {
+        html.push_str(&format!(
+            "<p><strong>Examiner Notes:</strong> {}</p>\n",
+            escape_html(&state.selected_charges.examiner_notes)
+        ));
+    }
+
+    html.push_str(
+        "<p class=\"notice\">All findings should be reviewed by qualified legal counsel \
+         before use in charging decisions.</p>\n",
+    );
+
+    html
 }
