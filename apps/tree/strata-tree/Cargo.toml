@@ -51,6 +51,7 @@ strata-plugin-recon = { path = "../../../plugins/strata-plugin-recon" }
 strata-plugin-sigma = { path = "../../../plugins/strata-plugin-sigma" }
 strata-plugin-csam = { path = "../../../plugins/strata-plugin-csam" }
 strata-csam = { workspace = true }
+strata-ml-obstruction = { path = "../../../crates/strata-ml-obstruction" }
 egui-phosphor = "0.11"
 
 [features]
