@@ -110,35 +110,45 @@ pub fn hash_all_files(
 }
 
 /// Hash a single file — read-only access only.
+///
+/// Uses 64 KB chunked streaming to avoid loading the entire file
+/// into memory. Evidence files can be multi-GB; the previous
+/// `read_to_end` call was a CRITICAL OOM vector.
 pub fn hash_single_file(path: &str, algorithms: &HashAlgorithms) -> Result<FileHashResult> {
     use md5::Digest as Md5Digest;
 
     let mut file = std::fs::File::open(path)?;
-    let mut buf = Vec::new();
-    file.read_to_end(&mut buf)?;
-
-    let md5_hex = if algorithms.md5 {
-        let mut h = md5::Md5::new();
-        h.update(&buf);
-        Some(hex::encode(h.finalize()))
+    let mut md5_hasher = if algorithms.md5 {
+        Some(md5::Md5::new())
+    } else {
+        None
+    };
+    let mut sha256_hasher = if algorithms.sha256 {
+        Some(sha2::Sha256::new())
     } else {
         None
     };
 
-    let sha256_hex = if algorithms.sha256 {
-        let mut h = sha2::Sha256::new();
-        h.update(&buf);
-        Some(hex::encode(h.finalize()))
-    } else {
-        None
-    };
+    let mut buf = [0u8; 65536];
+    loop {
+        let n = file.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        if let Some(ref mut h) = md5_hasher {
+            h.update(&buf[..n]);
+        }
+        if let Some(ref mut h) = sha256_hasher {
+            h.update(&buf[..n]);
+        }
+    }
 
     Ok(FileHashResult {
         file_id: String::new(),
         path: path.to_string(),
-        md5: md5_hex,
+        md5: md5_hasher.map(|h| hex::encode(h.finalize())),
         sha1: None,
-        sha256: sha256_hex,
+        sha256: sha256_hasher.map(|h| hex::encode(h.finalize())),
     })
 }
 
