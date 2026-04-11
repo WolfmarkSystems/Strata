@@ -16,11 +16,15 @@ pub mod walker;
 pub mod accounts_google;
 pub mod adidas_running;
 pub mod app_usage;
+pub mod badoo;
 pub mod bluetooth;
 pub mod browser_history;
+pub mod bumble;
 pub mod calendar;
 pub mod call_logs;
 pub mod cash_app;
+pub mod chess_com;
+pub mod chess_with_friends;
 pub mod chrome_autofill;
 pub mod chrome_bookmarks;
 pub mod chrome_cookies;
@@ -53,15 +57,20 @@ pub mod installed_apps;
 pub mod keyboard_cache;
 pub mod line_messenger;
 pub mod location_history;
+pub mod meetme;
+pub mod mega_chat;
 pub mod nike_activities;
 pub mod nike_moments;
 pub mod notifications;
 pub mod permissions;
 pub mod puma_trac;
+pub mod randochat;
 pub mod recent_activity;
+pub mod romeo;
 pub mod runkeeper;
 pub mod samsung_notes;
 pub mod sim_info;
+pub mod skout;
 pub mod skype;
 pub mod sms;
 pub mod snapchat;
@@ -77,6 +86,7 @@ pub mod waze;
 pub mod wellbeing;
 pub mod whatsapp;
 pub mod wifi_profiles;
+pub mod words_with_friends;
 
 /// A single Android parser binding — name, matcher, and runner.
 pub struct ParserEntry {
@@ -424,5 +434,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "fitbit",
         matches_any: fitbit::MATCHES,
         run: fitbit::parse,
+    },
+    ParserEntry {
+        name: "badoo",
+        matches_any: badoo::MATCHES,
+        run: badoo::parse,
+    },
+    ParserEntry {
+        name: "bumble",
+        matches_any: bumble::MATCHES,
+        run: bumble::parse,
+    },
+    ParserEntry {
+        name: "meetme",
+        matches_any: meetme::MATCHES,
+        run: meetme::parse,
+    },
+    ParserEntry {
+        name: "skout",
+        matches_any: skout::MATCHES,
+        run: skout::parse,
+    },
+    ParserEntry {
+        name: "romeo",
+        matches_any: romeo::MATCHES,
+        run: romeo::parse,
+    },
+    ParserEntry {
+        name: "chess_com",
+        matches_any: chess_com::MATCHES,
+        run: chess_com::parse,
+    },
+    ParserEntry {
+        name: "chess_with_friends",
+        matches_any: chess_with_friends::MATCHES,
+        run: chess_with_friends::parse,
+    },
+    ParserEntry {
+        name: "words_with_friends",
+        matches_any: words_with_friends::MATCHES,
+        run: words_with_friends::parse,
+    },
+    ParserEntry {
+        name: "randochat",
+        matches_any: randochat::MATCHES,
+        run: randochat::parse,
+    },
+    ParserEntry {
+        name: "mega_chat",
+        matches_any: mega_chat::MATCHES,
+        run: mega_chat::parse,
     },
 ];
