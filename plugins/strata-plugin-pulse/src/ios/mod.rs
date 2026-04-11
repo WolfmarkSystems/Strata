@@ -21,7 +21,10 @@ pub mod biome;
 pub mod bluetooth;
 pub mod bumble;
 pub mod calendar;
+pub mod candycrush;
 pub mod cashapp;
+pub mod clashofclans;
+pub mod coinbase;
 pub mod cellular;
 pub mod cloudkit;
 pub mod chrome;
@@ -33,6 +36,7 @@ pub mod cookies;
 pub mod datausage;
 pub mod deviceinfo;
 pub mod dhcpleases;
+pub mod disneyplus;
 pub mod duetactivity;
 pub mod discord;
 pub mod facebook;
@@ -41,6 +45,7 @@ pub mod findmy;
 pub mod googlemaps;
 pub mod health;
 pub mod hinge;
+pub mod hulu;
 pub mod healthworkouts;
 pub mod icloudbackup;
 pub mod instagram;
@@ -60,14 +65,17 @@ pub mod mobilebackup;
 pub mod netflix;
 pub mod notes;
 pub mod notifications;
+pub mod amazonprime;
 pub mod photoanalysis;
 pub mod photos;
+pub mod pokemongo;
 pub mod protonmail;
 pub mod podcasts;
 pub mod powerlog;
 pub mod reddit;
 pub mod reminders;
 pub mod restrictions;
+pub mod robinhood;
 pub mod safari;
 pub mod safaritabs;
 pub mod screentime;
@@ -87,6 +95,7 @@ pub mod tcc;
 pub mod teams;
 pub mod textreplacement;
 pub mod threema;
+pub mod twitch;
 pub mod twitter;
 pub mod viber;
 pub mod uber;
@@ -379,6 +388,33 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if protonmail::matches(path) {
         out.extend(protonmail::parse(path));
+    }
+    if pokemongo::matches(path) {
+        out.extend(pokemongo::parse(path));
+    }
+    if clashofclans::matches(path) {
+        out.extend(clashofclans::parse(path));
+    }
+    if candycrush::matches(path) {
+        out.extend(candycrush::parse(path));
+    }
+    if robinhood::matches(path) {
+        out.extend(robinhood::parse(path));
+    }
+    if coinbase::matches(path) {
+        out.extend(coinbase::parse(path));
+    }
+    if hulu::matches(path) {
+        out.extend(hulu::parse(path));
+    }
+    if disneyplus::matches(path) {
+        out.extend(disneyplus::parse(path));
+    }
+    if amazonprime::matches(path) {
+        out.extend(amazonprime::parse(path));
+    }
+    if twitch::matches(path) {
+        out.extend(twitch::parse(path));
     }
     out
 }
