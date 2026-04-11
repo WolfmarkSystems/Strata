@@ -290,23 +290,31 @@ impl StrataPlugin for NetFlowPlugin {
 
             match file_type {
                 "PCAP" => {
-                    if let Ok(data) = std::fs::read(&path) {
-                        let magic = Self::pcap_magic_check(&data)
-                            .unwrap_or("unknown magic");
-                        let mut a = Artifact::new("Packet Capture", &path_str);
-                        a.add_field("title", &format!("PCAP: {}", path.file_name().and_then(|n| n.to_str()).unwrap_or("")));
-                        a.add_field(
-                            "detail",
-                            &format!(
-                                "Format: {} | Size: {} bytes",
-                                magic,
-                                data.len()
-                            ),
-                        );
-                        a.add_field("file_type", "PCAP");
-                        a.add_field("mitre", "T1071");
-                        a.add_field("forensic_value", "High");
-                        out.push(a);
+                    // Bounded read: only load 4 bytes for magic check.
+                    // PCAPs can be multi-GB; the full-load OOM'd on real
+                    // evidence. File size comes from metadata.
+                    let file_size = path.metadata().map(|m| m.len()).unwrap_or(0);
+                    if let Ok(mut f) = std::fs::File::open(&path) {
+                        use std::io::Read;
+                        let mut header = [0u8; 4];
+                        if f.read_exact(&mut header).is_ok() {
+                            let magic = Self::pcap_magic_check(&header)
+                                .unwrap_or("unknown magic");
+                            let mut a = Artifact::new("Packet Capture", &path_str);
+                            a.add_field("title", &format!("PCAP: {}", path.file_name().and_then(|n| n.to_str()).unwrap_or("")));
+                            a.add_field(
+                                "detail",
+                                &format!(
+                                    "Format: {} | Size: {} bytes",
+                                    magic,
+                                    file_size
+                                ),
+                            );
+                            a.add_field("file_type", "PCAP");
+                            a.add_field("mitre", "T1071");
+                            a.add_field("forensic_value", "High");
+                            out.push(a);
+                        }
                     }
                 }
 
