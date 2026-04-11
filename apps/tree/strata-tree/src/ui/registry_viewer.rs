@@ -280,6 +280,19 @@ fn load_hive(rs: &mut RegistryState) {
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "Unknown".to_string());
 
+    // Size gate: reject hives >512 MB to prevent OOM on enterprise images.
+    const MAX_HIVE_BYTES: u64 = 512 * 1024 * 1024;
+    if let Ok(meta) = path.metadata() {
+        if meta.len() > MAX_HIVE_BYTES {
+            rs.error = Some(format!(
+                "Hive too large ({} bytes, max {}). Use an external registry tool.",
+                meta.len(),
+                MAX_HIVE_BYTES
+            ));
+            return;
+        }
+    }
+
     // Read the hive file.
     let data = match std::fs::read(path) {
         Ok(d) => d,

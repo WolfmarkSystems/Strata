@@ -181,9 +181,15 @@ pub fn export_timeline_csv(state: &AppState, out_path: &Path) -> Result<()> {
 
 pub fn export_timeline_json(state: &AppState, out_path: &Path) -> Result<()> {
     guard_output_path(state, out_path)?;
-    let mut rows = Vec::with_capacity(state.timeline_entries.len());
-    for entry in &state.timeline_entries {
-        rows.push(serde_json::json!({
+    // Stream JSON array to disk one entry at a time. The previous
+    // implementation built a Vec<serde_json::Value> for every timeline
+    // entry before serializing — for 20M entries that was ~8 GB.
+    use std::io::Write;
+    let mut out = std::io::BufWriter::new(std::fs::File::create(out_path)?);
+    out.write_all(b"[\n")?;
+    let last = state.timeline_entries.len().saturating_sub(1);
+    for (i, entry) in state.timeline_entries.iter().enumerate() {
+        let row = serde_json::json!({
             "timestamp_utc": entry.timestamp.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             "event_type": event_type_label(&entry.event_type),
             "path": entry.path,
@@ -191,31 +197,48 @@ pub fn export_timeline_json(state: &AppState, out_path: &Path) -> Result<()> {
             "detail": entry.detail,
             "file_id": entry.file_id,
             "suspicious": entry.suspicious,
-        }));
+        });
+        serde_json::to_writer_pretty(&mut out, &row)?;
+        if i < last {
+            out.write_all(b",")?;
+        }
+        out.write_all(b"\n")?;
     }
-    std::fs::write(out_path, serde_json::to_string_pretty(&rows)?)?;
+    out.write_all(b"]\n")?;
+    out.flush()?;
     Ok(())
 }
 
 pub fn export_timeline_pdf(state: &AppState, out_path: &Path) -> Result<()> {
     guard_output_path(state, out_path)?;
-    let mut lines = Vec::new();
-    lines.push("Strata Timeline Report".to_string());
-    lines.push(format!(
-        "Case: {}",
-        state
-            .case
-            .as_ref()
-            .map(|c| c.name.as_str())
-            .unwrap_or("No Case")
-    ));
-    lines.push(format!("Examiner: {}", state.examiner_name));
-    lines.push(format!("Events: {}", state.timeline_entries.len()));
-    lines.push(format!("Suspicious: {}", state.suspicious_event_count));
-    lines.push(String::new());
 
-    for entry in &state.timeline_entries {
-        lines.push(format!(
+    let case_name = state
+        .case
+        .as_ref()
+        .map(|c| c.name.as_str())
+        .unwrap_or("No Case");
+    let case_id = state
+        .case
+        .as_ref()
+        .map(|c| c.id.as_str())
+        .unwrap_or("-");
+    let generated = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+
+    // Build header lines (6 items — always small).
+    let header: Vec<String> = vec![
+        "Strata Timeline Report".to_string(),
+        format!("Case: {}", case_name),
+        format!("Examiner: {}", state.examiner_name),
+        format!("Events: {}", state.timeline_entries.len()),
+        format!("Suspicious: {}", state.suspicious_event_count),
+        String::new(),
+    ];
+
+    // Paginate lazily: yield one formatted line at a time from the
+    // header followed by timeline entries. This avoids materializing
+    // the entire Vec<String> (which for 20M entries would be ~2 GB).
+    let entry_iter = state.timeline_entries.iter().map(|entry| {
+        format!(
             "{} | {} | {} | suspicious={}",
             entry
                 .timestamp
@@ -223,20 +246,67 @@ pub fn export_timeline_pdf(state: &AppState, out_path: &Path) -> Result<()> {
             event_type_label(&entry.event_type),
             entry.path,
             entry.suspicious as u8
-        ));
+        )
+    });
+
+    let total_lines = header.len() + state.timeline_entries.len();
+    let lines_per_page = 50usize;
+    let total_pages = if total_lines == 0 {
+        1
+    } else {
+        total_lines.div_ceil(lines_per_page)
+    };
+
+    let mut pages = Vec::with_capacity(total_pages);
+    let mut line_iter: Box<dyn Iterator<Item = String>> =
+        Box::new(header.into_iter().chain(entry_iter));
+
+    for page_idx in 0..total_pages {
+        let mut ops = vec![
+            Op::StartTextSection,
+            Op::SetFont {
+                font: PdfFontHandle::Builtin(BuiltinFont::Courier),
+                size: Pt(8.5),
+            },
+            Op::SetLineHeight {
+                lh: Pt(9.5),
+            },
+            Op::SetTextCursor {
+                pos: Point::new(Mm(15.0), Mm(280.0)),
+            },
+        ];
+
+        for _ in 0..lines_per_page {
+            let Some(line) = line_iter.next() else { break };
+            ops.push(Op::ShowText {
+                items: vec![TextItem::Text(line)],
+            });
+            ops.push(Op::AddLineBreak);
+        }
+
+        ops.push(Op::SetTextCursor {
+            pos: Point::new(Mm(15.0), Mm(10.0)),
+        });
+        ops.push(Op::SetFont {
+            font: PdfFontHandle::Builtin(BuiltinFont::Courier),
+            size: Pt(8.0),
+        });
+        ops.push(Op::ShowText {
+            items: vec![TextItem::Text(format!(
+                "Page {} of {} | Examiner: {} | Case: {} | Generated UTC: {}",
+                page_idx + 1,
+                total_pages,
+                state.examiner_name,
+                case_id,
+                generated
+            ))],
+        });
+        ops.push(Op::EndTextSection);
+
+        pages.push(PdfPage::new(Mm(210.0), Mm(297.0), ops));
     }
 
-    let generated = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
     let mut doc = PdfDocument::new("Timeline Report");
-    let pages = paginate_pdf_lines(
-        &lines,
-        &state.examiner_name,
-        state.case.as_ref().map(|c| c.id.as_str()).unwrap_or("-"),
-        &generated,
-        8.5,
-        9.5,
-        50,
-    );
     let mut warnings = Vec::new();
     let bytes = doc
         .with_pages(pages)

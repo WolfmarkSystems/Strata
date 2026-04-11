@@ -281,17 +281,15 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                         .save_file()
                                     {
                                         if let Some(ctx) = &state.vfs_context {
-                                            match ctx.read_file(&f) {
-                                                Ok(bytes) => {
-                                                    match std::fs::write(&dest, &bytes) {
-                                                        Ok(_) => {
-                                                            state.status = format!("Exported: {}", dest.display());
-                                                            state.log_action("FILE_EXPORT", &format!("path={}", f.path));
-                                                        }
-                                                        Err(e) => state.status = format!("Export failed: {}", e),
-                                                    }
+                                            // Chunked export via read_range — never
+                                            // load the full file into memory.
+                                            let file_size = f.size.unwrap_or(0);
+                                            match chunked_export(ctx, &f, &dest, file_size) {
+                                                Ok(()) => {
+                                                    state.status = format!("Exported: {}", dest.display());
+                                                    state.log_action("FILE_EXPORT", &format!("path={}", f.path));
                                                 }
-                                                Err(e) => state.status = format!("Read failed: {}", e),
+                                                Err(e) => state.status = format!("Export failed: {}", e),
                                             }
                                         }
                                     }
@@ -659,6 +657,32 @@ fn drag_column_divider(ui: &mut egui::Ui, width: &mut f32, t: &crate::theme::Str
         egui::Stroke::new(1.0, t.border),
     );
     response.dragged()
+}
+
+/// Export an evidence file to disk using 64 KB chunked reads via
+/// `read_range`. Avoids loading the full file into memory — evidence
+/// files can be multi-GB (videos, databases, disk images).
+fn chunked_export(
+    ctx: &crate::evidence::vfs_context::VfsReadContext,
+    entry: &FileEntry,
+    dest: &std::path::Path,
+    file_size: u64,
+) -> anyhow::Result<()> {
+    use std::io::Write;
+    const CHUNK: usize = 65536;
+    let mut out = std::io::BufWriter::new(std::fs::File::create(dest)?);
+    let mut offset = 0u64;
+    while offset < file_size {
+        let len = CHUNK.min((file_size - offset) as usize);
+        let chunk = ctx.read_range(entry, offset, len)?;
+        if chunk.is_empty() {
+            break;
+        }
+        out.write_all(&chunk)?;
+        offset += chunk.len() as u64;
+    }
+    out.flush()?;
+    Ok(())
 }
 
 #[cfg(test)]

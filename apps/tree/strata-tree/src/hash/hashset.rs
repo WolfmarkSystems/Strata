@@ -39,9 +39,8 @@ impl HashSetManager {
             if trimmed.is_empty() {
                 continue;
             }
-            if trimmed.to_ascii_lowercase().contains("sha-1")
-                && trimmed.to_ascii_lowercase().contains("md5")
-            {
+            let lower_trimmed = trimmed.to_ascii_lowercase();
+            if lower_trimmed.contains("sha-1") && lower_trimmed.contains("md5") {
                 continue;
             }
 

@@ -337,14 +337,9 @@ impl CarveEngine {
 
                     let abs_offset = file_offset + i as u64;
 
-                    // Extract the carved bytes.
-                    let carved = extract_carved(&self.source_path, abs_offset, sig);
-                    let data = match carved {
-                        Ok(data) => data,
-                        Err(_) => continue,
-                    };
-                    let size = data.len() as u64;
-
+                    // Stream carved bytes directly to disk — never hold
+                    // the full carved file in memory (can be 2 GB for
+                    // PST/MP4/AVI signatures).
                     let out_name = format!(
                         "carved_{:08}_{}.{}",
                         carved_count,
@@ -352,9 +347,18 @@ impl CarveEngine {
                         sig.extension
                     );
                     let out_path = self.output_dir.join(&out_name);
-                    if std::fs::write(&out_path, &data).is_err() {
-                        continue;
-                    }
+                    let size = match extract_carved_to_file(
+                        &self.source_path,
+                        abs_offset,
+                        sig,
+                        &out_path,
+                    ) {
+                        Ok(s) => s,
+                        Err(_) => {
+                            let _ = std::fs::remove_file(&out_path);
+                            continue;
+                        }
+                    };
 
                     let carved_file = CarvedFile {
                         signature_name: sig.name.to_string(),
@@ -430,8 +434,78 @@ pub fn carve_unallocated_with_options(
     })
 }
 
+/// Stream carved data from `source` at `offset` directly to `out_path`
+/// using 64 KB chunks. Never holds the full carved file in memory.
+/// Returns the number of bytes written. For signatures with a footer
+/// pattern, maintains a small overlap buffer across chunk boundaries
+/// to detect the footer, then truncates the output file.
+fn extract_carved_to_file(
+    source: &Path,
+    offset: u64,
+    sig: &FileSignature,
+    out_path: &Path,
+) -> Result<u64> {
+    use std::io::Write;
+    let mut f = std::fs::File::open(source)?;
+    f.seek(SeekFrom::Start(offset))?;
+
+    let mut out = std::io::BufWriter::new(std::fs::File::create(out_path)?);
+    let cap = sig.max_size as usize;
+    let mut chunk = vec![0u8; 65536];
+    let mut written = 0usize;
+
+    let footer_len = sig.footer.map(|ft| ft.len()).unwrap_or(0);
+    let overlap_keep = footer_len.saturating_sub(1);
+    let mut tail = Vec::with_capacity(overlap_keep);
+
+    loop {
+        if written >= cap {
+            break;
+        }
+        let to_read = chunk.len().min(cap - written);
+        let n = f.read(&mut chunk[..to_read])?;
+        if n == 0 {
+            break;
+        }
+
+        if let Some(footer) = sig.footer {
+            let mut search_buf = Vec::with_capacity(tail.len() + n);
+            search_buf.extend_from_slice(&tail);
+            search_buf.extend_from_slice(&chunk[..n]);
+            if let Some(pos) = find_pattern(&search_buf, footer) {
+                let footer_end = pos + footer.len();
+                let new_bytes = footer_end.saturating_sub(tail.len());
+                out.write_all(&chunk[..new_bytes.min(n)])?;
+                written += new_bytes.min(n);
+                out.flush()?;
+                let total = written as u64;
+                let inner = out.into_inner()?;
+                inner.set_len(total)?;
+                return Ok(total);
+            }
+            tail.clear();
+            if overlap_keep > 0 && n >= overlap_keep {
+                tail.extend_from_slice(&chunk[n - overlap_keep..n]);
+            } else if overlap_keep > 0 {
+                tail.extend_from_slice(&chunk[..n]);
+                if tail.len() > overlap_keep {
+                    let excess = tail.len() - overlap_keep;
+                    tail.drain(0..excess);
+                }
+            }
+        }
+
+        out.write_all(&chunk[..n])?;
+        written += n;
+    }
+
+    out.flush()?;
+    Ok(written as u64)
+}
+
 /// Open the source read-only, seek to `offset`, and extract up to sig.max_size bytes.
 /// If a footer pattern is defined, scan for it and truncate there.
+#[allow(dead_code)]
 fn extract_carved(source: &Path, offset: u64, sig: &FileSignature) -> Result<Vec<u8>> {
     let mut f = std::fs::File::open(source)?;
     f.seek(SeekFrom::Start(offset))?;
