@@ -153,3 +153,62 @@ fn map_fsevent_flags(f: u32) -> Vec<String> {
     }
     flags
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use std::io::Write;
+
+    fn build_fsevent_gzip(paths_and_flags: &[(&str, u64, u32)]) -> Vec<u8> {
+        let mut raw = Vec::new();
+        // 12 bytes page header (magic "1SLD" + padding)
+        raw.extend_from_slice(b"1SLD");
+        raw.extend_from_slice(&[0u8; 8]);
+        for (path, event_id, flags) in paths_and_flags {
+            raw.extend_from_slice(path.as_bytes());
+            raw.push(0); // null terminator
+            raw.extend_from_slice(&event_id.to_le_bytes());
+            raw.extend_from_slice(&flags.to_le_bytes());
+        }
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
+        encoder.write_all(&raw).unwrap();
+        encoder.finish().unwrap()
+    }
+
+    #[test]
+    fn parses_gzipped_fsevent_records() {
+        let gz = build_fsevent_gzip(&[
+            ("/Users/test/Documents/secret.pdf", 12345, 0x0100), // Created
+            ("/Users/test/Downloads/malware.exe", 12346, 0x0200), // Removed
+        ]);
+        let mut out = Vec::new();
+        parse_fsevents_binary(Path::new("0000000000abcdef"), &gz, &mut out).unwrap();
+        assert_eq!(out.len(), 2);
+        assert!(out[0].description.contains("Created"));
+        assert!(out[1].description.contains("Removed"));
+    }
+
+    #[test]
+    fn map_fsevent_flags_covers_common_flags() {
+        let flags = map_fsevent_flags(0x0100 | 0x1000 | 0x0800);
+        assert!(flags.contains(&"Created".to_string()));
+        assert!(flags.contains(&"Modified".to_string()));
+        assert!(flags.contains(&"Renamed".to_string()));
+    }
+
+    #[test]
+    fn handles_non_gzip_data() {
+        let mut out = Vec::new();
+        parse_fsevents_binary(Path::new("bad"), b"not gzip at all", &mut out).unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn empty_data_returns_empty() {
+        let mut out = Vec::new();
+        parse_fsevents_binary(Path::new("empty"), b"", &mut out).unwrap();
+        assert!(out.is_empty());
+    }
+}
