@@ -584,6 +584,14 @@ impl ParserRegistry {
         self.register(Box::new(
             crate::parsers::browser_forensic::SafariForensicParser::new(),
         ));
+
+        // Memory forensics
+        self.register(Box::new(
+            crate::parsers::memory::HiberfilParser::new(),
+        ));
+        self.register(Box::new(
+            crate::parsers::memory::PagefileParser::new(),
+        ));
     }
 
     pub fn parsers(&self) -> &[Box<dyn ArtifactParser>] {

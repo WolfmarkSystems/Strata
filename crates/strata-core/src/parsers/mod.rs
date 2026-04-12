@@ -26,6 +26,7 @@ pub mod lnk;
 pub mod macos;
 pub mod mdm;
 pub mod media;
+pub mod memory;
 pub mod mft_timestomp;
 pub mod mobile;
 pub mod network;
