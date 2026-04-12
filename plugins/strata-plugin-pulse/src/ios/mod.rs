@@ -29,6 +29,7 @@ pub mod apppermissions;
 pub mod appstate;
 pub mod authkit;
 pub mod backgroundtasks;
+pub mod bear;
 pub mod biome;
 pub mod biometrickit;
 pub mod bluetooth;
@@ -82,6 +83,7 @@ pub mod focusfilters;
 pub mod focusmode;
 pub mod freeform;
 pub mod gamecenter;
+pub mod goodnotes;
 pub mod googlemaps;
 pub mod handoff;
 pub mod health;
@@ -117,6 +119,7 @@ pub mod managedconfig;
 pub mod measure;
 pub mod medialibrary;
 pub mod maps;
+pub mod minecraft;
 pub mod mediaremote;
 pub mod mobileasset;
 pub mod mobileactivation;
@@ -125,8 +128,10 @@ pub mod nanotimekit;
 pub mod nearbyinteraction;
 pub mod netflix;
 pub mod notes;
+pub mod notion;
 pub mod nsuserdefaults;
 pub mod notifications;
+pub mod obsidian;
 pub mod amazonprime;
 pub mod photoanalysis;
 pub mod passkit;
@@ -140,6 +145,7 @@ pub mod reddit;
 pub mod reminders;
 pub mod researchkit;
 pub mod restrictions;
+pub mod roblox;
 pub mod robinhood;
 pub mod safari;
 pub mod safarisearches;
@@ -175,10 +181,14 @@ pub mod twitch;
 pub mod twitter;
 pub mod viber;
 pub mod uber;
+pub mod uberdeep;
 pub mod universalclipboard;
 pub mod venmo;
+pub mod venmoreceipts;
+pub mod visionhealth;
 pub mod voicememos;
 pub mod vpnconfig;
+pub mod vrbo;
 pub mod voicemail;
 pub mod wallet;
 pub mod webclips;
@@ -186,7 +196,10 @@ pub mod watchconnectivity;
 pub mod waze;
 pub mod weather;
 pub mod wechat;
+pub mod wellsfargo;
 pub mod whatsapp;
+pub mod amongus;
+pub mod wordle;
 pub mod widgetkit;
 pub mod wifi;
 pub mod wifigeo;
@@ -747,6 +760,45 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if chase::matches(path) {
         out.extend(chase::parse(path));
+    }
+    if wellsfargo::matches(path) {
+        out.extend(wellsfargo::parse(path));
+    }
+    if roblox::matches(path) {
+        out.extend(roblox::parse(path));
+    }
+    if minecraft::matches(path) {
+        out.extend(minecraft::parse(path));
+    }
+    if amongus::matches(path) {
+        out.extend(amongus::parse(path));
+    }
+    if wordle::matches(path) {
+        out.extend(wordle::parse(path));
+    }
+    if notion::matches(path) {
+        out.extend(notion::parse(path));
+    }
+    if obsidian::matches(path) {
+        out.extend(obsidian::parse(path));
+    }
+    if bear::matches(path) {
+        out.extend(bear::parse(path));
+    }
+    if goodnotes::matches(path) {
+        out.extend(goodnotes::parse(path));
+    }
+    if vrbo::matches(path) {
+        out.extend(vrbo::parse(path));
+    }
+    if visionhealth::matches(path) {
+        out.extend(visionhealth::parse(path));
+    }
+    if uberdeep::matches(path) {
+        out.extend(uberdeep::parse(path));
+    }
+    if venmoreceipts::matches(path) {
+        out.extend(venmoreceipts::parse(path));
     }
     out
 }
