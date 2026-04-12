@@ -15,7 +15,9 @@ pub mod walker;
 // Individual parsers — one module per ALEAPP-equivalent artifact.
 pub mod accounts_google;
 pub mod adidas_running;
+pub mod amazon_alexa;
 pub mod amazon_shopping;
+pub mod android_auto;
 pub mod app_usage;
 pub mod badoo;
 pub mod bank_of_america;
@@ -54,13 +56,16 @@ pub mod factory_reset;
 pub mod firefox;
 pub mod firefox_cookies;
 pub mod fitbit;
+pub mod fordpass;
 pub mod garmin_activities;
 pub mod garmin_dailies;
 pub mod garmin_sleep;
 pub mod garmin_weight;
+pub mod gm_onstar;
 pub mod gmail;
 pub mod google_calendar_events;
 pub mod google_chrome;
+pub mod google_home;
 pub mod google_keep;
 pub mod google_maps;
 pub mod google_messages;
@@ -87,16 +92,19 @@ pub mod metamask;
 pub mod miui_gallery;
 pub mod miui_security;
 pub mod mychart;
+pub mod nest;
 pub mod nike_activities;
 pub mod nike_moments;
 pub mod notifications;
 pub mod oruxmaps;
 pub mod permissions;
+pub mod philips_hue;
 pub mod pinterest;
 pub mod puma_trac;
 pub mod randochat;
 pub mod recent_activity;
 pub mod reddit;
+pub mod ring_doorbell;
 pub mod robinhood;
 pub mod romeo;
 pub mod runkeeper;
@@ -109,6 +117,7 @@ pub mod skout;
 pub mod skype;
 pub mod slopes;
 pub mod smartthings;
+pub mod smartthings_events;
 pub mod sms;
 pub mod snapchat;
 pub mod snapchat_memories;
@@ -117,6 +126,7 @@ pub mod speedtest;
 pub mod strava;
 pub mod telegram;
 pub mod telegram_channels;
+pub mod tesla_app;
 pub mod textnow;
 pub mod tiktok;
 pub mod tiktok_live;
@@ -814,5 +824,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "hinge",
         matches_any: hinge::MATCHES,
         run: hinge::parse,
+    },
+    ParserEntry {
+        name: "google_home",
+        matches_any: google_home::MATCHES,
+        run: google_home::parse,
+    },
+    ParserEntry {
+        name: "amazon_alexa",
+        matches_any: amazon_alexa::MATCHES,
+        run: amazon_alexa::parse,
+    },
+    ParserEntry {
+        name: "smartthings_events",
+        matches_any: smartthings_events::MATCHES,
+        run: smartthings_events::parse,
+    },
+    ParserEntry {
+        name: "ring_doorbell",
+        matches_any: ring_doorbell::MATCHES,
+        run: ring_doorbell::parse,
+    },
+    ParserEntry {
+        name: "nest",
+        matches_any: nest::MATCHES,
+        run: nest::parse,
+    },
+    ParserEntry {
+        name: "philips_hue",
+        matches_any: philips_hue::MATCHES,
+        run: philips_hue::parse,
+    },
+    ParserEntry {
+        name: "android_auto",
+        matches_any: android_auto::MATCHES,
+        run: android_auto::parse,
+    },
+    ParserEntry {
+        name: "tesla_app",
+        matches_any: tesla_app::MATCHES,
+        run: tesla_app::parse,
+    },
+    ParserEntry {
+        name: "fordpass",
+        matches_any: fordpass::MATCHES,
+        run: fordpass::parse,
+    },
+    ParserEntry {
+        name: "gm_onstar",
+        matches_any: gm_onstar::MATCHES,
+        run: gm_onstar::parse,
     },
 ];
