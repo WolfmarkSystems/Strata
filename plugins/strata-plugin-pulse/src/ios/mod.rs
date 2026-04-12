@@ -14,8 +14,10 @@ pub mod accessibility;
 pub mod accounts;
 pub mod aggregate;
 pub mod airdrop;
+pub mod airpods;
 pub mod alltrails;
 pub mod appinstall;
+pub mod applepay;
 pub mod appclips;
 pub mod appletv;
 pub mod apppermissions;
@@ -35,7 +37,9 @@ pub mod chrome;
 pub mod crashlogs;
 pub mod callhistory;
 pub mod carplay;
+pub mod commlimits;
 pub mod containermanager;
+pub mod corelocationhist;
 pub mod crashreporterdeep;
 pub mod contacts;
 pub mod cookies;
@@ -49,12 +53,14 @@ pub mod discord;
 pub mod emergencysos;
 pub mod facebook;
 pub mod facetimedeep;
+pub mod falldetection;
 pub mod fileprovider;
 pub mod findmy;
 pub mod findmynetwork;
 pub mod firefox;
 pub mod fitbit;
 pub mod focusmode;
+pub mod gamecenter;
 pub mod googlemaps;
 pub mod health;
 pub mod healthsamples;
@@ -86,9 +92,11 @@ pub mod mobileactivation;
 pub mod mobilebackup;
 pub mod netflix;
 pub mod notes;
+pub mod nsuserdefaults;
 pub mod notifications;
 pub mod amazonprime;
 pub mod photoanalysis;
+pub mod passkit;
 pub mod photos;
 pub mod pinterest;
 pub mod pokemongo;
@@ -104,6 +112,7 @@ pub mod safarisearches;
 pub mod safaritabs;
 pub mod screenrecording;
 pub mod screentime;
+pub mod screentimeapps;
 pub mod shortcuts;
 pub mod siri;
 pub mod siminfo;
@@ -138,6 +147,7 @@ pub mod whatsapp;
 pub mod widgetkit;
 pub mod wifi;
 pub mod wifigeo;
+pub mod workoutroutes;
 pub mod youtube;
 pub mod zoom;
 
@@ -535,6 +545,36 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if backgroundtasks::matches(path) {
         out.extend(backgroundtasks::parse(path));
+    }
+    if workoutroutes::matches(path) {
+        out.extend(workoutroutes::parse(path));
+    }
+    if falldetection::matches(path) {
+        out.extend(falldetection::parse(path));
+    }
+    if airpods::matches(path) {
+        out.extend(airpods::parse(path));
+    }
+    if applepay::matches(path) {
+        out.extend(applepay::parse(path));
+    }
+    if passkit::matches(path) {
+        out.extend(passkit::parse(path));
+    }
+    if corelocationhist::matches(path) {
+        out.extend(corelocationhist::parse(path));
+    }
+    if gamecenter::matches(path) {
+        out.extend(gamecenter::parse(path));
+    }
+    if screentimeapps::matches(path) {
+        out.extend(screentimeapps::parse(path));
+    }
+    if commlimits::matches(path) {
+        out.extend(commlimits::parse(path));
+    }
+    if nsuserdefaults::matches(path) {
+        out.extend(nsuserdefaults::parse(path));
     }
     out
 }
