@@ -22,12 +22,14 @@ pub mod app_usage;
 pub mod badoo;
 pub mod bank_of_america;
 pub mod bereal;
+pub mod betterhelp;
 pub mod bitcoin_wallet;
 pub mod bluetooth;
 pub mod browser_history;
 pub mod bumble;
 pub mod calendar;
 pub mod call_logs;
+pub mod calm_app;
 pub mod capital_one;
 pub mod cash_app;
 pub mod chase_bank;
@@ -45,6 +47,7 @@ pub mod clipboard;
 pub mod coinbase;
 pub mod contacts;
 pub mod device_info;
+pub mod dexcom_cgm;
 pub mod discord;
 pub mod discord_voice;
 pub mod dji_flight;
@@ -72,12 +75,14 @@ pub mod google_messages;
 pub mod google_photos;
 pub mod google_play;
 pub mod grubhub;
+pub mod headspace;
 pub mod hinge;
 pub mod imo_messenger;
 pub mod installed_apps;
 pub mod instacart;
 pub mod irs2go;
 pub mod keyboard_cache;
+pub mod libre_cgm;
 pub mod life360;
 pub mod line_messenger;
 pub mod linkedin;
@@ -92,11 +97,15 @@ pub mod metamask;
 pub mod miui_gallery;
 pub mod miui_security;
 pub mod mychart;
+pub mod myfitnesspal;
+pub mod mysugr;
 pub mod nest;
 pub mod nike_activities;
 pub mod nike_moments;
 pub mod notifications;
 pub mod oruxmaps;
+pub mod oura;
+pub mod peloton;
 pub mod permissions;
 pub mod philips_hue;
 pub mod pinterest;
@@ -147,6 +156,7 @@ pub mod waze;
 pub mod wellbeing;
 pub mod wells_fargo;
 pub mod whatsapp;
+pub mod whoop;
 pub mod wifi_profiles;
 pub mod withings;
 pub mod words_with_friends;
@@ -874,5 +884,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "gm_onstar",
         matches_any: gm_onstar::MATCHES,
         run: gm_onstar::parse,
+    },
+    ParserEntry {
+        name: "dexcom_cgm",
+        matches_any: dexcom_cgm::MATCHES,
+        run: dexcom_cgm::parse,
+    },
+    ParserEntry {
+        name: "libre_cgm",
+        matches_any: libre_cgm::MATCHES,
+        run: libre_cgm::parse,
+    },
+    ParserEntry {
+        name: "mysugr",
+        matches_any: mysugr::MATCHES,
+        run: mysugr::parse,
+    },
+    ParserEntry {
+        name: "betterhelp",
+        matches_any: betterhelp::MATCHES,
+        run: betterhelp::parse,
+    },
+    ParserEntry {
+        name: "calm_app",
+        matches_any: calm_app::MATCHES,
+        run: calm_app::parse,
+    },
+    ParserEntry {
+        name: "headspace",
+        matches_any: headspace::MATCHES,
+        run: headspace::parse,
+    },
+    ParserEntry {
+        name: "myfitnesspal",
+        matches_any: myfitnesspal::MATCHES,
+        run: myfitnesspal::parse,
+    },
+    ParserEntry {
+        name: "peloton",
+        matches_any: peloton::MATCHES,
+        run: peloton::parse,
+    },
+    ParserEntry {
+        name: "whoop",
+        matches_any: whoop::MATCHES,
+        run: whoop::parse,
+    },
+    ParserEntry {
+        name: "oura",
+        matches_any: oura::MATCHES,
+        run: oura::parse,
     },
 ];
