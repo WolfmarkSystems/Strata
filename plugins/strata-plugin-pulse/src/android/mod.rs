@@ -15,8 +15,10 @@ pub mod walker;
 // Individual parsers — one module per ALEAPP-equivalent artifact.
 pub mod accounts_google;
 pub mod adidas_running;
+pub mod airbnb;
 pub mod amazon_alexa;
 pub mod amazon_shopping;
+pub mod american_airlines;
 pub mod android_auto;
 pub mod app_usage;
 pub mod army_mobile;
@@ -27,6 +29,7 @@ pub mod betterhelp;
 pub mod bitcoin_wallet;
 pub mod blackboard;
 pub mod bluetooth;
+pub mod booking_com;
 pub mod browser_history;
 pub mod bumble;
 pub mod calendar;
@@ -50,6 +53,7 @@ pub mod clipboard;
 pub mod coinbase;
 pub mod contacts;
 pub mod device_info;
+pub mod delta_airlines;
 pub mod dexcom_cgm;
 pub mod discord;
 pub mod discord_voice;
@@ -58,6 +62,7 @@ pub mod dmv_app;
 pub mod doordash;
 pub mod duolingo;
 pub mod ebay;
+pub mod expedia;
 pub mod facebook_messenger;
 pub mod factory_reset;
 pub mod firefox;
@@ -73,6 +78,7 @@ pub mod gmail;
 pub mod google_authenticator;
 pub mod google_calendar_events;
 pub mod google_chrome;
+pub mod google_flights;
 pub mod google_home;
 pub mod google_keep;
 pub mod google_maps;
@@ -83,6 +89,7 @@ pub mod govx;
 pub mod grubhub;
 pub mod headspace;
 pub mod hinge;
+pub mod hotels_com;
 pub mod imo_messenger;
 pub mod installed_apps;
 pub mod instacart;
@@ -137,8 +144,9 @@ pub mod skout;
 pub mod skype;
 pub mod slopes;
 pub mod smartthings;
-pub mod spotify_deep;
 pub mod smartthings_events;
+pub mod southwest_airlines;
+pub mod spotify_deep;
 pub mod sms;
 pub mod snapchat;
 pub mod snapchat_memories;
@@ -160,11 +168,13 @@ pub mod twitter;
 pub mod twitter_spaces;
 pub mod uber;
 pub mod uber_eats;
+pub mod united_airlines;
 pub mod united_healthcare;
 pub mod usaa;
 pub mod usage_stats;
 pub mod venmo;
 pub mod viber;
+pub mod vrbo;
 pub mod vlc_media;
 pub mod waze;
 pub mod wellbeing;
@@ -684,6 +694,56 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "ebay",
         matches_any: ebay::MATCHES,
         run: ebay::parse,
+    },
+    ParserEntry {
+        name: "airbnb",
+        matches_any: airbnb::MATCHES,
+        run: airbnb::parse,
+    },
+    ParserEntry {
+        name: "american_airlines",
+        matches_any: american_airlines::MATCHES,
+        run: american_airlines::parse,
+    },
+    ParserEntry {
+        name: "booking_com",
+        matches_any: booking_com::MATCHES,
+        run: booking_com::parse,
+    },
+    ParserEntry {
+        name: "delta_airlines",
+        matches_any: delta_airlines::MATCHES,
+        run: delta_airlines::parse,
+    },
+    ParserEntry {
+        name: "expedia",
+        matches_any: expedia::MATCHES,
+        run: expedia::parse,
+    },
+    ParserEntry {
+        name: "google_flights",
+        matches_any: google_flights::MATCHES,
+        run: google_flights::parse,
+    },
+    ParserEntry {
+        name: "hotels_com",
+        matches_any: hotels_com::MATCHES,
+        run: hotels_com::parse,
+    },
+    ParserEntry {
+        name: "southwest_airlines",
+        matches_any: southwest_airlines::MATCHES,
+        run: southwest_airlines::parse,
+    },
+    ParserEntry {
+        name: "united_airlines",
+        matches_any: united_airlines::MATCHES,
+        run: united_airlines::parse,
+    },
+    ParserEntry {
+        name: "vrbo",
+        matches_any: vrbo::MATCHES,
+        run: vrbo::parse,
     },
     ParserEntry {
         name: "uber",
