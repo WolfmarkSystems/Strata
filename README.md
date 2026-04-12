@@ -25,7 +25,7 @@ The tools that exist were built for enterprise budgets and conference demos. Str
 - **Court-ready reporting** — Word and PDF export, chain-of-custody audit log, evidence integrity verification, obstruction score section
 - **Air-gap deployable** — single binary (24 MB macOS), USB portable, no cloud dependency, no telemetry
 - **Cross-platform** — Windows, macOS, Linux. Parses evidence from iOS and Android devices
-- **89% pure Rust** — 2,348 tests, zero unsafe blocks in production paths, zero clippy warnings
+- **89% pure Rust** — 2,393 tests, zero unsafe blocks in production paths, zero clippy warnings
 
 ---
 
