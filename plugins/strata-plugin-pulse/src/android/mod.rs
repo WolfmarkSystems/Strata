@@ -24,12 +24,14 @@ pub mod bank_of_america;
 pub mod bereal;
 pub mod betterhelp;
 pub mod bitcoin_wallet;
+pub mod blackboard;
 pub mod bluetooth;
 pub mod browser_history;
 pub mod bumble;
 pub mod calendar;
 pub mod call_logs;
 pub mod calm_app;
+pub mod canvas_lms;
 pub mod capital_one;
 pub mod cash_app;
 pub mod chase_bank;
@@ -53,6 +55,7 @@ pub mod discord_voice;
 pub mod dji_flight;
 pub mod dmv_app;
 pub mod doordash;
+pub mod duolingo;
 pub mod ebay;
 pub mod facebook_messenger;
 pub mod factory_reset;
@@ -105,6 +108,7 @@ pub mod nike_moments;
 pub mod notifications;
 pub mod oruxmaps;
 pub mod oura;
+pub mod pandora;
 pub mod peloton;
 pub mod permissions;
 pub mod philips_hue;
@@ -126,6 +130,7 @@ pub mod skout;
 pub mod skype;
 pub mod slopes;
 pub mod smartthings;
+pub mod spotify_deep;
 pub mod smartthings_events;
 pub mod sms;
 pub mod snapchat;
@@ -934,5 +939,30 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "oura",
         matches_any: oura::MATCHES,
         run: oura::parse,
+    },
+    ParserEntry {
+        name: "duolingo",
+        matches_any: duolingo::MATCHES,
+        run: duolingo::parse,
+    },
+    ParserEntry {
+        name: "canvas_lms",
+        matches_any: canvas_lms::MATCHES,
+        run: canvas_lms::parse,
+    },
+    ParserEntry {
+        name: "blackboard",
+        matches_any: blackboard::MATCHES,
+        run: blackboard::parse,
+    },
+    ParserEntry {
+        name: "spotify_deep",
+        matches_any: spotify_deep::MATCHES,
+        run: spotify_deep::parse,
+    },
+    ParserEntry {
+        name: "pandora",
+        matches_any: pandora::MATCHES,
+        run: pandora::parse,
     },
 ];
