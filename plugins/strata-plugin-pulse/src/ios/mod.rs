@@ -15,17 +15,21 @@ pub mod accounts;
 pub mod aggregate;
 pub mod airdrop;
 pub mod airpods;
+pub mod alarms;
 pub mod airprint;
 pub mod alltrails;
 pub mod appinstall;
+pub mod appgroupcontainers;
 pub mod applepay;
 pub mod applenews;
 pub mod appclips;
 pub mod appletv;
 pub mod apppermissions;
 pub mod appstate;
+pub mod authkit;
 pub mod backgroundtasks;
 pub mod biome;
+pub mod biometrickit;
 pub mod bluetooth;
 pub mod books;
 pub mod bumble;
@@ -40,6 +44,7 @@ pub mod cloudkitsync;
 pub mod chrome;
 pub mod compass;
 pub mod continuity;
+pub mod corespotlightindex;
 pub mod crashlogs;
 pub mod callhistory;
 pub mod carplay;
@@ -49,14 +54,18 @@ pub mod corelocationhist;
 pub mod crashreporterdeep;
 pub mod contacts;
 pub mod cookies;
+pub mod datadetectors;
 pub mod datausage;
+pub mod deletedapps;
 pub mod deviceinfo;
 pub mod devicelock;
+pub mod diskusage;
 pub mod dhcpleases;
 pub mod disneyplus;
 pub mod duetactivity;
 pub mod discord;
 pub mod emergencysos;
+pub mod encryptednotes;
 pub mod facebook;
 pub mod facetimedeep;
 pub mod falldetection;
@@ -78,11 +87,13 @@ pub mod hinge;
 pub mod homekit;
 pub mod hulu;
 pub mod icloudbackup;
+pub mod icloudkeyvalue;
 pub mod icloudtabs;
 pub mod imessageattach;
 pub mod instagram;
 pub mod interactionc;
 pub mod itunesstore;
+pub mod keychainmeta;
 pub mod keyboard;
 pub mod kik;
 pub mod knowledgec;
@@ -97,8 +108,12 @@ pub mod managedconfig;
 pub mod measure;
 pub mod medialibrary;
 pub mod maps;
+pub mod mediaremote;
+pub mod mobileasset;
 pub mod mobileactivation;
 pub mod mobilebackup;
+pub mod nanotimekit;
+pub mod nearbyinteraction;
 pub mod netflix;
 pub mod notes;
 pub mod nsuserdefaults;
@@ -122,9 +137,12 @@ pub mod safaritabs;
 pub mod screenrecording;
 pub mod screentime;
 pub mod screentimeapps;
+pub mod sharinghistory;
 pub mod shortcuts;
+pub mod simtoolkit;
 pub mod siri;
 pub mod siminfo;
+pub mod springboardarrange;
 pub mod spotlight;
 pub mod spotify;
 pub mod strava;
@@ -139,8 +157,9 @@ pub mod tiktok;
 pub mod tinder;
 pub mod tcc;
 pub mod teams;
-pub mod translate;
 pub mod textreplacement;
+pub mod translate;
+pub mod truststore;
 pub mod threema;
 pub mod twitch;
 pub mod twitter;
@@ -149,6 +168,7 @@ pub mod uber;
 pub mod universalclipboard;
 pub mod venmo;
 pub mod voicememos;
+pub mod vpnconfig;
 pub mod voicemail;
 pub mod wallet;
 pub mod webclips;
@@ -627,6 +647,66 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if continuity::matches(path) {
         out.extend(continuity::parse(path));
+    }
+    if truststore::matches(path) {
+        out.extend(truststore::parse(path));
+    }
+    if mobileasset::matches(path) {
+        out.extend(mobileasset::parse(path));
+    }
+    if biometrickit::matches(path) {
+        out.extend(biometrickit::parse(path));
+    }
+    if authkit::matches(path) {
+        out.extend(authkit::parse(path));
+    }
+    if corespotlightindex::matches(path) {
+        out.extend(corespotlightindex::parse(path));
+    }
+    if nanotimekit::matches(path) {
+        out.extend(nanotimekit::parse(path));
+    }
+    if datadetectors::matches(path) {
+        out.extend(datadetectors::parse(path));
+    }
+    if springboardarrange::matches(path) {
+        out.extend(springboardarrange::parse(path));
+    }
+    if encryptednotes::matches(path) {
+        out.extend(encryptednotes::parse(path));
+    }
+    if deletedapps::matches(path) {
+        out.extend(deletedapps::parse(path));
+    }
+    if simtoolkit::matches(path) {
+        out.extend(simtoolkit::parse(path));
+    }
+    if vpnconfig::matches(path) {
+        out.extend(vpnconfig::parse(path));
+    }
+    if alarms::matches(path) {
+        out.extend(alarms::parse(path));
+    }
+    if keychainmeta::matches(path) {
+        out.extend(keychainmeta::parse(path));
+    }
+    if diskusage::matches(path) {
+        out.extend(diskusage::parse(path));
+    }
+    if appgroupcontainers::matches(path) {
+        out.extend(appgroupcontainers::parse(path));
+    }
+    if icloudkeyvalue::matches(path) {
+        out.extend(icloudkeyvalue::parse(path));
+    }
+    if sharinghistory::matches(path) {
+        out.extend(sharinghistory::parse(path));
+    }
+    if mediaremote::matches(path) {
+        out.extend(mediaremote::parse(path));
+    }
+    if nearbyinteraction::matches(path) {
+        out.extend(nearbyinteraction::parse(path));
     }
     out
 }
