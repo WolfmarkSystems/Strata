@@ -120,6 +120,7 @@ pub mod lastpass;
 pub mod lexisnexis;
 pub mod libre_cgm;
 pub mod life360;
+pub mod life360_deep;
 pub mod line_messenger;
 pub mod linkedin;
 pub mod linkedin_jobs;
@@ -159,6 +160,7 @@ pub mod pandora;
 pub mod peloton;
 pub mod permissions;
 pub mod philips_hue;
+pub mod pillow_sleep;
 pub mod pinterest;
 pub mod protonmail;
 pub mod puma_trac;
@@ -180,6 +182,7 @@ pub mod sim_info;
 pub mod skout;
 pub mod sleep_cycle;
 pub mod skype;
+pub mod slack_deep;
 pub mod slopes;
 pub mod smartthings;
 pub mod smartthings_events;
@@ -195,6 +198,7 @@ pub mod speedtest;
 pub mod spothero;
 pub mod strava;
 pub mod target_app;
+pub mod teams_deep;
 pub mod telegram;
 pub mod telegram_channels;
 pub mod tesla_app;
@@ -237,6 +241,7 @@ pub mod zello;
 pub mod zepp_life;
 pub mod zillow;
 pub mod ziprecruiter;
+pub mod zoom_deep;
 
 /// A single Android parser binding — name, matcher, and runner.
 pub struct ParserEntry {
@@ -1384,5 +1389,30 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "find_my_kids",
         matches_any: find_my_kids::MATCHES,
         run: find_my_kids::parse,
+    },
+    ParserEntry {
+        name: "life360_deep",
+        matches_any: life360_deep::MATCHES,
+        run: life360_deep::parse,
+    },
+    ParserEntry {
+        name: "pillow_sleep",
+        matches_any: pillow_sleep::MATCHES,
+        run: pillow_sleep::parse,
+    },
+    ParserEntry {
+        name: "slack_deep",
+        matches_any: slack_deep::MATCHES,
+        run: slack_deep::parse,
+    },
+    ParserEntry {
+        name: "teams_deep",
+        matches_any: teams_deep::MATCHES,
+        run: teams_deep::parse,
+    },
+    ParserEntry {
+        name: "zoom_deep",
+        matches_any: zoom_deep::MATCHES,
+        run: zoom_deep::parse,
     },
 ];
