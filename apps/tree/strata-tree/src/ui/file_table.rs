@@ -162,7 +162,8 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                 let Some(f) = state.file_index.get(idx).cloned() else {
                     continue;
                 };
-                let is_sel = selected_id.as_deref() == Some(f.id.as_str());
+                let is_sel = selected_id.as_deref() == Some(f.id.as_str())
+                    || state.file_table_state.selected_ids.contains(&f.id);
                 let stripe_bg = if row % 2 == 0 {
                     egui::Color32::TRANSPARENT
                 } else {
@@ -220,6 +221,34 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                 egui::Label::new(name_text).sense(egui::Sense::click()),
                             );
                             if resp.clicked() {
+                                let modifiers = ui.input(|i| i.modifiers);
+                                if modifiers.shift {
+                                    // Shift+Click: range select from last_click_row to current
+                                    if let Some(anchor) = state.file_table_state.last_click_row {
+                                        let lo = anchor.min(row);
+                                        let hi = anchor.max(row);
+                                        state.file_table_state.selected_ids.clear();
+                                        for r in lo..=hi {
+                                            if let Some(idx) = state.filtered_file_indices.get(r) {
+                                                if let Some(entry) = state.file_index.get(*idx) {
+                                                    state.file_table_state.selected_ids.push(entry.id.clone());
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else if modifiers.command {
+                                    // Ctrl+Click: toggle individual
+                                    if let Some(pos) = state.file_table_state.selected_ids.iter().position(|id| id == &f.id) {
+                                        state.file_table_state.selected_ids.remove(pos);
+                                    } else {
+                                        state.file_table_state.selected_ids.push(f.id.clone());
+                                    }
+                                    state.file_table_state.last_click_row = Some(row);
+                                } else {
+                                    // Normal click: single select, clear multi
+                                    state.file_table_state.selected_ids.clear();
+                                    state.file_table_state.last_click_row = Some(row);
+                                }
                                 state.selected_file_id = Some(f.id.clone());
                                 state.file_table_state.selected_id = Some(f.id.clone());
                                 state.load_hex_for_file(&f.id);
@@ -238,6 +267,86 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                 );
                             }
                             resp.context_menu(|ui| {
+                                let multi_count = state.file_table_state.selected_ids.len();
+                                if multi_count > 1 {
+                                    ui.label(
+                                        egui::RichText::new(format!("{} files selected", multi_count))
+                                            .strong()
+                                            .size(10.0),
+                                    );
+                                    ui.separator();
+                                    if ui.button("Tag Selected as Notable").clicked() {
+                                        let ids = state.file_table_state.selected_ids.clone();
+                                        let examiner = state.examiner_name.clone();
+                                        for fid in &ids {
+                                            if state.bookmarks.iter().all(|b| b.file_id.as_deref() != Some(fid)) {
+                                                state.bookmarks.push(crate::state::Bookmark {
+                                                    id: uuid::Uuid::new_v4().to_string(),
+                                                    file_id: Some(fid.clone()),
+                                                    registry_path: None,
+                                                    tag: "NOTABLE".to_string(),
+                                                    examiner: examiner.clone(),
+                                                    note: String::new(),
+                                                    created_utc: chrono::Utc::now()
+                                                        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                                                });
+                                            }
+                                        }
+                                        state.mark_case_dirty();
+                                        state.log_action(
+                                            "BULK_TAG",
+                                            &format!("{} files tagged NOTABLE", ids.len()),
+                                        );
+                                        ui.close_menu();
+                                    }
+                                    if ui.button("Hash Selected").clicked() {
+                                        let ids = state.file_table_state.selected_ids.clone();
+                                        let files: Vec<_> = state
+                                            .file_index
+                                            .iter()
+                                            .filter(|f| ids.contains(&f.id))
+                                            .cloned()
+                                            .collect();
+                                        if !files.is_empty() {
+                                            let (tx, rx) = std::sync::mpsc::channel();
+                                            crate::evidence::hasher::spawn_hash_worker(
+                                                files,
+                                                state.vfs_context.clone(),
+                                                tx,
+                                            );
+                                            state.hashing_rx = Some(rx);
+                                            state.hashing_active = true;
+                                            state.status =
+                                                format!("Hashing {} files...", ids.len());
+                                        }
+                                        ui.close_menu();
+                                    }
+                                    if ui.button("Add Selected to Report").clicked() {
+                                        let ids = state.file_table_state.selected_ids.clone();
+                                        let examiner = state.examiner_name.clone();
+                                        for fid in &ids {
+                                            if state.bookmarks.iter().all(|b| b.file_id.as_deref() != Some(fid)) {
+                                                state.bookmarks.push(crate::state::Bookmark {
+                                                    id: uuid::Uuid::new_v4().to_string(),
+                                                    file_id: Some(fid.clone()),
+                                                    registry_path: None,
+                                                    tag: "REPORT".to_string(),
+                                                    examiner: examiner.clone(),
+                                                    note: String::new(),
+                                                    created_utc: chrono::Utc::now()
+                                                        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                                                });
+                                            }
+                                        }
+                                        state.mark_case_dirty();
+                                        state.log_action(
+                                            "BULK_ADD_REPORT",
+                                            &format!("{} files added to report", ids.len()),
+                                        );
+                                        ui.close_menu();
+                                    }
+                                    ui.separator();
+                                }
                                 if ui.button("Bookmark (Notable)").clicked() {
                                     let examiner = state.examiner_name.clone();
                                     if let Some(existing) =
