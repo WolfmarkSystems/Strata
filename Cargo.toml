@@ -89,4 +89,5 @@ strata-shield-engine = { path = "crates/strata-shield-engine" }
 strata-shield-cli = { path = "crates/strata-shield-cli" }
 strata-csam = { path = "crates/strata-csam" }
 strata-charges = { path = "crates/strata-charges" }
+strata-ml-summary = { path = "crates/strata-ml-summary" }
 vt-core = { path = "apps/tree/vt-core" }

@@ -168,6 +168,8 @@ pub enum ViewMode {
     AuditLog,
     Plugins,
     Settings,
+    #[allow(dead_code)]
+    Summary,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -395,6 +397,10 @@ pub struct AppState {
     pub charge_search_query: String,
     pub charge_search_results: Vec<strata_charges::ChargeEntry>,
     pub charge_db: Option<strata_charges::ChargeDatabase>,
+
+    // ── Executive Summary (ML-assisted) ──
+    pub generated_summary: Option<strata_ml_summary::GeneratedSummary>,
+    pub summary_generating: bool,
 
     // ── Evidence ──
     pub evidence_sources: Vec<EvidenceSource>,
@@ -631,6 +637,8 @@ impl Default for AppState {
             charge_search_query: String::new(),
             charge_search_results: Vec::new(),
             charge_db: None,
+            generated_summary: None,
+            summary_generating: false,
             evidence_sources: Vec::new(),
             vfs_context: None,
             file_index: Vec::new(),
@@ -849,6 +857,56 @@ impl AppState {
                 tracing::error!("Failed to open charge database: {}", e);
             }
         }
+    }
+
+    /// Approve the current generated summary for report inclusion.
+    pub fn approve_summary(&mut self) {
+        if let Some(ref mut summary) = self.generated_summary {
+            summary.examiner_approved = true;
+            summary.status = strata_ml_summary::SummaryStatus::Approved;
+        }
+    }
+
+    /// Reject the current summary — it will not be included in reports.
+    pub fn reject_summary(&mut self) {
+        if let Some(ref mut summary) = self.generated_summary {
+            summary.examiner_approved = false;
+            summary.status = strata_ml_summary::SummaryStatus::Rejected;
+        }
+    }
+
+    /// Edit a summary section, revoking approval and tracking the change.
+    #[allow(dead_code)]
+    pub fn update_summary_section(
+        &mut self,
+        section_type: strata_ml_summary::SectionType,
+        new_text: String,
+        reason: Option<String>,
+    ) {
+        let Some(ref mut summary) = self.generated_summary else {
+            return;
+        };
+        let Some(section) = summary
+            .sections
+            .iter_mut()
+            .find(|s| s.section_type == section_type)
+        else {
+            return;
+        };
+        if !section.is_editable {
+            return;
+        }
+        let original = section.content.clone();
+        section.content = new_text.clone();
+        summary.examiner_edits.push(strata_ml_summary::ExaminerEdit {
+            section_type,
+            original_text: original,
+            edited_text: new_text,
+            edited_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            edit_reason: reason,
+        });
+        summary.examiner_approved = false;
+        summary.status = strata_ml_summary::SummaryStatus::UnderReview;
     }
 
     pub fn refresh_license_state(&mut self) {
@@ -1280,6 +1338,7 @@ impl AppState {
                 ViewMode::Plugins => "plugins",
                 ViewMode::Artifacts => "artifacts",
                 ViewMode::Settings => "settings",
+                ViewMode::Summary => "summary",
             },
         );
         let _ = project.set_ui_pref(
@@ -1299,6 +1358,7 @@ impl AppState {
                 ViewMode::Plugins => "plugins",
                 ViewMode::Artifacts => "artifacts",
                 ViewMode::Settings => "settings",
+                ViewMode::Summary => "summary",
             },
         );
         if let Some(selected_file_id) = &self.selected_file_id {

@@ -26,6 +26,7 @@ pub mod plugins_view;
 pub mod registry_view;
 pub mod search_view;
 pub mod settings_view;
+pub mod summary_view;
 pub mod timeline_view;
 
 use crate::state::{AppState, ViewMode};
@@ -81,6 +82,7 @@ fn view_mode_label(mode: &crate::state::ViewMode) -> &'static str {
         crate::state::ViewMode::AuditLog => "AuditLog",
         crate::state::ViewMode::Plugins => "Plugins",
         crate::state::ViewMode::Settings => "Settings",
+        crate::state::ViewMode::Summary => "Summary",
     }
 }
 

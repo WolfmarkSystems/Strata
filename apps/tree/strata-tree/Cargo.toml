@@ -52,6 +52,7 @@ strata-plugin-sigma = { path = "../../../plugins/strata-plugin-sigma" }
 strata-plugin-csam = { path = "../../../plugins/strata-plugin-csam" }
 strata-csam = { workspace = true }
 strata-charges = { workspace = true }
+strata-ml-summary = { workspace = true }
 egui-phosphor = "0.11"
 
 [features]
