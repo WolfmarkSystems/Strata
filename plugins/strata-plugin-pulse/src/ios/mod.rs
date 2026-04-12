@@ -13,6 +13,7 @@ pub mod util;
 pub mod accessibility;
 pub mod accounts;
 pub mod aggregate;
+pub mod airbnb;
 pub mod airdrop;
 pub mod airpods;
 pub mod alarms;
@@ -47,7 +48,9 @@ pub mod continuity;
 pub mod corespotlightindex;
 pub mod crashlogs;
 pub mod callhistory;
+pub mod carekit;
 pub mod carplay;
+pub mod chase;
 pub mod commlimits;
 pub mod containermanager;
 pub mod corelocationhist;
@@ -66,6 +69,7 @@ pub mod duetactivity;
 pub mod discord;
 pub mod emergencysos;
 pub mod encryptednotes;
+pub mod expedia;
 pub mod facebook;
 pub mod facetimedeep;
 pub mod falldetection;
@@ -74,11 +78,14 @@ pub mod findmy;
 pub mod findmynetwork;
 pub mod firefox;
 pub mod fitbit;
+pub mod focusfilters;
 pub mod focusmode;
+pub mod freeform;
 pub mod gamecenter;
 pub mod googlemaps;
 pub mod handoff;
 pub mod health;
+pub mod hearinghealth;
 pub mod healthsamples;
 pub mod healthsources;
 pub mod healthecg;
@@ -93,12 +100,14 @@ pub mod imessageattach;
 pub mod instagram;
 pub mod interactionc;
 pub mod itunesstore;
+pub mod journal;
 pub mod keychainmeta;
 pub mod keyboard;
 pub mod kik;
 pub mod knowledgec;
 pub mod line;
 pub mod linkedin;
+pub mod liveactivities;
 pub mod location;
 pub mod lyft;
 pub mod magnifier;
@@ -129,6 +138,7 @@ pub mod podcasts;
 pub mod powerlog;
 pub mod reddit;
 pub mod reminders;
+pub mod researchkit;
 pub mod restrictions;
 pub mod robinhood;
 pub mod safari;
@@ -707,6 +717,36 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if nearbyinteraction::matches(path) {
         out.extend(nearbyinteraction::parse(path));
+    }
+    if freeform::matches(path) {
+        out.extend(freeform::parse(path));
+    }
+    if journal::matches(path) {
+        out.extend(journal::parse(path));
+    }
+    if focusfilters::matches(path) {
+        out.extend(focusfilters::parse(path));
+    }
+    if liveactivities::matches(path) {
+        out.extend(liveactivities::parse(path));
+    }
+    if airbnb::matches(path) {
+        out.extend(airbnb::parse(path));
+    }
+    if expedia::matches(path) {
+        out.extend(expedia::parse(path));
+    }
+    if researchkit::matches(path) {
+        out.extend(researchkit::parse(path));
+    }
+    if carekit::matches(path) {
+        out.extend(carekit::parse(path));
+    }
+    if hearinghealth::matches(path) {
+        out.extend(hearinghealth::parse(path));
+    }
+    if chase::matches(path) {
+        out.extend(chase::parse(path));
     }
     out
 }
