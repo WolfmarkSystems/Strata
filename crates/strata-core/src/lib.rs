@@ -13,6 +13,7 @@ pub mod case;
 pub mod catalog;
 pub mod classification;
 pub mod context;
+pub mod custody;
 pub mod disk;
 pub mod encryption;
 pub mod events;
