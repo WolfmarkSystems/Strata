@@ -19,6 +19,7 @@ pub mod audit_view;
 pub mod bookmarks_view;
 pub mod browser_history_view;
 pub mod charges_view;
+pub mod csam_review_view;
 pub mod compare_view;
 pub mod event_logs_view;
 pub mod gallery_view;
@@ -83,6 +84,7 @@ fn view_mode_label(mode: &crate::state::ViewMode) -> &'static str {
         crate::state::ViewMode::Plugins => "Plugins",
         crate::state::ViewMode::Settings => "Settings",
         crate::state::ViewMode::Summary => "Summary",
+        crate::state::ViewMode::CsamReview => "CsamReview",
     }
 }
 

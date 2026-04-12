@@ -2,9 +2,10 @@
 //! Uses painter-drawn card backgrounds for reliable rounded corners.
 
 use super::{
-    artifacts_view, audit_view, bookmarks_view, browser_history_view, compare_view, dialogs,
-    event_logs_view, file_table, gallery_view, hash_sets_view, plugins_view, preview_panel,
-    registry_view, search_view, settings_view, summary_view, tabbar, timeline_view, tree_panel,
+    artifacts_view, audit_view, bookmarks_view, browser_history_view, compare_view,
+    csam_review_view, dialogs, event_logs_view, file_table, gallery_view, hash_sets_view,
+    plugins_view, preview_panel, registry_view, search_view, settings_view, summary_view, tabbar,
+    timeline_view, tree_panel,
 };
 use crate::state::{AppState, ViewMode};
 
@@ -253,6 +254,7 @@ fn render_tab_content(ctx: &egui::Context, state: &mut AppState, t: &crate::them
                     ViewMode::Plugins => plugins_view::render(ui, state),
                     ViewMode::Settings => settings_view::render(ui, state),
                     ViewMode::Summary => summary_view::render(ui, state),
+                    ViewMode::CsamReview => csam_review_view::render(ui, state),
                     ViewMode::FileExplorer => {}
                 });
         });

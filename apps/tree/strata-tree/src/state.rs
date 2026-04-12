@@ -170,6 +170,8 @@ pub enum ViewMode {
     Settings,
     #[allow(dead_code)]
     Summary,
+    #[allow(dead_code)]
+    CsamReview,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -1350,6 +1352,7 @@ impl AppState {
                 ViewMode::Artifacts => "artifacts",
                 ViewMode::Settings => "settings",
                 ViewMode::Summary => "summary",
+                ViewMode::CsamReview => "csam_review",
             },
         );
         let _ = project.set_ui_pref(
@@ -1370,6 +1373,7 @@ impl AppState {
                 ViewMode::Artifacts => "artifacts",
                 ViewMode::Settings => "settings",
                 ViewMode::Summary => "summary",
+                ViewMode::CsamReview => "csam_review",
             },
         );
         if let Some(selected_file_id) = &self.selected_file_id {
