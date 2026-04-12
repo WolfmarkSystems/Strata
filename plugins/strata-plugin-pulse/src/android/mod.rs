@@ -19,6 +19,8 @@ pub mod airbnb;
 pub mod amazon_alexa;
 pub mod amazon_shopping;
 pub mod american_airlines;
+pub mod anydo;
+pub mod authy;
 pub mod android_auto;
 pub mod app_usage;
 pub mod army_mobile;
@@ -26,6 +28,7 @@ pub mod badoo;
 pub mod bank_of_america;
 pub mod bereal;
 pub mod betterhelp;
+pub mod bitwarden;
 pub mod bitcoin_wallet;
 pub mod blackboard;
 pub mod bluetooth;
@@ -52,6 +55,7 @@ pub mod chrome_top_sites;
 pub mod clipboard;
 pub mod coinbase;
 pub mod contacts;
+pub mod costco;
 pub mod device_info;
 pub mod delta_airlines;
 pub mod dexcom_cgm;
@@ -62,8 +66,10 @@ pub mod dmv_app;
 pub mod doordash;
 pub mod duolingo;
 pub mod ebay;
+pub mod evernote;
 pub mod expedia;
 pub mod facebook_messenger;
+pub mod fb_marketplace;
 pub mod factory_reset;
 pub mod firefox;
 pub mod firefox_cookies;
@@ -82,12 +88,15 @@ pub mod google_flights;
 pub mod google_home;
 pub mod google_keep;
 pub mod google_maps;
+pub mod google_tasks;
 pub mod google_messages;
 pub mod google_photos;
 pub mod google_play;
 pub mod govx;
+pub mod groupme;
 pub mod grubhub;
 pub mod headspace;
+pub mod here_maps;
 pub mod hinge;
 pub mod hotels_com;
 pub mod imo_messenger;
@@ -96,6 +105,7 @@ pub mod instacart;
 pub mod indeed;
 pub mod irs2go;
 pub mod keyboard_cache;
+pub mod lastpass;
 pub mod lexisnexis;
 pub mod libre_cgm;
 pub mod life360;
@@ -104,7 +114,9 @@ pub mod linkedin;
 pub mod linkedin_jobs;
 pub mod location_history;
 pub mod lyft;
+pub mod maps_me;
 pub mod mapmywalk;
+pub mod marco_polo;
 pub mod medicare;
 pub mod meetme;
 pub mod mega_chat;
@@ -118,8 +130,13 @@ pub mod navy_federal;
 pub mod nest;
 pub mod nike_activities;
 pub mod nike_moments;
+pub mod notion;
 pub mod notifications;
+pub mod offerup;
+pub mod onenote;
+pub mod onepassword;
 pub mod oruxmaps;
+pub mod osmand;
 pub mod oura;
 pub mod pacer;
 pub mod pandora;
@@ -153,9 +170,12 @@ pub mod spotify_deep;
 pub mod sms;
 pub mod snapchat;
 pub mod snapchat_memories;
+pub mod snapchat_spotlight;
 pub mod snapchat_stories;
+pub mod soundcloud;
 pub mod speedtest;
 pub mod strava;
+pub mod target_app;
 pub mod telegram;
 pub mod telegram_channels;
 pub mod tesla_app;
@@ -164,6 +184,7 @@ pub mod tiktok;
 pub mod tiktok_live;
 pub mod tiktok_search;
 pub mod tinder;
+pub mod todoist;
 pub mod trust_wallet;
 pub mod tsa_precheck;
 pub mod twitch;
@@ -177,8 +198,10 @@ pub mod usaa;
 pub mod usage_stats;
 pub mod venmo;
 pub mod viber;
+pub mod voxer;
 pub mod vrbo;
 pub mod vlc_media;
+pub mod walmart;
 pub mod waze;
 pub mod wellbeing;
 pub mod wells_fargo;
@@ -188,7 +211,9 @@ pub mod whoop;
 pub mod wifi_profiles;
 pub mod withings;
 pub mod words_with_friends;
+pub mod youtube_music;
 pub mod zelle;
+pub mod zello;
 pub mod zepp_life;
 pub mod zillow;
 pub mod ziprecruiter;
@@ -1114,5 +1139,130 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "ziprecruiter",
         matches_any: ziprecruiter::MATCHES,
         run: ziprecruiter::parse,
+    },
+    ParserEntry {
+        name: "notion",
+        matches_any: notion::MATCHES,
+        run: notion::parse,
+    },
+    ParserEntry {
+        name: "evernote",
+        matches_any: evernote::MATCHES,
+        run: evernote::parse,
+    },
+    ParserEntry {
+        name: "onenote",
+        matches_any: onenote::MATCHES,
+        run: onenote::parse,
+    },
+    ParserEntry {
+        name: "todoist",
+        matches_any: todoist::MATCHES,
+        run: todoist::parse,
+    },
+    ParserEntry {
+        name: "anydo",
+        matches_any: anydo::MATCHES,
+        run: anydo::parse,
+    },
+    ParserEntry {
+        name: "google_tasks",
+        matches_any: google_tasks::MATCHES,
+        run: google_tasks::parse,
+    },
+    ParserEntry {
+        name: "lastpass",
+        matches_any: lastpass::MATCHES,
+        run: lastpass::parse,
+    },
+    ParserEntry {
+        name: "onepassword",
+        matches_any: onepassword::MATCHES,
+        run: onepassword::parse,
+    },
+    ParserEntry {
+        name: "bitwarden",
+        matches_any: bitwarden::MATCHES,
+        run: bitwarden::parse,
+    },
+    ParserEntry {
+        name: "authy",
+        matches_any: authy::MATCHES,
+        run: authy::parse,
+    },
+    ParserEntry {
+        name: "soundcloud",
+        matches_any: soundcloud::MATCHES,
+        run: soundcloud::parse,
+    },
+    ParserEntry {
+        name: "youtube_music",
+        matches_any: youtube_music::MATCHES,
+        run: youtube_music::parse,
+    },
+    ParserEntry {
+        name: "groupme",
+        matches_any: groupme::MATCHES,
+        run: groupme::parse,
+    },
+    ParserEntry {
+        name: "here_maps",
+        matches_any: here_maps::MATCHES,
+        run: here_maps::parse,
+    },
+    ParserEntry {
+        name: "maps_me",
+        matches_any: maps_me::MATCHES,
+        run: maps_me::parse,
+    },
+    ParserEntry {
+        name: "osmand",
+        matches_any: osmand::MATCHES,
+        run: osmand::parse,
+    },
+    ParserEntry {
+        name: "walmart",
+        matches_any: walmart::MATCHES,
+        run: walmart::parse,
+    },
+    ParserEntry {
+        name: "target_app",
+        matches_any: target_app::MATCHES,
+        run: target_app::parse,
+    },
+    ParserEntry {
+        name: "costco",
+        matches_any: costco::MATCHES,
+        run: costco::parse,
+    },
+    ParserEntry {
+        name: "offerup",
+        matches_any: offerup::MATCHES,
+        run: offerup::parse,
+    },
+    ParserEntry {
+        name: "fb_marketplace",
+        matches_any: fb_marketplace::MATCHES,
+        run: fb_marketplace::parse,
+    },
+    ParserEntry {
+        name: "marco_polo",
+        matches_any: marco_polo::MATCHES,
+        run: marco_polo::parse,
+    },
+    ParserEntry {
+        name: "voxer",
+        matches_any: voxer::MATCHES,
+        run: voxer::parse,
+    },
+    ParserEntry {
+        name: "zello",
+        matches_any: zello::MATCHES,
+        run: zello::parse,
+    },
+    ParserEntry {
+        name: "snapchat_spotlight",
+        matches_any: snapchat_spotlight::MATCHES,
+        run: snapchat_spotlight::parse,
     },
 ];
