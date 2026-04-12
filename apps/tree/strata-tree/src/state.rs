@@ -218,6 +218,12 @@ pub struct FileTableState {
     pub column_widths: Vec<f32>,
     #[serde(default = "default_visible_columns")]
     pub visible_columns: Vec<bool>,
+    /// Multi-selected file IDs (Shift+Click range, Ctrl+Click toggle).
+    #[serde(skip)]
+    pub selected_ids: Vec<String>,
+    /// Last clicked row index for Shift+Click range selection.
+    #[serde(skip)]
+    pub last_click_row: Option<usize>,
 }
 
 fn default_visible_columns() -> Vec<bool> {
@@ -240,6 +246,8 @@ impl Default for FileTableState {
             visible_end: 0,
             column_widths: default_file_table_column_widths(),
             visible_columns: default_visible_columns(),
+            selected_ids: Vec::new(),
+            last_click_row: None,
         }
     }
 }
