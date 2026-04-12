@@ -44,6 +44,7 @@ pub mod cash_app;
 pub mod chase_bank;
 pub mod chess_com;
 pub mod chess_with_friends;
+pub mod citizen_app;
 pub mod citymapper;
 pub mod chrome_autofill;
 pub mod chrome_bookmarks;
@@ -53,10 +54,12 @@ pub mod chrome_login_data;
 pub mod chrome_media_history;
 pub mod chrome_top_sites;
 pub mod clipboard;
+pub mod coffee_meets_bagel;
 pub mod coinbase;
 pub mod contacts;
 pub mod costco;
 pub mod device_info;
+pub mod dailymotion;
 pub mod delta_airlines;
 pub mod dexcom_cgm;
 pub mod discord;
@@ -85,6 +88,7 @@ pub mod google_authenticator;
 pub mod google_calendar_events;
 pub mod google_chrome;
 pub mod google_flights;
+pub mod grindr;
 pub mod google_home;
 pub mod google_keep;
 pub mod google_maps;
@@ -128,17 +132,21 @@ pub mod myfitnesspal;
 pub mod mysugr;
 pub mod navy_federal;
 pub mod nest;
+pub mod nextdoor;
 pub mod nike_activities;
 pub mod nike_moments;
 pub mod notion;
 pub mod notifications;
 pub mod offerup;
+pub mod okcupid;
 pub mod onenote;
 pub mod onepassword;
 pub mod oruxmaps;
 pub mod osmand;
 pub mod oura;
 pub mod pacer;
+pub mod plenty_of_fish;
+pub mod pluto_tv;
 pub mod pandora;
 pub mod peloton;
 pub mod permissions;
@@ -153,6 +161,7 @@ pub mod redfin;
 pub mod reddit;
 pub mod ring_doorbell;
 pub mod robinhood;
+pub mod rumble;
 pub mod romeo;
 pub mod runkeeper;
 pub mod samsung_health;
@@ -184,6 +193,7 @@ pub mod tiktok;
 pub mod tiktok_live;
 pub mod tiktok_search;
 pub mod tinder;
+pub mod tubi;
 pub mod todoist;
 pub mod trust_wallet;
 pub mod tsa_precheck;
@@ -1264,5 +1274,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "snapchat_spotlight",
         matches_any: snapchat_spotlight::MATCHES,
         run: snapchat_spotlight::parse,
+    },
+    ParserEntry {
+        name: "rumble",
+        matches_any: rumble::MATCHES,
+        run: rumble::parse,
+    },
+    ParserEntry {
+        name: "dailymotion",
+        matches_any: dailymotion::MATCHES,
+        run: dailymotion::parse,
+    },
+    ParserEntry {
+        name: "pluto_tv",
+        matches_any: pluto_tv::MATCHES,
+        run: pluto_tv::parse,
+    },
+    ParserEntry {
+        name: "tubi",
+        matches_any: tubi::MATCHES,
+        run: tubi::parse,
+    },
+    ParserEntry {
+        name: "grindr",
+        matches_any: grindr::MATCHES,
+        run: grindr::parse,
+    },
+    ParserEntry {
+        name: "coffee_meets_bagel",
+        matches_any: coffee_meets_bagel::MATCHES,
+        run: coffee_meets_bagel::parse,
+    },
+    ParserEntry {
+        name: "plenty_of_fish",
+        matches_any: plenty_of_fish::MATCHES,
+        run: plenty_of_fish::parse,
+    },
+    ParserEntry {
+        name: "okcupid",
+        matches_any: okcupid::MATCHES,
+        run: okcupid::parse,
+    },
+    ParserEntry {
+        name: "citizen_app",
+        matches_any: citizen_app::MATCHES,
+        run: citizen_app::parse,
+    },
+    ParserEntry {
+        name: "nextdoor",
+        matches_any: nextdoor::MATCHES,
+        run: nextdoor::parse,
     },
 ];
