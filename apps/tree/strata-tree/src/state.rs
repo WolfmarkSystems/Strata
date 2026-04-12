@@ -201,6 +201,14 @@ pub struct HashSetListItem {
     pub category: String,
     pub source: String,
     pub entry_count: usize,
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub last_updated: Option<String>,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

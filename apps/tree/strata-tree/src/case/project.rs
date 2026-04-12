@@ -451,6 +451,8 @@ impl VtpProject {
                 category: r.get(1)?,
                 source: r.get(2)?,
                 entry_count: r.get::<_, i64>(3)?.max(0) as usize,
+                enabled: true,
+                last_updated: None,
             })
         })?;
 
@@ -492,6 +494,8 @@ impl VtpProject {
                 category: r.get(1)?,
                 source: r.get(2)?,
                 entry_count: 0,
+                enabled: true,
+                last_updated: None,
             })
         })?;
 
