@@ -77,3 +77,50 @@ fn parse_log_chunk(path: &Path, _chunk_data: &[u8], out: &mut Vec<ParsedArtifact
         json_data: serde_json::to_value(&entry).unwrap_or_default(),
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn build_tracev3_header() -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"vt03");  // magic
+        buf.extend_from_slice(&64_u32.to_le_bytes()); // size of this chunk
+        buf.extend_from_slice(&[0u8; 56]); // padding to 64 bytes
+        buf
+    }
+
+    fn build_chunk(tag: &[u8; 4], payload_size: usize) -> Vec<u8> {
+        let total = 8 + payload_size;
+        let mut buf = Vec::new();
+        buf.extend_from_slice(tag);
+        buf.extend_from_slice(&(total as u32).to_le_bytes());
+        buf.resize(total, 0);
+        buf
+    }
+
+    #[test]
+    fn parses_tracev3_with_chunk() {
+        let mut data = build_tracev3_header();
+        data.extend_from_slice(&build_chunk(b"\x02\x60\x00\x00", 24)); // Chunk tag
+        let mut out = Vec::new();
+        parse_tracev3(Path::new("test.tracev3"), &data, &mut out).unwrap();
+        assert!(!out.is_empty());
+        assert!(out[0].description.contains("TraceV3"));
+    }
+
+    #[test]
+    fn rejects_non_tracev3_magic() {
+        let data = b"NOT_A_TRACEV3_FILE_AT_ALL";
+        let mut out = Vec::new();
+        parse_tracev3(Path::new("bad.tracev3"), data, &mut out).unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn handles_empty_data() {
+        let mut out = Vec::new();
+        parse_tracev3(Path::new("empty"), b"", &mut out).unwrap();
+        assert!(out.is_empty());
+    }
+}

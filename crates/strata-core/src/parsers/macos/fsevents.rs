@@ -85,3 +85,42 @@ impl ArtifactParser for MacosFseventsParser {
         Ok(artifacts)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_text_with_path_lines() {
+        let text = "/Users/test/Documents/secret.pdf renamed\n/Applications/Safari.app delete\n";
+        let parser = MacosFseventsParser::new();
+        let arts = parser.parse_file(Path::new(".fseventsd/0001"), text.as_bytes()).unwrap();
+        assert!(arts.iter().any(|a| {
+            a.json_data.get("record").and_then(|v| v.as_str()).unwrap_or("").contains("secret.pdf")
+        }));
+    }
+
+    #[test]
+    fn carves_paths_from_binary_data() {
+        let mut data = Vec::new();
+        data.extend_from_slice(b"junk junk /Users/victim/Desktop/evidence.doc more junk /System/Library/thing ");
+        let parser = MacosFseventsParser::new();
+        let arts = parser.parse_file(Path::new(".fseventsd/0002"), &data).unwrap();
+        let carved: Vec<_> = arts.iter().filter(|a| a.description.contains("carved")).collect();
+        assert!(!carved.is_empty());
+    }
+
+    #[test]
+    fn empty_data_returns_empty() {
+        let parser = MacosFseventsParser::new();
+        let arts = parser.parse_file(Path::new(".fseventsd/0003"), b"").unwrap();
+        assert!(arts.is_empty());
+    }
+
+    #[test]
+    fn target_patterns_include_fseventsd() {
+        let parser = MacosFseventsParser::new();
+        let patterns = parser.target_patterns();
+        assert!(patterns.contains(&".fseventsd"));
+    }
+}
