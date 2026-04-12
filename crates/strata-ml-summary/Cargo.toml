@@ -1,0 +1,17 @@
+[package]
+name = "strata-ml-summary"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+anyhow = "1"
+handlebars = "5"
+regex = { workspace = true }
+strata-plugin-sdk = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

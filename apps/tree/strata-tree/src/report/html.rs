@@ -140,6 +140,8 @@ tr:nth-child(even) {{ background: #fafafa; }}
 
 {charges_section}
 
+{summary_section}
+
 <h2>Section 2 — Evidence Integrity</h2>
 <table>
 <tr><th>Source Path</th><th>Format</th><th>SHA-256</th><th>Verification</th><th>Loaded (UTC)</th></tr>
@@ -271,6 +273,7 @@ Examiner: {examiner} &nbsp;|&nbsp; This report is self-contained. No external re
             String::new()
         },
         charges_section = generate_charges_html(state),
+        summary_section = crate::ui::summary_view::format_summary_html(state),
         first_action = state.audit_log.first()
             .map(|e| format!("{} — {}", e.timestamp_utc, e.action))
             .unwrap_or_else(|| "N/A".to_string()),
