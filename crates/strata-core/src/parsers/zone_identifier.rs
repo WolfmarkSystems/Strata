@@ -20,16 +20,18 @@ pub struct ZoneIdentifier {
 impl ZoneIdentifier {
     /// Parse a Zone.Identifier ADS (key=value text format, one per line).
     pub fn parse(bytes: &[u8]) -> Result<Self, ForensicError> {
-        let text = std::str::from_utf8(bytes)
-            .or_else(|_| {
-                // Try UTF-16LE as fallback
+        let owned: String;
+        let text = match std::str::from_utf8(bytes) {
+            Ok(s) => s,
+            Err(_) => {
                 let u16s: Vec<u16> = bytes
                     .chunks_exact(2)
                     .map(|c| u16::from_le_bytes([c[0], c[1]]))
                     .collect();
-                String::from_utf16(&u16s).map(|s| Box::leak(s.into_boxed_str()) as &str)
-            })
-            .unwrap_or("");
+                owned = String::from_utf16(&u16s).unwrap_or_default();
+                &owned
+            }
+        };
 
         let mut out = ZoneIdentifier::default();
 
@@ -103,5 +105,42 @@ mod tests {
         let z = ZoneIdentifier::parse(data).unwrap();
         assert_eq!(z.zone_id, 0);
         assert!(!z.from_internet());
+    }
+
+    #[test]
+    fn parses_last_writer_package_name() {
+        let data = b"[ZoneTransfer]\r\nZoneId=3\r\nLastWriterPackageFamilyName=Microsoft.MicrosoftEdge_8wekyb3d8bbwe\r\n";
+        let z = ZoneIdentifier::parse(data).unwrap();
+        assert_eq!(z.zone_id, 3);
+        assert_eq!(
+            z.last_writer_package_name.as_deref(),
+            Some("Microsoft.MicrosoftEdge_8wekyb3d8bbwe")
+        );
+    }
+
+    #[test]
+    fn zone_label_maps_correctly() {
+        let z = ZoneIdentifier { zone_id: 3, ..Default::default() };
+        assert_eq!(z.zone_label(), "Internet");
+        let z2 = ZoneIdentifier { zone_id: 4, ..Default::default() };
+        assert_eq!(z2.zone_label(), "Untrusted/Restricted");
+        let z3 = ZoneIdentifier { zone_id: 1, ..Default::default() };
+        assert_eq!(z3.zone_label(), "Local Intranet");
+    }
+
+    #[test]
+    fn handles_empty_input() {
+        let z = ZoneIdentifier::parse(b"").unwrap();
+        assert_eq!(z.zone_id, 0);
+        assert!(z.referrer_url.is_none());
+        assert!(z.host_url.is_none());
+    }
+
+    #[test]
+    fn handles_app_zone_id() {
+        let data = b"[ZoneTransfer]\r\nZoneId=3\r\nAppZoneId=4\r\n";
+        let z = ZoneIdentifier::parse(data).unwrap();
+        assert_eq!(z.zone_id, 3);
+        assert_eq!(z.app_zone_id, Some(4));
     }
 }
