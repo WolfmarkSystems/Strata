@@ -93,6 +93,7 @@ pub mod hotels_com;
 pub mod imo_messenger;
 pub mod installed_apps;
 pub mod instacart;
+pub mod indeed;
 pub mod irs2go;
 pub mod keyboard_cache;
 pub mod lexisnexis;
@@ -130,6 +131,8 @@ pub mod protonmail;
 pub mod puma_trac;
 pub mod randochat;
 pub mod recent_activity;
+pub mod realtor_com;
+pub mod redfin;
 pub mod reddit;
 pub mod ring_doorbell;
 pub mod robinhood;
@@ -187,6 +190,8 @@ pub mod withings;
 pub mod words_with_friends;
 pub mod zelle;
 pub mod zepp_life;
+pub mod zillow;
+pub mod ziprecruiter;
 
 /// A single Android parser binding — name, matcher, and runner.
 pub struct ParserEntry {
@@ -1084,5 +1089,30 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "protonmail",
         matches_any: protonmail::MATCHES,
         run: protonmail::parse,
+    },
+    ParserEntry {
+        name: "zillow",
+        matches_any: zillow::MATCHES,
+        run: zillow::parse,
+    },
+    ParserEntry {
+        name: "realtor_com",
+        matches_any: realtor_com::MATCHES,
+        run: realtor_com::parse,
+    },
+    ParserEntry {
+        name: "redfin",
+        matches_any: redfin::MATCHES,
+        run: redfin::parse,
+    },
+    ParserEntry {
+        name: "indeed",
+        matches_any: indeed::MATCHES,
+        run: indeed::parse,
+    },
+    ParserEntry {
+        name: "ziprecruiter",
+        matches_any: ziprecruiter::MATCHES,
+        run: ziprecruiter::parse,
     },
 ];
