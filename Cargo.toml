@@ -41,6 +41,7 @@ members = [
     "crates/strata-charges",
     "crates/strata-ml-obstruction",
     "crates/strata-ml-anomaly",
+    "crates/strata-ml-charges",
     "crates/strata-ml-summary",
 ]
 
