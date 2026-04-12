@@ -27,6 +27,7 @@ pub mod network;
 pub mod parser;
 pub mod parsers;
 pub mod knowledge_bank;
+pub mod notes;
 pub mod plugin;
 pub mod report;
 pub mod scripting;
