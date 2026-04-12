@@ -19,6 +19,7 @@ pub mod amazon_alexa;
 pub mod amazon_shopping;
 pub mod android_auto;
 pub mod app_usage;
+pub mod army_mobile;
 pub mod badoo;
 pub mod bank_of_america;
 pub mod bereal;
@@ -69,6 +70,7 @@ pub mod garmin_sleep;
 pub mod garmin_weight;
 pub mod gm_onstar;
 pub mod gmail;
+pub mod google_authenticator;
 pub mod google_calendar_events;
 pub mod google_chrome;
 pub mod google_home;
@@ -77,6 +79,7 @@ pub mod google_maps;
 pub mod google_messages;
 pub mod google_photos;
 pub mod google_play;
+pub mod govx;
 pub mod grubhub;
 pub mod headspace;
 pub mod hinge;
@@ -85,6 +88,7 @@ pub mod installed_apps;
 pub mod instacart;
 pub mod irs2go;
 pub mod keyboard_cache;
+pub mod lexisnexis;
 pub mod libre_cgm;
 pub mod life360;
 pub mod line_messenger;
@@ -102,17 +106,20 @@ pub mod miui_security;
 pub mod mychart;
 pub mod myfitnesspal;
 pub mod mysugr;
+pub mod navy_federal;
 pub mod nest;
 pub mod nike_activities;
 pub mod nike_moments;
 pub mod notifications;
 pub mod oruxmaps;
 pub mod oura;
+pub mod pacer;
 pub mod pandora;
 pub mod peloton;
 pub mod permissions;
 pub mod philips_hue;
 pub mod pinterest;
+pub mod protonmail;
 pub mod puma_trac;
 pub mod randochat;
 pub mod recent_activity;
@@ -147,12 +154,14 @@ pub mod tiktok_live;
 pub mod tiktok_search;
 pub mod tinder;
 pub mod trust_wallet;
+pub mod tsa_precheck;
 pub mod twitch;
 pub mod twitter;
 pub mod twitter_spaces;
 pub mod uber;
 pub mod uber_eats;
 pub mod united_healthcare;
+pub mod usaa;
 pub mod usage_stats;
 pub mod venmo;
 pub mod viber;
@@ -160,6 +169,7 @@ pub mod vlc_media;
 pub mod waze;
 pub mod wellbeing;
 pub mod wells_fargo;
+pub mod westlaw;
 pub mod whatsapp;
 pub mod whoop;
 pub mod wifi_profiles;
@@ -964,5 +974,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "pandora",
         matches_any: pandora::MATCHES,
         run: pandora::parse,
+    },
+    ParserEntry {
+        name: "lexisnexis",
+        matches_any: lexisnexis::MATCHES,
+        run: lexisnexis::parse,
+    },
+    ParserEntry {
+        name: "westlaw",
+        matches_any: westlaw::MATCHES,
+        run: westlaw::parse,
+    },
+    ParserEntry {
+        name: "pacer",
+        matches_any: pacer::MATCHES,
+        run: pacer::parse,
+    },
+    ParserEntry {
+        name: "army_mobile",
+        matches_any: army_mobile::MATCHES,
+        run: army_mobile::parse,
+    },
+    ParserEntry {
+        name: "govx",
+        matches_any: govx::MATCHES,
+        run: govx::parse,
+    },
+    ParserEntry {
+        name: "usaa",
+        matches_any: usaa::MATCHES,
+        run: usaa::parse,
+    },
+    ParserEntry {
+        name: "navy_federal",
+        matches_any: navy_federal::MATCHES,
+        run: navy_federal::parse,
+    },
+    ParserEntry {
+        name: "tsa_precheck",
+        matches_any: tsa_precheck::MATCHES,
+        run: tsa_precheck::parse,
+    },
+    ParserEntry {
+        name: "google_authenticator",
+        matches_any: google_authenticator::MATCHES,
+        run: google_authenticator::parse,
+    },
+    ParserEntry {
+        name: "protonmail",
+        matches_any: protonmail::MATCHES,
+        run: protonmail::parse,
     },
 ];
