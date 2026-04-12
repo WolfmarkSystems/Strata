@@ -129,7 +129,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         state.file_table_state.sort_dirty = false;
     }
 
-    let row_height = 28.0;
+    let row_height = 20.0;
     let selected_id = state.selected_file_id.clone();
     let total_rows = state.filtered_file_indices.len();
     state.file_table_state.total_rows = total_rows;
@@ -163,8 +163,19 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                     continue;
                 };
                 let is_sel = selected_id.as_deref() == Some(f.id.as_str());
+                let stripe_bg = if row % 2 == 0 {
+                    egui::Color32::TRANSPARENT
+                } else {
+                    // Subtle stripe: card + 2% lighter
+                    let c = t.card;
+                    egui::Color32::from_rgb(
+                        c.r().saturating_add(5),
+                        c.g().saturating_add(5),
+                        c.b().saturating_add(5),
+                    )
+                };
                 let row_bg = if is_sel {
-                    egui::Color32::from_rgb(0x0f, 0x25, 0x40)
+                    t.selection
                 } else if f.is_deleted {
                     egui::Color32::from_rgb(0x08, 0x04, 0x04)
                 } else if f.hash_flag.as_deref() == Some("KnownBad") {
@@ -172,7 +183,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                 } else if f.hash_flag.as_deref() == Some("KnownGood") {
                     egui::Color32::from_rgba_unmultiplied(6, 22, 10, 80)
                 } else {
-                    egui::Color32::TRANSPARENT
+                    stripe_bg
                 };
 
                 egui::Frame::none()
