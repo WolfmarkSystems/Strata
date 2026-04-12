@@ -14,8 +14,12 @@ pub mod accessibility;
 pub mod accounts;
 pub mod aggregate;
 pub mod airdrop;
+pub mod airpods;
+pub mod airprint;
 pub mod alltrails;
 pub mod appinstall;
+pub mod applepay;
+pub mod applenews;
 pub mod appclips;
 pub mod appletv;
 pub mod apppermissions;
@@ -23,6 +27,7 @@ pub mod appstate;
 pub mod backgroundtasks;
 pub mod biome;
 pub mod bluetooth;
+pub mod books;
 pub mod bumble;
 pub mod calendar;
 pub mod candycrush;
@@ -31,11 +36,16 @@ pub mod clashofclans;
 pub mod coinbase;
 pub mod cellular;
 pub mod cloudkit;
+pub mod cloudkitsync;
 pub mod chrome;
+pub mod compass;
+pub mod continuity;
 pub mod crashlogs;
 pub mod callhistory;
 pub mod carplay;
+pub mod commlimits;
 pub mod containermanager;
+pub mod corelocationhist;
 pub mod crashreporterdeep;
 pub mod contacts;
 pub mod cookies;
@@ -49,13 +59,16 @@ pub mod discord;
 pub mod emergencysos;
 pub mod facebook;
 pub mod facetimedeep;
+pub mod falldetection;
 pub mod fileprovider;
 pub mod findmy;
 pub mod findmynetwork;
 pub mod firefox;
 pub mod fitbit;
 pub mod focusmode;
+pub mod gamecenter;
 pub mod googlemaps;
+pub mod handoff;
 pub mod health;
 pub mod healthsamples;
 pub mod healthsources;
@@ -77,18 +90,22 @@ pub mod line;
 pub mod linkedin;
 pub mod location;
 pub mod lyft;
+pub mod magnifier;
 pub mod mail;
 pub mod mailattach;
 pub mod managedconfig;
+pub mod measure;
 pub mod medialibrary;
 pub mod maps;
 pub mod mobileactivation;
 pub mod mobilebackup;
 pub mod netflix;
 pub mod notes;
+pub mod nsuserdefaults;
 pub mod notifications;
 pub mod amazonprime;
 pub mod photoanalysis;
+pub mod passkit;
 pub mod photos;
 pub mod pinterest;
 pub mod pokemongo;
@@ -104,6 +121,7 @@ pub mod safarisearches;
 pub mod safaritabs;
 pub mod screenrecording;
 pub mod screentime;
+pub mod screentimeapps;
 pub mod shortcuts;
 pub mod siri;
 pub mod siminfo;
@@ -121,23 +139,28 @@ pub mod tiktok;
 pub mod tinder;
 pub mod tcc;
 pub mod teams;
+pub mod translate;
 pub mod textreplacement;
 pub mod threema;
 pub mod twitch;
 pub mod twitter;
 pub mod viber;
 pub mod uber;
+pub mod universalclipboard;
 pub mod venmo;
 pub mod voicememos;
 pub mod voicemail;
 pub mod wallet;
 pub mod webclips;
+pub mod watchconnectivity;
 pub mod waze;
+pub mod weather;
 pub mod wechat;
 pub mod whatsapp;
 pub mod widgetkit;
 pub mod wifi;
 pub mod wifigeo;
+pub mod workoutroutes;
 pub mod youtube;
 pub mod zoom;
 
@@ -535,6 +558,75 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if backgroundtasks::matches(path) {
         out.extend(backgroundtasks::parse(path));
+    }
+    if workoutroutes::matches(path) {
+        out.extend(workoutroutes::parse(path));
+    }
+    if falldetection::matches(path) {
+        out.extend(falldetection::parse(path));
+    }
+    if airpods::matches(path) {
+        out.extend(airpods::parse(path));
+    }
+    if applepay::matches(path) {
+        out.extend(applepay::parse(path));
+    }
+    if passkit::matches(path) {
+        out.extend(passkit::parse(path));
+    }
+    if corelocationhist::matches(path) {
+        out.extend(corelocationhist::parse(path));
+    }
+    if gamecenter::matches(path) {
+        out.extend(gamecenter::parse(path));
+    }
+    if screentimeapps::matches(path) {
+        out.extend(screentimeapps::parse(path));
+    }
+    if commlimits::matches(path) {
+        out.extend(commlimits::parse(path));
+    }
+    if nsuserdefaults::matches(path) {
+        out.extend(nsuserdefaults::parse(path));
+    }
+    if cloudkitsync::matches(path) {
+        out.extend(cloudkitsync::parse(path));
+    }
+    if watchconnectivity::matches(path) {
+        out.extend(watchconnectivity::parse(path));
+    }
+    if applenews::matches(path) {
+        out.extend(applenews::parse(path));
+    }
+    if books::matches(path) {
+        out.extend(books::parse(path));
+    }
+    if translate::matches(path) {
+        out.extend(translate::parse(path));
+    }
+    if weather::matches(path) {
+        out.extend(weather::parse(path));
+    }
+    if compass::matches(path) {
+        out.extend(compass::parse(path));
+    }
+    if measure::matches(path) {
+        out.extend(measure::parse(path));
+    }
+    if magnifier::matches(path) {
+        out.extend(magnifier::parse(path));
+    }
+    if airprint::matches(path) {
+        out.extend(airprint::parse(path));
+    }
+    if handoff::matches(path) {
+        out.extend(handoff::parse(path));
+    }
+    if universalclipboard::matches(path) {
+        out.extend(universalclipboard::parse(path));
+    }
+    if continuity::matches(path) {
+        out.extend(continuity::parse(path));
     }
     out
 }
