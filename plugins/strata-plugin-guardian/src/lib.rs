@@ -256,6 +256,7 @@ impl StrataPlugin for GuardianPlugin {
                 mitre_technique: a.data.get("mitre").cloned(),
                 is_suspicious: suspicious,
                 raw_data: None,
+                confidence: 0,
             });
         }
 

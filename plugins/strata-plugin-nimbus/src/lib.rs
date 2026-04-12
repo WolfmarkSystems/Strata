@@ -172,6 +172,7 @@ impl StrataPlugin for NimbusPlugin {
                 mitre_technique: artifact.data.get("mitre").cloned(),
                 is_suspicious: false,
                 raw_data: None,
+                confidence: 0,
             });
         }
 

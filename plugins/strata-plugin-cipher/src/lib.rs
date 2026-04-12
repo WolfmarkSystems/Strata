@@ -1159,6 +1159,7 @@ impl StrataPlugin for CipherPlugin {
                 mitre_technique: mitre,
                 is_suspicious,
                 raw_data: None,
+                confidence: 0,
             });
         }
 

@@ -1147,6 +1147,7 @@ impl StrataPlugin for RemnantPlugin {
                     mitre_technique: mitre,
                     is_suspicious: true,
                     raw_data: None,
+                    confidence: 0,
                 });
                 continue;
             }
@@ -1172,6 +1173,7 @@ impl StrataPlugin for RemnantPlugin {
                     mitre_technique: mitre,
                     is_suspicious: true,
                     raw_data: None,
+                    confidence: 0,
                 });
                 continue;
             }
@@ -1196,6 +1198,7 @@ impl StrataPlugin for RemnantPlugin {
                     mitre_technique: None,
                     is_suspicious: false,
                     raw_data: None,
+                    confidence: 0,
                 });
                 continue;
             }
@@ -1220,6 +1223,7 @@ impl StrataPlugin for RemnantPlugin {
                     mitre_technique: None,
                     is_suspicious: false,
                     raw_data: None,
+                    confidence: 0,
                 });
                 continue;
             }
@@ -1250,6 +1254,7 @@ impl StrataPlugin for RemnantPlugin {
                     mitre_technique: mitre,
                     is_suspicious,
                     raw_data: None,
+                    confidence: 0,
                 });
                 continue;
             }
@@ -1338,6 +1343,7 @@ impl StrataPlugin for RemnantPlugin {
                 } else {
                     Some(analysis.clone())
                 },
+                confidence: 0,
             });
         }
 

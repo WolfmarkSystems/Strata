@@ -259,6 +259,7 @@ impl AppState {
                     mitre_technique: None,
                     is_suspicious: true,
                     raw_data: None,
+                    confidence: 0,
                 }
             })
             .collect();

@@ -808,7 +808,7 @@ impl StrataPlugin for ChroniclePlugin {
             let ef = artifact.data.get("forensic_value").cloned().unwrap_or_default();
             let fv = if ef == "Critical" { ForensicValue::Critical } else if suspicious || ef == "High" { ForensicValue::High } else { ForensicValue::Medium };
             let mt = artifact.data.get("mitre").cloned();
-            records.push(ArtifactRecord { category, subcategory, timestamp: artifact.timestamp.map(|t| t as i64), title: artifact.data.get("title").cloned().unwrap_or_else(|| artifact.source.clone()), detail: artifact.data.get("detail").cloned().unwrap_or_default(), source_path: artifact.source.clone(), forensic_value: fv, mitre_technique: mt, is_suspicious: suspicious, raw_data: None });
+            records.push(ArtifactRecord { category, subcategory, timestamp: artifact.timestamp.map(|t| t as i64), title: artifact.data.get("title").cloned().unwrap_or_else(|| artifact.source.clone()), detail: artifact.data.get("detail").cloned().unwrap_or_default(), source_path: artifact.source.clone(), forensic_value: fv, mitre_technique: mt, is_suspicious: suspicious, raw_data: None, confidence: 0 });
         }
         let sc = records.iter().filter(|r| r.is_suspicious).count();
         let cats: Vec<String> = records.iter().map(|r| r.category.as_str().to_string()).collect::<HashSet<_>>().into_iter().collect();

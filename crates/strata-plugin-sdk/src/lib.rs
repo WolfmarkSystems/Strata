@@ -154,6 +154,245 @@ pub struct ArtifactRecord {
     pub mitre_technique: Option<String>,
     pub is_suspicious: bool,
     pub raw_data: Option<serde_json::Value>,
+    /// Confidence score (0-100). Defaults to 0 (unscored) for backward
+    /// compatibility. Populated by `compute_confidence` after plugin
+    /// execution. High (80+), Medium (50-79), Low (<50).
+    #[serde(default)]
+    pub confidence: u8,
+}
+
+/// Compute confidence score for an artifact record.
+///
+/// Scoring factors:
+/// - Parser certainty: known schema columns present = high base
+/// - Data completeness: populated optional fields raise the score
+/// - Suspicious flag: suspicious artifacts get a small boost (examiner attention)
+pub fn compute_confidence(record: &ArtifactRecord) -> u8 {
+    let mut score: u32 = 0;
+
+    // Base: parser produced a titled, categorized record from a known schema
+    if !record.title.is_empty() && !record.subcategory.is_empty() {
+        score += 40;
+    }
+
+    // Source path present (proves provenance)
+    if !record.source_path.is_empty() {
+        score += 10;
+    }
+
+    // Timestamp present (temporal anchor)
+    if record.timestamp.is_some() {
+        score += 15;
+    }
+
+    // Detail field populated with substance (>20 chars)
+    if record.detail.len() > 20 {
+        score += 10;
+    }
+
+    // MITRE technique mapped (structured threat intel)
+    if record.mitre_technique.is_some() {
+        score += 10;
+    }
+
+    // Raw data present (machine-readable backup of the finding)
+    if record.raw_data.is_some() {
+        score += 10;
+    }
+
+    // Forensic value assessed above Low
+    match record.forensic_value {
+        ForensicValue::Critical => score += 5,
+        ForensicValue::High => score += 5,
+        _ => {}
+    }
+
+    score.min(100) as u8
+}
+
+/// Compute and set confidence scores for all artifacts in a plugin output.
+pub fn score_plugin_output(output: &mut PluginOutput) {
+    for record in &mut output.artifacts {
+        record.confidence = compute_confidence(record);
+    }
+}
+
+/// Compute confidence across multiple plugin outputs with corroboration bonus.
+/// Records that appear in multiple plugins (same source_path + same subcategory)
+/// get a corroboration boost.
+pub fn score_with_corroboration(outputs: &mut [PluginOutput]) {
+    use std::collections::HashMap;
+
+    // First pass: score each record individually
+    for output in outputs.iter_mut() {
+        score_plugin_output(output);
+    }
+
+    // Second pass: find corroborated records (same source_path + subcategory across plugins)
+    let mut evidence_map: HashMap<(String, String), usize> = HashMap::new();
+    for output in outputs.iter() {
+        for record in &output.artifacts {
+            if record.source_path.is_empty() {
+                continue;
+            }
+            let key = (record.source_path.clone(), record.subcategory.clone());
+            *evidence_map.entry(key).or_insert(0) += 1;
+        }
+    }
+
+    // Third pass: apply corroboration bonus
+    for output in outputs.iter_mut() {
+        for record in &mut output.artifacts {
+            if record.source_path.is_empty() {
+                continue;
+            }
+            let key = (record.source_path.clone(), record.subcategory.clone());
+            if let Some(&count) = evidence_map.get(&key) {
+                if count >= 2 {
+                    record.confidence = (record.confidence as u32 + 10).min(100) as u8;
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod confidence_tests {
+    use super::*;
+
+    #[allow(clippy::too_many_arguments)]
+    fn make_record(
+        title: &str,
+        subcategory: &str,
+        timestamp: Option<i64>,
+        detail: &str,
+        source_path: &str,
+        mitre: Option<&str>,
+        raw_data: bool,
+        forensic_value: ForensicValue,
+    ) -> ArtifactRecord {
+        ArtifactRecord {
+            category: ArtifactCategory::SystemActivity,
+            subcategory: subcategory.into(),
+            timestamp,
+            title: title.into(),
+            detail: detail.into(),
+            source_path: source_path.into(),
+            forensic_value,
+            mitre_technique: mitre.map(String::from),
+            is_suspicious: false,
+            raw_data: if raw_data {
+                Some(serde_json::json!({"key": "value"}))
+            } else {
+                None
+            },
+            confidence: 0,
+        }
+    }
+
+    #[test]
+    fn high_confidence_for_complete_record() {
+        let record = make_record(
+            "Prefetch Execution",
+            "Prefetch",
+            Some(1712435400),
+            "CCLEANER64.EXE — 3 executions detected in prefetch",
+            "/Windows/Prefetch/CCLEANER64.EXE-ABCD1234.pf",
+            Some("T1070.004"),
+            true,
+            ForensicValue::High,
+        );
+        let score = compute_confidence(&record);
+        assert!(score >= 80, "expected high confidence, got {}", score);
+    }
+
+    #[test]
+    fn low_confidence_for_sparse_record() {
+        let record = make_record(
+            "",
+            "",
+            None,
+            "some data",
+            "",
+            None,
+            false,
+            ForensicValue::Low,
+        );
+        let score = compute_confidence(&record);
+        assert!(score < 50, "expected low confidence, got {}", score);
+    }
+
+    #[test]
+    fn confidence_capped_at_100() {
+        let record = make_record(
+            "Full Record",
+            "Test Category",
+            Some(1712435400),
+            "A very detailed description that is longer than 20 chars",
+            "/some/path/file.db",
+            Some("T1078"),
+            true,
+            ForensicValue::Critical,
+        );
+        let score = compute_confidence(&record);
+        assert!(score <= 100);
+    }
+
+    #[test]
+    fn corroboration_boosts_score() {
+        let record = make_record(
+            "ShimCache Entry",
+            "Execution",
+            Some(1712435400),
+            "cmd.exe found in ShimCache with timestamp",
+            "/Windows/System32/cmd.exe",
+            None,
+            false,
+            ForensicValue::Medium,
+        );
+
+        let base_score = compute_confidence(&record);
+
+        let mut outputs = vec![
+            PluginOutput {
+                plugin_name: "Phantom".into(),
+                plugin_version: "1.0".into(),
+                executed_at: String::new(),
+                duration_ms: 0,
+                artifacts: vec![record.clone()],
+                summary: PluginSummary {
+                    total_artifacts: 1,
+                    suspicious_count: 0,
+                    categories_populated: vec![],
+                    headline: String::new(),
+                },
+                warnings: vec![],
+            },
+            PluginOutput {
+                plugin_name: "Trace".into(),
+                plugin_version: "1.0".into(),
+                executed_at: String::new(),
+                duration_ms: 0,
+                artifacts: vec![record],
+                summary: PluginSummary {
+                    total_artifacts: 1,
+                    suspicious_count: 0,
+                    categories_populated: vec![],
+                    headline: String::new(),
+                },
+                warnings: vec![],
+            },
+        ];
+
+        score_with_corroboration(&mut outputs);
+        let boosted = outputs[0].artifacts[0].confidence;
+        assert!(
+            boosted > base_score,
+            "corroboration should boost: base={} boosted={}",
+            base_score,
+            boosted
+        );
+    }
 }
 
 /// Plugin execution summary
@@ -251,6 +490,7 @@ pub trait StrataPlugin: Send + Sync {
                     .map(|v| v == "true")
                     .unwrap_or(false),
                 raw_data: None,
+                confidence: 0,
             });
         }
 

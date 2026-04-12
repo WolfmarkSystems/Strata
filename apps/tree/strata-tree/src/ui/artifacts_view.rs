@@ -220,6 +220,29 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                 ui.label(egui::RichText::new(fv_label).color(fv_color).size(9.0).strong());
                             });
 
+                            // Confidence badge
+                            if record.confidence > 0 {
+                                let (conf_label, conf_color) = if record.confidence >= 80 {
+                                    ("HIGH", t.clean)
+                                } else if record.confidence >= 50 {
+                                    ("MED", t.suspicious)
+                                } else {
+                                    ("LOW", TEXT_MUTED)
+                                };
+                                ui.horizontal(|ui| {
+                                    ui.label(egui::RichText::new("Confidence:").color(t.muted).size(9.0));
+                                    egui::Frame::none()
+                                        .fill(conf_color)
+                                        .rounding(3.0)
+                                        .inner_margin(egui::Margin::symmetric(5.0, 1.0))
+                                        .show(ui, |ui| {
+                                            ui.label(egui::RichText::new(
+                                                format!("{} {}", record.confidence, conf_label)
+                                            ).color(t.bg).size(8.5).strong());
+                                        });
+                                });
+                            }
+
                             // MITRE technique
                             if let Some(mitre) = &record.mitre_technique {
                                 if !mitre.is_empty() {

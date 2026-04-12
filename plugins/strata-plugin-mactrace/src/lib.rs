@@ -601,6 +601,7 @@ impl StrataPlugin for MacTracePlugin {
                 mitre_technique: a.data.get("mitre").cloned(),
                 is_suspicious: is_sus,
                 raw_data: None,
+                confidence: 0,
             });
         }
         let total = records.len();

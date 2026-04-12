@@ -904,6 +904,7 @@ impl StrataPlugin for SpecterPlugin {
                 mitre_technique: mitre,
                 is_suspicious: is_sus,
                 raw_data: None,
+                confidence: 0,
             });
         }
         let sus = records.iter().filter(|r| r.is_suspicious).count();

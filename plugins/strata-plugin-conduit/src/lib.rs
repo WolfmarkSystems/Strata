@@ -210,6 +210,7 @@ impl StrataPlugin for ConduitPlugin {
                 mitre_technique: artifact.data.get("mitre").cloned(),
                 is_suspicious,
                 raw_data: None,
+                confidence: 0,
             });
         }
 

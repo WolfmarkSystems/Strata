@@ -1105,6 +1105,7 @@ impl StrataPlugin for SigmaPlugin {
                 mitre_technique: None,
                 is_suspicious,
                 raw_data: None,
+                confidence: 0,
             });
         }
 
@@ -1198,6 +1199,7 @@ mod tests {
             mitre_technique: None,
             is_suspicious: true,
             raw_data: None,
+            confidence: 0,
         }
     }
 
@@ -1338,6 +1340,7 @@ mod tests {
             mitre_technique: None,
             is_suspicious: false,
             raw_data: None,
+            confidence: 0,
         };
         let prior = PluginOutput {
             plugin_name: "Strata Other".to_string(),

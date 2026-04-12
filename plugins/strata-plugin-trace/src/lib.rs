@@ -742,6 +742,7 @@ impl StrataPlugin for TracePlugin {
                 mitre_technique: artifact.data.get("mitre").cloned(),
                 is_suspicious: is_lolbin || is_suspicious,
                 raw_data: None,
+                confidence: 0,
             });
         }
 
