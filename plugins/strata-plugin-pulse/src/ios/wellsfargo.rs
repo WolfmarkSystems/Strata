@@ -29,6 +29,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} rows — account info, transactions, transfers", total),
         source_path: source, forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

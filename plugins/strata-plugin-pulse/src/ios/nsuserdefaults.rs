@@ -30,6 +30,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} ({} bytes) — user IDs, auth tokens, last-login, feature flags", bundle, size),
         source_path: source, forensic_value: ForensicValue::Medium,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

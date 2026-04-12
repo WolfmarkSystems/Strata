@@ -33,6 +33,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} rows — cross-device activity handoffs, reveals associated Apple devices", total),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

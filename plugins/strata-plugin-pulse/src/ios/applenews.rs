@@ -29,6 +29,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} rows — articles read, topics followed, saved stories", total),
         source_path: source, forensic_value: ForensicValue::Medium,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

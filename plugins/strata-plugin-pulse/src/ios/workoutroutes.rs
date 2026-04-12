@@ -36,6 +36,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             detail: format!("Workout route file ({} bytes) — full GPS polyline with lat/lon/alt per second", size),
             source_path: source, forensic_value: ForensicValue::Critical,
             mitre_technique: Some("T1430".to_string()), is_suspicious: false, raw_data: None,
+            confidence: 0,
         }];
     }
 
@@ -53,6 +54,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} workout_events rows — GPS route segments from Apple Watch workouts", count),
         source_path: source, forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1430".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

@@ -92,6 +92,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             mitre_technique: mitre.map(String::from),
             is_suspicious: false,
             raw_data: None,
+            confidence: 0,
         });
     }
 

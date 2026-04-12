@@ -26,6 +26,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} ({} bytes) — enrollment events, auth attempts, lockouts", name, size),
         source_path: source, forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1110".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

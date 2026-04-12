@@ -32,6 +32,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} rows — share sheet invocations (which apps content was shared to)", total),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1048".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

@@ -28,6 +28,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} ({} bytes) — AirPods/Beats pairing, connection times, battery levels, ear detection", name, size),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1011".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

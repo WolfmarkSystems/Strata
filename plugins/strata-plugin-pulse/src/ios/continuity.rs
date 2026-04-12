@@ -29,6 +29,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} ({} bytes) — paired Mac/iPad for Continuity Camera, Sidecar, Universal Control", name, size),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

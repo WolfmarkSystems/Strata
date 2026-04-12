@@ -36,6 +36,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                     detail: format!("{} rows across {} tables — vehicle pairing, driving session app usage", total, tables.len()),
                     source_path: source, forensic_value: ForensicValue::High,
                     mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+                    confidence: 0,
                 }];
             }
         }
@@ -51,6 +52,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("CarPlay plist ({} bytes) — paired vehicles, app layout, driving sessions", size),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

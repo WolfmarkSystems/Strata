@@ -35,6 +35,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 detail: format!("{} rows — detected phone numbers, addresses, dates, flights from messages/email", total),
                 source_path: source, forensic_value: ForensicValue::High,
                 mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+                confidence: 0,
             }];
         }
     }
@@ -46,6 +47,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("DataDetectors data ({} bytes) — auto-detected entities cache", size),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

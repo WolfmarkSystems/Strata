@@ -33,6 +33,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} rows across {} tables — recording sessions with start time, duration, source app", total, tables.len()),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1113".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

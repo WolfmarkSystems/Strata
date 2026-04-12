@@ -24,6 +24,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} ({} bytes) — Apple ID auth tokens, sign-in time, 2FA enrollment", name, size),
         source_path: source, forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1078".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

@@ -35,6 +35,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             detail: format!("{} rows — OTA downloads: iOS updates, ML models, fonts", total),
             source_path: source, forensic_value: ForensicValue::High,
             mitre_technique: None, is_suspicious: false, raw_data: None,
+            confidence: 0,
         }];
     }
 
@@ -47,6 +48,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("MobileAsset plist ({} bytes) — OTA update configuration + download history", size),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

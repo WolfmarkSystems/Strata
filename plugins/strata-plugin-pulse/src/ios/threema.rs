@@ -27,6 +27,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             detail: format!("{} ZMESSAGE rows", count),
             source_path: source.clone(), forensic_value: ForensicValue::Critical,
             mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+            confidence: 0,
         });
         emitted = true;
     }
@@ -39,6 +40,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             detail: format!("{} ZCONTACT rows", count),
             source_path: source, forensic_value: ForensicValue::High,
             mitre_technique: None, is_suspicious: false, raw_data: None,
+            confidence: 0,
         });
         emitted = true;
     }

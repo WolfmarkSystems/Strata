@@ -24,6 +24,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("Weather data ({} bytes) — saved cities reveal locations of interest", size),
         source_path: source, forensic_value: ForensicValue::Medium,
         mitre_technique: Some("T1430".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

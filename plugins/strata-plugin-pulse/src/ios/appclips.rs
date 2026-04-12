@@ -37,6 +37,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                     detail: format!("{} rows — NFC/QR/link-triggered app interactions at businesses", total),
                     source_path: source, forensic_value: ForensicValue::High,
                     mitre_technique: Some("T1430".to_string()), is_suspicious: false, raw_data: None,
+                    confidence: 0,
                 }];
             }
         }
@@ -50,6 +51,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} ({} bytes) — App Clip invocation history", name, size),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

@@ -32,6 +32,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1572".to_string()),
         is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

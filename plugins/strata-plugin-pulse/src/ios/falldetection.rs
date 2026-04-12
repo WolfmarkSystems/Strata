@@ -37,6 +37,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                     detail: format!("{} rows — fall events with timestamp, location, SOS trigger state", total),
                     source_path: source, forensic_value: ForensicValue::Critical,
                     mitre_technique: None, is_suspicious: false, raw_data: None,
+                    confidence: 0,
                 }];
             }
         }
@@ -50,6 +51,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} ({} bytes) — fall event records, crash detection config", name, size),
         source_path: source, forensic_value: ForensicValue::Critical,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

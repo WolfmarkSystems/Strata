@@ -35,6 +35,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 detail: format!("{} {} rows — merchant, amount, date, card DPAN", count, table),
                 source_path: source.clone(), forensic_value: fv,
                 mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+                confidence: 0,
             });
         }
     }
@@ -54,6 +55,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             detail: format!("{} rows across {} tables", total, tables.len()),
             source_path: source, forensic_value: ForensicValue::High,
             mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+            confidence: 0,
         });
     }
     out

@@ -35,6 +35,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         mitre_technique: Some("T1027".to_string()),
         is_suspicious: true,
         raw_data: None,
+        confidence: 0,
     });
     out
 }

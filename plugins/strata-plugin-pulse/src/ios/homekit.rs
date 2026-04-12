@@ -35,6 +35,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                     detail: format!("{} rows across {} tables — device events, automations, scenes", total, tables.len()),
                     source_path: source, forensic_value: ForensicValue::Critical,
                     mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+                    confidence: 0,
                 }];
             }
         }
@@ -50,6 +51,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("HomeKit plist ({} bytes) — smart home devices, rooms, automations", size),
         source_path: source, forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

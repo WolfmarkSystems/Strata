@@ -128,6 +128,7 @@ pub fn build_record(
         mitre_technique: None,
         is_suspicious,
         raw_data: None,
+        confidence: 0,
     }
 }
 

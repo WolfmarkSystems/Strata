@@ -30,6 +30,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} rows — saved AR measurements with screenshots (metadata only)", total),
         source_path: source, forensic_value: ForensicValue::Medium,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

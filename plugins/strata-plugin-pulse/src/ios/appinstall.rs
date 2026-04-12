@@ -47,6 +47,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         mitre_technique: Some("T1027".to_string()),
         is_suspicious: stats.uninstalls > 0 && stats.installs == 0,
         raw_data: None,
+        confidence: 0,
     });
 
     // Surface bundle IDs as their own subcategory so the panel can
@@ -63,6 +64,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             mitre_technique: None,
             is_suspicious: false,
             raw_data: None,
+            confidence: 0,
         });
     }
 

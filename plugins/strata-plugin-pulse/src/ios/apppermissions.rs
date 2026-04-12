@@ -37,6 +37,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         mitre_technique: Some("T1005".to_string()),
         is_suspicious: false,
         raw_data: None,
+        confidence: 0,
     });
 
     for (cat, count) in by_category.into_iter().take(10) {
@@ -51,6 +52,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             mitre_technique: None,
             is_suspicious: false,
             raw_data: None,
+            confidence: 0,
         });
     }
     out

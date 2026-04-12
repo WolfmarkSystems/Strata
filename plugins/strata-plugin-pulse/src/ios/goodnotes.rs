@@ -29,6 +29,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} rows — notebooks, pages, handwriting metadata (strokes not extracted)", total),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

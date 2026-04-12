@@ -46,6 +46,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             detail: format!("{} entries, {:.0}s total foreground time", rows, seconds),
             source_path: source.clone(), forensic_value: ForensicValue::High,
             mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+            confidence: 0,
         });
     }
     out

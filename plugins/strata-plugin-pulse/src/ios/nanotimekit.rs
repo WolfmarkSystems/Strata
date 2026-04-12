@@ -26,6 +26,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("NanoTimeKit data ({} bytes) — watch faces, complications (pinned contacts, cities, stocks)", size),
         source_path: source, forensic_value: ForensicValue::Medium,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

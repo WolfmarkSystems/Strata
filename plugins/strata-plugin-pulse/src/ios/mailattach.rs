@@ -30,6 +30,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} attachment rows — filename, MIME type, size (file bytes not read)", count),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1114".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

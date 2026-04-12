@@ -24,6 +24,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("Magnifier data ({} bytes) — snapshot metadata (image bytes not read)", size),
         source_path: source, forensic_value: ForensicValue::Medium,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

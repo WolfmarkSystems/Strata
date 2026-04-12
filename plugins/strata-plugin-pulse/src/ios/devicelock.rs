@@ -23,6 +23,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("SpringBoard plist ({} bytes) — auto-lock timeout, failed passcode attempts, wallpaper, icon layout", size),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1110".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

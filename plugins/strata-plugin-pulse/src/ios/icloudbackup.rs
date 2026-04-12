@@ -41,6 +41,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         mitre_technique: None,
         is_suspicious: false,
         raw_data: None,
+        confidence: 0,
     });
 
     let by_domain = conn
@@ -65,6 +66,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             mitre_technique: None,
             is_suspicious: false,
             raw_data: None,
+            confidence: 0,
         });
     }
 

@@ -40,6 +40,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                     detail: format!("{} rows — Screen Time allowed/blocked contact lists", total),
                     source_path: source, forensic_value: ForensicValue::High,
                     mitre_technique: None, is_suspicious: false, raw_data: None,
+                    confidence: 0,
                 }];
             }
         }
@@ -53,6 +54,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} ({} bytes) — Screen Time allowed/blocked contacts for child accounts", name, size),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

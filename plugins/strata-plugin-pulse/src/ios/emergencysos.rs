@@ -30,6 +30,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} ({} bytes) — SOS contacts, crash detection config, emergency call trigger log", name, size),
         source_path: source, forensic_value: ForensicValue::Critical,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

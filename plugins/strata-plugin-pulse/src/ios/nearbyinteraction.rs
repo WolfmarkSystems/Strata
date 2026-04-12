@@ -27,6 +27,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("NearbyInteraction data ({} bytes) — UWB proximity to other U1 devices (iPhones, AirTags)", size),
         source_path: source, forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1011".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

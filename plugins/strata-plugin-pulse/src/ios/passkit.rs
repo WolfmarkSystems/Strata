@@ -40,6 +40,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                     detail: format!("{} passes of type {} — boarding passes, tickets, loyalty cards", count, desc),
                     source_path: source.clone(), forensic_value: ForensicValue::High,
                     mitre_technique: None, is_suspicious: false, raw_data: None,
+                    confidence: 0,
                 });
             }
             return out;

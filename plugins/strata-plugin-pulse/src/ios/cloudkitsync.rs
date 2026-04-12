@@ -34,6 +34,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} rows — record-level iCloud sync tracking, reveals what was pushed to cloud", total),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1530".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

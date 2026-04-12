@@ -25,6 +25,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} ({} bytes) — MDM enrollment, managed apps, device restrictions", name, size),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1098".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

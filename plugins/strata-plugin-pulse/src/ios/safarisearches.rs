@@ -19,6 +19,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("RecentSearches.plist ({} bytes) — user search queries from Safari search bar", size),
         source_path: source, forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 

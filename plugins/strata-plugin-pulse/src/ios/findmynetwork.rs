@@ -35,6 +35,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} rows across {} tables — AirTag pings, item locations, device beacons", total, tables.len()),
         source_path: source, forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1430".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

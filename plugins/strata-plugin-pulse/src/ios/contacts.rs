@@ -45,6 +45,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         mitre_technique: None,
         is_suspicious: false,
         raw_data: None,
+        confidence: 0,
     });
 
     if util::table_exists(&conn, "ABMultiValue") {
@@ -73,6 +74,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 mitre_technique: None,
                 is_suspicious: false,
                 raw_data: None,
+                confidence: 0,
             });
         }
         if email_count > 0 {
@@ -87,6 +89,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 mitre_technique: None,
                 is_suspicious: false,
                 raw_data: None,
+                confidence: 0,
             });
         }
     }

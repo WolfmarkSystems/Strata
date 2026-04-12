@@ -37,6 +37,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 mitre_technique: None,
                 is_suspicious: false,
                 raw_data: None,
+                confidence: 0,
             }];
         }
     }
@@ -52,6 +53,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         mitre_technique: None,
         is_suspicious: false,
         raw_data: None,
+        confidence: 0,
     }]
 }
 

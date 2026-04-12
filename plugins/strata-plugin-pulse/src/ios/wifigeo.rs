@@ -32,6 +32,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 detail: format!("{} {} rows — BSSID → lat/lon cache from Apple positioning", count, table),
                 source_path: source.clone(), forensic_value: ForensicValue::Critical,
                 mitre_technique: Some("T1430".to_string()), is_suspicious: false, raw_data: None,
+                confidence: 0,
             });
             return out;
         }
@@ -52,6 +53,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("{} rows across {} tables — Wi-Fi BSSID location cache", total, tables.len()),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: Some("T1430".to_string()), is_suspicious: false, raw_data: None,
+        confidence: 0,
     });
     out
 }

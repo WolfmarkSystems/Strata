@@ -23,6 +23,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         detail: format!("IconState.plist ({} bytes) — app arrangement, folder names, dock apps, page order", size),
         source_path: source, forensic_value: ForensicValue::High,
         mitre_technique: None, is_suspicious: false, raw_data: None,
+        confidence: 0,
     }]
 }
 
