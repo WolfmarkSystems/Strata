@@ -15,9 +15,11 @@ pub mod accounts;
 pub mod aggregate;
 pub mod airdrop;
 pub mod airpods;
+pub mod alarms;
 pub mod airprint;
 pub mod alltrails;
 pub mod appinstall;
+pub mod appgroupcontainers;
 pub mod applepay;
 pub mod applenews;
 pub mod appclips;
@@ -57,6 +59,7 @@ pub mod datausage;
 pub mod deletedapps;
 pub mod deviceinfo;
 pub mod devicelock;
+pub mod diskusage;
 pub mod dhcpleases;
 pub mod disneyplus;
 pub mod duetactivity;
@@ -84,11 +87,13 @@ pub mod hinge;
 pub mod homekit;
 pub mod hulu;
 pub mod icloudbackup;
+pub mod icloudkeyvalue;
 pub mod icloudtabs;
 pub mod imessageattach;
 pub mod instagram;
 pub mod interactionc;
 pub mod itunesstore;
+pub mod keychainmeta;
 pub mod keyboard;
 pub mod kik;
 pub mod knowledgec;
@@ -103,10 +108,12 @@ pub mod managedconfig;
 pub mod measure;
 pub mod medialibrary;
 pub mod maps;
+pub mod mediaremote;
 pub mod mobileasset;
 pub mod mobileactivation;
 pub mod mobilebackup;
 pub mod nanotimekit;
+pub mod nearbyinteraction;
 pub mod netflix;
 pub mod notes;
 pub mod nsuserdefaults;
@@ -130,7 +137,9 @@ pub mod safaritabs;
 pub mod screenrecording;
 pub mod screentime;
 pub mod screentimeapps;
+pub mod sharinghistory;
 pub mod shortcuts;
+pub mod simtoolkit;
 pub mod siri;
 pub mod siminfo;
 pub mod springboardarrange;
@@ -159,6 +168,7 @@ pub mod uber;
 pub mod universalclipboard;
 pub mod venmo;
 pub mod voicememos;
+pub mod vpnconfig;
 pub mod voicemail;
 pub mod wallet;
 pub mod webclips;
@@ -667,6 +677,36 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if deletedapps::matches(path) {
         out.extend(deletedapps::parse(path));
+    }
+    if simtoolkit::matches(path) {
+        out.extend(simtoolkit::parse(path));
+    }
+    if vpnconfig::matches(path) {
+        out.extend(vpnconfig::parse(path));
+    }
+    if alarms::matches(path) {
+        out.extend(alarms::parse(path));
+    }
+    if keychainmeta::matches(path) {
+        out.extend(keychainmeta::parse(path));
+    }
+    if diskusage::matches(path) {
+        out.extend(diskusage::parse(path));
+    }
+    if appgroupcontainers::matches(path) {
+        out.extend(appgroupcontainers::parse(path));
+    }
+    if icloudkeyvalue::matches(path) {
+        out.extend(icloudkeyvalue::parse(path));
+    }
+    if sharinghistory::matches(path) {
+        out.extend(sharinghistory::parse(path));
+    }
+    if mediaremote::matches(path) {
+        out.extend(mediaremote::parse(path));
+    }
+    if nearbyinteraction::matches(path) {
+        out.extend(nearbyinteraction::parse(path));
     }
     out
 }
