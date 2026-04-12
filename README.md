@@ -1,6 +1,6 @@
 # Strata
 
-**Professional digital forensics platform — 17 plugins, 310 mobile parsers, 34 Sigma rules, ML-powered analysis, court-ready reporting.**
+**Professional digital forensics platform — 17 plugins, 355 mobile parsers, 34 Sigma rules, ML-powered analysis, court-ready reporting.**
 
 Built by a US Army Counterintelligence Special Agent and Digital Forensic Examiner.  
 Free for US military and law enforcement. Commercial licensing available.
@@ -18,14 +18,14 @@ The tools that exist were built for enterprise budgets and conference demos. Str
 ## Features
 
 - **17 forensic plugins** covering Windows, macOS, iOS, Android, cloud, network, memory, and malware
-- **310 mobile artifact parsers** — 157 Android (ALEAPP-equivalent) + 153 iOS (iLEAPP-equivalent), all read-only SQLite
+- **355 mobile artifact parsers** — 157 Android (ALEAPP-equivalent) + 198 iOS (iLEAPP-equivalent), all read-only SQLite
 - **34 Sigma correlation rules** with full MITRE ATT&CK kill chain coverage
 - **ML-powered analysis** — anomaly detection, executive case summary, anti-forensic obstruction scoring (0-100)
 - **CSAM detection module** — hash-based and perceptual detection, NCMEC/Project VIC compatible, immutable audit trail, free on all license tiers
 - **Court-ready reporting** — Word and PDF export, chain-of-custody audit log, evidence integrity verification, obstruction score section
 - **Air-gap deployable** — single binary (24 MB macOS), USB portable, no cloud dependency, no telemetry
 - **Cross-platform** — Windows, macOS, Linux. Parses evidence from iOS and Android devices
-- **89% pure Rust** — 890+ tests, zero unsafe blocks in production paths, zero clippy warnings
+- **89% pure Rust** — 2,348 tests, zero unsafe blocks in production paths, zero clippy warnings
 
 ---
 
@@ -48,7 +48,7 @@ The tools that exist were built for enterprise budgets and conference demos. Str
 | Wraith | hiberfil.sys, LSASS dump detection, crash dump analysis |
 | Recon | Username/email/IP extraction, AWS AKIA key detection, SID history |
 | Specter | Android backup (`.ab`), package inventory, Wi-Fi config, device profile |
-| Pulse | **157 Android parsers** (SMS, calls, contacts, Gmail, Chrome, photos, location, clipboard, keyboard cache, Wi-Fi, Bluetooth, calendar, notifications + more) · **153 iOS parsers** (KnowledgeC, iMessage, Safari, Health, Significant Locations, Notes, WhatsApp, Signal, Telegram, Snapchat, Find My, Biome, PowerLog, HealthKit, Strava, AllTrails + more) — all read-only SQLite, UFDR-compatible |
+| Pulse | **157 Android parsers** (SMS, calls, contacts, Gmail, Chrome, photos, location, clipboard, keyboard cache, Wi-Fi, Bluetooth, calendar, notifications + more) · **198 iOS parsers** (KnowledgeC, iMessage, Safari, Health, Significant Locations, Notes, WhatsApp, Signal, Telegram, Snapchat, Find My, Biome, PowerLog, HealthKit, Strava, AllTrails, CarPlay, HomeKit, Apple Pay, Workout Routes + more) — all read-only SQLite, UFDR-compatible |
 | **Sigma** | **34 correlation rules. Always runs last. Full MITRE ATT&CK kill chain.** |
 
 ---
