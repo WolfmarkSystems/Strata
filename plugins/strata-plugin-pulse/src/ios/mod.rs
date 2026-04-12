@@ -24,8 +24,10 @@ pub mod appclips;
 pub mod appletv;
 pub mod apppermissions;
 pub mod appstate;
+pub mod authkit;
 pub mod backgroundtasks;
 pub mod biome;
+pub mod biometrickit;
 pub mod bluetooth;
 pub mod books;
 pub mod bumble;
@@ -40,6 +42,7 @@ pub mod cloudkitsync;
 pub mod chrome;
 pub mod compass;
 pub mod continuity;
+pub mod corespotlightindex;
 pub mod crashlogs;
 pub mod callhistory;
 pub mod carplay;
@@ -49,7 +52,9 @@ pub mod corelocationhist;
 pub mod crashreporterdeep;
 pub mod contacts;
 pub mod cookies;
+pub mod datadetectors;
 pub mod datausage;
+pub mod deletedapps;
 pub mod deviceinfo;
 pub mod devicelock;
 pub mod dhcpleases;
@@ -57,6 +62,7 @@ pub mod disneyplus;
 pub mod duetactivity;
 pub mod discord;
 pub mod emergencysos;
+pub mod encryptednotes;
 pub mod facebook;
 pub mod facetimedeep;
 pub mod falldetection;
@@ -97,8 +103,10 @@ pub mod managedconfig;
 pub mod measure;
 pub mod medialibrary;
 pub mod maps;
+pub mod mobileasset;
 pub mod mobileactivation;
 pub mod mobilebackup;
+pub mod nanotimekit;
 pub mod netflix;
 pub mod notes;
 pub mod nsuserdefaults;
@@ -125,6 +133,7 @@ pub mod screentimeapps;
 pub mod shortcuts;
 pub mod siri;
 pub mod siminfo;
+pub mod springboardarrange;
 pub mod spotlight;
 pub mod spotify;
 pub mod strava;
@@ -139,8 +148,9 @@ pub mod tiktok;
 pub mod tinder;
 pub mod tcc;
 pub mod teams;
-pub mod translate;
 pub mod textreplacement;
+pub mod translate;
+pub mod truststore;
 pub mod threema;
 pub mod twitch;
 pub mod twitter;
@@ -627,6 +637,36 @@ pub fn dispatch(path: &Path) -> Vec<ArtifactRecord> {
     }
     if continuity::matches(path) {
         out.extend(continuity::parse(path));
+    }
+    if truststore::matches(path) {
+        out.extend(truststore::parse(path));
+    }
+    if mobileasset::matches(path) {
+        out.extend(mobileasset::parse(path));
+    }
+    if biometrickit::matches(path) {
+        out.extend(biometrickit::parse(path));
+    }
+    if authkit::matches(path) {
+        out.extend(authkit::parse(path));
+    }
+    if corespotlightindex::matches(path) {
+        out.extend(corespotlightindex::parse(path));
+    }
+    if nanotimekit::matches(path) {
+        out.extend(nanotimekit::parse(path));
+    }
+    if datadetectors::matches(path) {
+        out.extend(datadetectors::parse(path));
+    }
+    if springboardarrange::matches(path) {
+        out.extend(springboardarrange::parse(path));
+    }
+    if encryptednotes::matches(path) {
+        out.extend(encryptednotes::parse(path));
+    }
+    if deletedapps::matches(path) {
+        out.extend(deletedapps::parse(path));
     }
     out
 }
