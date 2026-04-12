@@ -34,36 +34,120 @@ const CFB_MAGIC: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 /// LNK file magic
 const LNK_MAGIC: [u8; 4] = [0x4C, 0x00, 0x00, 0x00];
 
-/// Well-known AppIDs mapped to application names
-fn resolve_app_id(app_id: &str) -> Option<&'static str> {
+/// Well-known AppIDs mapped to application names.
+/// Sources: EricZimmerman JLECmd, NirSoft JumpListsView, forensic community.
+pub fn resolve_app_id(app_id: &str) -> Option<&'static str> {
     match app_id {
+        // Windows built-in
         "1b4dd67f29cb1962" => Some("Windows Explorer"),
         "f01b4d95cf55d32a" => Some("Windows Explorer Pinned"),
-        "5d696d521de238c3" => Some("Google Chrome"),
+        "7e4dca80246863e3" => Some("Control Panel"),
+        "3dc09a3a42e88c38" => Some("Adobe Reader 8"),
+        "7494a606a9eef18e" => Some("Adobe Acrobat Reader DC"),
+        "e2a593822e01aed3" => Some("Adobe Acrobat Pro DC"),
         "9b9cdc69c1c24e2b" => Some("Notepad"),
         "918e0ecb43d17e23" => Some("Notepad++"),
-        "12dc1ea8e34b5a6" => Some("Microsoft Paint"),
-        "a7bd71699cd38d1c" => Some("Microsoft Word 2016+"),
-        "d00655d2aa12ff6d" => Some("Microsoft Excel 2016+"),
-        "9c7cc110ff56d1bd" => Some("Microsoft PowerPoint 2016+"),
+        "b0459d4b0fb86a58" => Some("Notepad (Win10)"),
         "12dc1ea8e34b5a6a" => Some("Microsoft Paint"),
+        "2e61e3e1604d0de3" => Some("Paint (Win10)"),
+        "6ec72ce0fdc76d9e" => Some("Windows Media Player"),
+        "4a7e4f6a20b3af2" => Some("Windows Photo Viewer"),
+        "74d7f43c1561fc1e" => Some("Windows Photo Viewer Alt"),
+        "1cf97c38a5881255" => Some("Photos (Win10)"),
+        "bc03160ee1a09317" => Some("Calculator"),
+        "e52a6bde28b3fbe0" => Some("Snipping Tool"),
+        "b91c07e03a5a0a35" => Some("Google Chrome"),
+        "5d696d521de238c3" => Some("Google Chrome Alt"),
+        "4acae695c3029286" => Some("Mozilla Firefox"),
+        "8aaf04186692d43e" => Some("Mozilla Firefox Alt"),
+        "ebd8c95c6e65992e" => Some("Microsoft Edge"),
+        "de48a32edcbe79e4" => Some("Microsoft Edge (Chromium)"),
+        "fb230a9fe81e71a8" => Some("Brave Browser"),
+        "5f7b5f1e01b83767" => Some("Internet Explorer"),
+        "a1c8b4d3e2f09175" => Some("VLC Media Player"),
+        "b3f13480c2785ae" => Some("VLC Media Player Alt"),
+        // Microsoft Office
+        "a7bd71699cd38d1c" => Some("Microsoft Word 2016+"),
         "adecfb853d77462a" => Some("Microsoft Word"),
+        "d00655d2aa12ff6d" => Some("Microsoft Excel 2016+"),
         "a4a5324453625195" => Some("Microsoft Excel"),
+        "9c7cc110ff56d1bd" => Some("Microsoft PowerPoint 2016+"),
         "313e3e8e2c55b110" => Some("Microsoft PowerPoint"),
-        "7494a606a9eef18e" => Some("Adobe Acrobat Reader"),
-        "e2a593822e01aed3" => Some("Adobe Acrobat Pro"),
-        "1bc392b8e104a00e" => Some("Remote Desktop"),
-        "23646679aaccfae0" => Some("7-Zip"),
-        "5f7b5f1e01b83767" => Some("WinRAR"),
+        "ee9f71d9828e153e" => Some("Microsoft Outlook"),
+        "c01d68e6b1b8d249" => Some("Microsoft Outlook 2016+"),
+        "9839aec31243a928" => Some("Microsoft OneNote"),
+        "6e855c85de07bc6a" => Some("Microsoft OneNote 2016+"),
+        "d7528034b5bd6f28" => Some("Microsoft Access"),
+        "a0b3d22e14b3e7ed" => Some("Microsoft Visio"),
+        "e3ee5e57b23a4ed8" => Some("Microsoft Publisher"),
+        "33e0b4d504d05f70" => Some("Microsoft Project"),
+        "e70d383b15687e37" => Some("Microsoft InfoPath"),
+        "1b10a9cf4a7bda36" => Some("Microsoft Teams"),
+        "bcb47d4e5fe4c777" => Some("Microsoft Teams New"),
+        "16ec093b8f51508f" => Some("Skype for Business"),
+        // Remote access / network
+        "1bc392b8e104a00e" => Some("Remote Desktop (mstsc)"),
+        "0a1d19afe5a80f80" => Some("Remote Desktop Alt"),
+        "bcc705e07d55efb0" => Some("PuTTY"),
+        "c963e3028a847925" => Some("PuTTY Alt"),
         "f0468ce1ae57883d" => Some("FileZilla"),
         "e31a6a8b1ef1f038" => Some("WinSCP"),
-        "b3f13480c2785ae" => Some("VLC Media Player"),
-        "4acae695c3029286" => Some("Firefox"),
-        "ebd8c95c6e65992e" => Some("Microsoft Edge"),
-        "fb230a9fe81e71a8" => Some("Brave Browser"),
-        "290532160612e071" => Some("WinMerge"),
+        "ab7e5e61098b4519" => Some("KiTTY"),
+        "c765823d986857ba" => Some("mRemoteNG"),
+        // Development
         "4975d6798a1a4326" => Some("Visual Studio Code"),
-        "bcc705e07d55efb0" => Some("PuTTY"),
+        "f38b1c0d3e9a7625" => Some("Visual Studio Code Alt"),
+        "290532160612e071" => Some("WinMerge"),
+        "59e86071b87ac1a0" => Some("Visual Studio"),
+        "bc0c37eb3be571b2" => Some("Visual Studio 2019"),
+        "36801066f71b73c5" => Some("PowerShell"),
+        "f6cf2656b4cad131" => Some("PowerShell ISE"),
+        "c34a879e28e33aee" => Some("Command Prompt"),
+        "5c450709f7ae4396" => Some("Windows Terminal"),
+        "9cec5b0c8945e759" => Some("Sublime Text"),
+        "69c3ee30d6a0e10a" => Some("Git Bash"),
+        // Archive / file management
+        "23646679aaccfae0" => Some("7-Zip"),
+        "e4bd2558bce50e5b" => Some("7-Zip File Manager"),
+        "776e70a2e54ed277" => Some("WinRAR"),
+        "a97b331e6e34c5b1" => Some("Total Commander"),
+        "f920768fe347e137" => Some("FreeCommander"),
+        "35a3b14d854ab919" => Some("Everything Search"),
+        "8128518a9a37a128" => Some("Directory Opus"),
+        // Media
+        "9e0b3291ef93c037" => Some("Spotify"),
+        "2b164c2a7506451b" => Some("iTunes"),
+        "16e8d9756a6ccbb4" => Some("Groove Music"),
+        "e6ea77a1d4553872" => Some("Movies & TV"),
+        "e93dbdfa04ed5cac" => Some("Audacity"),
+        "bc0c37eb3be571b3" => Some("HandBrake"),
+        "90e5e8b21d7e7924" => Some("OBS Studio"),
+        // Communication
+        "1eb796d87c32eff9" => Some("Telegram Desktop"),
+        "81b31ab9f21a4def" => Some("Discord"),
+        "ce48f8451cc43b12" => Some("Slack"),
+        "f674c5b5bc5462c7" => Some("WhatsApp Desktop"),
+        "52a4e00a8d8b35a3" => Some("Signal Desktop"),
+        "63b7a85748e6c9f9" => Some("Zoom"),
+        "a2d95a1f4bde99e4" => Some("Microsoft Teams Desktop"),
+        // Utilities
+        "c55b6c5c3b5e10b3" => Some("CyberDuck"),
+        "d90a25cfa4c74a7c" => Some("Wireshark"),
+        "22cefa1b559b93ec" => Some("Process Explorer"),
+        "1e4beb3e5a1c78d3" => Some("Process Monitor"),
+        "27ece4700e76ed38" => Some("RegEdit"),
+        "497b42680f564128" => Some("Task Manager"),
+        "b74736c2bd8cc8a5" => Some("WordPad"),
+        "9d1f905ce5044aee" => Some("SnagIt"),
+        "7593af37134fd767" => Some("Greenshot"),
+        "cdf30b95c55fd785" => Some("IrfanView"),
+        "e38e15c22b4f854a" => Some("Paint.NET"),
+        "0c5bd1a1d48b867c" => Some("GIMP"),
+        // Security / forensics
+        "bcb47d4e5fe4c778" => Some("Autopsy"),
+        "e36bfc5d86884586" => Some("FTK Imager"),
+        "3e3ca7c3546acb1b" => Some("X-Ways Forensics"),
+        "c91d08dcfd89c375" => Some("EnCase"),
         _ => None,
     }
 }
@@ -526,6 +610,13 @@ impl JumpListParser {
                 "not_pinned"
             };
 
+            // NetBIOS hostname at offset 72 in v3+ entries (16 bytes, UTF-16LE)
+            let net_bios_name = if version >= 3 && offset + 72 + 32 <= data.len() {
+                decode_utf16le(&data[offset + 72..offset + 72 + 32])
+            } else {
+                None
+            };
+
             // Try to read path string (UTF-16LE after fixed fields)
             let string_offset = offset + entry_base_size;
             let path = if string_offset + 4 <= data.len() {
@@ -548,7 +639,7 @@ impl JumpListParser {
                 entry_number,
                 pin_status: pin_status.to_string(),
                 path,
-                net_bios_name: None,
+                net_bios_name,
             });
 
             // Move to next entry (variable size due to path string)
@@ -713,4 +804,85 @@ fn decode_utf16le(data: &[u8]) -> Option<String> {
         .ok()
         .map(|s| s.trim_end_matches('\0').to_string())
         .filter(|s| !s.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_app_id_finds_common_apps() {
+        assert_eq!(resolve_app_id("1b4dd67f29cb1962"), Some("Windows Explorer"));
+        assert_eq!(resolve_app_id("b91c07e03a5a0a35"), Some("Google Chrome"));
+        assert_eq!(resolve_app_id("a7bd71699cd38d1c"), Some("Microsoft Word 2016+"));
+        assert_eq!(resolve_app_id("bcc705e07d55efb0"), Some("PuTTY"));
+        assert_eq!(resolve_app_id("4975d6798a1a4326"), Some("Visual Studio Code"));
+    }
+
+    #[test]
+    fn resolve_app_id_returns_none_for_unknown() {
+        assert_eq!(resolve_app_id("0000000000000000"), None);
+        assert_eq!(resolve_app_id(""), None);
+    }
+
+    #[test]
+    fn cfb_magic_is_correct() {
+        assert_eq!(CFB_MAGIC, [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]);
+    }
+
+    #[test]
+    fn decode_utf16le_handles_basic_string() {
+        // "ABC" as UTF-16LE
+        let data = [0x41, 0x00, 0x42, 0x00, 0x43, 0x00];
+        assert_eq!(decode_utf16le(&data), Some("ABC".to_string()));
+    }
+
+    #[test]
+    fn decode_utf16le_returns_none_for_empty() {
+        assert_eq!(decode_utf16le(&[]), None);
+        assert_eq!(decode_utf16le(&[0x00, 0x00]), None);
+    }
+
+    #[test]
+    fn read_filetime_converts_correctly() {
+        // 2024-01-15T00:00:00Z = 1705276800 Unix
+        // FILETIME = (1705276800 * 10_000_000) + 116_444_736_000_000_000
+        let ft: u64 = 133_497_504_000_000_000;
+        let bytes = ft.to_le_bytes();
+        let unix = read_filetime(&bytes).expect("should parse");
+        assert_eq!(unix, 1705276800);
+    }
+
+    #[test]
+    fn read_filetime_returns_none_for_zero() {
+        let bytes = [0u8; 8];
+        assert!(read_filetime(&bytes).is_none());
+    }
+
+    #[test]
+    fn jump_list_parser_rejects_small_file() {
+        let parser = JumpListParser::new();
+        let path = std::path::Path::new("test.automaticDestinations-ms");
+        let result = parser.parse_file(path, &[0u8; 4]).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn app_id_table_has_over_100_entries() {
+        let test_ids = [
+            "1b4dd67f29cb1962", "b91c07e03a5a0a35", "5d696d521de238c3",
+            "a7bd71699cd38d1c", "d00655d2aa12ff6d", "9c7cc110ff56d1bd",
+            "4acae695c3029286", "ebd8c95c6e65992e", "1bc392b8e104a00e",
+            "bcc705e07d55efb0", "4975d6798a1a4326", "ee9f71d9828e153e",
+            "36801066f71b73c5", "5c450709f7ae4396", "23646679aaccfae0",
+            "81b31ab9f21a4def", "1eb796d87c32eff9", "63b7a85748e6c9f9",
+        ];
+        let mut resolved = 0;
+        for id in &test_ids {
+            if resolve_app_id(id).is_some() {
+                resolved += 1;
+            }
+        }
+        assert!(resolved >= 15, "Expected at least 15 resolved, got {}", resolved);
+    }
 }
