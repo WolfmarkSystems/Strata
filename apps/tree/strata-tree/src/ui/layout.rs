@@ -35,11 +35,19 @@ fn paint_panel(ui: &mut egui::Ui, t: &crate::theme::StrataTheme) {
 pub fn render(ctx: &egui::Context, state: &mut AppState) {
     dialogs::render(ctx, state);
 
+    // Ctrl+B: toggle navigator panel
+    if ctx.input(|i| i.modifiers.command && i.key_pressed(egui::Key::B)) {
+        state.navigator_collapsed = !state.navigator_collapsed;
+    }
+
     let t = *state.theme();
 
-    // ── Left icon sidebar (48px) ─────────────────────────────────────────
+    // ── Status bar (24px bottom) ─────────────────────────────────────────
+    super::status_bar::render(ctx, state);
+
+    // ── Left icon sidebar (40px — tightened) ─────────────────────────────
     egui::SidePanel::left("icon_sidebar")
-        .exact_width(48.0)
+        .exact_width(40.0)
         .resizable(false)
         .frame(egui::Frame::none().fill(t.bg).inner_margin(egui::Margin {
             left: 8.0,
@@ -157,26 +165,28 @@ fn render_ingestion_progress(ctx: &egui::Context, state: &mut AppState, t: &crat
 }
 
 fn render_explorer(ctx: &egui::Context, state: &mut AppState, t: &crate::theme::StrataTheme) {
-    // ── Evidence tree (220px) ────────────────────────────────────────
-    egui::SidePanel::left("evidence_tree")
-        .resizable(true)
-        .default_width(220.0)
-        .min_width(160.0)
-        .max_width(360.0)
-        .frame(egui::Frame::none().fill(t.bg).inner_margin(egui::Margin {
-            left: 4.0,
-            top: 8.0,
-            bottom: 8.0,
-            right: 4.0,
-        }))
-        .show(ctx, |ui| {
-            paint_card(ui, t);
-            egui::Frame::none()
-                .inner_margin(egui::Margin::same(0.0))
-                .show(ui, |ui| {
-                    tree_panel::render(ui, state);
-                });
-        });
+    // ── Navigator panel (collapsible, 200px default, Ctrl+B toggle) ──
+    if !state.navigator_collapsed {
+        egui::SidePanel::left("navigator_panel")
+            .resizable(true)
+            .default_width(200.0)
+            .min_width(140.0)
+            .max_width(360.0)
+            .frame(egui::Frame::none().fill(t.bg).inner_margin(egui::Margin {
+                left: 4.0,
+                top: 8.0,
+                bottom: 8.0,
+                right: 4.0,
+            }))
+            .show(ctx, |ui| {
+                paint_card(ui, t);
+                egui::Frame::none()
+                    .inner_margin(egui::Margin::same(0.0))
+                    .show(ui, |ui| {
+                        tree_panel::render(ui, state);
+                    });
+            });
+    }
 
     // ── Detail panel (280px, right) ──────────────────────────────────
     egui::SidePanel::right("detail_panel")

@@ -1,15 +1,12 @@
-//! Status bar — bottom bar with clickable color-coded stats.
-//! NOTE: currently unused — stats moved to toolbar Row 2.
+//! Status bar — 24px bottom bar with clickable stat pills.
 
-#[allow(unused_imports)]
 use crate::state::{AppState, ViewMode};
 
-#[allow(dead_code)]
 pub fn render(ctx: &egui::Context, state: &mut AppState) {
     let t = *state.theme();
 
     egui::TopBottomPanel::bottom("status_bar")
-        .exact_height(28.0)
+        .exact_height(24.0)
         .frame(
             egui::Frame::none()
                 .fill(t.panel)
@@ -98,7 +95,6 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
 }
 
 /// Render a clickable stat label+value. Returns true if clicked.
-#[allow(dead_code)]
 fn pill_clickable(
     ui: &mut egui::Ui,
     label: &str,
@@ -131,7 +127,6 @@ fn pill_clickable(
     click.clicked()
 }
 
-#[allow(dead_code)]
 fn bar_div(ui: &mut egui::Ui, t: &crate::theme::StrataTheme) {
     let cursor = ui.cursor().min;
     ui.painter().line_segment(

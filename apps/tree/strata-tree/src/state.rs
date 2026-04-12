@@ -214,6 +214,14 @@ pub struct FileTableState {
     pub visible_end: usize,
     #[serde(default = "default_file_table_column_widths")]
     pub column_widths: Vec<f32>,
+    #[serde(default = "default_visible_columns")]
+    pub visible_columns: Vec<bool>,
+}
+
+fn default_visible_columns() -> Vec<bool> {
+    // NAME, SIZE, MODIFIED, CREATED, SHA-256, CATEGORY
+    // Default: NAME=show, SIZE=show, MODIFIED=show, CREATED=hide, SHA-256=show, CATEGORY=show
+    vec![true, true, true, false, true, true]
 }
 
 impl Default for FileTableState {
@@ -229,6 +237,7 @@ impl Default for FileTableState {
             visible_start: 0,
             visible_end: 0,
             column_widths: default_file_table_column_widths(),
+            visible_columns: default_visible_columns(),
         }
     }
 }
@@ -470,6 +479,7 @@ pub struct AppState {
     pub preview_tab: u8,         // 0=Metadata 1=Hex 2=Text 3=Image
     pub theme_index: usize,      // index into theme::THEMES
     pub metadata_expanded: bool, // collapsible metadata strip below file table
+    pub navigator_collapsed: bool,  // Ctrl+B toggle for 3-panel layout
 
     // ── Sort ──
     pub sort_col: usize,
@@ -698,6 +708,7 @@ impl Default for AppState {
             preview_tab: 0,
             theme_index: crate::theme::load_theme_index(),
             metadata_expanded: false,
+            navigator_collapsed: false,
             sort_col: 0,
             sort_asc: true,
             new_case_dlg: NewCaseDialog::default(),
