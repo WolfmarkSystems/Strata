@@ -1,6 +1,6 @@
 # Strata
 
-**Professional digital forensics platform — 17 plugins, 178 mobile parsers, MITRE ATT&CK, court-ready reporting.**
+**Professional digital forensics platform — 17 plugins, 310 mobile parsers, 34 Sigma rules, ML-powered analysis, court-ready reporting.**
 
 Built by a US Army Counterintelligence Special Agent and Digital Forensic Examiner.  
 Free for US military and law enforcement. Commercial licensing available.
@@ -18,13 +18,14 @@ The tools that exist were built for enterprise budgets and conference demos. Str
 ## Features
 
 - **17 forensic plugins** covering Windows, macOS, iOS, Android, cloud, network, memory, and malware
-- **178 mobile artifact parsers** — 87 Android (ALEAPP-equivalent) + 91 iOS (iLEAPP-equivalent), all read-only SQLite
-- **29 Sigma correlation rules** with full MITRE ATT&CK kill chain coverage
+- **310 mobile artifact parsers** — 157 Android (ALEAPP-equivalent) + 153 iOS (iLEAPP-equivalent), all read-only SQLite
+- **34 Sigma correlation rules** with full MITRE ATT&CK kill chain coverage
+- **ML-powered analysis** — anomaly detection, executive case summary, anti-forensic obstruction scoring (0-100)
 - **CSAM detection module** — hash-based and perceptual detection, NCMEC/Project VIC compatible, immutable audit trail, free on all license tiers
-- **Court-ready reporting** — Word and PDF export, chain-of-custody audit log, evidence integrity verification
-- **Air-gap deployable** — single binary, USB portable, no cloud dependency, no telemetry
+- **Court-ready reporting** — Word and PDF export, chain-of-custody audit log, evidence integrity verification, obstruction score section
+- **Air-gap deployable** — single binary (24 MB macOS), USB portable, no cloud dependency, no telemetry
 - **Cross-platform** — Windows, macOS, Linux. Parses evidence from iOS and Android devices
-- **89% pure Rust** — 878+ tests, zero unsafe blocks in production paths, zero clippy warnings
+- **89% pure Rust** — 890+ tests, zero unsafe blocks in production paths, zero clippy warnings
 
 ---
 
@@ -47,8 +48,8 @@ The tools that exist were built for enterprise budgets and conference demos. Str
 | Wraith | hiberfil.sys, LSASS dump detection, crash dump analysis |
 | Recon | Username/email/IP extraction, AWS AKIA key detection, SID history |
 | Specter | Android backup (`.ab`), package inventory, Wi-Fi config, device profile |
-| Pulse | **87 Android parsers** (SMS, calls, contacts, Gmail, Chrome, photos, location, clipboard, keyboard cache, Wi-Fi, Bluetooth, calendar, notifications + more) · **91 iOS parsers** (KnowledgeC, iMessage, Safari, Health, Significant Locations, Notes, WhatsApp, Signal, Telegram, Snapchat, Find My, Biome, PowerLog + more) — all read-only SQLite, UFDR-compatible |
-| **Sigma** | **29 correlation rules. Always runs last. Full MITRE ATT&CK kill chain.** |
+| Pulse | **157 Android parsers** (SMS, calls, contacts, Gmail, Chrome, photos, location, clipboard, keyboard cache, Wi-Fi, Bluetooth, calendar, notifications + more) · **153 iOS parsers** (KnowledgeC, iMessage, Safari, Health, Significant Locations, Notes, WhatsApp, Signal, Telegram, Snapchat, Find My, Biome, PowerLog, HealthKit, Strava, AllTrails + more) — all read-only SQLite, UFDR-compatible |
+| **Sigma** | **34 correlation rules. Always runs last. Full MITRE ATT&CK kill chain.** |
 
 ---
 
@@ -64,6 +65,29 @@ The `strata-csam` crate provides hash-based and perceptual CSAM detection for fo
 - **Free on all license tiers — no gating, ever**
 
 Examiners import their own hash sets. Strata never bundles hash data.
+
+---
+
+## ML-Powered Analysis
+
+Strata includes three deterministic ML modules — no model files required, no cloud calls, all run locally.
+
+| Module | What it does |
+|---|---|
+| **Anomaly Detection** (`strata-ml-anomaly`) | Flags statistical outliers across file metadata (timestamps, sizes, entropy). Catches timestomping, data staging, and exfiltration patterns that manual review misses. |
+| **Executive Summary** (`strata-ml-summary`) | Generates a plain-English case summary from artifact data. One paragraph for the prosecutor, one for the jury — no jargon, no acronyms. |
+| **Obstruction Scoring** (`strata-ml-obstruction`) | Produces a single 0-100 score summarizing all detected anti-forensic behavior (VSS deletion, log clearing, secure-delete tools, timestamp manipulation). Always advisory. |
+
+All ML modules are available on **every license tier** including free Gov/Mil.
+
+---
+
+## Tools
+
+| Tool | Purpose |
+|---|---|
+| `wolfmark-deploy` | Internal deployment wizard — builds signed, org-customized Strata USB packages with Ed25519 license signing, bulk license packs, and full audit trail |
+| `wolfmark-license-gen` | License keypair generator |
 
 ---
 
