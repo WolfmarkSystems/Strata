@@ -31,6 +31,8 @@ pub mod betterhelp;
 pub mod bitwarden;
 pub mod bitcoin_wallet;
 pub mod blackboard;
+pub mod blood_pressure_app;
+pub mod blockchain_wallet;
 pub mod bluetooth;
 pub mod booking_com;
 pub mod browser_history;
@@ -56,6 +58,7 @@ pub mod chrome_top_sites;
 pub mod clipboard;
 pub mod coffee_meets_bagel;
 pub mod coinbase;
+pub mod coinomi;
 pub mod contacts;
 pub mod costco;
 pub mod device_info;
@@ -69,13 +72,16 @@ pub mod dmv_app;
 pub mod doordash;
 pub mod duolingo;
 pub mod ebay;
+pub mod electrum_wallet;
 pub mod evernote;
+pub mod exodus_wallet;
 pub mod expedia;
 pub mod facebook_messenger;
 pub mod fb_marketplace;
 pub mod factory_reset;
 pub mod firefox;
 pub mod firefox_cookies;
+pub mod find_my_kids;
 pub mod fitbit;
 pub mod fordpass;
 pub mod garmin_activities;
@@ -87,6 +93,7 @@ pub mod gmail;
 pub mod google_authenticator;
 pub mod google_calendar_events;
 pub mod google_chrome;
+pub mod google_family_link;
 pub mod google_flights;
 pub mod grindr;
 pub mod google_home;
@@ -145,6 +152,7 @@ pub mod oruxmaps;
 pub mod osmand;
 pub mod oura;
 pub mod pacer;
+pub mod parkwhiz;
 pub mod plenty_of_fish;
 pub mod pluto_tv;
 pub mod pandora;
@@ -170,6 +178,7 @@ pub mod samsung_pay;
 pub mod signal_attachments;
 pub mod sim_info;
 pub mod skout;
+pub mod sleep_cycle;
 pub mod skype;
 pub mod slopes;
 pub mod smartthings;
@@ -183,6 +192,7 @@ pub mod snapchat_spotlight;
 pub mod snapchat_stories;
 pub mod soundcloud;
 pub mod speedtest;
+pub mod spothero;
 pub mod strava;
 pub mod target_app;
 pub mod telegram;
@@ -1324,5 +1334,55 @@ pub const ALL_PARSERS: &[ParserEntry] = &[
         name: "nextdoor",
         matches_any: nextdoor::MATCHES,
         run: nextdoor::parse,
+    },
+    ParserEntry {
+        name: "exodus_wallet",
+        matches_any: exodus_wallet::MATCHES,
+        run: exodus_wallet::parse,
+    },
+    ParserEntry {
+        name: "electrum_wallet",
+        matches_any: electrum_wallet::MATCHES,
+        run: electrum_wallet::parse,
+    },
+    ParserEntry {
+        name: "coinomi",
+        matches_any: coinomi::MATCHES,
+        run: coinomi::parse,
+    },
+    ParserEntry {
+        name: "blockchain_wallet",
+        matches_any: blockchain_wallet::MATCHES,
+        run: blockchain_wallet::parse,
+    },
+    ParserEntry {
+        name: "parkwhiz",
+        matches_any: parkwhiz::MATCHES,
+        run: parkwhiz::parse,
+    },
+    ParserEntry {
+        name: "spothero",
+        matches_any: spothero::MATCHES,
+        run: spothero::parse,
+    },
+    ParserEntry {
+        name: "sleep_cycle",
+        matches_any: sleep_cycle::MATCHES,
+        run: sleep_cycle::parse,
+    },
+    ParserEntry {
+        name: "blood_pressure_app",
+        matches_any: blood_pressure_app::MATCHES,
+        run: blood_pressure_app::parse,
+    },
+    ParserEntry {
+        name: "google_family_link",
+        matches_any: google_family_link::MATCHES,
+        run: google_family_link::parse,
+    },
+    ParserEntry {
+        name: "find_my_kids",
+        matches_any: find_my_kids::MATCHES,
+        run: find_my_kids::parse,
     },
 ];
