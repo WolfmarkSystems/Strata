@@ -482,6 +482,8 @@ pub struct AppState {
     pub theme_index: usize,      // index into theme::THEMES
     pub metadata_expanded: bool, // collapsible metadata strip below file table
     pub navigator_collapsed: bool,  // Ctrl+B toggle for 3-panel layout
+    pub court_mode: bool,           // Ctrl+Shift+C — presentation-safe mode
+    pub court_mode_prev_theme: Option<usize>, // theme to restore on exit
 
     // ── Sort ──
     pub sort_col: usize,
@@ -708,6 +710,8 @@ impl Default for AppState {
             theme_index: crate::theme::load_theme_index(),
             metadata_expanded: false,
             navigator_collapsed: false,
+            court_mode: false,
+            court_mode_prev_theme: None,
             sort_col: 0,
             sort_asc: true,
             new_case_dlg: NewCaseDialog::default(),
@@ -920,6 +924,32 @@ impl AppState {
         });
         summary.examiner_approved = false;
         summary.status = strata_ml_summary::SummaryStatus::UnderReview;
+    }
+
+    /// Toggle court-mode. Switches to Ash theme, collapses navigator,
+    /// hides CSAM. Does NOT change analysis state.
+    pub fn toggle_court_mode(&mut self) {
+        if self.court_mode {
+            // Restore
+            if let Some(prev) = self.court_mode_prev_theme.take() {
+                self.theme_index = prev;
+            }
+            self.court_mode = false;
+        } else {
+            // Engage
+            self.court_mode_prev_theme = Some(self.theme_index);
+            self.theme_index = 4; // Ash (light theme)
+            self.navigator_collapsed = true;
+            // If on CsamReview, switch away
+            if matches!(self.view_mode, ViewMode::CsamReview) {
+                self.view_mode = ViewMode::FileExplorer;
+            }
+            self.court_mode = true;
+        }
+        self.log_action(
+            "COURT_MODE",
+            if self.court_mode { "enabled" } else { "disabled" },
+        );
     }
 
     pub fn refresh_license_state(&mut self) {

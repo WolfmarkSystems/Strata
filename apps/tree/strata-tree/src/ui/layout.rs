@@ -40,6 +40,10 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
     if ctx.input(|i| i.modifiers.command && i.key_pressed(egui::Key::B)) {
         state.navigator_collapsed = !state.navigator_collapsed;
     }
+    // Ctrl+Shift+C: toggle court-mode
+    if ctx.input(|i| i.modifiers.command && i.modifiers.shift && i.key_pressed(egui::Key::C)) {
+        state.toggle_court_mode();
+    }
 
     let t = *state.theme();
 

@@ -17,6 +17,17 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
             ui.horizontal_centered(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(6.0, 0.0);
 
+                // Court-mode indicator
+                if state.court_mode {
+                    ui.label(
+                        egui::RichText::new("⚖ COURT MODE")
+                            .color(egui::Color32::from_rgb(0x2a, 0x50, 0x68))
+                            .size(11.0)
+                            .strong(),
+                    );
+                    bar_div(ui, &t);
+                }
+
                 // Search mode indicator
                 if state.global_search_active {
                     ui.label(
