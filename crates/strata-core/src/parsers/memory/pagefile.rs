@@ -130,7 +130,7 @@ fn extract_interesting_strings(data: &[u8]) -> Vec<String> {
     // Pass 1: ASCII strings
     let mut current = String::new();
     for &byte in data {
-        if byte >= 0x20 && byte <= 0x7E {
+        if (0x20..=0x7E).contains(&byte) {
             current.push(byte as char);
         } else {
             if current.len() >= MIN_STRING_LEN && is_interesting(&current) {
@@ -154,7 +154,7 @@ fn extract_interesting_strings(data: &[u8]) -> Vec<String> {
             let lo = data[i];
             let hi = data[i + 1];
             // Printable BMP character in UTF-16LE
-            if hi == 0 && lo >= 0x20 && lo <= 0x7E {
+            if hi == 0 && (0x20..=0x7E).contains(&lo) {
                 utf16_buf.push(u16::from_le_bytes([lo, hi]));
             } else {
                 if utf16_buf.len() >= MIN_STRING_LEN {
