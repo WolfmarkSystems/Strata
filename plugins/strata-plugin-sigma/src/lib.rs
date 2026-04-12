@@ -879,6 +879,135 @@ impl StrataPlugin for SigmaPlugin {
             results.push(a);
         }
 
+        // ── Rule 30 — High-confidence temporal anomaly ──────────────
+        // Fires when AnomalyEngine finds TemporalOutlier with confidence >= 0.8
+        let ml_temporal: Vec<_> = ctx.prior_results
+            .iter()
+            .flat_map(|output| &output.artifacts)
+            .filter(|r| {
+                r.subcategory == "ML Anomaly"
+                    && r.detail.contains("[anomaly_type=TemporalOutlier]")
+                    && r.detail.contains("[confidence=")
+                    && parse_ml_confidence(&r.detail) >= 0.80
+            })
+            .collect();
+        if !ml_temporal.is_empty() {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: ML Temporal Anomaly Detected");
+            a.add_field("detail", &format!(
+                "ML anomaly engine found {} high-confidence temporal outlier(s). \
+                 Activity detected outside the device's established behavioral baseline. \
+                 [ML-ASSISTED — ADVISORY ONLY]",
+                ml_temporal.len()
+            ));
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("suspicious", "true");
+            a.add_field("mitre", "T1059");
+            results.push(a);
+        }
+
+        // ── Rule 31 — Stealth execution detected ──────────────────────
+        // Fires when AnomalyEngine finds StealthExecution with confidence >= 0.75
+        let ml_stealth: Vec<_> = ctx.prior_results
+            .iter()
+            .flat_map(|output| &output.artifacts)
+            .filter(|r| {
+                r.subcategory == "ML Anomaly"
+                    && r.detail.contains("[anomaly_type=StealthExecution]")
+                    && parse_ml_confidence(&r.detail) >= 0.75
+            })
+            .collect();
+        if !ml_stealth.is_empty() {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: ML Stealth Execution Detected");
+            a.add_field("detail", &format!(
+                "ML anomaly engine found {} stealth execution(s) — single run, \
+                 zero focus time, no user interaction artifacts. \
+                 [ML-ASSISTED — ADVISORY ONLY]",
+                ml_stealth.len()
+            ));
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("suspicious", "true");
+            a.add_field("mitre", "T1059.001");
+            results.push(a);
+        }
+
+        // ── Rule 32 — Timestamp manipulation confirmed ────────────────
+        // Fires when AnomalyEngine finds TimestampManipulation with confidence >= 0.85
+        // ($SI/$FN mismatch is near-definitive)
+        let ml_timestomp: Vec<_> = ctx.prior_results
+            .iter()
+            .flat_map(|output| &output.artifacts)
+            .filter(|r| {
+                r.subcategory == "ML Anomaly"
+                    && r.detail.contains("[anomaly_type=TimestampManipulation]")
+                    && parse_ml_confidence(&r.detail) >= 0.85
+            })
+            .collect();
+        if !ml_timestomp.is_empty() {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: ML Timestamp Manipulation Confirmed");
+            a.add_field("detail", &format!(
+                "ML anomaly engine found {} timestamp manipulation indicator(s). \
+                 Impossible clustering, future timestamps, or $SI/$FN mismatch. \
+                 [ML-ASSISTED — ADVISORY ONLY]",
+                ml_timestomp.len()
+            ));
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("suspicious", "true");
+            a.add_field("mitre", "T1070.006");
+            results.push(a);
+        }
+
+        // ── Rule 33 — Anti-forensic chain detected ────────────────────
+        // Fires when 2+ AntiForensicBehavior findings exist (coordinated cleanup)
+        let ml_antiforensic: Vec<_> = ctx.prior_results
+            .iter()
+            .flat_map(|output| &output.artifacts)
+            .filter(|r| {
+                r.subcategory == "ML Anomaly"
+                    && r.detail.contains("[anomaly_type=AntiForensicBehavior]")
+            })
+            .collect();
+        if ml_antiforensic.len() >= 2 {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: ML Anti-Forensic Chain Detected");
+            a.add_field("detail", &format!(
+                "{} anti-forensic behavior indicators detected in coordinated pattern. \
+                 VSS deletion + log clearing = deliberate evidence destruction. \
+                 [ML-ASSISTED — ADVISORY ONLY]",
+                ml_antiforensic.len()
+            ));
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("suspicious", "true");
+            a.add_field("mitre", "T1070");
+            results.push(a);
+        }
+
+        // ── Rule 34 — Abnormal exfiltration pattern ───────────────────
+        // Fires when AbnormalDataTransfer + TemporalOutlier in same session
+        let has_transfer_anomaly = ctx.prior_results
+            .iter()
+            .flat_map(|output| &output.artifacts)
+            .any(|r| {
+                r.subcategory == "ML Anomaly"
+                    && r.detail.contains("[anomaly_type=AbnormalDataTransfer]")
+            });
+        let has_temporal_anomaly = !ml_temporal.is_empty();
+        if has_transfer_anomaly && has_temporal_anomaly {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: ML Abnormal Exfiltration Pattern");
+            a.add_field("detail",
+                "Abnormal data transfer coincides with temporal anomaly — \
+                 off-hours exfiltration pattern. \
+                 [ML-ASSISTED — ADVISORY ONLY]"
+            );
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("suspicious", "true");
+            a.add_field("mitre", "T1048");
+            results.push(a);
+        }
+
         // Build technique breakdown string
         let mut technique_lines: Vec<String> = technique_counts
             .iter()
@@ -1009,6 +1138,18 @@ impl StrataPlugin for SigmaPlugin {
 pub extern "C" fn create_plugin_sigma() -> *mut std::ffi::c_void {
     let plugin: Box<dyn StrataPlugin> = Box::new(SigmaPlugin::new());
     Box::into_raw(Box::new(plugin)) as *mut std::ffi::c_void
+}
+
+/// Parse a confidence value from bracket-delimited ML anomaly detail strings.
+/// Format: `[confidence=0.88]`
+fn parse_ml_confidence(detail: &str) -> f32 {
+    if let Some(start) = detail.find("[confidence=") {
+        let after = &detail[start + 12..];
+        if let Some(end) = after.find(']') {
+            return after[..end].parse::<f32>().unwrap_or(0.0);
+        }
+    }
+    0.0
 }
 
 // ──────────────────────────────────────────────────────────────────────
