@@ -419,6 +419,7 @@ mod tests {
                 mitre_technique: None,
                 is_suspicious: false,
                 raw_data: None,
+                confidence: 0,
             }],
             summary: PluginSummary {
                 total_artifacts: 1,

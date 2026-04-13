@@ -188,6 +188,7 @@ mod tests {
                 mitre_technique: Some("T1490".to_string()),
                 is_suspicious: true,
                 raw_data: None,
+                confidence: 0,
             }],
             summary: PluginSummary {
                 total_artifacts: 1,

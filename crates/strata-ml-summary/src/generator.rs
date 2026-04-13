@@ -299,6 +299,7 @@ mod tests {
                         mitre_technique: None,
                         is_suspicious: true,
                         raw_data: None,
+                        confidence: 0,
                     },
                     ArtifactRecord {
                         category: ArtifactCategory::SystemActivity,
@@ -311,6 +312,7 @@ mod tests {
                         mitre_technique: Some("T1490".into()),
                         is_suspicious: true,
                         raw_data: None,
+                        confidence: 0,
                     },
                 ],
                 summary: PluginSummary {

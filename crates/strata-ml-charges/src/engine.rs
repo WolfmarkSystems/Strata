@@ -258,6 +258,7 @@ mod tests {
             mitre_technique: None,
             is_suspicious: true,
             raw_data: None,
+            confidence: 0,
         }
     }
 
