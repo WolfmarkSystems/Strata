@@ -14,3 +14,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 rusqlite = { version = "0.30", features = ["bundled"] }
+
+# FSEvents log files are gzip-compressed; flate2 is the standard
+# workspace decoder.
+flate2 = { workspace = true }

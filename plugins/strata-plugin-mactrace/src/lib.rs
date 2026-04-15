@@ -22,6 +22,7 @@
 use std::path::{Path, PathBuf};
 
 pub mod biome;
+pub mod fsevents;
 
 use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext,
@@ -248,6 +249,91 @@ impl StrataPlugin for MacTracePlugin {
         };
 
         for path in files {
+            // FSEvents (/.fseventsd/) — gzipped binary log of every
+            // filesystem event the kernel surfaced. See
+            // `crate::fsevents`. Highest-value source for proving
+            // deletes / renames after the file is gone.
+            let path_lower_pre = path.to_string_lossy().to_ascii_lowercase();
+            if path_lower_pre.contains("/.fseventsd/")
+                && !path_lower_pre.ends_with("fseventsd-uuid")
+            {
+                let path_str = path.to_string_lossy().to_string();
+                if let Ok(data) = std::fs::read(&path) {
+                    let events = crate::fsevents::parse(&path, &data);
+                    for ev in &events {
+                        let mut a = Artifact::new("FSEvent", &path_str);
+                        if let Some(dt) = ev.approximate_date {
+                            a.timestamp = Some(dt.timestamp() as u64);
+                        }
+                        let flags_str = ev.flags.as_string();
+                        a.add_field(
+                            "title",
+                            &format!(
+                                "FSEvent [{}]: {}",
+                                flags_str, ev.path
+                            ),
+                        );
+                        a.add_field(
+                            "detail",
+                            &format!(
+                                "Path: {} | event_id: {} | flags: {} | is_directory: {} | \
+                                 approximate_date: {} | source: {}",
+                                ev.path,
+                                ev.event_id,
+                                flags_str,
+                                ev.is_directory,
+                                ev.approximate_date
+                                    .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                    .unwrap_or_else(|| "-".to_string()),
+                                path_str,
+                            ),
+                        );
+                        a.add_field("file_type", "FSEvent");
+                        a.add_field("path", &ev.path);
+                        a.add_field("event_id", &ev.event_id.to_string());
+                        a.add_field("flags_str", &flags_str);
+                        a.add_field(
+                            "is_directory",
+                            if ev.is_directory { "true" } else { "false" },
+                        );
+                        if let Some(dt) = ev.approximate_date {
+                            a.add_field(
+                                "approximate_date",
+                                &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                            );
+                        }
+                        // MITRE per spec:
+                        //   Removed       -> T1070.004 (file deletion)
+                        //   Created+large -> T1074.001 (data staging)
+                        //   else          -> T1083     (file/dir discovery)
+                        let mitre = if ev.flags.removed() {
+                            "T1070.004"
+                        } else if ev.flags.created()
+                            && (ev.path.to_ascii_lowercase().contains(".zip")
+                                || ev.path.to_ascii_lowercase().contains(".7z")
+                                || ev.path.to_ascii_lowercase().contains(".tar")
+                                || ev.path.to_ascii_lowercase().contains(".dmg"))
+                        {
+                            "T1074.001"
+                        } else {
+                            "T1083"
+                        };
+                        a.add_field("mitre", mitre);
+                        let severity = if ev.flags.removed() || ev.flags.renamed() {
+                            "High"
+                        } else {
+                            "Medium"
+                        };
+                        a.add_field("forensic_value", severity);
+                        if ev.flags.removed() || ev.flags.renamed() {
+                            a.add_field("suspicious", "true");
+                        }
+                        out.push(a);
+                    }
+                }
+                continue;
+            }
+
             // Apple Biome (macOS 13+) — highest-priority user-activity
             // store. Detect by `/biome/` (system) or `/Biome/`
             // (per-user) path fragment. SEGB format, custom protobuf.
@@ -698,6 +784,7 @@ impl StrataPlugin for MacTracePlugin {
                 "Safari History" => ArtifactCategory::WebActivity,
                 "AddressBook" => ArtifactCategory::AccountsCredentials,
                 "Biome Record" => ArtifactCategory::UserActivity,
+                "FSEvent" => ArtifactCategory::SystemActivity,
                 _ => ArtifactCategory::SystemActivity,
             };
             cats.insert(category.as_str().to_string());
