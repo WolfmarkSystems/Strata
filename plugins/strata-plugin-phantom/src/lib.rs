@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 pub mod amcache;
 pub mod prefetch;
 pub mod shimcache;
+pub mod usb;
 
 use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext,
@@ -577,68 +578,75 @@ mod parsers {
             }
 
             // ── USB device chain ─────────────────────────────────────────
-            if let Some(usbstor) = walk(&root, &["ControlSet001", "Enum", "USBSTOR"]) {
-                if let Some(Ok(class_iter)) = usbstor.subkeys() {
-                    for class_res in class_iter {
-                        let Ok(class_node) = class_res else { continue };
-                        let Ok(class_name) = class_node.name() else { continue };
-                        let class_name = class_name.to_string_lossy();
-                        // class node → device id subkeys
-                        if let Some(Ok(dev_iter)) = class_node.subkeys() {
-                            for dev_res in dev_iter {
-                                let Ok(dev_node) = dev_res else { continue };
-                                let Ok(serial) = dev_node.name() else { continue };
-                                let serial = serial.to_string_lossy();
-
-                                let friendly = read_value_string(&dev_node, "FriendlyName")
-                                    .unwrap_or_else(|| class_name.to_string());
-
-                                let mut detail =
-                                    format!("Class: {} | Serial: {}", class_name, serial);
-
-                                // Try to get first install / last connect from
-                                // Properties subkey 0064/0066/0067.
-                                if let Some(props) = dev_node
-                                    .subkey("Properties")
-                                    .and_then(|r| r.ok())
-                                {
-                                    if let Some(install) =
-                                        read_filetime_in_properties(&props, "0064")
-                                    {
-                                        detail.push_str(&format!(
-                                            " | First install: {}",
-                                            fmt_unix(install)
-                                        ));
-                                    }
-                                    if let Some(last) =
-                                        read_filetime_in_properties(&props, "0066")
-                                    {
-                                        detail.push_str(&format!(
-                                            " | Last connected: {}",
-                                            fmt_unix(last)
-                                        ));
-                                    }
-                                    if let Some(removal) =
-                                        read_filetime_in_properties(&props, "0067")
-                                    {
-                                        detail.push_str(&format!(
-                                            " | Last removal: {}",
-                                            fmt_unix(removal)
-                                        ));
-                                    }
-                                }
-
-                                let mut a = Artifact::new("USB Device", &path_str);
-                                a.add_field("title", &format!("USB: {}", friendly));
-                                a.add_field("detail", &detail);
-                                a.add_field("file_type", "USB Device");
-                                a.add_field("mitre", "T1052.001");
-                                a.add_field("forensic_value", "High");
-                                out.push(a);
-                            }
-                        }
-                    }
+            // Typed parser — see `crate::usb`. Walks USBSTOR + USB,
+            // splits vendor/product, surfaces all three Properties
+            // FILETIMEs, flags generic / spoofed serials suspicious.
+            let usb_history = crate::usb::parse(&root);
+            for dev in &usb_history.devices {
+                let suspicious = crate::usb::is_generic_serial(&dev.serial_number);
+                let mut a = Artifact::new("USB Device", &path_str);
+                a.timestamp = dev
+                    .last_write_time
+                    .map(|dt| dt.timestamp() as u64);
+                let title_label = if !dev.friendly_name.is_empty() {
+                    dev.friendly_name.clone()
+                } else if !dev.product.is_empty() {
+                    format!("{} {}", dev.vendor, dev.product)
+                } else {
+                    dev.device_type.clone()
+                };
+                a.add_field("title", &format!("USB: {}", title_label));
+                let install_str = dev
+                    .first_install_time
+                    .map(|t| t.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                    .unwrap_or_else(|| "<unknown>".to_string());
+                let connect_str = dev
+                    .last_connect_time
+                    .map(|t| t.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                    .unwrap_or_else(|| "<unknown>".to_string());
+                let removal_str = dev
+                    .last_removal_time
+                    .map(|t| t.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                    .unwrap_or_else(|| "<unknown>".to_string());
+                a.add_field(
+                    "detail",
+                    &format!(
+                        "Bus: {} | Type: {} | Vendor: {} | Product: {} | Serial: {} | \
+                         First install: {} | Last connected: {} | Last removal: {}",
+                        dev.bus.as_str(),
+                        dev.device_type,
+                        if dev.vendor.is_empty() { "<unknown>" } else { &dev.vendor },
+                        if dev.product.is_empty() { "<unknown>" } else { &dev.product },
+                        dev.serial_number,
+                        install_str,
+                        connect_str,
+                        removal_str,
+                    ),
+                );
+                a.add_field("file_type", "USB Device");
+                a.add_field("bus", dev.bus.as_str());
+                a.add_field("device_type", &dev.device_type);
+                a.add_field("vendor", &dev.vendor);
+                a.add_field("product", &dev.product);
+                a.add_field("serial_number", &dev.serial_number);
+                a.add_field("friendly_name", &dev.friendly_name);
+                a.add_field("device_desc", &dev.device_desc);
+                if let Some(letter) = &dev.drive_letter {
+                    a.add_field("drive_letter", letter);
                 }
+                a.add_field("first_install_time", &install_str);
+                a.add_field("last_connect_time", &connect_str);
+                a.add_field("last_removal_time", &removal_str);
+                a.add_field("mitre", "T1052.001");
+                a.add_field("forensic_value", "High");
+                if suspicious {
+                    a.add_field("suspicious", "true");
+                    a.add_field(
+                        "suspicious_reason",
+                        "Generic / spoofed / Microsoft-fallback serial number",
+                    );
+                }
+                out.push(a);
             }
 
             // ── Services enumeration ─────────────────────────────────────
@@ -1315,6 +1323,9 @@ mod parsers {
                 || l.contains("\\windows\\debug\\")
         }
 
+        // Used only by the v1.0 inline USB block, now superseded by
+        // `crate::usb`. Kept for any future hive-property timestamp work.
+        #[allow(dead_code)]
         fn read_filetime_in_properties(
             props: &nt_hive::KeyNode<'_, &[u8]>,
             sub_name: &str,
