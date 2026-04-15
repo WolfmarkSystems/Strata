@@ -39,6 +39,15 @@ If blocked on a crate — implement manually, document why in a comment.
 
 ---
 
+## RESUME INSTRUCTIONS
+
+If this session was interrupted by a rate limit:
+1. Run: git log --oneline -5
+2. Find the last completed sprint commit
+3. Mark that sprint COMPLETE in this file
+4. Continue from the next incomplete sprint
+5. Do not re-implement anything already committed
+
 ## COMPLETED SPRINTS (skip these)
 
 - W-1 ShimCache/AppCompatCache — commit 956d1b4
@@ -52,7 +61,7 @@ If blocked on a crate — implement manually, document why in a comment.
 - W-8 Thumbcache — commit 0c44268
 - W-9 Registry Transaction Logs — commit fd0bb17
 - M-1 Biome Parser — commit 32cd3a1
-- M-2 FSEvents — in progress
+- M-2 FSEvents — commit 62ff603
 - M-3 TCC Database — commit 7a2cbba
 
 ---
