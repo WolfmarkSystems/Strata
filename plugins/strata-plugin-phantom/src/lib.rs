@@ -24,6 +24,7 @@ pub mod amcache;
 pub mod mru;
 pub mod prefetch;
 pub mod shimcache;
+pub mod thumbcache;
 pub mod usb;
 
 use strata_plugin_sdk::{
@@ -280,6 +281,67 @@ impl StrataPlugin for PhantomPlugin {
                         }
                     }
                 }
+            } else if lower.starts_with("thumbcache_") && lower.ends_with(".db") {
+                // Typed thumbnail-cache parser. Thumbnails persist
+                // after source-file deletion — this is the highest-
+                // value forensic artifact in deletion / staging
+                // cases. See `crate::thumbcache` for format details.
+                if let Ok(data) = std::fs::read(&path) {
+                    let path_str = path.to_string_lossy().to_string();
+                    let parsed = crate::thumbcache::parse(&data);
+                    for e in &parsed.entries {
+                        let mut a = Artifact::new("Thumbcache Entry", &path_str);
+                        let ext_label = if e.extension.is_empty() {
+                            "<none>".to_string()
+                        } else {
+                            format!(".{}", e.extension)
+                        };
+                        a.add_field(
+                            "title",
+                            &format!(
+                                "Thumbnail [{}]: hash={:016X} ext={} size={}",
+                                e.cache_type, e.hash, ext_label, e.data_size
+                            ),
+                        );
+                        a.add_field(
+                            "detail",
+                            &format!(
+                                "Cache: {} | Hash: {:016X} | Ext: {} | Data size: {} | \
+                                 Has thumbnail data: {} | data_checksum: {:016X} | \
+                                 header_checksum: {:016X} (thumbnails persist after \
+                                 source-file deletion \u{2014} high evidentiary value \
+                                 in deletion cases)",
+                                e.cache_type,
+                                e.hash,
+                                ext_label,
+                                e.data_size,
+                                !e.thumbnail_data.is_empty(),
+                                e.data_checksum,
+                                e.header_checksum,
+                            ),
+                        );
+                        a.add_field("file_type", "Thumbcache Entry");
+                        a.add_field("cache_type", &e.cache_type);
+                        a.add_field("entry_hash", &format!("{:016X}", e.hash));
+                        a.add_field("extension", &e.extension);
+                        a.add_field("data_size", &e.data_size.to_string());
+                        a.add_field(
+                            "has_data",
+                            if e.thumbnail_data.is_empty() {
+                                "false"
+                            } else {
+                                "true"
+                            },
+                        );
+                        a.add_field("data_checksum", &format!("{:016X}", e.data_checksum));
+                        a.add_field("header_checksum", &format!("{:016X}", e.header_checksum));
+                        a.add_field("source_path", &path_str);
+                        // T1074.001 — Local Data Staging.
+                        a.add_field("mitre", "T1074.001");
+                        a.add_field("forensic_value", "Medium");
+                        results.push(a);
+                    }
+                }
             } else if lower.ends_with(".pf") {
                 // Prefetch deep parser — see crate::prefetch for the typed
                 // PrefetchEntry shape and forensic rationale. Each .pf
@@ -379,9 +441,8 @@ impl StrataPlugin for PhantomPlugin {
                     ArtifactCategory::NetworkArtifacts
                 }
                 "AmCache Shortcut" => ArtifactCategory::UserActivity,
-                "Shellbag" | "MuiCache" | "UserChoice" | "MRU Entry" => {
-                    ArtifactCategory::UserActivity
-                }
+                "Shellbag" | "MuiCache" | "UserChoice" | "MRU Entry"
+                | "Thumbcache Entry" => ArtifactCategory::UserActivity,
                 // v1.5.0 RegRipper-coverage parsers
                 "Print Monitor"
                 | "LSA Security Package"
