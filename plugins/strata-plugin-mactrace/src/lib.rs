@@ -23,7 +23,9 @@ use std::path::{Path, PathBuf};
 
 pub mod biome;
 pub mod fsevents;
+pub mod knowledgec;
 pub mod tcc;
+pub mod unified_logs;
 
 use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext,
@@ -403,6 +405,157 @@ impl StrataPlugin for MacTracePlugin {
                         out.push(a);
                     }
                 }
+                continue;
+            }
+
+            // KnowledgeC.db — pre-macOS-13 user-activity store. Per-row
+            // parsing supersedes the generic row-count summary produced
+            // by `classify()` for the same filename.
+            if lower_name == "knowledgec.db" {
+                let path_str = path.to_string_lossy().to_string();
+                let records = crate::knowledgec::parse(&path);
+                for r in &records {
+                    let mut a = Artifact::new("KnowledgeC Record", &path_str);
+                    a.timestamp = Some(r.start_time.timestamp() as u64);
+                    let title = match r.stream_name.as_str() {
+                        "/app/inFocus" => format!(
+                            "KnowledgeC [app/inFocus]: {}",
+                            r.bundle_id.as_deref().unwrap_or("<unknown>")
+                        ),
+                        "/user/appSession" => format!(
+                            "KnowledgeC [appSession]: {} ({}s)",
+                            r.bundle_id.as_deref().unwrap_or("<unknown>"),
+                            crate::knowledgec::session_duration_secs(r).unwrap_or(0),
+                        ),
+                        "/safari/history" => format!(
+                            "KnowledgeC [safari/history]: {}",
+                            r.url.as_deref().unwrap_or("<unknown>")
+                        ),
+                        "/app/webUsage" => format!(
+                            "KnowledgeC [app/webUsage]: {}",
+                            r.url.as_deref().unwrap_or("<unknown>")
+                        ),
+                        "/device/isLocked" => format!(
+                            "KnowledgeC [device/isLocked]: {}",
+                            match r.value_integer {
+                                Some(v) if v != 0 => "locked",
+                                Some(_) => "unlocked",
+                                None => "unknown",
+                            }
+                        ),
+                        "/display/isBacklit" => format!(
+                            "KnowledgeC [display/isBacklit]: {}",
+                            match r.value_integer {
+                                Some(v) if v != 0 => "on",
+                                Some(_) => "off",
+                                None => "unknown",
+                            }
+                        ),
+                        other => format!("KnowledgeC [{}]", other),
+                    };
+                    let detail = format!(
+                        "Stream: {} | bundle_id: {} | url: {} | start: {} | end: {} | \
+                         value_integer: {} | device_id: {}",
+                        r.stream_name,
+                        r.bundle_id.as_deref().unwrap_or("-"),
+                        r.url.as_deref().unwrap_or("-"),
+                        r.start_time.format("%Y-%m-%d %H:%M:%S UTC"),
+                        r.end_time
+                            .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                            .unwrap_or_else(|| "-".to_string()),
+                        r.value_integer
+                            .map(|v| v.to_string())
+                            .unwrap_or_else(|| "-".to_string()),
+                        r.device_id.as_deref().unwrap_or("-"),
+                    );
+                    a.add_field("title", &title);
+                    a.add_field("detail", &detail);
+                    a.add_field("file_type", "KnowledgeC Record");
+                    a.add_field("stream_name", &r.stream_name);
+                    if let Some(v) = &r.bundle_id {
+                        a.add_field("bundle_id", v);
+                    }
+                    if let Some(v) = &r.url {
+                        a.add_field("url", v);
+                    }
+                    a.add_field(
+                        "start_time",
+                        &r.start_time.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                    );
+                    if let Some(dt) = r.end_time {
+                        a.add_field(
+                            "end_time",
+                            &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        );
+                    }
+                    if let Some(v) = r.value_integer {
+                        a.add_field("value_integer", &v.to_string());
+                    }
+                    if let Some(v) = &r.device_id {
+                        a.add_field("device_id", v);
+                    }
+                    a.add_field("mitre", crate::knowledgec::mitre_for_stream(&r.stream_name));
+                    a.add_field("forensic_value", "High");
+                    out.push(a);
+                }
+                // Per-record routing owns this file; skip classify() to
+                // avoid the legacy row-count duplicate.
+                continue;
+            }
+
+            // Unified Logs (`.tracev3`) — Apple Unified Logging System.
+            // Per-record decoding is deferred; the indicator reader
+            // surfaces forensically significant process / subsystem
+            // tokens. See `crate::unified_logs`.
+            if lower_name.ends_with(".tracev3") {
+                let path_str = path.to_string_lossy().to_string();
+                if let Ok(data) = std::fs::read(&path) {
+                    let entries = crate::unified_logs::parse(&path, &data);
+                    for e in &entries {
+                        if !e.is_forensically_significant() {
+                            continue;
+                        }
+                        let mut a = Artifact::new("Unified Log Entry", &path_str);
+                        a.timestamp = Some(e.timestamp.timestamp() as u64);
+                        let title = match e.subsystem.as_deref() {
+                            Some(sub) => format!("Unified Log [{}]: {}", sub, e.message),
+                            None => format!("Unified Log [{}]: {}", e.process, e.message),
+                        };
+                        let detail = format!(
+                            "Process: {} | PID: {} | Subsystem: {} | Category: {} | \
+                             Level: {} | Timestamp: {} | Message: {}",
+                            e.process,
+                            e.pid,
+                            e.subsystem.as_deref().unwrap_or("-"),
+                            e.category.as_deref().unwrap_or("-"),
+                            e.log_level,
+                            e.timestamp.format("%Y-%m-%d %H:%M:%S UTC"),
+                            e.message,
+                        );
+                        a.add_field("title", &title);
+                        a.add_field("detail", &detail);
+                        a.add_field("file_type", "Unified Log Entry");
+                        a.add_field("process", &e.process);
+                        a.add_field("pid", &e.pid.to_string());
+                        if let Some(v) = &e.subsystem {
+                            a.add_field("subsystem", v);
+                        }
+                        if let Some(v) = &e.category {
+                            a.add_field("category", v);
+                        }
+                        a.add_field("log_level", &e.log_level);
+                        a.add_field("message", &e.message);
+                        a.add_field(
+                            "timestamp",
+                            &e.timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        );
+                        a.add_field("mitre", e.mitre_technique());
+                        a.add_field("forensic_value", e.forensic_value());
+                        out.push(a);
+                    }
+                }
+                // tracev3 routing owns this file; skip classify() to
+                // avoid the legacy summary duplicate.
                 continue;
             }
 
@@ -855,8 +1008,8 @@ impl StrataPlugin for MacTracePlugin {
                 | "CallHistory" => ArtifactCategory::Communications,
                 "Safari History" => ArtifactCategory::WebActivity,
                 "AddressBook" => ArtifactCategory::AccountsCredentials,
-                "Biome Record" => ArtifactCategory::UserActivity,
-                "FSEvent" => ArtifactCategory::SystemActivity,
+                "Biome Record" | "KnowledgeC Record" => ArtifactCategory::UserActivity,
+                "FSEvent" | "Unified Log Entry" => ArtifactCategory::SystemActivity,
                 "TCC Permission" => ArtifactCategory::AccountsCredentials,
                 _ => ArtifactCategory::SystemActivity,
             };
