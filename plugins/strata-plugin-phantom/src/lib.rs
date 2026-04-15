@@ -20,6 +20,8 @@
 
 use std::path::{Path, PathBuf};
 
+pub mod shimcache;
+
 use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext,
     PluginError, PluginOutput, PluginResult, PluginSummary, PluginType, StrataPlugin,
@@ -358,24 +360,52 @@ mod parsers {
 
             // ── ShimCache (AppCompatCache) ──────────────────────────────
             //
-            // The binary format varies by OS version. Win10+ entries are
-            // 12-byte headers + variable-length path. We extract every
-            // printable path-like string as a heuristic — full binary parse
-            // is a Day 12 follow-up.
+            // Typed binary parser — see `crate::shimcache`. Handles Win7,
+            // Win8.0, Win8.1, and Win10/11 framing. Emits one artifact per
+            // entry, with the FILETIME `last_modified` promoted to the
+            // artifact `timestamp` so the timeline view shows real dates
+            // rather than "unknown time".
             if let Some(node) = walk(
                 &root,
                 &["ControlSet001", "Control", "Session Manager", "AppCompatCache"],
             ) {
                 if let Some(bytes) = read_value_bytes(&node, "AppCompatCache") {
-                    let entries = decode_shimcache_strings(&bytes);
-                    for path in entries {
-                        let suspicious = is_suspicious_exe_path(&path);
+                    let entries = crate::shimcache::parse(&bytes, &path_str);
+                    for entry in entries {
+                        let suspicious = is_suspicious_exe_path(&entry.executable_path);
                         let mut a = Artifact::new("ShimCache", &path_str);
-                        a.add_field("title", &format!("ShimCache: {}", path));
-                        a.add_field("detail", "AppCompatCache entry — proves file existed (does NOT prove execution)");
+                        a.timestamp = Some(entry.last_modified.timestamp() as u64);
+                        a.add_field(
+                            "title",
+                            &format!("ShimCache: {}", entry.executable_path),
+                        );
+                        a.add_field(
+                            "detail",
+                            &format!(
+                                "AppCompatCache entry #{} — last_modified={} shimmed={} \
+                                 (proves file existed on disk; does NOT prove execution)",
+                                entry.entry_index,
+                                entry.last_modified.format("%Y-%m-%d %H:%M:%S UTC"),
+                                entry.shimmed,
+                            ),
+                        );
                         a.add_field("file_type", "ShimCache");
+                        // T1059: Command and Scripting Interpreter — ShimCache
+                        //         is the canonical shell-executable artifact.
+                        // T1112: Modify Registry — cleared / tampered
+                        //         ShimCache is a direct T1112 indicator; we
+                        //         carry both for downstream kill-chain
+                        //         correlation.
                         a.add_field("mitre", "T1059");
-                        a.add_field("forensic_value", if suspicious { "High" } else { "Medium" });
+                        a.add_field("mitre_secondary", "T1112");
+                        a.add_field(
+                            "forensic_value",
+                            if suspicious { "High" } else { "Medium" },
+                        );
+                        a.add_field("executable_path", &entry.executable_path);
+                        a.add_field("entry_index", &entry.entry_index.to_string());
+                        a.add_field("shimmed", if entry.shimmed { "true" } else { "false" });
+                        a.add_field("source_hive", &entry.source_hive);
                         if suspicious {
                             a.add_field("suspicious", "true");
                         }
@@ -1111,52 +1141,9 @@ mod parsers {
             out
         }
 
-        fn decode_shimcache_strings(blob: &[u8]) -> Vec<String> {
-            // Heuristic: walk the blob looking for UTF-16LE strings that look
-            // like file paths (>= 4 chars, contains backslash, ends in
-            // executable extension or is followed by a null pair).
-            let mut out = Vec::new();
-            let mut i = 0;
-            while i + 8 <= blob.len() {
-                // Try to read up to 520 bytes as UTF-16LE
-                let chunk_end = (i + 1024).min(blob.len());
-                let chunk = &blob[i..chunk_end];
-                let mut s = String::new();
-                let mut j = 0;
-                while j + 2 <= chunk.len() {
-                    let c = u16::from_le_bytes([chunk[j], chunk[j + 1]]);
-                    if c == 0 {
-                        break;
-                    }
-                    if let Some(ch) = char::from_u32(c as u32) {
-                        if ch.is_ascii() && (ch.is_ascii_graphic() || ch == ' ') {
-                            s.push(ch);
-                        } else {
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                    j += 2;
-                }
-                if s.len() >= 8 && s.contains('\\') {
-                    let lower = s.to_lowercase();
-                    if lower.ends_with(".exe")
-                        || lower.ends_with(".dll")
-                        || lower.ends_with(".sys")
-                    {
-                        out.push(s.clone());
-                    }
-                }
-                i += s.len().max(2) * 2 + 2;
-                if out.len() > 1000 {
-                    break;
-                }
-            }
-            out.sort();
-            out.dedup();
-            out
-        }
+        // `decode_shimcache_strings` (the v1.0.0 string-heuristic ShimCache
+        // reader) was replaced by `crate::shimcache::parse` in v1.3.1 and
+        // removed to avoid carrying two parallel implementations.
 
         fn is_suspicious_exe_path(p: &str) -> bool {
             let l = p.to_lowercase();
