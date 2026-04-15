@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 
 pub mod biome;
 pub mod fsevents;
+pub mod tcc;
 
 use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext,
@@ -249,6 +250,77 @@ impl StrataPlugin for MacTracePlugin {
         };
 
         for path in files {
+            // ── TCC.db — Transparency, Consent, and Control. macOS
+            // privacy-grant database. See `crate::tcc`.
+            let lower_name = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            if lower_name == "tcc.db" {
+                let path_str = path.to_string_lossy().to_string();
+                let entries = crate::tcc::parse(&path);
+                for e in &entries {
+                    let mut a = Artifact::new("TCC Permission", &path_str);
+                    a.timestamp = Some(e.last_modified.timestamp() as u64);
+                    let suspicious = crate::tcc::is_suspicious(e);
+                    let severity = crate::tcc::forensic_value_for(e);
+                    let mitre = crate::tcc::mitre_for_service(&e.service_friendly);
+                    a.add_field(
+                        "title",
+                        &format!(
+                            "TCC: {} -> {} ({})",
+                            e.client,
+                            e.service_friendly,
+                            e.auth_value.as_str()
+                        ),
+                    );
+                    a.add_field(
+                        "detail",
+                        &format!(
+                            "Service: {} ({}) | Client: {} | Client type: {} | \
+                             Auth: {} | Auth reason: {} | Last modified: {} | \
+                             Policy ID: {}",
+                            e.service_friendly,
+                            e.service,
+                            e.client,
+                            e.client_type.as_str(),
+                            e.auth_value.as_str(),
+                            e.auth_reason,
+                            e.last_modified.format("%Y-%m-%d %H:%M:%S UTC"),
+                            e.policy_id
+                                .map(|p| p.to_string())
+                                .unwrap_or_else(|| "-".to_string()),
+                        ),
+                    );
+                    a.add_field("file_type", "TCC Permission");
+                    a.add_field("service", &e.service);
+                    a.add_field("service_friendly", &e.service_friendly);
+                    a.add_field("client", &e.client);
+                    a.add_field("client_type", e.client_type.as_str());
+                    a.add_field("auth_value", e.auth_value.as_str());
+                    a.add_field("auth_reason", &e.auth_reason.to_string());
+                    a.add_field(
+                        "last_modified",
+                        &e.last_modified.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                    );
+                    if let Some(p) = e.policy_id {
+                        a.add_field("policy_id", &p.to_string());
+                    }
+                    a.add_field("mitre", mitre);
+                    a.add_field("forensic_value", severity);
+                    if suspicious {
+                        a.add_field("suspicious", "true");
+                        a.add_field(
+                            "suspicious_reason",
+                            "Third-party app holds FullDiskAccess or Accessibility grant",
+                        );
+                    }
+                    out.push(a);
+                }
+                continue;
+            }
+
             // FSEvents (/.fseventsd/) — gzipped binary log of every
             // filesystem event the kernel surfaced. See
             // `crate::fsevents`. Highest-value source for proving
@@ -785,6 +857,7 @@ impl StrataPlugin for MacTracePlugin {
                 "AddressBook" => ArtifactCategory::AccountsCredentials,
                 "Biome Record" => ArtifactCategory::UserActivity,
                 "FSEvent" => ArtifactCategory::SystemActivity,
+                "TCC Permission" => ArtifactCategory::AccountsCredentials,
                 _ => ArtifactCategory::SystemActivity,
             };
             cats.insert(category.as_str().to_string());

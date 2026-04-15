@@ -18,3 +18,6 @@ rusqlite = { version = "0.30", features = ["bundled"] }
 # FSEvents log files are gzip-compressed; flate2 is the standard
 # workspace decoder.
 flate2 = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
