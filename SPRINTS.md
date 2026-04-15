@@ -3,7 +3,23 @@
 # Usage: "Read CLAUDE.md and SPRINTS.md. Execute all incomplete sprints in order.
 #         For each sprint: implement, test, commit, then move to the next."
 # Last updated: 2026-04-14
-# Completed: W-1 through W-9, Pulse fix, Sentinel, M-1 through M-3
+# Completed: W-1 through W-9, Pulse fix, Sentinel, M-1 through M-6
+
+# LEGAL NOTICE — READ BEFORE IMPLEMENTING ANY SPRINT:
+# Several open-source tools were studied as research references for these specs.
+# Their architectures and approaches informed our designs.
+# WE DO NOT COPY OR INCORPORATE ANY EXTERNAL CODE.
+# Every implementation in this file is written independently from scratch.
+#
+# Reference tools and their licenses:
+#   MIT (free to study, must not copy verbatim):
+#     evtx (omerbenamram), dfir-toolkit (dfir-dd), zff-rs, searchlight,
+#     masstin, chromium_ripper, par-hash, malwaredb-rs, yoink, chat4n6
+#   GPL-3.0 (study architecture only — NEVER incorporate into Strata):
+#     chainsaw, tau-engine, Aralez, 4n6mount, ext4fs-forensic, memory-forensic
+#
+# Strata is proprietary commercial software. GPL code cannot be linked,
+# incorporated, or derived from under any circumstances.
 
 ---
 
@@ -665,3 +681,317 @@ Content must cover:
 *STRATA AUTONOMOUS BUILD QUEUE*
 *Wolfmark Systems — 2026-04-14*
 *Execute all incomplete sprints in order. Ship everything.*
+
+---
+
+## SPRINT R-1 — LNK File Parser (informed by dfir-toolkit lnk2bodyfile)
+# Reference: dfir-toolkit/lnk2bodyfile (MIT) — study approach, implement independently
+
+Create `plugins/strata-plugin-phantom/src/lnk.rs`.
+
+Parse Windows LNK (Shell Link) shortcut files.
+Location: `%AppData%\Microsoft\Windows\Recent\*.lnk`
+          `%AppData%\Microsoft\Office\Recent\*.lnk`
+Format: Binary — MS-SHLLINK specification
+
+Key fields to extract:
+- target_path: String (the file/folder the LNK points to)
+- working_directory: Option<String>
+- arguments: Option<String>
+- target_created: Option<DateTime<Utc>> (FILETIME)
+- target_modified: Option<DateTime<Utc>> (FILETIME)
+- target_accessed: Option<DateTime<Utc>> (FILETIME)
+- target_size: u64
+- drive_type: String (Fixed, Removable, Network, etc.)
+- drive_serial: Option<String>
+- volume_label: Option<String>
+- machine_id: Option<String> (NetBIOS name of origin machine)
+- droid_volume_id: Option<String> (GUID)
+- droid_file_id: Option<String> (GUID — tracks file across renames)
+
+LNK header magic: `4C 00 00 00` at offset 0
+GUID at offset 4: `01 14 02 00 00 00 00 00 C0 00 00 00 00 00 00 46`
+
+Typed struct `LnkFile` every field doc-commented with forensic meaning.
+Note in doc: machine_id reveals origin machine even when file is moved.
+Note in doc: droid_file_id can track files across volume changes.
+
+Emit `Artifact::new("LNK File", path_str)` per file.
+MITRE: T1547.009 (shortcut modification), T1070.006 (indicator removal).
+forensic_value: High — reveals target file existence even after deletion.
+suspicious=true when target_path points to temp/appdata/downloads.
+
+Wire into Phantom `run()` when filename ends `.lnk` case-insensitive.
+Zero unwrap, zero unsafe, Clippy clean, three tests minimum.
+
+---
+
+## SPRINT R-2 — Chromium Browser Artifacts (informed by chromium_ripper)
+# Reference: chromium_ripper (MIT) — study approach, implement independently
+
+Enhance `plugins/strata-plugin-carbon/src/` with deep Chromium artifact parsing.
+Applies to: Chrome, Edge, Brave, Opera, Vivaldi (all Chromium-based).
+
+Profile location pattern: `*/Google/Chrome/User Data/*/`
+                          `*/Microsoft/Edge/User Data/*/`
+                          `*/BraveSoftware/Brave-Browser/User Data/*/`
+
+Parse these SQLite databases:
+
+### History (History file — no extension)
+Tables: urls, visits, downloads, keyword_search_terms
+Fields from urls: url, title, visit_count, last_visit_time (WebKit epoch)
+Fields from downloads: target_path, start_time, end_time, total_bytes,
+                       danger_type, tab_url, tab_referrer_url
+Fields from keyword_search_terms: term (search query), url_id
+
+### Login Data (Login Data file)
+Table: logins
+Fields: origin_url, username_value, date_created, date_last_used,
+        times_used
+NOTE: password_value is encrypted — do NOT attempt decryption.
+      Record presence and metadata only.
+
+### Web Data (Web Data file)
+Table: autofill
+Fields: name, value, date_created, date_last_used, count
+
+### Favicons (Favicons file)
+Table: icon_mapping
+Fields: page_url — confirms URLs visited even if history cleared
+
+### Network Action Predictor
+Table: network_action_predictor
+Fields: user_text (typed URL prefix), url
+
+WebKit epoch: microseconds since 1601-01-01.
+Convert: Unix_us = WebKit_us - 11644473600000000
+
+Typed structs for each artifact type, every field doc-commented.
+Emit appropriate `Artifact::new()` per record.
+MITRE: T1217 for history/favicons, T1555.003 for login data presence,
+T1056.003 for search terms.
+forensic_value: High for downloads and login data, Medium for history.
+
+Wire into Carbon `run()` by filename match.
+Zero unwrap, zero unsafe, Clippy clean, three tests minimum.
+
+---
+
+## SPRINT R-3 — Lateral Movement Timeline (informed by masstin)
+# Reference: masstin (MIT) — study approach, implement independently
+
+Enhance `plugins/strata-plugin-sentinel/src/` with lateral movement detection.
+
+Correlate these event IDs to build a lateral movement timeline:
+- 4624 logon_type=3 (network logon) — inbound lateral movement
+- 4624 logon_type=10 (RemoteInteractive/RDP) — RDP inbound
+- 4648 (explicit credential logon) — pass-the-hash/pass-the-ticket indicator
+- 4768/4769 (Kerberos TGT/service ticket) — Kerberos activity
+- 4776 (NTLM authentication) — NTLM lateral movement
+- 5140/5145 (network share access) — SMB lateral movement
+- 7045 service install from remote (cross-reference with 4624 type=3 timing)
+
+Create `plugins/strata-plugin-sentinel/src/lateral_movement.rs`.
+
+For each detected lateral movement indicator emit:
+`Artifact::new("Lateral Movement", path_str)` with fields:
+- movement_type: String (RDP/SMB/Kerberos/NTLM/Service)
+- source_ip: Option<String>
+- target_account: String
+- timestamp: DateTime<Utc>
+- correlated_events: String (pipe-separated event IDs involved)
+- confidence: String (High/Medium/Low)
+
+High confidence: two or more correlated events within 60 seconds.
+Medium confidence: single event of type 4648 or type=10 logon.
+
+MITRE: T1021.001 (RDP), T1021.002 (SMB), T1550.002 (pass-the-hash),
+T1558 (Kerberos).
+forensic_value: High.
+
+Zero unwrap, zero unsafe, Clippy clean, three tests minimum.
+
+---
+
+## SPRINT R-4 — File Carving Enhancement (informed by searchlight)
+# Reference: searchlight (MIT) — study approach, implement independently
+
+Enhance `plugins/strata-plugin-recon/src/` with pattern-based file carving.
+
+Implement header/footer signature carving for these file types:
+
+```rust
+pub struct CarveSignature {
+    /// File type name
+    pub file_type: &'static str,
+    /// Magic bytes at file start
+    pub header: &'static [u8],
+    /// Magic bytes at file end (if known)
+    pub footer: Option<&'static [u8]>,
+    /// Maximum reasonable file size for this type
+    pub max_size: usize,
+    /// MIME type
+    pub mime_type: &'static str,
+}
+```
+
+Signatures to implement:
+- JPEG: header `FF D8 FF`, footer `FF D9`
+- PNG: header `89 50 4E 47 0D 0A 1A 0A`, footer `49 45 4E 44 AE 42 60 82`
+- PDF: header `25 50 44 46`, footer `25 25 45 4F 46`
+- ZIP/DOCX/XLSX: header `50 4B 03 04`
+- RAR: header `52 61 72 21 1A 07`
+- 7-ZIP: header `37 7A BC AF 27 1C`
+- SQLite: header `53 51 4C 69 74 65 20 66 6F 72 6D 61 74 20 33 00`
+- ELF: header `7F 45 4C 46`
+- PE/EXE/DLL: header `4D 5A`
+- GIF: header `47 49 46 38`
+- MP4: header at offset 4: `66 74 79 70`
+
+Sliding window approach: scan raw bytes with 4KB read buffer.
+Cap carved file count at 10,000 per input file.
+Cap individual carved file size at max_size.
+
+Emit `Artifact::new("Carved File", path_str)` per carved item with:
+file_type, offset (hex string), size, header_hex (first 16 bytes as hex),
+mime_type, entropy (f64 — high entropy suggests encryption/compression).
+
+MITRE: T1027 (obfuscated files), T1083 (file discovery).
+forensic_value: High for PE files and SQLite, Medium for documents.
+suspicious=true when PE found in non-executable location or high entropy.
+
+Wire into Recon `run()` on raw disk image input.
+Zero unwrap, zero unsafe, Clippy clean, three tests minimum.
+
+---
+
+## SPRINT R-5 — Chat/Messaging Forensics (informed by chat4n6)
+# Reference: chat4n6 (MIT) — study approach, implement independently
+
+Create `plugins/strata-plugin-pulse/src/chat_forensics.rs`.
+
+Parse chat artifacts from desktop messaging applications.
+
+### Slack Desktop
+Location: `%AppData%\Slack\storage\` (Windows)
+          `~/Library/Application Support/Slack/` (macOS)
+Files: `root-state.db` (SQLite), `C[workspace_id]-[channel_id].db`
+Tables: messages — timestamp, user_id, text, attachments JSON
+Emit: `Artifact::new("Slack Message", path_str)`
+MITRE: T1552.003
+
+### Microsoft Teams (Classic)
+Location: `%AppData%\Microsoft\Teams\storage.db`
+Table: conversations — id, creator, create_time, display_name
+Table: messages — originalarrivaltime, content, messagetype
+Emit: `Artifact::new("Teams Message", path_str)`
+MITRE: T1552.003
+
+### Discord Desktop
+Location: `%AppData%\discord\Local Storage\leveldb\`
+Format: LevelDB — parse .ldb and .log files for JSON message fragments
+Extract: channel_id, message_id, content, timestamp, author_id
+Emit: `Artifact::new("Discord Message", path_str)`
+NOTE: Discord is already in Pulse — check existing coverage first,
+      extend if needed rather than duplicate.
+MITRE: T1552.003
+
+Typed structs per platform, every field doc-commented.
+forensic_value: High for all messaging artifacts.
+Zero unwrap, zero unsafe, Clippy clean, three tests minimum.
+
+---
+
+## SPRINT R-6 — Malware Hash Database Integration (informed by malwaredb-rs)
+# Reference: malwaredb-rs (MIT) — study approach, implement independently
+
+Enhance `crates/strata-core/src/hashset/` with malware hash matching.
+
+Create `crates/strata-core/src/hashset/malware_hashset.rs`.
+
+Support loading known-malware hash sets from:
+- Plain text files: one SHA256 per line (LOKI/THOR IOC format)
+- CSV files: hash,name,category columns
+- MISP format: JSON array of {value, type, comment} objects
+
+```rust
+pub struct MalwareHashSet {
+    /// SHA256 hashes mapped to malware name
+    sha256: HashMap<[u8; 32], String>,
+    /// MD5 hashes mapped to malware name  
+    md5: HashMap<[u8; 16], String>,
+    /// SHA1 hashes mapped to malware name
+    sha1: HashMap<[u8; 20], String>,
+    /// Source file for attribution
+    source: String,
+    /// Entry count
+    count: usize,
+}
+
+impl MalwareHashSet {
+    pub fn load_from_file(path: &Path) -> Result<Self, HashSetError>;
+    pub fn check_sha256(&self, hash: &[u8; 32]) -> Option<&str>;
+    pub fn check_md5(&self, hash: &[u8; 16]) -> Option<&str>;
+    pub fn check_sha1(&self, hash: &[u8; 20]) -> Option<&str>;
+}
+```
+
+When a hash match is found during any artifact parse, add to the artifact:
+- `malware_match=true`
+- `malware_name=<name from hashset>`
+- `malware_source=<hashset source file>`
+- `forensic_value=High`
+- `suspicious=true`
+
+MITRE: T1588.001 (malware acquisition).
+Zero unwrap, zero unsafe, Clippy clean, five tests minimum.
+
+---
+
+## SPRINT R-7 — ZFF Container Support (informed by zff-rs)
+# Reference: zff-rs (MIT) — study approach, implement independently
+
+Add ZFF forensic container format support to image acquisition/reading.
+ZFF is a modern alternative to E01 — pure Rust, better compression,
+designed for modern forensics workflows.
+
+Location: `crates/strata-core/src/disk/`
+
+ZFF file magic: `ZFF` at offset 0 (check zff-rs spec for exact bytes)
+
+Implement minimal ZFF reader:
+```rust
+pub struct ZffReader {
+    path: PathBuf,
+    segment_count: u32,
+    chunk_size: u64,
+    compression: ZffCompression,
+    hash_value: Option<Vec<u8>>,
+    acquisition_date: Option<DateTime<Utc>>,
+    examiner_name: Option<String>,
+    case_number: Option<String>,
+}
+
+impl ZffReader {
+    pub fn open(path: &Path) -> Result<Self, ZffError>;
+    pub fn read_sector(&self, lba: u64) -> Result<Vec<u8>, ZffError>;
+    pub fn metadata(&self) -> &ZffMetadata;
+}
+```
+
+Expose metadata as `Artifact::new("ZFF Image Metadata", path_str)` with:
+examiner_name, case_number, acquisition_date, hash_value,
+compression_type, segment_count, total_size.
+
+MITRE: N/A — acquisition format, not artifact.
+forensic_value: Medium — confirms image integrity.
+Zero unwrap, zero unsafe, Clippy clean, three tests minimum.
+
+---
+
+*STRATA AUTONOMOUS BUILD QUEUE — Updated 2026-04-14*
+*Research references: MIT-licensed tools studied for architectural inspiration.*
+*All implementations are original Wolfmark Systems code.*
+*GPL-referenced tools: architecture studied only, zero code incorporated.*
+*Every examiner. Every artifact. Every platform. Ship it all.*
