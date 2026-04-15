@@ -20,6 +20,7 @@
 
 use std::path::{Path, PathBuf};
 
+pub mod amcache;
 pub mod prefetch;
 pub mod shimcache;
 
@@ -117,6 +118,98 @@ impl StrataPlugin for PhantomPlugin {
                 }
             } else if lower == "amcache.hve" {
                 if let Some(data) = read_hive_gated(&path) {
+                    // Typed AmCache parser — InventoryApplicationFile +
+                    // InventoryDriverBinary as `AmCacheAppEntry` /
+                    // `AmCacheDriverEntry` structs (see crate::amcache).
+                    let path_str = path.to_string_lossy().to_string();
+                    let parsed = crate::amcache::parse(&data);
+                    for app in &parsed.apps {
+                        let suspicious = crate::amcache::is_suspicious_app(app);
+                        let mut a = Artifact::new("AmCache Application", &path_str);
+                        a.timestamp = app.link_date.map(|dt| dt.timestamp() as u64);
+                        let title_label = if !app.product_name.is_empty() {
+                            app.product_name.clone()
+                        } else if !app.full_path.is_empty() {
+                            app.full_path.clone()
+                        } else {
+                            app.sha1_hash.clone()
+                        };
+                        a.add_field("title", &format!("AmCache: {}", title_label));
+                        a.add_field(
+                            "detail",
+                            &format!(
+                                "Path: {} | SHA1: {} | Size: {} | Publisher: {} | Product: {} | PE: {}",
+                                if app.full_path.is_empty() { "<unknown>" } else { &app.full_path },
+                                if app.sha1_hash.is_empty() { "<unknown>" } else { &app.sha1_hash },
+                                app.file_size,
+                                if app.publisher.is_empty() { "<unknown>" } else { &app.publisher },
+                                if app.product_name.is_empty() { "<unknown>" } else { &app.product_name },
+                                app.is_pe_file,
+                            ),
+                        );
+                        a.add_field("file_type", "AmCache Application");
+                        a.add_field("sha1_hash", &app.sha1_hash);
+                        a.add_field("full_path", &app.full_path);
+                        a.add_field("file_size", &app.file_size.to_string());
+                        if let Some(dt) = app.link_date {
+                            a.add_field(
+                                "link_date",
+                                &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                            );
+                        }
+                        a.add_field("publisher", &app.publisher);
+                        a.add_field("product_name", &app.product_name);
+                        a.add_field("is_pe_file", if app.is_pe_file { "true" } else { "false" });
+                        a.add_field("source_hive", &path_str);
+                        // T1059 — Command and Scripting Interpreter
+                        // T1204 — User Execution
+                        a.add_field("mitre", "T1059");
+                        a.add_field("mitre_secondary", "T1204");
+                        a.add_field("forensic_value", "High");
+                        if suspicious {
+                            a.add_field("suspicious", "true");
+                        }
+                        results.push(a);
+                    }
+                    for drv in &parsed.drivers {
+                        let unsigned = !drv.driver_signed;
+                        let mut a = Artifact::new("AmCache Driver", &path_str);
+                        a.add_field("title", &format!("Driver: {}", drv.driver_name));
+                        a.add_field(
+                            "detail",
+                            &format!(
+                                "Driver: {} | Version: {} | Signed: {} | INF: {}",
+                                drv.driver_name,
+                                if drv.driver_version.is_empty() { "<unknown>" } else { &drv.driver_version },
+                                if drv.driver_signed { "yes" } else { "NO (unsigned)" },
+                                if drv.inf_name.is_empty() { "<unknown>" } else { &drv.inf_name },
+                            ),
+                        );
+                        a.add_field("file_type", "AmCache Driver");
+                        a.add_field("driver_name", &drv.driver_name);
+                        a.add_field("driver_version", &drv.driver_version);
+                        a.add_field(
+                            "driver_signed",
+                            if drv.driver_signed { "true" } else { "false" },
+                        );
+                        a.add_field("inf_name", &drv.inf_name);
+                        a.add_field("source_hive", &path_str);
+                        // T1014 — Rootkit (unsigned drivers are the
+                        // canonical BYOVD fingerprint).
+                        a.add_field("mitre", "T1014");
+                        a.add_field(
+                            "forensic_value",
+                            if unsigned { "High" } else { "Medium" },
+                        );
+                        if unsigned {
+                            a.add_field("suspicious", "true");
+                        }
+                        results.push(a);
+                    }
+                    // Legacy AmCache categories (shortcuts, device
+                    // containers, PnP, driver packages, Win7 file/programs)
+                    // are still served by the existing parsers::amcache
+                    // module — we skipped only its app + driver paths.
                     results.extend(parsers::amcache::parse(&path, &data));
                 }
             } else if lower == "usrclass.dat" {
@@ -211,6 +304,7 @@ impl StrataPlugin for PhantomPlugin {
             let category = match file_type.as_str() {
                 "ShimCache"
                 | "AmCache File"
+                | "AmCache Application"
                 | "Service"
                 | "AmCache Legacy File"
                 | "Prefetch Execution" => ArtifactCategory::ExecutionHistory,
@@ -2127,10 +2221,14 @@ mod parsers {
                 return out;
             };
 
-            parse_inventory_application_file(&root, &path_str, &mut out);
+            // InventoryApplicationFile + InventoryDriverBinary now owned
+            // by `crate::amcache` (typed structs, run from the top-level
+            // `*.hve` dispatch in `lib.rs::run`). Avoid duplicate
+            // artifacts by skipping them here.
+            // parse_inventory_application_file(&root, &path_str, &mut out);
             parse_inventory_application(&root, &path_str, &mut out);
             parse_inventory_application_shortcut(&root, &path_str, &mut out);
-            parse_inventory_driver_binary(&root, &path_str, &mut out);
+            // parse_inventory_driver_binary(&root, &path_str, &mut out);
             parse_inventory_driver_package(&root, &path_str, &mut out);
             parse_inventory_device_container(&root, &path_str, &mut out);
             parse_inventory_device_pnp(&root, &path_str, &mut out);
@@ -2141,6 +2239,10 @@ mod parsers {
         }
 
         // ── Modern: Root\InventoryApplicationFile ───────────────────────
+        // Superseded by `crate::amcache` (typed parser). Kept compiled
+        // so we can A/B against the typed parser if the new module
+        // regresses, but no longer wired into the dispatch.
+        #[allow(dead_code)]
         fn parse_inventory_application_file(
             root: &nt_hive::KeyNode<'_, &[u8]>,
             path_str: &str,
@@ -2299,6 +2401,9 @@ mod parsers {
         }
 
         // ── Modern: Root\InventoryDriverBinary ─────────────────────────
+        // Superseded by `crate::amcache` (typed parser). Same A/B
+        // rationale as `parse_inventory_application_file` above.
+        #[allow(dead_code)]
         fn parse_inventory_driver_binary(
             root: &nt_hive::KeyNode<'_, &[u8]>,
             path_str: &str,
