@@ -114,7 +114,7 @@ impl StrataPlugin for PulsePlugin {
 
         if records.is_empty() {
             warnings.push(
-                "No mobile artifacts detected under evidence root".to_string(),
+                "No mobile artifacts detected under evidence root".to_string()
             );
         }
 
@@ -125,7 +125,6 @@ impl StrataPlugin for PulsePlugin {
         }
         let total = records.len();
         let category_count = categories.len();
-        let categories_vec: Vec<String> = categories.into_iter().collect();
 
         Ok(PluginOutput {
             plugin_name: self.name().to_string(),
@@ -136,7 +135,7 @@ impl StrataPlugin for PulsePlugin {
             summary: PluginSummary {
                 total_artifacts: total,
                 suspicious_count,
-                categories_populated: categories_vec,
+                categories_populated: categories.into_iter().collect(),
                 headline: format!(
                     "Pulse: {} mobile artifacts ({} suspicious) across {} categories",
                     total,

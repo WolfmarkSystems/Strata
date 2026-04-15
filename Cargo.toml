@@ -34,6 +34,7 @@ members = [
     "plugins/strata-plugin-guardian",
     "plugins/strata-plugin-netflow",
     "plugins/strata-plugin-mactrace",
+    "plugins/strata-plugin-sentinel",
     "plugins/strata-plugin-csam",
     "plugins/strata-plugin-pulse",
     "crates/strata-engine-adapter",

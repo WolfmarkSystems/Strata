@@ -1,410 +1,199 @@
-# CLAUDE.md — Strata / Wolfmark Systems
-# This file is the single source of truth for every Claude Code agent working in this repo.
-# Read this ENTIRELY before touching any code.
-# Last updated: 2026-04-09
+# Strata — Claude Code Guidelines
+
+Strata is a Rust/Tauri digital forensics platform for court-ready evidence analysis. It uses a plugin architecture to parse artifacts from Windows, macOS, Android, and iOS sources. Read and understand existing code before modifying it. Think before coding — simplicity first, surgical changes only.
 
 ---
 
-## WHO YOU ARE WORKING WITH
+## Hard Rules
 
-You are working for Korbyn, Founder of Wolfmark Systems. He is a US Army
-Counterintelligence Special Agent and Digital Forensic Examiner. He built Strata
-because the tools he needed in the field didn't exist. Every line of code here
-matters — this tool will be used in real criminal investigations.
+### Code Safety
 
-Korbyn reviews every commit before it goes anywhere near production. Your job is
-to write production-quality Rust that he can review, push, and trust in court.
+- **Zero `.unwrap()` calls.** Use `?` operator or `match`. No exceptions.
+- **Zero `unsafe {}` blocks.** If a dependency requires unsafe, that dependency needs justification before being added.
+- **No `println!`.** Use `log::debug!`, `log::info!`, `log::warn!`, or `log::error!`. The CLI and Tauri layer both capture structured logs; raw stdout breaks that pipeline.
+- **No unnecessary dependencies.** Every new `Cargo.toml` entry must justify itself. Prefer crates already in the workspace. Avoid crates that pull in large transitive trees for minor convenience.
 
----
+### Testing
 
-## WHAT STRATA IS
+- **Never remove load-bearing tests.** If a test is blocking you, understand why it exists. Fix the code, not the test. The project has 2,393+ tests; any net reduction requires an explicit explanation.
+- Each plugin module must have a minimum of 3 unit tests per parser.
 
-Strata is a professional digital forensics platform:
-- 89% pure Rust, single binary, cross-platform (macOS, Windows, Linux)
-- 16 forensic plugins + Sigma (always runs last)
-- 29 Sigma correlation rules with full MITRE ATT&CK kill chain
-- Free for .gov/.mil permanently
-- CSAM detection built-in and free on all tiers
-- Air-gapped by design — no cloud, no telemetry, no license server
-- Court-ready reports with SHA256-chained audit trail
-- Current version: v1.4.0
+### Artifact Parsers
+
+- **Field-level documentation is required.** Every struct field in a parser must have a doc comment explaining what the field represents and its forensic significance.
+- **MITRE ATT&CK mapping is required.** Every `ArtifactRecord` produced by a parser must populate its `mitre_technique` field. Unmapped artifacts are incomplete artifacts. Use the [ATT&CK Enterprise/Mobile matrices](https://attack.mitre.org).
 
 ---
 
-## REPOSITORY STRUCTURE
+## Project Structure
 
 ```
-~/Wolfmark/strata/
-├── Cargo.toml                          # Workspace root
-├── CLAUDE.md                           # This file — READ FIRST
+strata/
 ├── apps/
-│   └── tree/
-│       └── strata-tree/                # Main egui desktop app
-│           ├── src/
-│           │   ├── main.rs
-│           │   ├── state.rs            # AppState — central state
-│           │   ├── state_csam.rs       # CSAM scan state + bridge
-│           │   ├── license_state.rs
-│           │   ├── plugin_host.rs      # Plugin orchestration
-│           │   └── ui/
-│           │       ├── plugins_view.rs # Plugin results UI
-│           │       └── dialogs/
+│   ├── strata-desktop/        # Primary Tauri 2 desktop app (case management + UI)
+│   ├── forge/                 # Tauri prompt template + DFIR playbook editor
+│   └── tree/                  # egui native viewer + tantivy full-text search (legacy)
 ├── crates/
-│   ├── strata-core/                    # Core forensic engine
-│   │   └── src/
-│   │       ├── parsers/
-│   │       │   ├── evtx.rs             # EVTX parser (has pre-existing warning line 76)
-│   │       │   └── ...
-│   │       └── classification/
-│   │           └── recyclebin.rs       # Has pre-existing platform-gated test
-│   ├── strata-csam/                    # CSAM detection module (NEW in v1.4.0)
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       ├── audit.rs               # SHA256-chained audit (load-bearing test inside)
-│   │       ├── hash_db.rs             # NCMEC/Project VIC hash sets
-│   │       ├── perceptual.rs          # dHash perceptual matching (load-bearing test inside)
-│   │       ├── scanner.rs             # Parallel rayon scanner
-│   │       └── report.rs              # PDF/JSON reports (load-bearing test inside)
-│   ├── strata-engine-adapter/          # IPC bridge for Forge desktop
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       ├── plugins.rs             # Has pre-existing type_complexity warning line 50
-│   │       └── csam.rs                # CSAM IPC commands (NEW in v1.4.0)
-│   ├── strata-fs/                      # VirtualFileSystem + EvidenceSource
-│   ├── strata-license/                 # Ed25519 license keypair
-│   │   └── tests.rs                   # Has pre-existing macOS machine-ID failures
-│   ├── strata-plugin-sdk/              # StrataPlugin trait + PluginTier enum
-│   └── strata-shield-engine/           # Shield analysis engine
-│       └── tests/
-│           └── vhd_integration_tests.rs # Has pre-existing single_match warning line 92
-├── plugins/
-│   ├── strata-plugin-csam/             # CSAM Sentinel plugin (NEW in v1.4.0)
-│   ├── strata-plugin-guardian/         # Windows Defender, AV/EDR
-│   │   └── src/lib.rs                 # Has pre-existing doc_overindented warnings (6 sites)
-│   ├── strata-plugin-phantom/          # Windows Registry
-│   │   └── src/lib.rs                 # Has pre-existing doc_overindented + needless_lifetimes
-│   ├── strata-plugin-sigma/            # Sigma correlation rules (29 rules, always last)
-│   │   └── src/lib.rs                 # Rules 28+29 are CSAM rules — DO NOT MODIFY
-│   └── strata-plugin-*/               # All other plugins
-└── .github/
-    └── workflows/                      # CI: macOS ✅ Linux ✅ Windows ✅
+│   ├── strata-core/           # Central forensic parsing engine (hives, prefetch, events)
+│   ├── strata-fs/             # Filesystem abstraction (NTFS, EWF, evidence images)
+│   ├── strata-plugin-sdk/     # StrataPlugin trait, ArtifactRecord schema, confidence scoring
+│   ├── strata-artifacts/      # Shared artifact types and serialization
+│   ├── strata-engine-adapter/ # JSON/Tauri IPC bridge; statically links all plugins
+│   ├── strata-acquire/        # Evidence acquisition and chain-of-custody hashing
+│   ├── strata-insight/        # Timeline enrichment and SQLite-based artifact queries
+│   ├── strata-shield-engine/  # Headless analysis engine (CLI/daemon)
+│   ├── strata-shield-cli/     # `strata` CLI binary
+│   ├── strata-license/        # Ed25519 license validation, machine-uid binding, tier gating
+│   ├── strata-csam/           # Hash + perceptual CSAM detection, audit logging
+│   ├── strata-ml-anomaly/     # Statistical outlier detection (timestomping, staging patterns)
+│   ├── strata-ml-summary/     # Plain-English case summary generation
+│   ├── strata-ml-obstruction/ # Anti-forensic behavior scoring (0–100)
+│   └── strata-charges/        # Charge and offense categorization
+└── plugins/
+    └── (see Plugin Architecture below)
 ```
 
 ---
 
-## CURRENT BUILD STATE — v1.4.0
+## Plugin Architecture
 
-```
-cargo test --workspace    → 871 passing, 4 pre-existing failures (platform-gated)
-cargo clippy --workspace  → 16 pre-existing warnings (none in v1.4.0 work)
-Binary: macOS 24MB · Windows 26.5MB · Linux 39.1MB
-CI: macOS ✅ Linux ✅ Windows ✅
-```
+All plugins implement `StrataPlugin` from `strata-plugin-sdk`. Each plugin's `execute()` returns a `PluginOutput` containing `Vec<ArtifactRecord>`. Plugins are statically linked in `strata-engine-adapter` for CJIS compliance (no dynamic loading at runtime).
 
----
+### Plugin → Source Mapping
 
-## LOAD-BEARING TESTS — DO NOT REMOVE EVER
+This is the canonical assignment. When adding or moving a parser, put it in the correct plugin:
 
-These three tests are permanent. They cannot be removed, renamed, or weakened.
-Each has a comment in the source marking it as load-bearing:
+| Plugin | Covers | Examples |
+|--------|--------|---------|
+| **Apex** *(planned)* | Apple-built app artifacts | Mail.app, Calendar.app, Contacts.app, Maps, Siri, iCloud Drive internals, Apple Notes (native), FaceTime logs |
+| **Carbon** *(planned)* | Google-built app artifacts | Chrome (desktop), Gmail, Google Drive, Google Maps, Google Photos, Android system apps built by Google |
+| **Pulse** | Third-party user-installed apps (iOS + Android) | WhatsApp, Signal, Telegram, Snapchat, Instagram, TikTok, Facebook, third-party browsers |
+| **MacTrace** | macOS system-layer artifacts | LaunchAgents/Daemons, FSEvents, Unified Log, Gatekeeper, Quarantine, Time Machine |
+| **Phantom** | Windows registry persistence | SYSTEM/SOFTWARE/SAM/SECURITY hives, AmCache, ShimCache, USBSTOR, 23 persistence mechanisms |
+| **Sentinel** | Windows Event Logs (`*.evtx`) | Per-event parsing of Security/System/PowerShell/Sysmon channels via `strata-core::parsers::evtx`; typed extractors for 4624, 4625, 4688, 4698/4702, 7045, 4103/4104, 1102 |
+| **Chronicle** | Windows user activity history | UserAssist, Jump Lists (LNK), Shellbags (CFB), Windows Timeline (ESE) |
+| **Trace** | Windows execution evidence | Prefetch, BAM/DAM, Scheduled Tasks, BITS, SRUM ESE, timestomp detection |
+| **Remnant** | Windows deletion artifacts | Recycle Bin ($I), USN Journal, ADS, VSS deletion, anti-forensic detection |
+| **Guardian** | Security product logs | Windows Defender, AV/EDR logs, WER crash files, firewall config |
+| **Cipher** | Credentials and secrets | WiFi passwords, browser credentials, SSH/AWS/Azure keys |
+| **Nimbus** | Cloud service artifacts | OneDrive, Teams, Slack, M365 UAL, AWS CloudTrail, Azure |
+| **Conduit** | Network configuration artifacts | WiFi profiles, RDP history, VPN artifacts, DNS cache |
+| **NetFlow** | Network traffic and server logs | PCAP/PCAPNG, IIS/Apache/Nginx logs, exfil tool detection |
+| **Vector** | Malicious file analysis | PE headers, VBA macros, PowerShell obfuscation, Cobalt Strike/Mimikatz detection |
+| **Wraith** | Memory and crash artifacts | hiberfil.sys, LSASS dumps, crash dump analysis |
+| **Recon** | Extracted IOC data | Usernames, emails, IPs, AWS AKIA keys, SID history |
+| **Specter** | Android backup artifacts | `.ab` backup parsing, package inventory, Wi-Fi config |
+| **Sigma** | Correlation engine | Runs last; receives all prior plugin results; applies 34 MITRE ATT&CK kill-chain rules |
+| **CSAM** | Child exploitation detection | Hash + dHash perceptual matching, NCMEC/Project VIC import, immutable audit log |
 
-1. `build_lines_includes_no_image_payload`
-   File: `crates/strata-csam/src/report.rs`
-   Why: Guarantees Strata never embeds image content in court reports.
-   Court admissibility depends on this.
+**Rule:** Sigma always runs last. Do not add correlation logic to other plugins — put cross-artifact rules in Sigma.
 
-2. `hash_recipe_byte_compat_with_strata_tree`
-   File: `crates/strata-csam/src/audit.rs`
-   Why: Guarantees the CSAM audit hash chain is byte-compatible with
-   the unified strata-tree audit log. Break this = broken chain of custody.
+### ArtifactRecord Requirements
 
-3. `rule_28_does_not_fire_with_no_csam_hits`
-   File: `plugins/strata-plugin-sigma/src/lib.rs`
-   Why: Guarantees Sigma CSAM rules require subcategory == "CSAM Hit".
-   Without this, any record with [confidence=Confirmed] in its detail
-   could silently fire CSAM rules on unrelated data.
+Every record produced by a parser must set:
 
----
-
-## PRE-EXISTING ISSUES — DO NOT FIX UNLESS ASSIGNED
-
-These exist before your work. Do not touch them unless your task explicitly
-says to fix them. Do not introduce new ones.
-
-### Clippy warnings (16 total):
-1.  `crates/strata-core/src/parsers/evtx.rs:76` — manual_range_patterns
-2.  `crates/strata-engine-adapter/src/plugins.rs:50` — type_complexity
-3.  `crates/strata-shield-engine/src/tests/integration_tests.rs:2` — module_inception
-4.  `crates/strata-shield-engine/tests/vhd_integration_tests.rs:92` — single_match
-5-10. `plugins/strata-plugin-guardian/src/lib.rs` — doc_overindented_list_items (6 sites)
-11-16. `plugins/strata-plugin-phantom/src/lib.rs` — doc_overindented_list_items + needless_lifetimes
-
-### Test failures (4 total — platform-gated):
-1. `ui::dialogs::carve_dialog::tests::carve_default_output_uses_non_c_evidence_drive`
-   Reason: Asserts Windows drive letter "F:", fails on macOS. Missing #[cfg(windows)].
-2. `tests::test_machine_id_generation` (strata-license)
-   Reason: macOS machine ID generation. Pre-existing.
-3. `tests::test_machine_id_consistency` (strata-license)
-   Reason: Same.
-4. `classification::recyclebin::tests::extract_sid_from_path_detects_sid_component`
-   Reason: SID parser test. Pre-existing.
-
----
-
-## CODING RULES — NON-NEGOTIABLE
-
-### Rust standards
-- Zero new `cargo clippy` warnings. Run `cargo clippy -p <crate> --all-targets` after every change.
-- Zero new test failures. Run `cargo test -p <crate>` after every change.
-- No `unwrap()` in production paths. Use `?` or explicit error handling.
-- No `unsafe` blocks without explicit approval from Korbyn.
-- All new public functions must have doc comments.
-- All new parsers must have a minimum of 3 tests.
-
-### Architecture rules
-- EvidenceSource abstraction — NEVER read files directly. Always go through
-  the EvidenceSource VFS. This is what makes air-gap work.
-- Streaming reads — use `read_file_range()` for large files. Never load
-  an entire evidence image into memory.
-- Plugin isolation — plugins communicate through PluginOutput / ArtifactRecord.
-  Never share mutable state between plugins.
-- Sigma always runs last — the plugin host enforces this. Never change it.
-- CSAM Sentinel is PluginTier::Free — never change this to any other tier.
-  CSAM detection must always be free for all users.
-
-### Commit rules
-- One commit per logical task. Not one commit per file.
-- Commit message format: `type(scope): description`
-  Examples:
-  - `feat(pulse): add ALEAPP AccountsGoogle parser`
-  - `fix(trace): add #[cfg(windows)] gate to carve_dialog test`
-  - `chore(clippy): fix pre-existing warnings in strata-core`
-- Always run `cargo test -p <affected_crate>` before committing.
-- Always run `cargo clippy -p <affected_crate> --all-targets` before committing.
-- Never commit with failing tests that weren't already failing before your work.
-- Never commit binary files, target/ directory, or .env files.
-
-### CSAM module rules (extra strict)
-- Never auto-display matched images. The review modal requires explicit examiner action.
-- Every CSAM hit must go through `publish_csam_plugin_output()` in state_csam.rs.
-- The detail format `[match_type=X] [confidence=Y] [source=Z] [sha256=...]` is
-  load-bearing. Never change it without updating Sigma rules 28+29 in lockstep.
-- Every CSAM report must include the 18 U.S.C. § 2258A mandatory reporting notice.
-- The three load-bearing tests (listed above) must pass after any CSAM work.
-
----
-
-## PLUGIN ARCHITECTURE
-
-### How plugins work
 ```rust
-// Plugin trait (strata-plugin-sdk/src/lib.rs)
-pub trait StrataPlugin: Send + Sync {
-    fn name(&self) -> &str;
-    fn run(&self, context: PluginContext) -> PluginOutput;
-    fn required_tier(&self) -> PluginTier { PluginTier::Professional } // default
-}
-
-// CSAM Sentinel overrides to Free:
-fn required_tier(&self) -> PluginTier { PluginTier::Free }
-```
-
-### Plugin output format
-```rust
-// ArtifactRecord fields:
-category: ArtifactCategory  // Media, Network, Registry, etc.
-subcategory: String          // e.g. "CSAM Hit", "EVTX Match"
-forensic_value: ForensicValue // Critical, High, Medium, Low
-mitre_technique: Option<String>
-is_suspicious: bool
-detail: String               // bracket-delimited for CSAM, free text for others
-```
-
-### Adding a new parser to an existing plugin
-1. Add the parser function to the relevant plugin crate
-2. Register it in the plugin's `run()` method
-3. Return `ArtifactRecord`s via `PluginOutput`
-4. Add at minimum 3 tests in a `#[cfg(test)]` module
-5. Run clippy and test before committing
-
-### Adding a new artifact category (app schema parser)
-For ALEAPP-style Android parsers (add to strata-plugin-pulse or new crate):
-```rust
-// Pattern: path glob → SQLite query → ArtifactRecord fields
-const DB_PATH: &str = "*/com.android.appname/databases/database.db";
-const QUERY: &str = "SELECT field1, field2, timestamp FROM table_name";
-
-pub fn parse_appname(evidence: &EvidenceSource) -> Vec<ArtifactRecord> {
-    // 1. Find database via evidence.find_files(DB_PATH)
-    // 2. Open with rusqlite
-    // 3. Execute QUERY
-    // 4. Map rows to ArtifactRecord
-    // 5. Return Vec<ArtifactRecord>
+ArtifactRecord {
+    mitre_technique: "T1547.001".into(), // required — never leave empty
+    confidence: 85,                       // 0–100; document your reasoning
+    // ... all other fields
 }
 ```
 
 ---
 
-## EVIDENCE SOURCE PATTERN
+## Evidence Pipeline
+
+```
+strata-fs (mount image)
+  → strata-core (parse raw artifacts)
+    → plugins (enrich, classify, correlate)
+      → strata-engine-adapter (serialize to JSON)
+        → Tauri IPC → UI
+```
+
+For CLI usage: `strata-shield-engine` → `strata-shield-cli` (bypasses Tauri).
+
+---
+
+## Development Patterns
+
+### Error Handling
 
 ```rust
-// ALWAYS use this pattern — never raw file access
-let files = evidence.find_files("*/path/to/artifact.*");
-for file_path in files {
-    let data = evidence.read_file_range(&file_path, 0, size)?;
-    // process data
+// Correct
+fn parse_artifact(path: &Path) -> Result<Vec<ArtifactRecord>, ForensicError> {
+    let conn = Connection::open(path)?;
+    let mut stmt = conn.prepare("SELECT ...")?;
+    // ...
+}
+
+// Wrong — never do this
+let conn = Connection::open(path).unwrap();
+```
+
+### Logging
+
+```rust
+// Correct
+log::debug!("Parsing {} records from {:?}", count, path);
+log::warn!("Expected table not found in {:?}, skipping", path);
+
+// Wrong
+println!("Parsing {} records", count);
+```
+
+### Parser Structure
+
+```rust
+/// Parses the SMS message database from an iOS backup.
+pub struct SmsParser;
+
+impl SmsParser {
+    /// Returns true if this path matches the iOS SMS database filename pattern.
+    /// Matching is filename-only (cheap) — no file I/O at this stage.
+    pub fn matches(path: &Path) -> bool { ... }
+
+    /// Parses SMS message records from the SQLite database at `path`.
+    ///
+    /// Opens the database read-only. Returns an empty vec (not an error) if
+    /// the table exists but contains no rows.
+    pub fn parse(path: &Path) -> Vec<ArtifactRecord> { ... }
 }
 ```
 
----
+### Parallel Processing
 
-## SIGMA RULES PATTERN
+Rayon is enabled via the `parallel` feature flag (default on). Use `par_iter()` for CPU-bound parser loops. Do not add threading primitives directly — route through Rayon.
 
-When adding a new Sigma rule to `plugins/strata-plugin-sigma/src/lib.rs`:
+### License Tier Gating
 
-```rust
-// Pattern used by all 29 existing rules:
-let matching_records: Vec<_> = prior_results
-    .iter()
-    .flat_map(|output| &output.records)
-    .filter(|r| {
-        r.subcategory == "Your Subcategory"
-            && r.detail.contains("[your_field=value]")
-    })
-    .collect();
-
-if !matching_records.is_empty() {
-    let mut a = Artifact::new("Sigma Rule", "sigma");
-    a.add_field("title", "RULE FIRED: Your Rule Name");
-    a.add_field("detail", &format!(
-        "Found {} matching records. [narrative explaining what this means]",
-        matching_records.len()
-    ));
-    a.add_field("file_type", "Sigma Rule");
-    a.add_field("suspicious", "true");
-    results.push(a);
-}
-```
+Tier checks live in `strata-engine-adapter`. Do not add tier logic inside individual plugins — plugins are tier-agnostic.
 
 ---
 
-## KNOWN ARCHITECTURAL NOTES
+## Testing
 
-### strata-tree (egui app)
-- Single-threaded egui — no case-level mutex. Per-evidence inner mutex on engine-adapter side.
-- CSAM events route through `log_action()` directly — no separate flush.
-- Plugin results stored in `self.plugin_results` — CSAM replaces prior entry on re-scan.
-- Lock order documented at top of `crates/strata-engine-adapter/src/csam.rs`.
-
-### engine-adapter (Forge desktop)
-- `plugins.rs` line 147: `prior_results: Vec::new()` — Sigma has no correlation input in Forge.
-  This is a known pre-existing issue. Do NOT fix it unless assigned.
-- CSAM runs through `csam.rs` IPC commands.
-
-### strata-fs (VFS)
-- `EvidenceSource` is the abstraction layer over all evidence formats.
-- `read_file_range()` is the only safe way to read file content.
-- Never bypass EvidenceSource even in tests — use mock evidence sources.
-
----
-
-## WHAT STRATA DOES NOT DO (DO NOT IMPLEMENT WITHOUT APPROVAL)
-
-- No live device acquisition (hardware required)
-- No cloud API connections (air-gap by design)
-- No auto-posting to external services
-- No telemetry, phone-home, or usage tracking of any kind
-- No license server calls
-- No network requests during evidence analysis
-
----
-
-## CURRENT DEVELOPMENT PRIORITIES
-
-### v1.5.0 targets (implement in this order):
-1. Fix 16 pre-existing clippy warnings
-2. Fix 4 platform-gated test failures (add #[cfg] gates)
-3. Large evidence audit (read ~/Wolfmark/opus_large_evidence_audit.md)
-4. UFDR ingestion — parse Cellebrite UFDR (ZIP + report.xml path reconstruction)
-5. Volume snapshot architecture (index all metadata first, never re-read)
-6. VSS (Volume Shadow Copy) support
-7. 100+ new app artifact parsers from ALEAPP/iLEAPP schemas
-8. UI redesign to Wolfmark dark aesthetic
-9. Regression test corpus in CI
-
-### Artifact parser targets (study these open source repos):
-- ALEAPP: github.com/abrignoni/ALEAPP — Android SQLite parsers
-- iLEAPP: github.com/abrignoni/iLEAPP — iOS SQLite/plist parsers
-- mac_apt: github.com/ydkhatri/mac_apt — macOS artifact parsers
-- ForensicArtifacts: github.com/ForensicArtifacts/artifacts — YAML definitions
-- EricZimmerman tools: github.com/EricZimmerman — Windows artifact schemas
-
----
-
-## SECURITY AND LEGAL
-
-- Copyright: US Copyright Office Case #1-15137320181 (registered 2026-04-08)
-- License keys: Ed25519 keypair in ~/Wolfmark/keys/ — NEVER commit these
-- Never commit .env files, API keys, or credentials of any kind
-- CSAM hash databases: NEVER bundled with Strata. Examiner imports their own.
-- The CSAM module is designed to comply with 18 U.S.C. § 2258A mandatory reporting
-
----
-
-## VERIFICATION CHECKLIST (run before every commit)
+Run the full test suite before any PR:
 
 ```bash
-# 1. Clippy — zero new warnings
-cargo clippy -p <your_crate> --all-targets 2>&1 | grep "^warning" | grep -v "pre-existing"
-
-# 2. Tests — zero new failures
-cargo test -p <your_crate> 2>&1 | tail -5
-
-# 3. Load-bearing tests still pass (if you touched CSAM or Sigma)
-cargo test -p strata-csam build_lines_includes_no_image_payload
-cargo test -p strata-csam hash_recipe_byte_compat_with_strata_tree
-cargo test -p strata-plugin-sigma rule_28_does_not_fire_with_no_csam_hits
-
-# 4. Build still compiles
-cargo check -p strata
+cargo test --workspace
+cargo clippy --workspace -- -D warnings
 ```
+
+Parser tests must cover:
+1. A known-good fixture file (real artifact, expected output verified)
+2. A missing/empty input (returns empty vec, does not panic)
+3. A malformed/corrupt input (returns empty vec or error, does not panic)
+
+Place test fixtures in the plugin's `tests/fixtures/` directory.
 
 ---
 
-## DAILY LOG FORMAT
+## What Not to Do
 
-After completing work, write a daily log to:
-`~/Wolfmark/strata/logs/DAILY_LOG_YYYY-MM-DD.md`
-
-Format:
-```markdown
-# Strata Daily Log — YYYY-MM-DD
-
-## Completed
-- [list of completed tasks with commit hashes]
-
-## Test counts
-- Before: XXX passing
-- After: XXX passing
-- New tests added: XX
-
-## Clippy
-- New warnings introduced: 0
-- Pre-existing warnings remaining: 16
-
-## Highlights for Herald
-[2-3 postable technical highlights for social media]
-
-## Blockers
-[anything that needs Korbyn's decision]
-```
-
----
-
-## CONTACT
-
-Korbyn reviews every commit. If something is ambiguous — stop and document
-the ambiguity in the daily log rather than guessing. Wrong assumptions in
-forensic tools have real consequences.
-
-wolfmarksystems.com | contact@wolfmarksystems.com | @WolfmarkSystems
+- Do not add `serde_json::Value` as a catch-all — define typed structs.
+- Do not mix OS-specific artifact logic across plugins (e.g., Windows registry parsing does not belong in MacTrace).
+- Do not add a new dependency to solve a problem already handled by a workspace crate.
+- Do not leave `TODO` or `FIXME` comments in committed code — file an issue instead.
+- Do not write parsers that modify the evidence source. All access is read-only.

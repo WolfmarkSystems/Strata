@@ -40,7 +40,11 @@ fn build_plugins() -> Vec<Box<dyn StrataPlugin>> {
         Box::new(strata_plugin_guardian::GuardianPlugin::new()),
         Box::new(strata_plugin_netflow::NetFlowPlugin::new()),
         Box::new(strata_plugin_mactrace::MacTracePlugin::new()),
-        // Sentinel — free on every license tier.
+        // Sentinel — Windows Event Log analyzer (per-event extraction
+        // via strata-core::parsers::evtx).
+        Box::new(strata_plugin_sentinel::SentinelPlugin::new()),
+        // CSAM Sentinel — free on every license tier; real workflow
+        // lives behind the dedicated csam.rs IPC commands.
         Box::new(strata_plugin_csam::CsamPlugin::new()),
         Box::new(strata_plugin_sigma::SigmaPlugin::new()),
     ]

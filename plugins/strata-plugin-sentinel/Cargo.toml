@@ -1,0 +1,19 @@
+[package]
+name = "strata-plugin-sentinel"
+version = "1.0.0"
+edition = "2021"
+description = "Sentinel — Windows Event Log analyzer. Owns *.evtx artifact extraction for Strata."
+license = "Proprietary"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+strata-plugin-sdk = { path = "../../crates/strata-plugin-sdk" }
+strata-core       = { path = "../../crates/strata-core" }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
+
+[dev-dependencies]
+tempfile = { workspace = true }
