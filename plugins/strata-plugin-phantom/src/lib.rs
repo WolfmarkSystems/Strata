@@ -20,6 +20,7 @@
 
 use std::path::{Path, PathBuf};
 
+pub mod prefetch;
 pub mod shimcache;
 
 use strata_plugin_sdk::{
@@ -126,6 +127,71 @@ impl StrataPlugin for PhantomPlugin {
                 if let Some(data) = read_hive_gated(&path) {
                     results.extend(parsers::ntuser::parse(&path, &data));
                 }
+            } else if lower.ends_with(".pf") {
+                // Prefetch deep parser — see crate::prefetch for the typed
+                // PrefetchEntry shape and forensic rationale. Each .pf
+                // becomes one Artifact("Prefetch Execution", path_str).
+                if let Some(entry) = crate::prefetch::parse_file(&path) {
+                    let path_str = path.to_string_lossy().to_string();
+                    let mut a = Artifact::new("Prefetch Execution", &path_str);
+                    a.timestamp = entry
+                        .last_run_times
+                        .first()
+                        .map(|dt| dt.timestamp() as u64);
+                    let last_run_str = entry
+                        .last_run_times
+                        .first()
+                        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                        .unwrap_or_else(|| "unknown".to_string());
+                    let all_run_times = entry
+                        .last_run_times
+                        .iter()
+                        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                        .collect::<Vec<_>>()
+                        .join("|");
+                    let volume_paths_joined = entry.volume_paths.join("|");
+                    a.add_field(
+                        "title",
+                        &format!(
+                            "Prefetch: {} executed {}\u{00D7}",
+                            entry.executable_name, entry.run_count
+                        ),
+                    );
+                    a.add_field(
+                        "detail",
+                        &format!(
+                            "Executable: {} | Hash: {} | Run count: {} | Last run: {} | \
+                             Format v{} | {} loaded files | {} volume(s)",
+                            entry.executable_name,
+                            entry.hash,
+                            entry.run_count,
+                            last_run_str,
+                            entry.format_version,
+                            entry.loaded_files.len(),
+                            entry.volume_paths.len()
+                        ),
+                    );
+                    a.add_field("file_type", "Prefetch Execution");
+                    a.add_field("executable_name", &entry.executable_name);
+                    a.add_field("hash", &entry.hash);
+                    a.add_field("run_count", &entry.run_count.to_string());
+                    a.add_field("last_run_time", &last_run_str);
+                    a.add_field("all_run_times", &all_run_times);
+                    a.add_field("volume_paths", &volume_paths_joined);
+                    a.add_field(
+                        "loaded_file_count",
+                        &entry.loaded_files.len().to_string(),
+                    );
+                    a.add_field("format_version", &entry.format_version.to_string());
+                    // T1059 — Command and Scripting Interpreter (proves
+                    //         shell-launched executable execution).
+                    // T1204 — User Execution (every prefetch entry is by
+                    //         definition a user-induced launch).
+                    a.add_field("mitre", "T1059");
+                    a.add_field("mitre_secondary", "T1204");
+                    a.add_field("forensic_value", "High");
+                    results.push(a);
+                }
             }
         }
 
@@ -143,9 +209,11 @@ impl StrataPlugin for PhantomPlugin {
         for a in &artifacts {
             let file_type = a.data.get("file_type").cloned().unwrap_or_default();
             let category = match file_type.as_str() {
-                "ShimCache" | "AmCache File" | "Service" | "AmCache Legacy File" => {
-                    ArtifactCategory::ExecutionHistory
-                }
+                "ShimCache"
+                | "AmCache File"
+                | "Service"
+                | "AmCache Legacy File"
+                | "Prefetch Execution" => ArtifactCategory::ExecutionHistory,
                 "USB Device" | "Network Adapter" => ArtifactCategory::NetworkArtifacts,
                 "SAM Account" | "Cloud Identity" => ArtifactCategory::AccountsCredentials,
                 "Installed Program"
