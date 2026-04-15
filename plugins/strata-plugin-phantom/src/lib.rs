@@ -21,6 +21,7 @@
 use std::path::{Path, PathBuf};
 
 pub mod amcache;
+pub mod mru;
 pub mod prefetch;
 pub mod shimcache;
 pub mod usb;
@@ -220,6 +221,64 @@ impl StrataPlugin for PhantomPlugin {
             } else if lower == "ntuser.dat" {
                 if let Some(data) = read_hive_gated(&path) {
                     results.extend(parsers::ntuser::parse(&path, &data));
+                    // Typed MRU parser — RecentDocs / OpenSave /
+                    // LastVisited / RunMRU. See `crate::mru`.
+                    let path_str = path.to_string_lossy().to_string();
+                    if let Ok(hive) = nt_hive::Hive::new(data.as_slice()) {
+                        if let Ok(root) = hive.root_key_node() {
+                            let parsed = crate::mru::parse(&root);
+                            for e in &parsed.entries {
+                                let mut a = Artifact::new("MRU Entry", &path_str);
+                                let title_subcat = if e.subcategory.is_empty() {
+                                    String::new()
+                                } else {
+                                    format!(" ({})", e.subcategory)
+                                };
+                                a.add_field(
+                                    "title",
+                                    &format!(
+                                        "MRU [{}{}]: {}",
+                                        e.mru_type.as_str(),
+                                        title_subcat,
+                                        e.value
+                                    ),
+                                );
+                                let order_str = if e.order == u32::MAX {
+                                    "<unknown>".to_string()
+                                } else {
+                                    e.order.to_string()
+                                };
+                                a.add_field(
+                                    "detail",
+                                    &format!(
+                                        "Store: {}{} | Order: {} | Raw value: {} | Decoded: {}",
+                                        e.mru_type.as_str(),
+                                        if e.subcategory.is_empty() {
+                                            String::new()
+                                        } else {
+                                            format!("\\{}", e.subcategory)
+                                        },
+                                        order_str,
+                                        e.raw_value_name,
+                                        e.value
+                                    ),
+                                );
+                                a.add_field("file_type", "MRU Entry");
+                                a.add_field("mru_type", e.mru_type.as_str());
+                                a.add_field("subcategory", &e.subcategory);
+                                a.add_field("value", &e.value);
+                                a.add_field("order", &order_str);
+                                a.add_field("raw_value_name", &e.raw_value_name);
+                                a.add_field("source_hive", &path_str);
+                                // T1074.001 — Local Data Staging
+                                // T1059   — Command and Scripting (RunMRU)
+                                a.add_field("mitre", "T1074.001");
+                                a.add_field("mitre_secondary", "T1059");
+                                a.add_field("forensic_value", "Medium");
+                                results.push(a);
+                            }
+                        }
+                    }
                 }
             } else if lower.ends_with(".pf") {
                 // Prefetch deep parser — see crate::prefetch for the typed
@@ -320,7 +379,9 @@ impl StrataPlugin for PhantomPlugin {
                     ArtifactCategory::NetworkArtifacts
                 }
                 "AmCache Shortcut" => ArtifactCategory::UserActivity,
-                "Shellbag" | "MuiCache" | "UserChoice" => ArtifactCategory::UserActivity,
+                "Shellbag" | "MuiCache" | "UserChoice" | "MRU Entry" => {
+                    ArtifactCategory::UserActivity
+                }
                 // v1.5.0 RegRipper-coverage parsers
                 "Print Monitor"
                 | "LSA Security Package"
