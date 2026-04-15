@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 pub mod amcache;
 pub mod mru;
 pub mod prefetch;
+pub mod regtxlog;
 pub mod shimcache;
 pub mod thumbcache;
 pub mod usb;
@@ -281,6 +282,78 @@ impl StrataPlugin for PhantomPlugin {
                         }
                     }
                 }
+            } else if lower.ends_with(".log1") || lower.ends_with(".log2") {
+                // Registry transaction logs (`.LOG1` / `.LOG2`) — see
+                // `crate::regtxlog`. Uncommitted dirty pages are
+                // strong evidence of interrupted hive writes (power
+                // loss, BSOD, or anti-forensic mid-write kills).
+                if let Some(data) = read_hive_gated(&path) {
+                    let path_str = path.to_string_lossy().to_string();
+                    if let Some(header) = crate::regtxlog::parse(&data) {
+                        let uncommitted =
+                            crate::regtxlog::has_uncommitted_changes(&header);
+                        let mut a =
+                            Artifact::new("Registry Transaction Log", &path_str);
+                        let hive_label = if header.hive_name.is_empty() {
+                            "<unknown hive>".to_string()
+                        } else {
+                            header.hive_name.clone()
+                        };
+                        a.add_field(
+                            "title",
+                            &format!(
+                                "Registry tx log: {} (LSN {}, {} dirty pages)",
+                                hive_label,
+                                header.log_sequence_number,
+                                header.dirty_page_count
+                            ),
+                        );
+                        a.add_field(
+                            "detail",
+                            &format!(
+                                "File: {} | Hive: {} | LSN: {} | Dirty pages: {} | \
+                                 Uncommitted changes: {} (uncommitted changes may \
+                                 indicate interrupted anti-forensic activity)",
+                                path_str,
+                                hive_label,
+                                header.log_sequence_number,
+                                header.dirty_page_count,
+                                uncommitted,
+                            ),
+                        );
+                        a.add_field("file_type", "Registry Transaction Log");
+                        a.add_field("log_file", &path_str);
+                        a.add_field("hive_name", &header.hive_name);
+                        a.add_field(
+                            "log_sequence_number",
+                            &header.log_sequence_number.to_string(),
+                        );
+                        a.add_field(
+                            "dirty_page_count",
+                            &header.dirty_page_count.to_string(),
+                        );
+                        a.add_field(
+                            "has_uncommitted_changes",
+                            if uncommitted { "true" } else { "false" },
+                        );
+                        // T1112 — Modify Registry (the log records
+                        //          the actual pending modifications).
+                        // T1070.006 — Indicator Removal subtechnique;
+                        //          uncommitted entries are evidence of
+                        //          attempted but uncompleted log/hive
+                        //          tampering.
+                        a.add_field("mitre", "T1112");
+                        a.add_field("mitre_secondary", "T1070.006");
+                        a.add_field(
+                            "forensic_value",
+                            if uncommitted { "High" } else { "Medium" },
+                        );
+                        if uncommitted {
+                            a.add_field("suspicious", "true");
+                        }
+                        results.push(a);
+                    }
+                }
             } else if lower.starts_with("thumbcache_") && lower.ends_with(".db") {
                 // Typed thumbnail-cache parser. Thumbnails persist
                 // after source-file deletion — this is the highest-
@@ -429,7 +502,8 @@ impl StrataPlugin for PhantomPlugin {
                 | "AmCache Application"
                 | "Service"
                 | "AmCache Legacy File"
-                | "Prefetch Execution" => ArtifactCategory::ExecutionHistory,
+                | "Prefetch Execution"
+                | "Registry Transaction Log" => ArtifactCategory::ExecutionHistory,
                 "USB Device" | "Network Adapter" => ArtifactCategory::NetworkArtifacts,
                 "SAM Account" | "Cloud Identity" => ArtifactCategory::AccountsCredentials,
                 "Installed Program"
