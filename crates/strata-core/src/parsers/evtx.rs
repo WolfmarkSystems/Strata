@@ -7,6 +7,7 @@
 //! engine can match Hayabusa-inspired rules against real data.
 
 use crate::parser::{ArtifactParser, ParsedArtifact, ParserError};
+use crate::parsers::evtx_structured;
 use evtx::EvtxParser as InnerEvtxParser;
 use serde_json::Value;
 use std::path::Path;
@@ -354,6 +355,30 @@ impl ArtifactParser for EvtxParser {
             }
             if let Some(v) = target_filename {
                 data_obj.insert("target_filename".into(), Value::from(v));
+            }
+
+            // Typed structured-event extraction for the 9 high-value IDs
+            // documented in `parsers::evtx_structured`. Adds:
+            //   * `artifact_subcategory = "Windows Event"`
+            //   * `mitre` mapped per the user-specified table (overrides
+            //     the generic per-channel default)
+            //   * `forensic_value = "High"` for the structured set
+            //   * `structured` — the typed Win<EID>* struct, serialized
+            if let Some(structured) = evtx_structured::extract_event(event_id, root) {
+                data_obj.insert(
+                    "artifact_subcategory".into(),
+                    Value::from("Windows Event"),
+                );
+                if let Some(mitre) = evtx_structured::mitre_for_event_id(event_id) {
+                    data_obj.insert("mitre".into(), Value::from(mitre));
+                }
+                data_obj.insert(
+                    "forensic_value".into(),
+                    Value::from(evtx_structured::forensic_value_for_event_id(event_id)),
+                );
+                if let Ok(v) = serde_json::to_value(&structured) {
+                    data_obj.insert("structured".into(), v);
+                }
             }
 
             artifacts.push(ParsedArtifact {

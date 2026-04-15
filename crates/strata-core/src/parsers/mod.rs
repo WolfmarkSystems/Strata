@@ -17,6 +17,7 @@ pub mod ese_parser;
 pub mod execution_correlation;
 pub mod etw;
 pub mod evtx;
+pub mod evtx_structured;
 pub mod facebook_messenger;
 pub mod ios;
 pub mod iot;
