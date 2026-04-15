@@ -21,6 +21,8 @@
 
 use std::path::{Path, PathBuf};
 
+pub mod biome;
+
 use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext,
     PluginError, PluginOutput, PluginResult, PluginSummary, PluginType, StrataPlugin,
@@ -246,6 +248,119 @@ impl StrataPlugin for MacTracePlugin {
         };
 
         for path in files {
+            // Apple Biome (macOS 13+) — highest-priority user-activity
+            // store. Detect by `/biome/` (system) or `/Biome/`
+            // (per-user) path fragment. SEGB format, custom protobuf.
+            // See `crate::biome` for the full schema.
+            let path_lower = path.to_string_lossy().to_ascii_lowercase();
+            if path_lower.contains("/biome/") {
+                let path_str = path.to_string_lossy().to_string();
+                if let Ok(data) = std::fs::read(&path) {
+                    let records = crate::biome::parse(&path, &data);
+                    for r in &records {
+                        let mut a = Artifact::new("Biome Record", &path_str);
+                        a.timestamp = r.start_time.map(|dt| dt.timestamp() as u64);
+                        let title = match r.stream_type {
+                            crate::biome::BiomeStreamType::AppInFocus => format!(
+                                "Biome [app/inFocus]: {}",
+                                r.bundle_id.as_deref().unwrap_or("<unknown>")
+                            ),
+                            crate::biome::BiomeStreamType::DeviceLocked => format!(
+                                "Biome [device/locked]: {}",
+                                match r.locked {
+                                    Some(true) => "locked",
+                                    Some(false) => "unlocked",
+                                    None => "unknown",
+                                }
+                            ),
+                            crate::biome::BiomeStreamType::SafariHistory => format!(
+                                "Biome [Safari]: {}",
+                                r.title
+                                    .clone()
+                                    .or_else(|| r.url.clone())
+                                    .unwrap_or_else(|| "<unknown>".to_string())
+                            ),
+                            crate::biome::BiomeStreamType::AppSession => format!(
+                                "Biome [appSession]: {} ({}s)",
+                                r.bundle_id.as_deref().unwrap_or("<unknown>"),
+                                r.duration_secs.unwrap_or(0),
+                            ),
+                            crate::biome::BiomeStreamType::Unknown => {
+                                "Biome record (stream unknown)".to_string()
+                            }
+                        };
+                        let detail = format!(
+                            "Stream: {} | bundle_id: {} | url: {} | title: {} | \
+                             start: {} | end: {} | locked: {} | duration_secs: {}",
+                            r.stream_type.as_str(),
+                            r.bundle_id.as_deref().unwrap_or("-"),
+                            r.url.as_deref().unwrap_or("-"),
+                            r.title.as_deref().unwrap_or("-"),
+                            r.start_time
+                                .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                .unwrap_or_else(|| "-".to_string()),
+                            r.end_time
+                                .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                .unwrap_or_else(|| "-".to_string()),
+                            match r.locked {
+                                Some(true) => "true",
+                                Some(false) => "false",
+                                None => "-",
+                            },
+                            r.duration_secs
+                                .map(|d| d.to_string())
+                                .unwrap_or_else(|| "-".to_string()),
+                        );
+                        a.add_field("title", &title);
+                        a.add_field("detail", &detail);
+                        a.add_field("file_type", "Biome Record");
+                        a.add_field("stream_type", r.stream_type.as_str());
+                        if let Some(v) = &r.bundle_id {
+                            a.add_field("bundle_id", v);
+                        }
+                        if let Some(v) = &r.url {
+                            a.add_field("url", v);
+                        }
+                        if let Some(v) = &r.title {
+                            a.add_field("page_title", v);
+                        }
+                        if let Some(dt) = r.start_time {
+                            a.add_field(
+                                "start_time",
+                                &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                            );
+                        }
+                        if let Some(dt) = r.end_time {
+                            a.add_field(
+                                "end_time",
+                                &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                            );
+                        }
+                        if let Some(l) = r.locked {
+                            a.add_field("locked", if l { "true" } else { "false" });
+                        }
+                        if let Some(d) = r.duration_secs {
+                            a.add_field("duration_secs", &d.to_string());
+                        }
+                        // MITRE per stream: T1217 for Safari history,
+                        // T1059 for app focus / sessions, otherwise
+                        // generic T1005 (Data from Local System).
+                        let mitre = match r.stream_type {
+                            crate::biome::BiomeStreamType::SafariHistory => "T1217",
+                            crate::biome::BiomeStreamType::AppInFocus
+                            | crate::biome::BiomeStreamType::AppSession => "T1059",
+                            _ => "T1005",
+                        };
+                        a.add_field("mitre", mitre);
+                        a.add_field("forensic_value", "High");
+                        out.push(a);
+                    }
+                }
+                // Biome routing owns this path; skip the generic
+                // classify() step to avoid double-emission.
+                continue;
+            }
+
             let Some((file_type, _category)) = Self::classify(&path) else {
                 continue;
             };
@@ -582,6 +697,7 @@ impl StrataPlugin for MacTracePlugin {
                 | "CallHistory" => ArtifactCategory::Communications,
                 "Safari History" => ArtifactCategory::WebActivity,
                 "AddressBook" => ArtifactCategory::AccountsCredentials,
+                "Biome Record" => ArtifactCategory::UserActivity,
                 _ => ArtifactCategory::SystemActivity,
             };
             cats.insert(category.as_str().to_string());
