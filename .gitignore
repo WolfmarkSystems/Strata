@@ -32,3 +32,6 @@ apps/shield/evidence/
 *.vhd
 .DS_Store
 **/.DS_Store
+crates/strata-core/exports/
+crates/strata-shield-cli/exports/
+logs/
