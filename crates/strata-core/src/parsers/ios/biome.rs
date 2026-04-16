@@ -111,18 +111,20 @@ mod tests {
 
         let artifacts = parser
             .parse_file(Path::new("AppIntents.segb"), &data)
-            .unwrap();
+            .expect("parse_file failed");
         assert_eq!(artifacts.len(), 1);
         let art = &artifacts[0];
 
         let identifiers = art
             .json_data
             .get("extracted_app_identifiers")
-            .unwrap()
+            .expect("extracted_app_identifiers not found")
             .as_array()
-            .unwrap();
+            .expect("extracted_app_identifiers is not an array");
 
-        let strings: Vec<&str> = identifiers.iter().map(|v| v.as_str().unwrap()).collect();
+        let strings: Vec<&str> = identifiers.iter()
+            .filter_map(|v| v.as_str())
+            .collect();
         assert!(strings.contains(&"com.apple.mobilesafari"));
         assert!(strings.contains(&"https://gemini.google.com"));
     }

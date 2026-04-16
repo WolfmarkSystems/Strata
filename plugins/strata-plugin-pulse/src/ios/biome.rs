@@ -56,7 +56,7 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
 
-    fn write_segment(dir: &Path, stream: &str, name: &str) -> std::path::PathBuf {
+    fn write_segment(dir: &Path, stream: &str, name: &str) -> std::io::Result<std::path::PathBuf> {
         let p = dir
             .join("Library")
             .join("Biome")
@@ -65,9 +65,11 @@ mod tests {
             .join(stream)
             .join("local")
             .join(name);
-        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
-        std::fs::write(&p, b"protobuf-payload").unwrap();
-        p
+        std::fs::create_dir_all(p.parent().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "path has no parent")
+        })?)?;
+        std::fs::write(&p, b"protobuf-payload")?;
+        Ok(p)
     }
 
     #[test]
@@ -80,8 +82,8 @@ mod tests {
 
     #[test]
     fn extracts_stream_name_into_subcategory() {
-        let dir = tempdir().unwrap();
-        let p = write_segment(dir.path(), "_DKEventBundle", "segment-001");
+        let dir = tempdir().expect("tempdir creation failed");
+        let p = write_segment(dir.path(), "_DKEventBundle", "segment-001").expect("write_segment failed");
         let recs = parse(&p);
         assert_eq!(recs.len(), 1);
         assert_eq!(recs[0].subcategory, "Biome stream: _DKEventBundle");
@@ -89,12 +91,12 @@ mod tests {
 
     #[test]
     fn empty_file_returns_no_records() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("tempdir creation failed");
         let p = dir
             .path()
             .join("Library/Biome/streams/public/x/local/seg");
-        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
-        std::fs::write(&p, b"").unwrap();
+        std::fs::create_dir_all(p.parent().expect("path has no parent")).expect("create_dir_all failed");
+        std::fs::write(&p, b"").expect("write failed");
         assert!(parse(&p).is_empty());
     }
 }
