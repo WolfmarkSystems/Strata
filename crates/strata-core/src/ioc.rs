@@ -7,6 +7,8 @@
 use serde::{Deserialize, Serialize};
 use strata_plugin_sdk::{ArtifactRecord, PluginOutput};
 
+pub mod search;
+
 /// Supported IOC types with automatic detection.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IocType {
