@@ -67,7 +67,8 @@ If this session was interrupted by a rate limit:
 - M-5 Unified Logs Parser — commit 76110be
 - M-6 plist Artifacts — commit 76110be
 - M-7 Modern macOS Artifacts (13-26) — commit b4d46cb
-- X-1 FOR572 DNS/IDS Improvements — this commit
+- X-1 FOR572 DNS/IDS Improvements — commit 51e3a84
+- X-2 Windows Search Index (ESE) — this commit
 
 ---
 

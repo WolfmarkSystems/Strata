@@ -27,6 +27,7 @@ pub mod regtxlog;
 pub mod shimcache;
 pub mod thumbcache;
 pub mod usb;
+pub mod windows_search;
 
 use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext,
@@ -480,6 +481,35 @@ impl StrataPlugin for PhantomPlugin {
                     a.add_field("forensic_value", "High");
                     results.push(a);
                 }
+            } else if lower == "windows.edb" {
+                // Windows Search Index — string-carving fallback. See
+                // `crate::windows_search` for the rationale behind the
+                // carving approach over full ESE parsing.
+                if let Ok(data) = std::fs::read(&path) {
+                    let entries = crate::windows_search::parse(&path, &data);
+                    let path_str = path.to_string_lossy().to_string();
+                    for e in &entries {
+                        let mut a = Artifact::new("Search Index Entry", &path_str);
+                        a.add_field(
+                            "title",
+                            &format!("Indexed path: {}", e.item_path),
+                        );
+                        a.add_field(
+                            "detail",
+                            &format!(
+                                "Path: {} | Offset: 0x{:X} | Length: {}",
+                                e.item_path, e.file_offset, e.path_length
+                            ),
+                        );
+                        a.add_field("file_type", "Search Index Entry");
+                        a.add_field("item_path", &e.item_path);
+                        a.add_field("file_offset", &format!("0x{:X}", e.file_offset));
+                        a.add_field("path_length", &e.path_length.to_string());
+                        a.add_field("mitre", "T1083");
+                        a.add_field("forensic_value", "Medium");
+                        results.push(a);
+                    }
+                }
             }
         }
 
@@ -516,7 +546,7 @@ impl StrataPlugin for PhantomPlugin {
                 }
                 "AmCache Shortcut" => ArtifactCategory::UserActivity,
                 "Shellbag" | "MuiCache" | "UserChoice" | "MRU Entry"
-                | "Thumbcache Entry" => ArtifactCategory::UserActivity,
+                | "Thumbcache Entry" | "Search Index Entry" => ArtifactCategory::UserActivity,
                 // v1.5.0 RegRipper-coverage parsers
                 "Print Monitor"
                 | "LSA Security Package"
