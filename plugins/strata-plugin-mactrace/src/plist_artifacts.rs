@@ -168,7 +168,7 @@ fn parse_recent_items(root: &Value) -> Vec<PlistArtifact> {
         ("RecentServers", "Server"),
     ];
     for (key, kind) in sections {
-        let Some(section) = dict.get(*key) else {
+        let Some(section) = dict.get(key) else {
             continue;
         };
         let Some(section_dict) = section.as_dictionary() else {
@@ -279,7 +279,7 @@ fn parse_sidebar_lists(root: &Value) -> Vec<PlistArtifact> {
         ("favorites", "favorite"),
     ];
     for (key, kind) in sections {
-        let Some(section) = dict.get(*key) else {
+        let Some(section) = dict.get(key) else {
             continue;
         };
         let items = section
@@ -327,7 +327,7 @@ fn parse_dock_items(root: &Value) -> Vec<PlistArtifact> {
         ("persistent-others", "persistent-other"),
     ];
     for (key, tile_type) in tile_sections {
-        let Some(tiles) = dict.get(*key).and_then(|v| v.as_array()) else {
+        let Some(tiles) = dict.get(key).and_then(|v| v.as_array()) else {
             continue;
         };
         for tile in tiles {

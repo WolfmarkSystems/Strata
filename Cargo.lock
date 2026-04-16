@@ -8067,10 +8067,13 @@ name = "strata-plugin-mactrace"
 version = "1.0.0"
 dependencies = [
  "chrono",
+ "flate2",
+ "plist",
  "rusqlite",
  "serde",
  "serde_json",
  "strata-plugin-sdk",
+ "tempfile",
 ]
 
 [[package]]

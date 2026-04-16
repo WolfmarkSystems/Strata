@@ -24,6 +24,7 @@ use std::path::{Path, PathBuf};
 pub mod biome;
 pub mod fsevents;
 pub mod knowledgec;
+pub mod plist_artifacts;
 pub mod tcc;
 pub mod unified_logs;
 
@@ -405,6 +406,55 @@ impl StrataPlugin for MacTracePlugin {
                         out.push(a);
                     }
                 }
+                continue;
+            }
+
+            // Plist artifacts — Recent Items, Login Items, Quarantine
+            // Events, Sidebar Lists, Dock Items. See
+            // `crate::plist_artifacts` for the full schema.
+            if crate::plist_artifacts::PlistArtifactType::from_path(&path).is_some() {
+                let path_str = path.to_string_lossy().to_string();
+                let records = crate::plist_artifacts::parse(&path);
+                for r in &records {
+                    let mut a = Artifact::new("Plist Artifact", &path_str);
+                    a.timestamp = r.timestamp.map(|dt| dt.timestamp() as u64);
+                    let title = format!(
+                        "{} [{}]: {}",
+                        r.artifact_type.as_str(),
+                        r.name,
+                        r.value,
+                    );
+                    let detail = format!(
+                        "Type: {} | Name: {} | Value: {} | Metadata: {} | Timestamp: {}",
+                        r.artifact_type.as_str(),
+                        r.name,
+                        r.value,
+                        r.metadata.as_deref().unwrap_or("-"),
+                        r.timestamp
+                            .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                            .unwrap_or_else(|| "-".to_string()),
+                    );
+                    a.add_field("title", &title);
+                    a.add_field("detail", &detail);
+                    a.add_field("file_type", "Plist Artifact");
+                    a.add_field("artifact_type", r.artifact_type.as_str());
+                    a.add_field("name", &r.name);
+                    a.add_field("value", &r.value);
+                    if let Some(v) = &r.metadata {
+                        a.add_field("metadata", v);
+                    }
+                    if let Some(dt) = r.timestamp {
+                        a.add_field(
+                            "timestamp",
+                            &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        );
+                    }
+                    a.add_field("mitre", r.artifact_type.mitre());
+                    a.add_field("forensic_value", r.artifact_type.forensic_value());
+                    out.push(a);
+                }
+                // Per-record plist routing owns this file; skip
+                // classify() to avoid the legacy summary duplicate.
                 continue;
             }
 
@@ -1008,7 +1058,9 @@ impl StrataPlugin for MacTracePlugin {
                 | "CallHistory" => ArtifactCategory::Communications,
                 "Safari History" => ArtifactCategory::WebActivity,
                 "AddressBook" => ArtifactCategory::AccountsCredentials,
-                "Biome Record" | "KnowledgeC Record" => ArtifactCategory::UserActivity,
+                "Biome Record" | "KnowledgeC Record" | "Plist Artifact" => {
+                    ArtifactCategory::UserActivity
+                }
                 "FSEvent" | "Unified Log Entry" => ArtifactCategory::SystemActivity,
                 "TCC Permission" => ArtifactCategory::AccountsCredentials,
                 _ => ArtifactCategory::SystemActivity,
