@@ -15,13 +15,31 @@ Strata is a Rust/Tauri digital forensics platform for court-ready evidence analy
 
 ### Testing
 
-- **Never remove load-bearing tests.** If a test is blocking you, understand why it exists. Fix the code, not the test. The project has 2,393+ tests; any net reduction requires an explicit explanation.
+- **Never remove load-bearing tests.** If a test is blocking you, understand why it exists. Fix the code, not the test. The project has 2,685+ tests; any net reduction requires an explicit explanation.
 - Each plugin module must have a minimum of 3 unit tests per parser.
 
 ### Artifact Parsers
 
 - **Field-level documentation is required.** Every struct field in a parser must have a doc comment explaining what the field represents and its forensic significance.
 - **MITRE ATT&CK mapping is required.** Every `ArtifactRecord` produced by a parser must populate its `mitre_technique` field. Unmapped artifacts are incomplete artifacts. Use the [ATT&CK Enterprise/Mobile matrices](https://attack.mitre.org).
+
+---
+
+## Load-Bearing Tests — Never Remove
+
+These 9 tests must always pass. If one is blocking you, fix the code, not the test:
+
+```
+build_lines_includes_no_image_payload
+hash_recipe_byte_compat_with_strata_tree
+rule_28_does_not_fire_with_no_csam_hits
+advisory_notice_present_in_all_findings
+is_advisory_always_true (strata-ml-anomaly)
+advisory_notice_always_present_in_output
+examiner_approved_defaults_to_false
+summary_status_defaults_to_draft
+is_advisory_always_true (strata-ml-charges)
+```
 
 ---
 
@@ -68,7 +86,7 @@ This is the canonical assignment. When adding or moving a parser, put it in the 
 | **Apex** *(planned)* | Apple-built app artifacts | Mail.app, Calendar.app, Contacts.app, Maps, Siri, iCloud Drive internals, Apple Notes (native), FaceTime logs |
 | **Carbon** *(planned)* | Google-built app artifacts | Chrome (desktop), Gmail, Google Drive, Google Maps, Google Photos, Android system apps built by Google |
 | **Pulse** | Third-party user-installed apps (iOS + Android) | WhatsApp, Signal, Telegram, Snapchat, Instagram, TikTok, Facebook, third-party browsers |
-| **MacTrace** | macOS system-layer artifacts | LaunchAgents/Daemons, FSEvents, Unified Log, Gatekeeper, Quarantine, Time Machine |
+| **MacTrace** | macOS system-layer artifacts | LaunchAgents/Daemons, FSEvents, Unified Log, Gatekeeper, Quarantine, Time Machine, Biome, TCC, KnowledgeC |
 | **Phantom** | Windows registry persistence | SYSTEM/SOFTWARE/SAM/SECURITY hives, AmCache, ShimCache, USBSTOR, 23 persistence mechanisms |
 | **Sentinel** | Windows Event Logs (`*.evtx`) | Per-event parsing of Security/System/PowerShell/Sysmon channels via `strata-core::parsers::evtx`; typed extractors for 4624, 4625, 4688, 4698/4702, 7045, 4103/4104, 1102 |
 | **Chronicle** | Windows user activity history | UserAssist, Jump Lists (LNK), Shellbags (CFB), Windows Timeline (ESE) |
@@ -87,6 +105,13 @@ This is the canonical assignment. When adding or moving a parser, put it in the 
 | **CSAM** | Child exploitation detection | Hash + dHash perceptual matching, NCMEC/Project VIC import, immutable audit log |
 
 **Rule:** Sigma always runs last. Do not add correlation logic to other plugins — put cross-artifact rules in Sigma.
+
+**Plugin separation principle:**
+- Apple-built apps → **Apex**
+- Google-built apps → **Carbon**
+- Third-party user-installed apps → **Pulse**
+- macOS system artifacts → **MacTrace**
+- Do not mix OS-specific logic across plugins
 
 ### ArtifactRecord Requirements
 
@@ -172,6 +197,15 @@ Tier checks live in `strata-engine-adapter`. Do not add tier logic inside indivi
 
 ---
 
+## Branch Conventions
+
+- `hermes/Q-XXX-description` — Qwen-built output, awaiting FORGE-DEV review
+- `forge/sprint-description` — FORGE-DEV weekly reset work
+- Never commit directly to `main` or `dev` without review
+- Hermes branches are auto-generated — review before merging
+
+---
+
 ## Testing
 
 Run the full test suite before any PR:
@@ -197,3 +231,5 @@ Place test fixtures in the plugin's `tests/fixtures/` directory.
 - Do not add a new dependency to solve a problem already handled by a workspace crate.
 - Do not leave `TODO` or `FIXME` comments in committed code — file an issue instead.
 - Do not write parsers that modify the evidence source. All access is read-only.
+- Do not remove or skip load-bearing tests — fix the code, not the test.
+- Do not add tier gating logic inside plugins — that belongs in strata-engine-adapter.
