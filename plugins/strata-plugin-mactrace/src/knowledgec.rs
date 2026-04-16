@@ -148,7 +148,14 @@ fn query_records(conn: &Connection) -> rusqlite::Result<Vec<KnowledgeCRecord>> {
         let value_integer: Option<i64> = row.get(3)?;
         let value_string: Option<String> = row.get(4)?;
         let device_id: Option<String> = row.get(5)?;
-        Ok((stream_name, start_raw, end_raw, value_integer, value_string, device_id))
+        Ok((
+            stream_name,
+            start_raw,
+            end_raw,
+            value_integer,
+            value_string,
+            device_id,
+        ))
     })?;
 
     let mut out = Vec::new();

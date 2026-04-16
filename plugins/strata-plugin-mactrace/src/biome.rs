@@ -324,8 +324,7 @@ fn apply_fixed64(
     match (stream_type, field_number) {
         (BiomeStreamType::AppInFocus, 3) => rec.start_time = ts,
         (BiomeStreamType::AppInFocus, 4) => rec.end_time = ts,
-        (BiomeStreamType::DeviceLocked, 3)
-        | (BiomeStreamType::SafariHistory, 3) => {
+        (BiomeStreamType::DeviceLocked, 3) | (BiomeStreamType::SafariHistory, 3) => {
             rec.start_time = ts;
         }
         _ => {}
@@ -339,8 +338,7 @@ fn apply_length_delimited(
     bytes: &[u8],
 ) {
     match (stream_type, field_number) {
-        (BiomeStreamType::AppInFocus, 1)
-        | (BiomeStreamType::AppSession, 1) => {
+        (BiomeStreamType::AppInFocus, 1) | (BiomeStreamType::AppSession, 1) => {
             if let Ok(s) = std::str::from_utf8(bytes) {
                 rec.bundle_id = Some(s.to_string());
             }

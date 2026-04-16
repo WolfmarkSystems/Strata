@@ -95,7 +95,9 @@ impl PlistArtifactType {
             .to_ascii_lowercase();
         match name.as_str() {
             "com.apple.recentitems.plist" => Some(PlistArtifactType::RecentItems),
-            "com.apple.loginitems.plist" | "loginitems.plist" => Some(PlistArtifactType::LoginItems),
+            "com.apple.loginitems.plist" | "loginitems.plist" => {
+                Some(PlistArtifactType::LoginItems)
+            }
             "com.apple.launchservices.quarantineeventsv2" => {
                 Some(PlistArtifactType::QuarantineEvents)
             }
@@ -334,8 +336,7 @@ fn parse_dock_items(root: &Value) -> Vec<PlistArtifact> {
             let Some(tile_dict) = tile.as_dictionary() else {
                 continue;
             };
-            let Some(tile_data) = tile_dict.get("tile-data").and_then(|v| v.as_dictionary())
-            else {
+            let Some(tile_data) = tile_dict.get("tile-data").and_then(|v| v.as_dictionary()) else {
                 continue;
             };
             let name = tile_data
@@ -474,7 +475,9 @@ mod tests {
             Some(PlistArtifactType::LoginItems)
         );
         assert_eq!(
-            PlistArtifactType::from_path(Path::new("/a/com.apple.LaunchServices.QuarantineEventsV2")),
+            PlistArtifactType::from_path(Path::new(
+                "/a/com.apple.LaunchServices.QuarantineEventsV2"
+            )),
             Some(PlistArtifactType::QuarantineEvents)
         );
         assert_eq!(
@@ -498,12 +501,12 @@ mod tests {
     fn parse_recent_items_pulls_name_and_url() {
         let doc_item = dict(vec![
             ("Name", Value::String("report.pdf".into())),
-            ("URL", Value::String("file:///Users/alice/Docs/report.pdf".into())),
+            (
+                "URL",
+                Value::String("file:///Users/alice/Docs/report.pdf".into()),
+            ),
         ]);
-        let recents = dict(vec![(
-            "CustomListItems",
-            Value::Array(vec![doc_item]),
-        )]);
+        let recents = dict(vec![("CustomListItems", Value::Array(vec![doc_item]))]);
         let root = dict(vec![("RecentDocuments", recents)]);
         let fx = PlistFixture::new("com.apple.recentitems.plist", root);
         let records = parse(&fx.path);
@@ -522,10 +525,7 @@ mod tests {
             ("Hide", Value::Boolean(true)),
             ("Kind", Value::String("Application".into())),
         ]);
-        let session = dict(vec![(
-            "CustomListItems",
-            Value::Array(vec![item]),
-        )]);
+        let session = dict(vec![("CustomListItems", Value::Array(vec![item]))]);
         let root = dict(vec![("SessionItems", session)]);
         let fx = PlistFixture::new("com.apple.loginitems.plist", root);
         let records = parse(&fx.path);
@@ -566,10 +566,7 @@ mod tests {
             ("Name", Value::String("BACKUP_USB".into())),
             ("Alias", Value::String("/Volumes/BACKUP_USB".into())),
         ]);
-        let sysitems = dict(vec![(
-            "VolumesList",
-            Value::Array(vec![volume]),
-        )]);
+        let sysitems = dict(vec![("VolumesList", Value::Array(vec![volume]))]);
         let root = dict(vec![("systemitems", sysitems)]);
         let fx = PlistFixture::new("sidebarlists.plist", root);
         let records = parse(&fx.path);
@@ -583,7 +580,9 @@ mod tests {
     #[test]
     fn parse_quarantine_events_reads_sqlite_rows() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let db_path = dir.path().join("com.apple.LaunchServices.QuarantineEventsV2");
+        let db_path = dir
+            .path()
+            .join("com.apple.LaunchServices.QuarantineEventsV2");
         let conn = Connection::open(&db_path).expect("open fixture db");
         conn.execute_batch(
             "CREATE TABLE LSQuarantineEvent ( \
@@ -631,12 +630,8 @@ mod tests {
         assert_eq!(PlistArtifactType::DockItems.mitre(), "T1547.011");
         assert_eq!(PlistArtifactType::QuarantineEvents.mitre(), "T1566");
         assert_eq!(PlistArtifactType::SidebarLists.mitre(), "T1052.001");
-        assert_eq!(
-            PlistArtifactType::QuarantineEvents.forensic_value(),
-            "High"
-        );
+        assert_eq!(PlistArtifactType::QuarantineEvents.forensic_value(), "High");
         assert_eq!(PlistArtifactType::SidebarLists.forensic_value(), "High");
         assert_eq!(PlistArtifactType::RecentItems.forensic_value(), "Medium");
     }
-
 }

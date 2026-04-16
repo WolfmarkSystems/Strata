@@ -189,9 +189,8 @@ pub fn parse(path: &Path, bytes: &[u8]) -> Vec<UnifiedLogEntry> {
     if !has_tracev3_magic(bytes) {
         return Vec::new();
     }
-    let timestamp = mtime_of(path).unwrap_or_else(|| {
-        DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_default()
-    });
+    let timestamp =
+        mtime_of(path).unwrap_or_else(|| DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_default());
     let tokens = extract_ascii_tokens(bytes);
     let mut seen: Vec<(&'static str, bool)> = Vec::new();
     let mut out = Vec::new();
@@ -203,7 +202,10 @@ pub fn parse(path: &Path, bytes: &[u8]) -> Vec<UnifiedLogEntry> {
         if let Some(entry) = entry {
             let key = significance_label(&entry);
             let is_subsystem = entry.subsystem.is_some();
-            if seen.iter().any(|(k, sub)| *k == key && *sub == is_subsystem) {
+            if seen
+                .iter()
+                .any(|(k, sub)| *k == key && *sub == is_subsystem)
+            {
                 continue;
             }
             seen.push((key, is_subsystem));

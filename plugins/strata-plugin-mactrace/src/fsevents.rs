@@ -364,9 +364,10 @@ pub(crate) fn approximate_date_from_filename(path: &Path) -> Option<DateTime<Utc
 }
 
 fn find_nul(buf: &[u8], from: usize) -> Option<usize> {
-    buf.iter().enumerate().skip(from).find_map(
-        |(i, &b)| if b == 0 { Some(i) } else { None },
-    )
+    buf.iter()
+        .enumerate()
+        .skip(from)
+        .find_map(|(i, &b)| if b == 0 { Some(i) } else { None })
 }
 
 fn read_u32_le(buf: &[u8], off: usize) -> Option<u32> {

@@ -63,6 +63,10 @@ If this session was interrupted by a rate limit:
 - M-1 Biome Parser — commit 32cd3a1
 - M-2 FSEvents — commit 62ff603
 - M-3 TCC Database — commit 7a2cbba
+- M-4 KnowledgeC Database — commit 76110be
+- M-5 Unified Logs Parser — commit 76110be
+- M-6 plist Artifacts — commit 76110be
+- M-7 Modern macOS Artifacts (13-26) — this commit
 
 ---
 

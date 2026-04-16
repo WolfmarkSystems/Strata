@@ -44,6 +44,78 @@ use chrono::{DateTime, Utc};
 use rusqlite::{Connection, OpenFlags};
 use std::path::Path;
 
+// ── Compatibility layer for simplified task interface ──
+
+/// Simple authorization value enum as requested in task requirements.
+/// This is a simplified version of [`TccAuthValue`] for basic use cases.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuthValue {
+    /// `auth_value = 0` — explicit deny.
+    Denied,
+    /// `auth_value = 2` — full grant.
+    Allowed,
+    /// `auth_value = 3` — limited grant.
+    Limited,
+    /// Any other value, including unknown future values.
+    Unknown,
+}
+
+impl From<TccAuthValue> for AuthValue {
+    fn from(val: TccAuthValue) -> Self {
+        match val {
+            TccAuthValue::Denied => AuthValue::Denied,
+            TccAuthValue::Allowed => AuthValue::Allowed,
+            TccAuthValue::Limited => AuthValue::Limited,
+            TccAuthValue::Other(_) => AuthValue::Unknown,
+        }
+    }
+}
+
+/// Simplified TCC record structure as requested in task requirements.
+/// This provides a basic interface over the more comprehensive [`TccEntry`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TccRecord {
+    /// Raw service identifier (e.g., "kTCCServiceCamera").
+    pub service: String,
+    /// Bundle ID or absolute binary path of the requesting app.
+    pub client: String,
+    /// The permission decision.
+    pub auth_value: AuthValue,
+    /// Last modification time.
+    pub last_modified: DateTime<Utc>,
+}
+
+impl From<TccEntry> for TccRecord {
+    fn from(entry: TccEntry) -> Self {
+        TccRecord {
+            service: entry.service,
+            client: entry.client,
+            auth_value: entry.auth_value.into(),
+            last_modified: entry.last_modified,
+        }
+    }
+}
+
+/// Parse TCC database and return simplified records as requested in task requirements.
+/// This function provides the exact interface specified while leveraging the
+/// comprehensive parsing logic already implemented.
+///
+/// # Arguments
+/// * `path` - Path to the TCC.db file
+///
+/// # Returns
+/// * `Ok(Vec<TccRecord>)` - Successfully parsed TCC records
+/// * `Err(Box<dyn std::error::Error>)` - Database error or file not found
+pub fn parse_tcc_db(path: &Path) -> Result<Vec<TccRecord>, Box<dyn std::error::Error>> {
+    // Leverage existing comprehensive parser
+    let entries = parse(path);
+
+    // Convert to simplified format
+    let records: Vec<TccRecord> = entries.into_iter().map(TccRecord::from).collect();
+
+    Ok(records)
+}
+
 /// Hard cap on rows returned per database. Real TCC.db files top out
 /// well under 1000 entries; 10 000 is a safety bound.
 const MAX_ROWS: usize = 10_000;
@@ -334,7 +406,10 @@ mod tests {
             friendly_service_name("kTCCServiceSystemPolicyAllFiles"),
             "FullDiskAccess"
         );
-        assert_eq!(friendly_service_name("kTCCServiceUnknownXYZ"), "kTCCServiceUnknownXYZ");
+        assert_eq!(
+            friendly_service_name("kTCCServiceUnknownXYZ"),
+            "kTCCServiceUnknownXYZ"
+        );
     }
 
     #[test]
@@ -406,9 +481,12 @@ mod tests {
     #[test]
     fn auth_value_decoding_handles_all_documented_codes() {
         let conn = build_test_db();
-        for (auth, _expected_variant_str) in
-            [(0i64, "Denied"), (2, "Allowed"), (3, "Limited"), (99, "Other")]
-        {
+        for (auth, _expected_variant_str) in [
+            (0i64, "Denied"),
+            (2, "Allowed"),
+            (3, "Limited"),
+            (99, "Other"),
+        ] {
             conn.execute(
                 "INSERT INTO access VALUES (?,?,?,?,?,?,?)",
                 rusqlite::params![
@@ -440,8 +518,7 @@ mod tests {
             client_type: TccClientType::BundleId,
             auth_value: TccAuthValue::Allowed,
             auth_reason: 4,
-            last_modified: DateTime::<Utc>::from_timestamp(0, 0)
-                .expect("epoch is representable"),
+            last_modified: DateTime::<Utc>::from_timestamp(0, 0).expect("epoch is representable"),
             policy_id: None,
         };
         assert!(is_suspicious(&entry));
@@ -456,8 +533,7 @@ mod tests {
             client_type: TccClientType::BundleId,
             auth_value: TccAuthValue::Allowed,
             auth_reason: 4,
-            last_modified: DateTime::<Utc>::from_timestamp(0, 0)
-                .expect("epoch is representable"),
+            last_modified: DateTime::<Utc>::from_timestamp(0, 0).expect("epoch is representable"),
             policy_id: None,
         };
         assert!(!is_suspicious(&entry));
@@ -472,8 +548,7 @@ mod tests {
             client_type: TccClientType::BundleId,
             auth_value: TccAuthValue::Denied,
             auth_reason: 0,
-            last_modified: DateTime::<Utc>::from_timestamp(0, 0)
-                .expect("epoch is representable"),
+            last_modified: DateTime::<Utc>::from_timestamp(0, 0).expect("epoch is representable"),
             policy_id: None,
         };
         assert!(!is_suspicious(&entry));
@@ -488,8 +563,7 @@ mod tests {
             client_type: TccClientType::BundleId,
             auth_value: TccAuthValue::Allowed,
             auth_reason: 0,
-            last_modified: DateTime::<Utc>::from_timestamp(0, 0)
-                .expect("epoch is representable"),
+            last_modified: DateTime::<Utc>::from_timestamp(0, 0).expect("epoch is representable"),
             policy_id: None,
         };
         assert_eq!(forensic_value_for(&entry), "High");
@@ -549,5 +623,78 @@ mod tests {
         assert!(TccAuthValue::Limited.is_grant());
         assert!(!TccAuthValue::Denied.is_grant());
         assert!(!TccAuthValue::Other(42).is_grant());
+    }
+
+    // ── Tests for compatibility layer ──
+
+    #[test]
+    fn tcc_record_conversion_from_entry() {
+        let entry = TccEntry {
+            service: "kTCCServiceCamera".into(),
+            service_friendly: "Camera".into(),
+            client: "com.example.app".into(),
+            client_type: TccClientType::BundleId,
+            auth_value: TccAuthValue::Allowed,
+            auth_reason: 4,
+            last_modified: DateTime::<Utc>::from_timestamp(1_700_000_000, 0)
+                .expect("valid timestamp"),
+            policy_id: None,
+        };
+
+        let record: TccRecord = entry.into();
+        assert_eq!(record.service, "kTCCServiceCamera");
+        assert_eq!(record.client, "com.example.app");
+        assert_eq!(record.auth_value, AuthValue::Allowed);
+        assert_eq!(record.last_modified.timestamp(), 1_700_000_000);
+    }
+
+    #[test]
+    fn auth_value_conversion_from_tcc_auth_value() {
+        assert_eq!(AuthValue::from(TccAuthValue::Denied), AuthValue::Denied);
+        assert_eq!(AuthValue::from(TccAuthValue::Allowed), AuthValue::Allowed);
+        assert_eq!(AuthValue::from(TccAuthValue::Limited), AuthValue::Limited);
+        assert_eq!(AuthValue::from(TccAuthValue::Other(99)), AuthValue::Unknown);
+    }
+
+    #[test]
+    fn parse_tcc_db_returns_simplified_records() {
+        let tmp = tempfile::NamedTempFile::new().expect("tempfile");
+        let conn = Connection::open(tmp.path()).expect("open");
+        conn.execute_batch(
+            "CREATE TABLE access (
+                service TEXT,
+                client TEXT,
+                client_type INTEGER,
+                auth_value INTEGER,
+                auth_reason INTEGER,
+                last_modified INTEGER,
+                policy_id INTEGER
+            );",
+        )
+        .expect("create");
+        conn.execute(
+            "INSERT INTO access VALUES (?,?,?,?,?,?,?)",
+            rusqlite::params![
+                "kTCCServiceMicrophone",
+                "com.example.recorder",
+                0i64,
+                2i64,
+                4i64,
+                1_700_000_000i64,
+                rusqlite::types::Null,
+            ],
+        )
+        .expect("insert");
+        drop(conn);
+
+        let result = parse_tcc_db(tmp.path());
+        assert!(result.is_ok());
+
+        let records = result.unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].service, "kTCCServiceMicrophone");
+        assert_eq!(records[0].client, "com.example.recorder");
+        assert_eq!(records[0].auth_value, AuthValue::Allowed);
+        assert_eq!(records[0].last_modified.timestamp(), 1_700_000_000);
     }
 }

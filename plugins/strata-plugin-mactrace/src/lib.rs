@@ -24,6 +24,7 @@ use std::path::{Path, PathBuf};
 pub mod biome;
 pub mod fsevents;
 pub mod knowledgec;
+pub mod modern_macos;
 pub mod plist_artifacts;
 pub mod tcc;
 pub mod unified_logs;
@@ -118,9 +119,7 @@ impl MacTracePlugin {
         }
 
         // ── loginitems ────────────────────────────────────────────────
-        if lc_name == "com.apple.loginitems.plist"
-            || lc_name == "backgrounditems.btm"
-        {
+        if lc_name == "com.apple.loginitems.plist" || lc_name == "backgrounditems.btm" {
             return Some(("LoginItems", "Persistence"));
         }
 
@@ -208,12 +207,111 @@ impl MacTracePlugin {
 
     fn count_sqlite_rows(path: &Path, table: &str) -> Option<i64> {
         use rusqlite::{Connection, OpenFlags};
-        let conn =
-            Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX)
-                .ok()?;
-        let mut stmt = conn.prepare(&format!("SELECT COUNT(*) FROM {}", table)).ok()?;
+        let conn = Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )
+        .ok()?;
+        let mut stmt = conn
+            .prepare(&format!("SELECT COUNT(*) FROM {}", table))
+            .ok()?;
         let n: i64 = stmt.query_row([], |row| row.get(0)).ok()?;
         Some(n)
+    }
+}
+
+/// Render a [`modern_macos::ModernMacosRecord`] into (title, detail,
+/// extra_fields, suspicious) for emission into the MacTrace artifact
+/// stream. Kept outside the main routing loop to keep that loop
+/// readable.
+fn render_modern_macos(
+    record: &crate::modern_macos::ModernMacosRecord,
+) -> (String, String, Vec<(&'static str, String)>, bool) {
+    use crate::modern_macos::ModernMacosRecord as R;
+    match record {
+        R::BackgroundTask(e) => {
+            let suspicious = crate::modern_macos::is_suspicious_background_task(e);
+            let title = format!("BackgroundTask: {}", e.app_identifier);
+            let detail = format!(
+                "App: {} | Developer: {} | Path: {} | Legacy: {} | Approved: {} | Created: {}",
+                e.app_identifier,
+                e.developer_name,
+                e.app_path,
+                e.is_legacy,
+                e.user_approved,
+                e.created_at
+                    .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                    .unwrap_or_else(|| "-".to_string()),
+            );
+            let fields = vec![
+                ("app_identifier", e.app_identifier.clone()),
+                ("app_path", e.app_path.clone()),
+                ("developer_name", e.developer_name.clone()),
+                ("is_legacy", e.is_legacy.to_string()),
+                ("user_approved", e.user_approved.to_string()),
+            ];
+            (title, detail, fields, suspicious)
+        }
+        R::ScreenTime(e) => {
+            let title = format!("ScreenTime: {} ({:.0}s)", e.bundle_id, e.total_time_secs);
+            let detail = format!(
+                "Bundle: {} | Total seconds: {} | Date: {}",
+                e.bundle_id,
+                e.total_time_secs,
+                e.date.format("%Y-%m-%d %H:%M:%S UTC"),
+            );
+            let fields = vec![
+                ("bundle_id", e.bundle_id.clone()),
+                ("total_time_secs", e.total_time_secs.to_string()),
+            ];
+            (title, detail, fields, false)
+        }
+        R::InstallHistory(e) => {
+            let title = format!("Install: {} {}", e.display_name, e.display_version);
+            let detail = format!(
+                "Name: {} | Version: {} | Package: {} | Process: {} | Date: {}",
+                e.display_name,
+                e.display_version,
+                e.package_identifier,
+                e.process_name,
+                e.install_date.format("%Y-%m-%d %H:%M:%S UTC"),
+            );
+            let fields = vec![
+                ("display_name", e.display_name.clone()),
+                ("display_version", e.display_version.clone()),
+                ("package_identifier", e.package_identifier.clone()),
+                ("process_name", e.process_name.clone()),
+            ];
+            (title, detail, fields, false)
+        }
+        R::NetworkUsage(e) => {
+            let total = e.wifi_in + e.wifi_out + e.wired_in + e.wired_out;
+            // Flag when a process transferred more than 500 MB — the
+            // UI can then review for exfil patterns.
+            let suspicious = total > 500 * 1024 * 1024;
+            let title = format!(
+                "NetworkUsage: {} ({} bytes)",
+                e.process_name, total
+            );
+            let detail = format!(
+                "Process: {} | WiFi In/Out: {}/{} | Wired In/Out: {}/{} | Timestamp: {}",
+                e.process_name,
+                e.wifi_in,
+                e.wifi_out,
+                e.wired_in,
+                e.wired_out,
+                e.timestamp.format("%Y-%m-%d %H:%M:%S UTC"),
+            );
+            let fields = vec![
+                ("process_name", e.process_name.clone()),
+                ("wifi_in", e.wifi_in.to_string()),
+                ("wifi_out", e.wifi_out.to_string()),
+                ("wired_in", e.wired_in.to_string()),
+                ("wired_out", e.wired_out.to_string()),
+                ("total_bytes", total.to_string()),
+            ];
+            (title, detail, fields, suspicious)
+        }
     }
 }
 
@@ -341,13 +439,7 @@ impl StrataPlugin for MacTracePlugin {
                             a.timestamp = Some(dt.timestamp() as u64);
                         }
                         let flags_str = ev.flags.as_string();
-                        a.add_field(
-                            "title",
-                            &format!(
-                                "FSEvent [{}]: {}",
-                                flags_str, ev.path
-                            ),
-                        );
+                        a.add_field("title", &format!("FSEvent [{}]: {}", flags_str, ev.path));
                         a.add_field(
                             "detail",
                             &format!(
@@ -409,6 +501,45 @@ impl StrataPlugin for MacTracePlugin {
                 continue;
             }
 
+            // Modern macOS (13+) artifacts — Background Task Management,
+            // Screen Time, Install History, Network Usage. See
+            // `crate::modern_macos`.
+            if crate::modern_macos::ModernMacosArtifactType::from_path(&path).is_some() {
+                let path_str = path.to_string_lossy().to_string();
+                let records = crate::modern_macos::parse(&path);
+                for r in &records {
+                    let kind = r.artifact_type();
+                    let (title, detail, extra_fields, suspicious) = render_modern_macos(r);
+                    let mut a = Artifact::new("Modern macOS Artifact", &path_str);
+                    a.timestamp = r.timestamp().map(|dt| dt.timestamp() as u64);
+                    a.add_field("title", &title);
+                    a.add_field("detail", &detail);
+                    a.add_field("file_type", "Modern macOS Artifact");
+                    a.add_field("artifact_type", kind.as_str());
+                    for (k, v) in &extra_fields {
+                        a.add_field(k, v);
+                    }
+                    if let Some(dt) = r.timestamp() {
+                        a.add_field(
+                            "timestamp",
+                            &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        );
+                    }
+                    a.add_field("mitre", kind.mitre());
+                    let severity = if suspicious {
+                        "High"
+                    } else {
+                        kind.forensic_value()
+                    };
+                    a.add_field("forensic_value", severity);
+                    if suspicious {
+                        a.add_field("suspicious", "true");
+                    }
+                    out.push(a);
+                }
+                continue;
+            }
+
             // Plist artifacts — Recent Items, Login Items, Quarantine
             // Events, Sidebar Lists, Dock Items. See
             // `crate::plist_artifacts` for the full schema.
@@ -418,12 +549,7 @@ impl StrataPlugin for MacTracePlugin {
                 for r in &records {
                     let mut a = Artifact::new("Plist Artifact", &path_str);
                     a.timestamp = r.timestamp.map(|dt| dt.timestamp() as u64);
-                    let title = format!(
-                        "{} [{}]: {}",
-                        r.artifact_type.as_str(),
-                        r.name,
-                        r.value,
-                    );
+                    let title = format!("{} [{}]: {}", r.artifact_type.as_str(), r.name, r.value,);
                     let detail = format!(
                         "Type: {} | Name: {} | Value: {} | Metadata: {} | Timestamp: {}",
                         r.artifact_type.as_str(),
@@ -444,10 +570,7 @@ impl StrataPlugin for MacTracePlugin {
                         a.add_field("metadata", v);
                     }
                     if let Some(dt) = r.timestamp {
-                        a.add_field(
-                            "timestamp",
-                            &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
-                        );
+                        a.add_field("timestamp", &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string());
                     }
                     a.add_field("mitre", r.artifact_type.mitre());
                     a.add_field("forensic_value", r.artifact_type.forensic_value());
@@ -533,10 +656,7 @@ impl StrataPlugin for MacTracePlugin {
                         &r.start_time.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
                     );
                     if let Some(dt) = r.end_time {
-                        a.add_field(
-                            "end_time",
-                            &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
-                        );
+                        a.add_field("end_time", &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string());
                     }
                     if let Some(v) = r.value_integer {
                         a.add_field("value_integer", &v.to_string());
@@ -1049,7 +1169,11 @@ impl StrataPlugin for MacTracePlugin {
         let mut suspicious = 0usize;
         for a in &artifacts {
             let ft = a.data.get("file_type").cloned().unwrap_or_default();
-            let is_sus = a.data.get("suspicious").map(|s| s == "true").unwrap_or(false);
+            let is_sus = a
+                .data
+                .get("suspicious")
+                .map(|s| s == "true")
+                .unwrap_or(false);
             if is_sus {
                 suspicious += 1;
             }
@@ -1058,9 +1182,10 @@ impl StrataPlugin for MacTracePlugin {
                 | "CallHistory" => ArtifactCategory::Communications,
                 "Safari History" => ArtifactCategory::WebActivity,
                 "AddressBook" => ArtifactCategory::AccountsCredentials,
-                "Biome Record" | "KnowledgeC Record" | "Plist Artifact" => {
-                    ArtifactCategory::UserActivity
-                }
+                "Biome Record"
+                | "KnowledgeC Record"
+                | "Plist Artifact"
+                | "Modern macOS Artifact" => ArtifactCategory::UserActivity,
                 "FSEvent" | "Unified Log Entry" => ArtifactCategory::SystemActivity,
                 "TCC Permission" => ArtifactCategory::AccountsCredentials,
                 _ => ArtifactCategory::SystemActivity,
@@ -1075,7 +1200,11 @@ impl StrataPlugin for MacTracePlugin {
                 category,
                 subcategory: ft,
                 timestamp: None,
-                title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
+                title: a
+                    .data
+                    .get("title")
+                    .cloned()
+                    .unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
                 source_path: a.source.clone(),
                 forensic_value: fv,
