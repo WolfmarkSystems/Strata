@@ -19,6 +19,8 @@
 
 use std::path::{Path, PathBuf};
 
+pub mod dns_ids;
+
 use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext,
     PluginError, PluginOutput, PluginResult, PluginSummary, PluginType, StrataPlugin,
@@ -283,6 +285,121 @@ impl StrataPlugin for NetFlowPlugin {
         };
 
         for path in files {
+            // X-1: DNS query logs / IDS alert files. Parsed per-record and
+            // emitted before falling through to the generic classifier.
+            if let Some(tag) = crate::dns_ids::classify_file(&path) {
+                let path_str = path.to_string_lossy().to_string();
+                if let Ok(body) = std::fs::read_to_string(&path) {
+                    match tag {
+                        crate::dns_ids::DnsOrIds::DnsBind
+                        | crate::dns_ids::DnsOrIds::DnsWindows => {
+                            for q in crate::dns_ids::parse_dns_log(&body) {
+                                let mut a = Artifact::new("DNS Query", &path_str);
+                                a.timestamp = Some(q.timestamp.timestamp() as u64);
+                                a.add_field(
+                                    "title",
+                                    &format!("DNS {}: {}", q.query_type, q.query_name),
+                                );
+                                a.add_field(
+                                    "detail",
+                                    &format!(
+                                        "Format: {} | Client: {} | Query: {} {} | Time: {}",
+                                        q.log_format.as_str(),
+                                        q.client_ip.as_deref().unwrap_or("-"),
+                                        q.query_type,
+                                        q.query_name,
+                                        q.timestamp.format("%Y-%m-%d %H:%M:%S UTC"),
+                                    ),
+                                );
+                                a.add_field("file_type", "DNS Query");
+                                a.add_field("log_format", q.log_format.as_str());
+                                a.add_field("query_name", &q.query_name);
+                                a.add_field("query_type", &q.query_type);
+                                if let Some(ip) = &q.client_ip {
+                                    a.add_field("client_ip", ip);
+                                }
+                                a.add_field("mitre", "T1071.004");
+                                a.add_field("forensic_value", "Medium");
+                                out.push(a);
+                            }
+                        }
+                        crate::dns_ids::DnsOrIds::IdsSnortFast
+                        | crate::dns_ids::DnsOrIds::IdsEve => {
+                            for alert in crate::dns_ids::parse_ids_log(&body) {
+                                let mut a = Artifact::new("IDS Alert", &path_str);
+                                a.timestamp = Some(alert.timestamp.timestamp() as u64);
+                                a.add_field(
+                                    "title",
+                                    &format!("IDS: {}", alert.signature),
+                                );
+                                a.add_field(
+                                    "detail",
+                                    &format!(
+                                        "Format: {} | Rule: {} | Class: {} | Prio: {} | \
+                                         {}: {}:{} -> {}:{} | Time: {}",
+                                        alert.format.as_str(),
+                                        alert.rule_id.as_deref().unwrap_or("-"),
+                                        alert.classification.as_deref().unwrap_or("-"),
+                                        alert
+                                            .priority
+                                            .map(|p| p.to_string())
+                                            .unwrap_or_else(|| "-".to_string()),
+                                        alert.protocol.as_deref().unwrap_or("?"),
+                                        alert.src_ip.as_deref().unwrap_or("?"),
+                                        alert
+                                            .src_port
+                                            .map(|p| p.to_string())
+                                            .unwrap_or_else(|| "?".to_string()),
+                                        alert.dst_ip.as_deref().unwrap_or("?"),
+                                        alert
+                                            .dst_port
+                                            .map(|p| p.to_string())
+                                            .unwrap_or_else(|| "?".to_string()),
+                                        alert.timestamp.format("%Y-%m-%d %H:%M:%S UTC"),
+                                    ),
+                                );
+                                a.add_field("file_type", "IDS Alert");
+                                a.add_field("format", alert.format.as_str());
+                                a.add_field("signature", &alert.signature);
+                                if let Some(c) = &alert.classification {
+                                    a.add_field("classification", c);
+                                }
+                                if let Some(p) = alert.priority {
+                                    a.add_field("priority", &p.to_string());
+                                }
+                                if let Some(r) = &alert.rule_id {
+                                    a.add_field("rule_id", r);
+                                }
+                                if let Some(p) = &alert.protocol {
+                                    a.add_field("protocol", p);
+                                }
+                                if let Some(s) = &alert.src_ip {
+                                    a.add_field("src_ip", s);
+                                }
+                                if let Some(s) = &alert.dst_ip {
+                                    a.add_field("dst_ip", s);
+                                }
+                                a.add_field(
+                                    "mitre",
+                                    crate::dns_ids::mitre_for_ids(
+                                        alert.classification.as_deref(),
+                                    ),
+                                );
+                                let severity = match alert.priority {
+                                    Some(p) if p <= 1 => "High",
+                                    Some(_) => "Medium",
+                                    None => "Medium",
+                                };
+                                a.add_field("forensic_value", severity);
+                                a.add_field("suspicious", "true");
+                                out.push(a);
+                            }
+                        }
+                    }
+                }
+                continue;
+            }
+
             let Some((file_type, _category)) = Self::classify(&path) else {
                 continue;
             };
