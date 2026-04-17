@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 pub mod amcache;
 pub mod lnk;
 pub mod mru;
+pub mod powershell;
 pub mod prefetch;
 pub mod regtxlog;
 pub mod shimcache;
