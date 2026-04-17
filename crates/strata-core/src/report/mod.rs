@@ -7,6 +7,7 @@ pub mod generator;
 pub mod html;
 pub mod json;
 pub mod jsonl;
+pub mod seal;
 pub mod ucmj;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
