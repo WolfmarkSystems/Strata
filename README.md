@@ -646,7 +646,7 @@ All modules are deterministic — no model files, no cloud calls, fully local.
 
 | Agency / Mission | Key Strata Capabilities |
 |---|---|
-| Army CID / NCIS / AFOSI / CGIS | CSAM detection, SAPR evidence (Android factory reset, iMessage, Biome location), UCMJ report format, mobile full coverage |
+| Army CI / Army CID / NCIS / AFOSI / CGIS | CSAM detection, SAPR evidence (Android factory reset, iMessage, Biome location), UCMJ report format, mobile full coverage |
 | FBI Cyber / RCFL | Full Windows artifact coverage, lateral movement detection, memory forensics, malware indicators, MITRE kill chain |
 | HSI | CSAM, WhatsApp/Telegram/Signal parsing, Tor Browser artifacts, photo vault detection, dark web indicators |
 | IRS-CI | Crypto wallet detection (Bitcoin Core, Electrum, MetaMask, exchange CSVs), cloud sync evidence |
