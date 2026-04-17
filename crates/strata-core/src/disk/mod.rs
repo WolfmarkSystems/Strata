@@ -437,6 +437,7 @@ pub fn detect_volume_base_offset<C: EvidenceContainerRO>(
 
 pub mod format;
 pub mod multidisk;
+pub mod zff;
 
 pub use format::{
     detect_image_format, get_image_segments, ImageFormat, ImageFormatInfo, ImageSegment,
