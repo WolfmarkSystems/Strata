@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 pub mod amcache;
 pub mod lnk;
 pub mod mru;
+pub mod notepad_tabstate;
 pub mod outlook;
 pub mod powershell;
 pub mod prefetch;
