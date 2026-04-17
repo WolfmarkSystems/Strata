@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 
 pub mod biome;
 pub mod fsevents;
+pub mod imessage;
 pub mod ios_biome;
 pub mod ios_knowledgec;
 pub mod knowledgec;
@@ -580,6 +581,103 @@ impl StrataPlugin for MacTracePlugin {
                 }
                 // Per-record plist routing owns this file; skip
                 // classify() to avoid the legacy summary duplicate.
+                continue;
+            }
+
+            // iMessage / SMS enhanced per-message parser (MOB-3). Runs
+            // before classify() so every message becomes its own
+            // artifact rather than a single row-count summary.
+            if crate::imessage::is_imessage_path(&path) {
+                let path_str = path.to_string_lossy().to_string();
+                let records = crate::imessage::parse(&path);
+                for r in &records {
+                    let mut a = Artifact::new("iMessage", &path_str);
+                    a.timestamp = Some(r.date.timestamp() as u64);
+                    let body = r
+                        .text
+                        .clone()
+                        .or_else(|| r.attributed_text.clone())
+                        .unwrap_or_default();
+                    let title = format!(
+                        "iMessage {} {}: {}",
+                        if r.was_downgraded { "(SMS)" } else { "" },
+                        r.handle.as_deref().unwrap_or("?"),
+                        body.chars().take(120).collect::<String>()
+                    );
+                    let att_summary = r
+                        .attachments
+                        .iter()
+                        .map(|att| {
+                            format!(
+                                "{} ({} bytes, {})",
+                                att.transfer_name.as_deref().unwrap_or("-"),
+                                att.total_bytes,
+                                att.mime_type.as_deref().unwrap_or("-"),
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("; ");
+                    let detail = format!(
+                        "rowid={} | date={} | handle={} | text={} | thread={} | \
+                         assoc={} | style={} | downgraded={} | attachments=[{}]",
+                        r.rowid,
+                        r.date.format("%Y-%m-%d %H:%M:%S UTC"),
+                        r.handle.as_deref().unwrap_or("-"),
+                        body.chars().take(512).collect::<String>(),
+                        r.thread_originator_guid.as_deref().unwrap_or("-"),
+                        r.associated_message_guid.as_deref().unwrap_or("-"),
+                        r.expressive_send_style_id.as_deref().unwrap_or("-"),
+                        r.was_downgraded,
+                        att_summary,
+                    );
+                    a.add_field("title", &title);
+                    a.add_field("detail", &detail);
+                    a.add_field("file_type", "iMessage");
+                    a.add_field("rowid", &r.rowid.to_string());
+                    if let Some(h) = &r.handle {
+                        a.add_field("handle", h);
+                    }
+                    if !body.is_empty() {
+                        a.add_field("body", &body);
+                    }
+                    if let Some(v) = &r.thread_originator_guid {
+                        a.add_field("thread_originator_guid", v);
+                    }
+                    if let Some(v) = &r.associated_message_guid {
+                        a.add_field("associated_message_guid", v);
+                    }
+                    if let Some(v) = &r.expressive_send_style_id {
+                        a.add_field("expressive_send_style_id", v);
+                    }
+                    if r.was_downgraded {
+                        a.add_field("was_downgraded", "true");
+                    }
+                    for att in &r.attachments {
+                        if let Some(n) = &att.transfer_name {
+                            a.add_field("attachment_name", n);
+                        }
+                        if let Some(m) = &att.mime_type {
+                            a.add_field("attachment_mime", m);
+                        }
+                        a.add_field("attachment_bytes", &att.total_bytes.to_string());
+                        if att.is_sticker {
+                            a.add_field("attachment_is_sticker", "true");
+                        }
+                    }
+                    let mitre = if r.attachments.iter().any(|att| {
+                        att.mime_type
+                            .as_deref()
+                            .map(|m| m.starts_with("image") || m.starts_with("video"))
+                            .unwrap_or(false)
+                    }) {
+                        "T1530"
+                    } else {
+                        "T1636.002"
+                    };
+                    a.add_field("mitre", mitre);
+                    a.add_field("forensic_value", "High");
+                    out.push(a);
+                }
                 continue;
             }
 
@@ -1352,8 +1450,8 @@ impl StrataPlugin for MacTracePlugin {
                 suspicious += 1;
             }
             let category = match ft.as_str() {
-                "SMS/iMessage" | "WhatsApp iOS" | "WhatsApp Android" | "Signal" | "Telegram"
-                | "CallHistory" => ArtifactCategory::Communications,
+                "SMS/iMessage" | "iMessage" | "WhatsApp iOS" | "WhatsApp Android"
+                | "Signal" | "Telegram" | "CallHistory" => ArtifactCategory::Communications,
                 "Safari History" => ArtifactCategory::WebActivity,
                 "AddressBook" => ArtifactCategory::AccountsCredentials,
                 "Biome Record"

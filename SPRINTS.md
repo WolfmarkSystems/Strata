@@ -72,7 +72,8 @@ If this session was interrupted by a rate limit:
 - A-1 Timeline SQLite Layer — commit 53669c9
 - A-2 Global IOC Search — commit e0bdc63
 - MOB-1 iOS Biome Parser — commit b85fbd1
-- MOB-2 iOS KnowledgeC — this commit
+- MOB-2 iOS KnowledgeC — commit e031742
+- MOB-3 iMessage Parser Enhancement — this commit
 
 ---
 
