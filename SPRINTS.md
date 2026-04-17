@@ -77,7 +77,8 @@ If this session was interrupted by a rate limit:
 - AGENT-1 code-reviewer.md — this commit
 - AGENT-2 security-reviewer.md — this commit
 - AGENT-3 tdd-guide.md — commit a1c243b
-- R-1 LNK File Parser — this commit
+- R-1 LNK File Parser — commit 34bfa15
+- R-2 Chromium Browser Artifacts — this commit
 
 ---
 
