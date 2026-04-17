@@ -24,6 +24,7 @@ use std::path::{Path, PathBuf};
 pub mod biome;
 pub mod fsevents;
 pub mod ios_biome;
+pub mod ios_knowledgec;
 pub mod knowledgec;
 pub mod modern_macos;
 pub mod plist_artifacts;
@@ -579,6 +580,93 @@ impl StrataPlugin for MacTracePlugin {
                 }
                 // Per-record plist routing owns this file; skip
                 // classify() to avoid the legacy summary duplicate.
+                continue;
+            }
+
+            // iOS KnowledgeC — same filename but different schema than
+            // macOS (extra battery / media / messages streams). Routed
+            // before the macOS parser when the path lives under the
+            // iOS mobile CoreDuet location.
+            if crate::ios_knowledgec::is_ios_knowledgec_path(&path) {
+                let path_str = path.to_string_lossy().to_string();
+                let recs = crate::ios_knowledgec::parse(&path);
+                for r in &recs {
+                    let mut a = Artifact::new("iOS KnowledgeC Record", &path_str);
+                    a.timestamp = Some(r.start_time.timestamp() as u64);
+                    let title = match r.stream_name.as_str() {
+                        "/app/inFocus" => format!(
+                            "iOS KnowledgeC [inFocus]: {}",
+                            r.bundle_id.as_deref().unwrap_or("<unknown>")
+                        ),
+                        "/device/isPluggedIn" => format!(
+                            "iOS KnowledgeC [isPluggedIn]: {}",
+                            match r.value_integer {
+                                Some(v) if v != 0 => "plugged in",
+                                Some(_) => "unplugged",
+                                None => "unknown",
+                            }
+                        ),
+                        "/device/batteryPercentage" => format!(
+                            "iOS KnowledgeC [battery]: {:.0}%",
+                            r.value_double.unwrap_or(0.0) * 100.0
+                        ),
+                        "/media/nowPlaying" => format!(
+                            "iOS KnowledgeC [nowPlaying]: {}",
+                            r.media_title.as_deref().unwrap_or("<unknown>")
+                        ),
+                        "/safari/history" | "/safariHistory" => format!(
+                            "iOS KnowledgeC [safari]: {}",
+                            r.url.as_deref().unwrap_or("<unknown>")
+                        ),
+                        "/com.apple.messages.count" => format!(
+                            "iOS KnowledgeC [messages.count]: {}",
+                            r.value_integer.unwrap_or(0)
+                        ),
+                        other => format!("iOS KnowledgeC [{}]", other),
+                    };
+                    a.add_field("title", &title);
+                    a.add_field(
+                        "detail",
+                        &format!(
+                            "Stream: {} | start: {} | bundle: {} | url: {} | \
+                             media: {} | int: {} | double: {}",
+                            r.stream_name,
+                            r.start_time.format("%Y-%m-%d %H:%M:%S UTC"),
+                            r.bundle_id.as_deref().unwrap_or("-"),
+                            r.url.as_deref().unwrap_or("-"),
+                            r.media_title.as_deref().unwrap_or("-"),
+                            r.value_integer
+                                .map(|v| v.to_string())
+                                .unwrap_or_else(|| "-".to_string()),
+                            r.value_double
+                                .map(|v| format!("{:.3}", v))
+                                .unwrap_or_else(|| "-".to_string()),
+                        ),
+                    );
+                    a.add_field("file_type", "iOS KnowledgeC Record");
+                    a.add_field("stream_name", &r.stream_name);
+                    if let Some(v) = &r.bundle_id {
+                        a.add_field("bundle_id", v);
+                    }
+                    if let Some(v) = &r.url {
+                        a.add_field("url", v);
+                    }
+                    if let Some(v) = &r.media_title {
+                        a.add_field("media_title", v);
+                    }
+                    if let Some(v) = r.value_integer {
+                        a.add_field("value_integer", &v.to_string());
+                    }
+                    if let Some(v) = r.value_double {
+                        a.add_field("value_double", &format!("{:.3}", v));
+                    }
+                    a.add_field(
+                        "mitre",
+                        crate::ios_knowledgec::mitre_for_stream(&r.stream_name),
+                    );
+                    a.add_field("forensic_value", "High");
+                    out.push(a);
+                }
                 continue;
             }
 
@@ -1271,6 +1359,7 @@ impl StrataPlugin for MacTracePlugin {
                 "Biome Record"
                 | "iOS Biome Record"
                 | "KnowledgeC Record"
+                | "iOS KnowledgeC Record"
                 | "Plist Artifact"
                 | "Modern macOS Artifact" => ArtifactCategory::UserActivity,
                 "FSEvent" | "Unified Log Entry" => ArtifactCategory::SystemActivity,
