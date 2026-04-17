@@ -18,6 +18,7 @@ use strata_plugin_sdk::{
     PluginSummary, PluginType, StrataPlugin,
 };
 
+pub mod ai_apps;
 pub mod android;
 pub mod chat_forensics;
 pub mod electron_scanner;
