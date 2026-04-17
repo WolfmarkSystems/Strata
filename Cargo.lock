@@ -8153,6 +8153,7 @@ version = "1.0.0"
 dependencies = [
  "chrono",
  "plist",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",
