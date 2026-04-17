@@ -8128,6 +8128,7 @@ dependencies = [
  "rusqlite",
  "serde_json",
  "strata-plugin-sdk",
+ "tempfile",
 ]
 
 [[package]]
