@@ -34,6 +34,8 @@
 //!
 //! Zero `unwrap`, zero `unsafe`, zero `println` per CLAUDE.md.
 
+pub mod lateral_movement;
+
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
