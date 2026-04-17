@@ -15,6 +15,8 @@
 //! - Court mode toggled
 //! - Examiner notes added/edited
 
+pub mod audit_log;
+
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

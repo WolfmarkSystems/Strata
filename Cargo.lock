@@ -7756,6 +7756,7 @@ dependencies = [
  "frnsc-hive",
  "frnsc-prefetch",
  "libloading 0.8.9",
+ "log",
  "md-5",
  "memmap2",
  "notify",
