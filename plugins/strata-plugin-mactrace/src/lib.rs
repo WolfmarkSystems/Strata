@@ -29,6 +29,7 @@ pub mod ios_knowledgec;
 pub mod knowledgec;
 pub mod modern_macos;
 pub mod plist_artifacts;
+pub mod rosetta;
 pub mod tcc;
 pub mod unified_logs;
 
