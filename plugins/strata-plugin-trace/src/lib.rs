@@ -5,6 +5,7 @@ use strata_plugin_sdk::{
     PluginOutput, PluginResult, PluginSummary, PluginType, StrataPlugin,
 };
 
+pub mod bits;
 pub mod srum;
 
 /// (binary_name, description, mitre_technique)
