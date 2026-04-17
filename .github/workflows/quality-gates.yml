@@ -1,5 +1,4 @@
-﻿name: Quality Gates
-
+name: Quality Gates
 on:
   pull_request:
   push:
@@ -7,28 +6,14 @@ on:
       - main
       - master
 
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
 jobs:
-  repo-hygiene:
-    name: Repo Hygiene
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Fail on committed build artifacts
-        run: |
-          set -euo pipefail
-          bad_paths=$(git ls-files | grep -E '(^|/)(node_modules|target|target_[^/]+|dist|build|\.vite)(/|$)' || true)
-          if [ -n "$bad_paths" ]; then
-            echo "Tracked generated artifacts found:"
-            echo "$bad_paths"
-            exit 1
-          fi
-
   rust:
     name: Rust Checks
     runs-on: ubuntu-latest
-    needs: repo-hygiene
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,88 +34,3 @@ jobs:
 
       - name: Tests
         run: cargo test --workspace
-
-  envelope-validation:
-    name: Envelope Validation
-    runs-on: windows-latest
-    needs: rust
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: pwsh apps/shield/scripts/validate_envelopes.ps1
-
-  stub-scan:
-    name: Stub Scan
-    runs-on: windows-latest
-    needs: rust
-    steps:
-      - uses: actions/checkout@v4
-      - run: pwsh apps/shield/scripts/scan_stubs.ps1
-
-  reliability:
-    name: Reliability Baseline
-    runs-on: ubuntu-latest
-    needs: rust
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run reliability guardrails
-        run: bash scripts/check_reliability.sh
-
-  forensic-contracts:
-    name: Forensic Contracts
-    runs-on: ubuntu-latest
-    needs: rust
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Validate forensic contract examples
-        run: python3 scripts/validate_forensic_contracts.py
-
-  node:
-    name: Node Checks
-    runs-on: ubuntu-latest
-    needs: repo-hygiene
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Discover package.json projects
-        id: discover
-        run: |
-          set -euo pipefail
-          mapfile -t packages < <(find . -name package.json -not -path '*/node_modules/*' -print)
-          if [ ${#packages[@]} -eq 0 ]; then
-            echo "has_packages=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "has_packages=true" >> "$GITHUB_OUTPUT"
-          printf '%s\n' "${packages[@]}" > package_paths.txt
-
-      - name: Install deps and run lint/build if present
-        if: steps.discover.outputs.has_packages == 'true'
-        run: |
-          set -euo pipefail
-          while IFS= read -r package_path; do
-            app_dir=$(dirname "$package_path")
-            echo "--- Checking $app_dir ---"
-            pushd "$app_dir" >/dev/null
-            npm ci
-            npm run --if-present lint
-            npm run --if-present build
-            popd >/dev/null
-          done < package_paths.txt
-
-

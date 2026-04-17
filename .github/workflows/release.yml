@@ -1,65 +1,68 @@
 name: Build Strata
-
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
   build-macos:
+    name: Build (macOS ARM64)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build -p strata --release
+        with:
+          targets: aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace --release --target aarch64-apple-darwin
       - uses: actions/upload-artifact@v4
         with:
-          name: strata-macos
-          path: target/release/strata
+          name: strata-macos-arm64
+          path: target/aarch64-apple-darwin/release/strata
+          if-no-files-found: warn
+          retention-days: 30
 
   build-windows:
+    name: Build (Windows x64)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build -p strata --release
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace --release
         env:
           CARGO_INCREMENTAL: 0
       - uses: actions/upload-artifact@v4
         with:
-          name: strata-windows
+          name: strata-windows-x64
           path: target/release/strata.exe
+          if-no-files-found: warn
+          retention-days: 30
 
   build-linux:
+    name: Build (Linux x64)
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libgtk-3-dev \
-            libwebkit2gtk-4.1-dev \
             libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libglib2.0-dev \
-            libxdo-dev \
-            libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev \
-            libx11-dev \
-            libxext-dev \
-            libxft-dev \
-            libxi-dev \
-            libxinerama-dev \
-            libxrandr-dev \
-            libxrender-dev \
-            libxss-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
             libxkbcommon-dev
-      - run: cargo build -p strata --release
+      - run: cargo build --workspace --release
       - uses: actions/upload-artifact@v4
         with:
-          name: strata-linux
+          name: strata-linux-x64
           path: target/release/strata
+          if-no-files-found: warn
+          retention-days: 30
