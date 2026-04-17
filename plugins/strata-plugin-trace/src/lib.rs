@@ -6,6 +6,7 @@ use strata_plugin_sdk::{
 };
 
 pub mod bits;
+pub mod pca;
 pub mod srum;
 
 /// (binary_name, description, mitre_technique)
