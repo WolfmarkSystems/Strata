@@ -25,6 +25,7 @@ pub mod intel;
 pub mod ioc;
 pub mod export_v3;
 pub mod filter;
+pub mod hunt;
 pub mod media;
 pub mod memory;
 pub mod model;
