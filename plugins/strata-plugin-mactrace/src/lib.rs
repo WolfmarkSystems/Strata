@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 
 pub mod biome;
 pub mod fsevents;
+pub mod ios_biome;
 pub mod knowledgec;
 pub mod modern_macos;
 pub mod plist_artifacts;
@@ -729,6 +730,91 @@ impl StrataPlugin for MacTracePlugin {
                 continue;
             }
 
+            // iOS Biome — same SEGB container but iOS-only stream
+            // shapes (photos, messaging, significant location). Routed
+            // before the macOS Biome block so iOS paths don't fall
+            // through to the macOS decoder.
+            if crate::ios_biome::is_ios_biome_path(&path) {
+                let path_str = path.to_string_lossy().to_string();
+                if let Ok(data) = std::fs::read(&path) {
+                    let records = crate::ios_biome::parse(&path, &data);
+                    for r in &records {
+                        let mut a = Artifact::new("iOS Biome Record", &path_str);
+                        a.timestamp = r.start_time.map(|d| d.timestamp() as u64);
+                        let title = match r.stream_type {
+                            crate::ios_biome::IosBiomeStream::PhotoAssetAdded => format!(
+                                "iOS Biome [photos/assetAdded]: {}",
+                                r.photo_asset_id.as_deref().unwrap_or("<unknown>")
+                            ),
+                            crate::ios_biome::IosBiomeStream::MessagingSent => format!(
+                                "iOS Biome [messaging/sent]: to {}",
+                                r.message_recipient.as_deref().unwrap_or("<unknown>")
+                            ),
+                            crate::ios_biome::IosBiomeStream::LocationSignificant => format!(
+                                "iOS Biome [location/significant]: {:.6},{:.6}",
+                                r.latitude.unwrap_or(0.0),
+                                r.longitude.unwrap_or(0.0)
+                            ),
+                            crate::ios_biome::IosBiomeStream::Shared => format!(
+                                "iOS Biome [{}]: {}",
+                                r.stream_type.as_str(),
+                                r.bundle_id
+                                    .clone()
+                                    .or_else(|| r.url.clone())
+                                    .unwrap_or_else(|| "<unknown>".to_string())
+                            ),
+                            crate::ios_biome::IosBiomeStream::Unknown => {
+                                "iOS Biome record (stream unknown)".to_string()
+                            }
+                        };
+                        a.add_field("title", &title);
+                        a.add_field(
+                            "detail",
+                            &format!(
+                                "Stream: {} | time: {} | lat: {} | lon: {} | \
+                                 asset: {} | recipient: {}",
+                                r.stream_type.as_str(),
+                                r.start_time
+                                    .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                    .unwrap_or_else(|| "-".to_string()),
+                                r.latitude
+                                    .map(|v| format!("{:.6}", v))
+                                    .unwrap_or_else(|| "-".to_string()),
+                                r.longitude
+                                    .map(|v| format!("{:.6}", v))
+                                    .unwrap_or_else(|| "-".to_string()),
+                                r.photo_asset_id.as_deref().unwrap_or("-"),
+                                r.message_recipient.as_deref().unwrap_or("-"),
+                            ),
+                        );
+                        a.add_field("file_type", "iOS Biome Record");
+                        a.add_field("stream_type", r.stream_type.as_str());
+                        if let Some(v) = r.latitude {
+                            a.add_field("latitude", &format!("{:.6}", v));
+                        }
+                        if let Some(v) = r.longitude {
+                            a.add_field("longitude", &format!("{:.6}", v));
+                        }
+                        if let Some(v) = &r.photo_asset_id {
+                            a.add_field("photo_asset_id", v);
+                        }
+                        if let Some(v) = &r.message_recipient {
+                            a.add_field("message_recipient", v);
+                        }
+                        if let Some(v) = &r.bundle_id {
+                            a.add_field("bundle_id", v);
+                        }
+                        if let Some(v) = &r.url {
+                            a.add_field("url", v);
+                        }
+                        a.add_field("mitre", r.stream_type.mitre());
+                        a.add_field("forensic_value", r.stream_type.forensic_value());
+                        out.push(a);
+                    }
+                }
+                continue;
+            }
+
             // Apple Biome (macOS 13+) — highest-priority user-activity
             // store. Detect by `/biome/` (system) or `/Biome/`
             // (per-user) path fragment. SEGB format, custom protobuf.
@@ -1183,6 +1269,7 @@ impl StrataPlugin for MacTracePlugin {
                 "Safari History" => ArtifactCategory::WebActivity,
                 "AddressBook" => ArtifactCategory::AccountsCredentials,
                 "Biome Record"
+                | "iOS Biome Record"
                 | "KnowledgeC Record"
                 | "Plist Artifact"
                 | "Modern macOS Artifact" => ArtifactCategory::UserActivity,
