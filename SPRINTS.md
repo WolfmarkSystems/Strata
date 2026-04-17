@@ -73,7 +73,10 @@ If this session was interrupted by a rate limit:
 - A-2 Global IOC Search — commit e0bdc63
 - MOB-1 iOS Biome Parser — commit b85fbd1
 - MOB-2 iOS KnowledgeC — commit e031742
-- MOB-3 iMessage Parser Enhancement — this commit
+- MOB-3 iMessage Parser Enhancement — commit 0e37d5b
+- AGENT-1 code-reviewer.md — this commit
+- AGENT-2 security-reviewer.md — this commit
+- AGENT-3 tdd-guide.md — this commit
 
 ---
 
