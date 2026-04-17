@@ -81,7 +81,8 @@ If this session was interrupted by a rate limit:
 - R-2 Chromium Browser Artifacts — commit 1b96fe9
 - R-3 Lateral Movement Timeline — commit c140eb2
 - R-4 File Carving Enhancement — commit 6445517
-- R-5 Chat/Messaging Forensics — this commit
+- R-5 Chat/Messaging Forensics — commit 6ec4eee
+- R-6 Malware Hash Database Integration — this commit
 
 ---
 
