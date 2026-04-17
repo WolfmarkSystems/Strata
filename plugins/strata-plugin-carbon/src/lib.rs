@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 pub mod chromium;
 pub mod factory_reset;
 pub mod samsung;
+pub mod work_profile;
 
 use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext,
