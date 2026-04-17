@@ -12,10 +12,12 @@ pub mod database;
 pub mod entropy;
 pub mod indexer;
 pub mod mime;
+pub mod prefilter;
 pub mod query;
 pub mod ranking;
 
 pub use database::{FileIndex, FileIndexEntry, FileIndexError};
 pub use indexer::{IndexProgress, IndexerConfig, IndexerReport};
+pub use prefilter::{run_prefilter, PrefilterReport};
 pub use query::QueryBuilder;
 pub use ranking::{rank_artifacts, ScoredArtifact};
