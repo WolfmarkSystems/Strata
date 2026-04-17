@@ -7981,6 +7981,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "strata-plugin-carbon"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "strata-plugin-sdk",
+ "tempfile",
+]
+
+[[package]]
 name = "strata-plugin-chronicle"
 version = "2.0.0"
 dependencies = [
@@ -8206,6 +8218,19 @@ name = "strata-plugin-tree-example"
 version = "0.1.0"
 dependencies = [
  "strata-tree-sdk",
+]
+
+[[package]]
+name = "strata-plugin-vault"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "plist",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "strata-plugin-sdk",
+ "tempfile",
 ]
 
 [[package]]

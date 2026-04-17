@@ -38,6 +38,7 @@ members = [
     "plugins/strata-plugin-csam",
     "plugins/strata-plugin-pulse",
     "plugins/strata-plugin-carbon",
+    "plugins/strata-plugin-vault",
     "crates/strata-engine-adapter",
     "crates/strata-csam",
     "crates/strata-charges",
