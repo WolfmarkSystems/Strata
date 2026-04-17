@@ -4,6 +4,7 @@ use std::path::Path;
 
 pub mod correlation;
 pub mod database;
+pub mod query_ui;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
