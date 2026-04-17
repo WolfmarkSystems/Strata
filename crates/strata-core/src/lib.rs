@@ -30,6 +30,7 @@ pub mod memory;
 pub mod model;
 pub mod triage;
 pub mod viz;
+pub mod warrant;
 pub mod network;
 pub mod parser;
 pub mod parsers;
