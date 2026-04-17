@@ -76,7 +76,8 @@ If this session was interrupted by a rate limit:
 - MOB-3 iMessage Parser Enhancement — commit 0e37d5b
 - AGENT-1 code-reviewer.md — this commit
 - AGENT-2 security-reviewer.md — this commit
-- AGENT-3 tdd-guide.md — this commit
+- AGENT-3 tdd-guide.md — commit a1c243b
+- R-1 LNK File Parser — this commit
 
 ---
 

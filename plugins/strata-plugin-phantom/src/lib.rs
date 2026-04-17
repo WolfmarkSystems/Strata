@@ -21,6 +21,7 @@
 use std::path::{Path, PathBuf};
 
 pub mod amcache;
+pub mod lnk;
 pub mod mru;
 pub mod prefetch;
 pub mod regtxlog;
@@ -481,6 +482,78 @@ impl StrataPlugin for PhantomPlugin {
                     a.add_field("forensic_value", "High");
                     results.push(a);
                 }
+            } else if lower.ends_with(".lnk") {
+                // LNK (Shell Link) parser — see `crate::lnk`. One
+                // artifact per file.
+                let path_str = path.to_string_lossy().to_string();
+                if let Ok(data) = std::fs::read(&path) {
+                    if let Some(lnk) = crate::lnk::parse(&data) {
+                        let mut a = Artifact::new("LNK File", &path_str);
+                        a.timestamp = lnk.target_modified.map(|d| d.timestamp() as u64);
+                        let title = format!("LNK → {}", lnk.target_path);
+                        let detail = format!(
+                            "Target: {} | WorkDir: {} | Args: {} | \
+                             Drive: {} (serial {}) | Volume: {} | \
+                             Machine: {} | DroidVol: {} | DroidFile: {} | \
+                             Created: {} | Accessed: {} | Modified: {} | \
+                             Size: {} bytes",
+                            lnk.target_path,
+                            lnk.working_directory.as_deref().unwrap_or("-"),
+                            lnk.arguments.as_deref().unwrap_or("-"),
+                            lnk.drive_type,
+                            lnk.drive_serial.as_deref().unwrap_or("-"),
+                            lnk.volume_label.as_deref().unwrap_or("-"),
+                            lnk.machine_id.as_deref().unwrap_or("-"),
+                            lnk.droid_volume_id.as_deref().unwrap_or("-"),
+                            lnk.droid_file_id.as_deref().unwrap_or("-"),
+                            lnk.target_created
+                                .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                .unwrap_or_else(|| "-".to_string()),
+                            lnk.target_accessed
+                                .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                .unwrap_or_else(|| "-".to_string()),
+                            lnk.target_modified
+                                .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                .unwrap_or_else(|| "-".to_string()),
+                            lnk.target_size,
+                        );
+                        a.add_field("title", &title);
+                        a.add_field("detail", &detail);
+                        a.add_field("file_type", "LNK File");
+                        a.add_field("target_path", &lnk.target_path);
+                        a.add_field("drive_type", &lnk.drive_type);
+                        if let Some(v) = &lnk.working_directory {
+                            a.add_field("working_directory", v);
+                        }
+                        if let Some(v) = &lnk.arguments {
+                            a.add_field("arguments", v);
+                        }
+                        if let Some(v) = &lnk.drive_serial {
+                            a.add_field("drive_serial", v);
+                        }
+                        if let Some(v) = &lnk.volume_label {
+                            a.add_field("volume_label", v);
+                        }
+                        if let Some(v) = &lnk.machine_id {
+                            a.add_field("machine_id", v);
+                        }
+                        if let Some(v) = &lnk.droid_volume_id {
+                            a.add_field("droid_volume_id", v);
+                        }
+                        if let Some(v) = &lnk.droid_file_id {
+                            a.add_field("droid_file_id", v);
+                        }
+                        a.add_field("target_size", &lnk.target_size.to_string());
+                        let suspicious = crate::lnk::is_suspicious_target(&lnk.target_path);
+                        a.add_field("mitre", "T1547.009");
+                        a.add_field("mitre_secondary", "T1070.006");
+                        a.add_field("forensic_value", "High");
+                        if suspicious {
+                            a.add_field("suspicious", "true");
+                        }
+                        results.push(a);
+                    }
+                }
             } else if lower == "windows.edb" {
                 // Windows Search Index — string-carving fallback. See
                 // `crate::windows_search` for the rationale behind the
@@ -546,7 +619,9 @@ impl StrataPlugin for PhantomPlugin {
                 }
                 "AmCache Shortcut" => ArtifactCategory::UserActivity,
                 "Shellbag" | "MuiCache" | "UserChoice" | "MRU Entry"
-                | "Thumbcache Entry" | "Search Index Entry" => ArtifactCategory::UserActivity,
+                | "Thumbcache Entry" | "Search Index Entry" | "LNK File" => {
+                    ArtifactCategory::UserActivity
+                }
                 // v1.5.0 RegRipper-coverage parsers
                 "Print Monitor"
                 | "LSA Security Package"
