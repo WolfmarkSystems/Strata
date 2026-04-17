@@ -18,6 +18,7 @@ use strata_plugin_sdk::{
 };
 
 pub mod antiforensic;
+pub mod crypto_wallets;
 pub mod encrypted_artifacts;
 pub mod hidden_partition;
 pub mod photo_vault;
@@ -99,6 +100,7 @@ impl StrataPlugin for VaultPlugin {
             out.extend(crate::antiforensic::scan(&path));
             out.extend(crate::hidden_partition::scan(&path));
             out.extend(crate::encrypted_artifacts::scan(&path));
+            out.extend(crate::crypto_wallets::scan(&path));
         }
         Ok(out)
     }
