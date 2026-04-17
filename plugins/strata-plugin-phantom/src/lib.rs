@@ -26,6 +26,7 @@ pub mod mru;
 pub mod powershell;
 pub mod prefetch;
 pub mod regtxlog;
+pub mod services;
 pub mod shimcache;
 pub mod thumbcache;
 pub mod usb;
