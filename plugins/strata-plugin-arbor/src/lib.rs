@@ -6,6 +6,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+pub mod containers;
 pub mod logs;
 pub mod persistence;
 pub mod shell_artifacts;
