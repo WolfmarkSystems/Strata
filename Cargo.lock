@@ -4186,6 +4186,15 @@ dependencies = [
 
 [[package]]
 name = "kamadak-exif"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef4fc70d0ab7e5b6bafa30216a6b48705ea964cdfc29c050f2412295eba58077"
+dependencies = [
+ "mutate_once",
+]
+
+[[package]]
+name = "kamadak-exif"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1130d80c7374efad55a117d715a3af9368f0fa7a2c54573afc15a188cd984837"
@@ -7660,7 +7669,7 @@ dependencies = [
  "frnsc-prefetch",
  "hex",
  "image",
- "kamadak-exif",
+ "kamadak-exif 0.6.1",
  "libloading 0.8.9",
  "md-5",
  "nt-hive",
@@ -7978,6 +7987,18 @@ dependencies = [
  "strata-plugin-sdk",
  "tempfile",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "strata-plugin-apex"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "kamadak-exif 0.5.5",
+ "serde",
+ "serde_json",
+ "strata-plugin-sdk",
+ "tempfile",
 ]
 
 [[package]]
