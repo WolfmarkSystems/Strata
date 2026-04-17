@@ -80,7 +80,8 @@ If this session was interrupted by a rate limit:
 - R-1 LNK File Parser — commit 34bfa15
 - R-2 Chromium Browser Artifacts — commit 1b96fe9
 - R-3 Lateral Movement Timeline — commit c140eb2
-- R-4 File Carving Enhancement — this commit
+- R-4 File Carving Enhancement — commit 6445517
+- R-5 Chat/Messaging Forensics — this commit
 
 ---
 

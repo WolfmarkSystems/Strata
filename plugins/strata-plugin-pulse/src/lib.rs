@@ -19,6 +19,7 @@ use strata_plugin_sdk::{
 };
 
 pub mod android;
+pub mod chat_forensics;
 pub mod ios;
 
 pub struct PulsePlugin {
