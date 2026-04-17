@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 pub mod chromium;
+pub mod factory_reset;
 
 use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext,
