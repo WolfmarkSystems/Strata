@@ -25,6 +25,7 @@ pub mod ioc;
 pub mod media;
 pub mod memory;
 pub mod model;
+pub mod triage;
 pub mod network;
 pub mod parser;
 pub mod parsers;
