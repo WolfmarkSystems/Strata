@@ -22,6 +22,7 @@ pub mod hashing;
 pub mod hashing_utils;
 pub mod hashset;
 pub mod ioc;
+pub mod media;
 pub mod memory;
 pub mod model;
 pub mod network;
