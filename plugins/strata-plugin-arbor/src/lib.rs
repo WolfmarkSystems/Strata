@@ -6,8 +6,10 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+pub mod logs;
 pub mod persistence;
 pub mod shell_artifacts;
+pub mod system_artifacts;
 
 use strata_plugin_sdk::{
     ArtifactCategory, ArtifactRecord, ForensicValue, PluginCapability, PluginContext, PluginError,
