@@ -1,5 +1,6 @@
 ﻿use serde::{Deserialize, Serialize};
 
+pub mod branding;
 pub mod csv;
 pub mod export;
 pub mod generator;
