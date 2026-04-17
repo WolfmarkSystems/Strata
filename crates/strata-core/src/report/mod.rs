@@ -3,6 +3,7 @@
 pub mod branding;
 pub mod csv;
 pub mod export;
+pub mod fact;
 pub mod generator;
 pub mod html;
 pub mod json;
