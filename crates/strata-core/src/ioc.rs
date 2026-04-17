@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 use strata_plugin_sdk::{ArtifactRecord, PluginOutput};
 
+pub mod feed_ui;
 pub mod search;
 
 /// Supported IOC types with automatic detection.
