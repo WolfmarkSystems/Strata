@@ -17,3 +17,6 @@ rusqlite = { version = "0.30", features = ["bundled"] }
 chrono = { version = "0.4", features = ["serde"] }
 cfb = "0.14"
 nt-hive = "0.3"
+
+[dev-dependencies]
+tempfile = { workspace = true }
