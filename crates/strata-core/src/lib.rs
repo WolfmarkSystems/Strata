@@ -21,6 +21,7 @@ pub mod evidence;
 pub mod hashing;
 pub mod hashing_utils;
 pub mod hashset;
+pub mod intel;
 pub mod ioc;
 pub mod export_v3;
 pub mod filter;
