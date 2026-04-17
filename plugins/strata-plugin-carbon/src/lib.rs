@@ -7,6 +7,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+pub mod adb_backup;
 pub mod chromium;
 pub mod factory_reset;
 pub mod samsung;
