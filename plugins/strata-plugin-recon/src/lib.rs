@@ -1,3 +1,5 @@
+pub mod carving;
+
 use std::collections::HashSet;
 use std::path::Path;
 use strata_plugin_sdk::{

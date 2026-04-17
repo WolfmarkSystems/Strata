@@ -79,7 +79,8 @@ If this session was interrupted by a rate limit:
 - AGENT-3 tdd-guide.md — commit a1c243b
 - R-1 LNK File Parser — commit 34bfa15
 - R-2 Chromium Browser Artifacts — commit 1b96fe9
-- R-3 Lateral Movement Timeline — this commit
+- R-3 Lateral Movement Timeline — commit c140eb2
+- R-4 File Carving Enhancement — this commit
 
 ---
 
