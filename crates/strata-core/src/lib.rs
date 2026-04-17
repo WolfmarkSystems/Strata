@@ -31,6 +31,7 @@ pub mod model;
 pub mod triage;
 pub mod correlation;
 pub mod scan;
+pub mod sigma;
 pub mod viz;
 pub mod warrant;
 pub mod network;
