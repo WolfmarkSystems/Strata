@@ -2,6 +2,7 @@
 
 pub mod branding;
 pub mod csv;
+pub mod expert_witness;
 pub mod export;
 pub mod fact;
 pub mod generator;
