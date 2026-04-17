@@ -23,6 +23,7 @@ pub mod chat_forensics;
 pub mod electron_scanner;
 pub mod gaming;
 pub mod ios;
+pub mod messaging_extended;
 pub mod telegram;
 pub mod whatsapp;
 
