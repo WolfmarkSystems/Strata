@@ -147,6 +147,7 @@ impl Default for HashSetDB {
 pub mod bloom;
 pub mod database;
 pub mod malware_hashset;
+pub mod nsrl;
 
 pub use bloom::{BloomFilter, HashBloomFilter, HashLookupResult};
 pub use database::{
