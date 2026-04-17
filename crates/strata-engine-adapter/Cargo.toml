@@ -33,6 +33,11 @@ strata-plugin-netflow   = { path = "../../plugins/strata-plugin-netflow" }
 strata-plugin-mactrace  = { path = "../../plugins/strata-plugin-mactrace" }
 strata-plugin-sentinel  = { path = "../../plugins/strata-plugin-sentinel" }
 strata-plugin-csam      = { path = "../../plugins/strata-plugin-csam" }
+strata-plugin-apex      = { path = "../../plugins/strata-plugin-apex" }
+strata-plugin-carbon    = { path = "../../plugins/strata-plugin-carbon" }
+strata-plugin-pulse     = { path = "../../plugins/strata-plugin-pulse" }
+strata-plugin-vault     = { path = "../../plugins/strata-plugin-vault" }
+strata-plugin-arbor     = { path = "../../plugins/strata-plugin-arbor" }
 
 # CSAM scanner core (used by the Forge IPC commands in src/csam.rs).
 strata-csam = { workspace = true }

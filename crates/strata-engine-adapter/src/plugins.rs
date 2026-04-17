@@ -46,6 +46,17 @@ fn build_plugins() -> Vec<Box<dyn StrataPlugin>> {
         // CSAM Sentinel — free on every license tier; real workflow
         // lives behind the dedicated csam.rs IPC commands.
         Box::new(strata_plugin_csam::CsamPlugin::new()),
+        // v1.4.0 additions: Apple/Google first-party, third-party mobile
+        // apps, credentials vault, container/repo discovery, and the master
+        // file index plugin. All registered before Sigma so its correlation
+        // pass sees their artifacts.
+        Box::new(strata_plugin_apex::ApexPlugin::new()),
+        Box::new(strata_plugin_carbon::CarbonPlugin::new()),
+        Box::new(strata_plugin_pulse::PulsePlugin::new()),
+        Box::new(strata_plugin_vault::VaultPlugin::new()),
+        Box::new(strata_plugin_arbor::ArborPlugin::new()),
+        // Note: strata-plugin-index is a cdylib-only dynamic plugin and is
+        // loaded through the dynamic loader path, not the static registry.
         Box::new(strata_plugin_sigma::SigmaPlugin::new()),
     ]
 }
