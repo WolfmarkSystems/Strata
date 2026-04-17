@@ -29,6 +29,8 @@ pub mod media;
 pub mod memory;
 pub mod model;
 pub mod triage;
+pub mod correlation;
+pub mod scan;
 pub mod viz;
 pub mod warrant;
 pub mod network;
