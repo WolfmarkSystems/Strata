@@ -8006,6 +8006,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "strata-plugin-arbor"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "strata-plugin-sdk",
+ "tempfile",
+]
+
+[[package]]
 name = "strata-plugin-carbon"
 version = "1.0.0"
 dependencies = [

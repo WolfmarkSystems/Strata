@@ -40,6 +40,7 @@ members = [
     "plugins/strata-plugin-carbon",
     "plugins/strata-plugin-vault",
     "plugins/strata-plugin-apex",
+    "plugins/strata-plugin-arbor",
     "crates/strata-engine-adapter",
     "crates/strata-csam",
     "crates/strata-charges",
