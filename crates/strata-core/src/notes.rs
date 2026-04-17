@@ -4,6 +4,8 @@
 //! when present. Every note creation/edit is timestamped and attributed
 //! to the examiner who wrote it.
 
+pub mod database;
+
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 
