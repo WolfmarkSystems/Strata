@@ -436,6 +436,7 @@ pub fn detect_volume_base_offset<C: EvidenceContainerRO>(
 }
 
 pub mod format;
+pub mod integrity;
 pub mod multidisk;
 pub mod zff;
 
