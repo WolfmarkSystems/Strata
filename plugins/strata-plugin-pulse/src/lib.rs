@@ -20,6 +20,7 @@ use strata_plugin_sdk::{
 
 pub mod android;
 pub mod chat_forensics;
+pub mod electron_scanner;
 pub mod gaming;
 pub mod ios;
 
