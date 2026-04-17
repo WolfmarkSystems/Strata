@@ -31,6 +31,7 @@ pub mod services;
 pub mod shimcache;
 pub mod thumbcache;
 pub mod usb;
+pub mod windows_recall;
 pub mod windows_search;
 
 use strata_plugin_sdk::{

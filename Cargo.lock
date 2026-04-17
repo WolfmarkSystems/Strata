@@ -8138,10 +8138,12 @@ dependencies = [
  "frnsc-prefetch",
  "log",
  "nt-hive",
+ "rusqlite",
  "serde",
  "serde_json",
  "strata-fs",
  "strata-plugin-sdk",
+ "tempfile",
 ]
 
 [[package]]

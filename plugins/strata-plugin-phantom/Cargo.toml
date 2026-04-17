@@ -24,3 +24,9 @@ frnsc-prefetch = "0.13"
 
 # Structured logging per CLAUDE.md (no println allowed).
 log = "0.4"
+
+# SQLite for Windows Recall + Outlook carving DB reads.
+rusqlite = { version = "0.30", features = ["bundled"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
