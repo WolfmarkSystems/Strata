@@ -6,6 +6,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+pub mod persistence;
 pub mod shell_artifacts;
 
 use strata_plugin_sdk::{
