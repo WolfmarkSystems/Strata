@@ -32,6 +32,7 @@ pub mod shadowcopy;
 pub mod snapshot;
 pub mod summary;
 pub mod timeline;
+pub mod unpack;
 pub mod xfs;
 pub mod xfs_advanced;
 pub mod zfs;
