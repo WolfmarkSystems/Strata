@@ -21,12 +21,15 @@ use strata_plugin_sdk::{
 pub mod ai_apps;
 pub mod android;
 pub mod chat_forensics;
+pub mod dating;
 pub mod electron_scanner;
 pub mod encrypted_messaging;
 pub mod ephemeral;
+pub mod financial;
 pub mod gaming;
 pub mod ios;
 pub mod messaging_extended;
+pub mod rideshare;
 pub mod telegram;
 pub mod wearables;
 pub mod whatsapp;

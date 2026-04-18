@@ -6,6 +6,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+pub mod ai_content;
 pub mod exif;
 
 use strata_plugin_sdk::{
