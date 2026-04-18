@@ -1,0 +1,14 @@
+[package]
+name = "strata-verify-plugins"
+version = "0.1.0"
+edition = "2021"
+description = "FIX-6: CI check that every workspace plugin is wired into strata-engine-adapter's static registry."
+
+[[bin]]
+name = "strata-verify-plugins"
+path = "src/main.rs"
+
+[dependencies]
+
+[dev-dependencies]
+tempfile = { workspace = true }

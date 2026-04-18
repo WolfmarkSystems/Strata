@@ -26,6 +26,7 @@ members = [
     "plugins/strata-plugin-remnant",
     "plugins/strata-plugin-tree-example",
     "crates/strata-tree-sdk", "crates/strata-license", "tools/wolfmark-license-gen",
+    "tools/strata-verify-plugins",
     "plugins/strata-plugin-specter",
     "plugins/strata-plugin-conduit",
     "plugins/strata-plugin-nimbus",
