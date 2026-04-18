@@ -61,15 +61,21 @@ pub struct IngestMatrixArgs {
 }
 
 /// CLI args for `strata ingest run`. Field meanings:
-/// * `source`            — path to the evidence source (image, mount, or logical dir).
-/// * `case_dir`          — directory that receives the case database + JSON output.
-/// * `case_name`         — human label recorded in the output summary.
-/// * `examiner`          — examiner identity for the run-log entry.
-/// * `plugins`           — optional comma-separated plugin name filter.
-/// * `output_format`     — `json` or `text` (text is the default examiner summary).
-/// * `triage_mode`       — reserved for future "fast only" plugin subset.
-/// * `quiet`             — suppress the per-plugin stderr progress lines.
-/// * `json_result`       — path to write the machine-readable JSON summary.
+///
+/// * `source` — evidence source (image, mount, or logical dir).
+/// * `case_dir` — case output directory.
+/// * `case_name` — human label for the summary.
+/// * `examiner` — examiner identity for the run-log entry.
+/// * `plugins` — optional plugin name filter.
+/// * `output_format` — `json` or `text`.
+/// * `triage_mode` — reserved for "fast only" plugin subset.
+/// * `quiet` — suppress per-plugin progress.
+/// * `json_result` — JSON summary output path.
+/// * `auto_unpack` — UNPACK-3: recursively extract nested containers.
+/// * `unpack_root` — extraction scratch dir.
+/// * `skip_routing` — DETECT-2: run every plugin regardless of classification.
+/// * `include` — DETECT-2: add optional plugins to the recommendation.
+/// * `auto` — DETECT-2: accept auto-selected plugin set.
 #[derive(Parser, Debug)]
 pub struct IngestRunArgs {
     #[arg(long, help = "Evidence source path (image, mount, or logical directory)")]
@@ -98,6 +104,21 @@ pub struct IngestRunArgs {
 
     #[arg(long, help = "Write machine-readable JSON summary to this path")]
     pub json_result: Option<PathBuf>,
+
+    #[arg(long, help = "Auto-unpack nested containers before running plugins (UNPACK-3)")]
+    pub auto_unpack: bool,
+
+    #[arg(long, help = "Extraction scratch dir (default: <case_dir>/unpacked)")]
+    pub unpack_root: Option<PathBuf>,
+
+    #[arg(long, help = "Skip DETECT-1 classification and run every plugin")]
+    pub skip_routing: bool,
+
+    #[arg(long, value_delimiter = ',', help = "Add optional plugins to the recommended set (DETECT-2)")]
+    pub include: Option<Vec<String>>,
+
+    #[arg(long, help = "Accept auto-selected plugin set without prompting (DETECT-2)")]
+    pub auto: bool,
 }
 
 /// Per-plugin outcome as emitted in the JSON summary.
@@ -126,6 +147,40 @@ pub struct IngestRunSummary {
     pub plugins_zero: usize,
     pub artifacts_total: usize,
     pub per_plugin: Vec<IngestRunPluginOutcome>,
+    /// UNPACK-3: summary of the auto-unpack pass. `None` means
+    /// `--auto-unpack` was not requested.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unpack: Option<UnpackSummary>,
+    /// DETECT-1/2: image classification + plugin recommendation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub classification: Option<ClassificationSummary>,
+}
+
+/// Machine-readable subset of `UnpackResult`. Full container trace +
+/// warnings go in the JSON result so chain of custody can reconstruct
+/// which layers Strata traversed.
+#[derive(Serialize, Debug, Clone)]
+pub struct UnpackSummary {
+    pub enabled: bool,
+    pub filesystem_root: String,
+    pub containers_traversed: usize,
+    pub total_bytes_extracted: u64,
+    pub total_files_extracted: u64,
+    pub elapsed_ms: u128,
+    pub limits_hit: Vec<String>,
+    pub warnings: Vec<String>,
+}
+
+/// DETECT-1/2: image classification passed through to the CLI JSON.
+#[derive(Serialize, Debug, Clone)]
+pub struct ClassificationSummary {
+    pub image_type: String,
+    pub confidence: f64,
+    pub recommended: Vec<String>,
+    pub optional: Vec<String>,
+    pub unnecessary: Vec<String>,
+    pub evidence: Vec<String>,
+    pub examiner_override: bool,
 }
 
 #[derive(Serialize)]
@@ -253,8 +308,104 @@ pub fn run_ingest(args: IngestRunArgs) -> i32 {
 
     let started = chrono::Utc::now();
     let wall = Instant::now();
-    let filter = args.plugins.as_deref();
-    let results = strata_engine_adapter::run_all_on_path(args.source.as_path(), filter);
+
+    // UNPACK-3: optionally unwrap nested containers before handing the
+    // filesystem root to the plugin pipeline.
+    let mut effective_source = args.source.clone();
+    let mut unpack_summary: Option<UnpackSummary> = None;
+    if args.auto_unpack {
+        let scratch = args
+            .unpack_root
+            .clone()
+            .unwrap_or_else(|| args.case_dir.join("unpacked"));
+        if let Err(e) = std::fs::create_dir_all(&scratch) {
+            eprintln!("Warning: failed to create unpack root {}: {}", scratch.display(), e);
+        }
+        let engine = strata_fs::unpack::UnpackEngine::new(scratch.clone())
+            .with_max_total_bytes(250 * 1024 * 1024 * 1024) // 250 GiB cap
+            .with_max_file_count(20_000_000)
+            .with_max_depth(5);
+        match strata_fs::unpack::unpack(args.source.as_path(), &engine) {
+            Ok(r) => {
+                if !args.quiet {
+                    eprintln!(
+                        "[unpack] {} container(s), {} file(s), {} byte(s) in {}ms",
+                        r.containers_traversed.len(),
+                        r.total_files_extracted,
+                        r.total_bytes_extracted,
+                        r.elapsed.as_millis()
+                    );
+                }
+                effective_source = r.filesystem_root.clone();
+                unpack_summary = Some(UnpackSummary {
+                    enabled: true,
+                    filesystem_root: r.filesystem_root.to_string_lossy().into_owned(),
+                    containers_traversed: r.containers_traversed.len(),
+                    total_bytes_extracted: r.total_bytes_extracted,
+                    total_files_extracted: r.total_files_extracted,
+                    elapsed_ms: r.elapsed.as_millis(),
+                    limits_hit: r
+                        .limits_hit
+                        .iter()
+                        .map(|l| format!("{:?}", l))
+                        .collect(),
+                    warnings: r.warnings.iter().map(|w| format!("{:?}", w)).collect(),
+                });
+            }
+            Err(e) => {
+                eprintln!("Warning: auto-unpack failed: {} (continuing with original source)", e);
+            }
+        }
+    }
+
+    // DETECT-1/2: image classification. If --plugins is set the
+    // examiner has explicitly chosen a filter; never override it. If
+    // --skip-routing is set, fall through to the every-plugin path.
+    // Otherwise classify and apply the recommendation.
+    let mut classification_summary: Option<ClassificationSummary> = None;
+    let explicit_filter = args.plugins.clone();
+    let effective_filter: Option<Vec<String>> = if let Some(p) = explicit_filter.clone() {
+        Some(p)
+    } else if args.skip_routing {
+        None
+    } else {
+        let cls = strata_core::detect::classify(effective_source.as_path());
+        let mut recommended: Vec<String> = cls.recommended_plugins.clone();
+        if let Some(extra) = &args.include {
+            for e in extra {
+                if !recommended.iter().any(|r| r.eq_ignore_ascii_case(e)) {
+                    recommended.push(e.clone());
+                }
+            }
+        }
+        if !args.quiet {
+            eprintln!(
+                "[detect] {} (confidence {:.2}) — recommending {} plugin(s)",
+                cls.image_type_label(),
+                cls.confidence,
+                recommended.len(),
+            );
+        }
+        classification_summary = Some(ClassificationSummary {
+            image_type: cls.image_type_label(),
+            confidence: cls.confidence,
+            recommended: recommended.clone(),
+            optional: cls.optional_plugins.clone(),
+            unnecessary: cls.unnecessary_plugins.clone(),
+            evidence: cls.evidence_markers(),
+            examiner_override: false,
+        });
+        // Confidence floor: if the classifier isn't sure, run every
+        // plugin (per DETECT-1 spec — "better to over-run than miss").
+        if cls.confidence < 0.30 {
+            None
+        } else {
+            Some(recommended)
+        }
+    };
+
+    let filter: Option<&[String]> = effective_filter.as_deref();
+    let results = strata_engine_adapter::run_all_on_path(effective_source.as_path(), filter);
 
     let mut per_plugin: Vec<IngestRunPluginOutcome> = Vec::with_capacity(results.len());
     let mut ok = 0usize;
@@ -312,6 +463,8 @@ pub fn run_ingest(args: IngestRunArgs) -> i32 {
         plugins_zero: zero,
         artifacts_total,
         per_plugin,
+        unpack: unpack_summary,
+        classification: classification_summary,
     };
 
     // Write JSON result file if requested.
@@ -385,6 +538,11 @@ mod tests {
             triage_mode: false,
             quiet: true,
             json_result: None,
+            auto_unpack: false,
+            unpack_root: None,
+            skip_routing: true,
+            include: None,
+            auto: true,
         }
     }
 
@@ -443,6 +601,95 @@ mod tests {
     }
 
     #[test]
+    fn auto_unpack_populates_unpack_summary_in_json() {
+        // UNPACK-3 end-to-end: a synthetic tar → unpack → classify →
+        // plugin filter → JSON summary should include a non-None
+        // `unpack` field.
+        use std::io::Write;
+        let tmp = tempfile::tempdir().expect("tmp");
+        let tar_path = tmp.path().join("fake.tar");
+        let file = std::fs::File::create(&tar_path).expect("mk");
+        let mut b = tar::Builder::new(file);
+        let body = b"hello";
+        let mut h = tar::Header::new_gnu();
+        h.set_size(body.len() as u64);
+        h.set_mode(0o644);
+        h.set_entry_type(tar::EntryType::Regular);
+        b.append_data(&mut h, "a.txt", &body[..]).expect("append");
+        b.finish().expect("finish");
+        drop(b);
+
+        let out = tmp.path().join("summary.json");
+        let mut args = make_args(
+            tar_path.clone(),
+            tmp.path().join("case"),
+            Some(vec!["__no_match__".into()]),
+        );
+        args.auto_unpack = true;
+        args.json_result = Some(out.clone());
+        let _ = run_ingest(args);
+        let body = std::fs::read_to_string(&out).expect("read");
+        assert!(body.contains("\"unpack\""), "unpack summary should be present");
+        assert!(body.contains("\"containers_traversed\""));
+    }
+
+    #[test]
+    fn classification_summary_present_when_routing_enabled() {
+        // DETECT-2 integration: classification block appears when
+        // routing is on (no explicit --plugins, --skip-routing off).
+        let tmp = tempfile::tempdir().expect("tmp");
+        let src = tmp.path().join("src");
+        std::fs::create_dir_all(&src).expect("mk");
+        let out = tmp.path().join("summary.json");
+        let args = IngestRunArgs {
+            source: src,
+            case_dir: tmp.path().join("case"),
+            case_name: "t".into(),
+            examiner: "t".into(),
+            plugins: None, // no explicit filter → routing engages
+            output_format: "json".into(),
+            triage_mode: false,
+            quiet: true,
+            json_result: Some(out.clone()),
+            auto_unpack: false,
+            unpack_root: None,
+            skip_routing: false,
+            include: None,
+            auto: true,
+        };
+        let _ = run_ingest(args);
+        let body = std::fs::read_to_string(&out).expect("read");
+        assert!(body.contains("\"classification\""));
+    }
+
+    #[test]
+    fn skip_routing_flag_omits_classification_summary() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let src = tmp.path().join("src");
+        std::fs::create_dir_all(&src).expect("mk");
+        let out = tmp.path().join("summary.json");
+        let args = IngestRunArgs {
+            source: src,
+            case_dir: tmp.path().join("case"),
+            case_name: "t".into(),
+            examiner: "t".into(),
+            plugins: Some(vec!["__no_match__".into()]),
+            output_format: "json".into(),
+            triage_mode: false,
+            quiet: true,
+            json_result: Some(out.clone()),
+            auto_unpack: false,
+            unpack_root: None,
+            skip_routing: true,
+            include: None,
+            auto: true,
+        };
+        let _ = run_ingest(args);
+        let body = std::fs::read_to_string(&out).expect("read");
+        assert!(!body.contains("\"classification\""));
+    }
+
+    #[test]
     fn summary_structure_round_trips() {
         let s = IngestRunSummary {
             case_name: "c".into(),
@@ -464,6 +711,8 @@ mod tests {
                 elapsed_ms: 0,
                 error: None,
             }],
+            unpack: None,
+            classification: None,
         };
         let j = serde_json::to_string(&s).expect("ser");
         assert!(j.contains("per_plugin"));
