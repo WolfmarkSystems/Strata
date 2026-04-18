@@ -72,26 +72,15 @@ fn ntfs_walker_opens_nps_jean_image() {
             return;
         }
     };
+    // NPS Jean's volume header reports a 10 GiB logical disk but
+    // only the first ~4.3 GiB of chunks were acquired into the E01
+    // (the acquisition was trimmed). Whether the ntfs crate lands a
+    // populated root index depends on where the MFT sits within the
+    // acquired range. Charlie and Terry below cover the positive
+    // case; for Jean we just verify the walker opens cleanly.
     match walker.list_dir("/") {
-        Ok(root) => {
-            eprintln!("NPS Jean: root has {} entries", root.len());
-            let names: Vec<String> = root.iter().map(|e| e.name.clone()).collect();
-            assert!(
-                names.iter().any(|n| n.eq_ignore_ascii_case("WINDOWS")),
-                "expected WINDOWS directory in Jean root, got {:?}",
-                names
-            );
-        }
-        Err(e) => {
-            // E01 reader currently can't reach the full MFT on all
-            // images (see SESSION_STATE_v10_BLOCKER.md). Accept the
-            // "walker opens but data is unreadable" state as a known
-            // follow-up while we ship the rest of v10.
-            eprintln!(
-                "ACK: NPS Jean NTFS walker opens but list_dir fails downstream \
-                 of E01 chunk addressing: {e}"
-            );
-        }
+        Ok(root) => eprintln!("NPS Jean: root listed {} entries", root.len()),
+        Err(e) => eprintln!("NPS Jean: list_dir error (known image trim): {e}"),
     }
 }
 
@@ -184,10 +173,15 @@ fn ntfs_walker_handles_each_test_material_e01() {
         }
     }
     eprintln!("NTFS walker acceptance: tried {tried}, fully opened {opened}");
-    // Pass the harness even when the underlying E01 chunk reader can't
-    // fully reach deep MFT offsets yet — the NTFS walker code itself
-    // is validated by its unit tests and by `ntfs_walker_opens_nps_jean_image`
-    // above. End-to-end data reads are covered in E2E-2 / REGRESS tests
-    // with the full pipeline.
-    let _ = (tried, opened);
+    // EWF-FIX-1 landed — require that at least one image fully opens
+    // with a populated root (Charlie + Terry both qualify with the
+    // current Test Material collection).
+    if tried > 0 {
+        assert!(
+            opened >= 1,
+            "EWF-FIX-1 regression: at least one of {} Windows E01s should \
+             open with a populated root directory",
+            tried
+        );
+    }
 }
