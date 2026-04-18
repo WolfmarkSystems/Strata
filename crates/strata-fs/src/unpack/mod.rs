@@ -14,6 +14,13 @@
 //!
 //! Zero `.unwrap()`, zero `unsafe {}`, zero `println!` per CLAUDE.md.
 
+pub mod stream;
+
+pub use stream::{
+    auto_select_mode, ArchiveEntry, CompressionMethod, ExtractionMode, VfsError,
+    VirtualFilesystem,
+};
+
 use crate::container::ContainerType;
 use serde::{Deserialize, Serialize};
 use std::fs;
