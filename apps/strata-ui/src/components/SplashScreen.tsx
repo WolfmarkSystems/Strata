@@ -109,7 +109,7 @@ export default function SplashScreen() {
             opacity: 0,
           }}
         >
-          v1.3.0 {'\u00B7'} Wolfmark Systems
+          v1.5.0 {'\u00B7'} Wolfmark Systems
         </div>
       </div>
 

@@ -1,0 +1,24 @@
+[package]
+name = "strata-evidence"
+version = "0.1.0"
+edition = "2021"
+description = "Pure-Rust evidence image readers + partition walkers. Opens Raw/DD/E01/VMDK/VHD/VHDX, parses MBR/GPT, exposes a uniform EvidenceImage trait consumed by the filesystem walkers."
+license = "Proprietary"
+
+[lib]
+name = "strata_evidence"
+path = "src/lib.rs"
+
+[dependencies]
+flate2 = { workspace = true }
+thiserror = "1"
+serde = { version = "1", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+md-5 = "0.10"
+sha1 = "0.10"
+sha2 = "0.10"
+uuid = { workspace = true }
+log = "0.4"
+
+[dev-dependencies]
+tempfile = { workspace = true }
