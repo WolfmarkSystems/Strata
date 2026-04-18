@@ -13,6 +13,7 @@
 //!
 //! Zero `.unwrap()`, zero `unsafe {}`, zero `println!` per CLAUDE.md.
 
+pub mod facetime26;
 pub mod translation_gaps;
 
 use serde::{Deserialize, Serialize};
