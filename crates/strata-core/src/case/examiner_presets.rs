@@ -218,9 +218,89 @@ pub fn init_case_schema(conn: &Connection) -> SqliteResult<()> {
             bundle_path TEXT,
             bundle_hash_sha256 TEXT
         );
+
+        -- FIX-3: the integrity-violations audit table must exist from
+        -- `case init` onward so `strata examine` / watchpoint flows can
+        -- record, query, and clear violations without hitting
+        -- "no such table" runtime errors on fresh cases.
+        CREATE TABLE IF NOT EXISTS integrity_violations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            case_id TEXT,
+            occurred_utc TEXT,
+            timestamp TEXT NOT NULL,
+            violation_type TEXT NOT NULL,
+            table_name TEXT,
+            expected_value TEXT NOT NULL,
+            actual_value TEXT NOT NULL,
+            affected_path TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            examiner_notified INTEGER DEFAULT 0,
+            acknowledged_by TEXT,
+            acknowledgment_timestamp TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_integrity_timestamp
+            ON integrity_violations(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_integrity_type
+            ON integrity_violations(violation_type);
+        CREATE INDEX IF NOT EXISTS idx_integrity_severity
+            ON integrity_violations(severity);
+        CREATE INDEX IF NOT EXISTS idx_integrity_violations_case_time
+            ON integrity_violations(case_id, occurred_utc);
+        CREATE INDEX IF NOT EXISTS idx_integrity_violations_case_table
+            ON integrity_violations(case_id, table_name);
         "#,
     )?;
     init_default_presets(conn)
+}
+
+#[cfg(test)]
+mod fix3_integrity_violations_tests {
+    use super::*;
+    use rusqlite::Connection;
+
+    fn count_table(conn: &Connection, table: &str) -> i64 {
+        conn.query_row(
+            &format!(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{}'",
+                table
+            ),
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0)
+    }
+
+    #[test]
+    fn fresh_case_init_creates_integrity_violations_table() {
+        let conn = Connection::open_in_memory().expect("open");
+        init_case_schema(&conn).expect("init");
+        assert_eq!(count_table(&conn, "integrity_violations"), 1);
+    }
+
+    #[test]
+    fn second_init_is_idempotent() {
+        let conn = Connection::open_in_memory().expect("open");
+        init_case_schema(&conn).expect("init1");
+        init_case_schema(&conn).expect("init2");
+        assert_eq!(count_table(&conn, "integrity_violations"), 1);
+    }
+
+    #[test]
+    fn can_insert_and_select_violation_after_init() {
+        let conn = Connection::open_in_memory().expect("open");
+        init_case_schema(&conn).expect("init");
+        conn.execute(
+            "INSERT INTO integrity_violations \
+             (case_id, timestamp, violation_type, expected_value, actual_value, affected_path, severity) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params!["c1", "2026-04-17T00:00:00Z", "HashMismatch", "aaa", "bbb", "/x", "High"],
+        )
+        .expect("insert");
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM integrity_violations", [], |r| r.get(0))
+            .expect("q");
+        assert_eq!(n, 1);
+    }
 }
 
 pub fn init_default_presets(conn: &Connection) -> SqliteResult<()> {

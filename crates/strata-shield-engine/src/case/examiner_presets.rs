@@ -218,6 +218,37 @@ pub fn init_case_schema(conn: &Connection) -> SqliteResult<()> {
             bundle_path TEXT,
             bundle_hash_sha256 TEXT
         );
+
+        -- FIX-3: keep this migration in lockstep with strata-core's copy
+        -- so the CLI and engine share a consistent freshly-initialized
+        -- schema. Without this block, `strata examine` errors with
+        -- "no such table: integrity_violations" on freshly-initialized
+        -- cases.
+        CREATE TABLE IF NOT EXISTS integrity_violations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            case_id TEXT,
+            occurred_utc TEXT,
+            timestamp TEXT NOT NULL,
+            violation_type TEXT NOT NULL,
+            table_name TEXT,
+            expected_value TEXT NOT NULL,
+            actual_value TEXT NOT NULL,
+            affected_path TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            examiner_notified INTEGER DEFAULT 0,
+            acknowledged_by TEXT,
+            acknowledgment_timestamp TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_integrity_timestamp
+            ON integrity_violations(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_integrity_type
+            ON integrity_violations(violation_type);
+        CREATE INDEX IF NOT EXISTS idx_integrity_severity
+            ON integrity_violations(severity);
+        CREATE INDEX IF NOT EXISTS idx_integrity_violations_case_time
+            ON integrity_violations(case_id, occurred_utc);
+        CREATE INDEX IF NOT EXISTS idx_integrity_violations_case_table
+            ON integrity_violations(case_id, table_name);
         "#,
     )?;
     init_default_presets(conn)
