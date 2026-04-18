@@ -28,6 +28,7 @@ members = [
     "crates/strata-evidence",
     "crates/strata-tree-sdk", "crates/strata-license", "tools/wolfmark-license-gen",
     "tools/strata-verify-plugins",
+    "tools/strata-verify-quality",
     "plugins/strata-plugin-specter",
     "plugins/strata-plugin-conduit",
     "plugins/strata-plugin-nimbus",

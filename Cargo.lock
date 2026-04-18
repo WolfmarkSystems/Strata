@@ -8388,6 +8388,7 @@ dependencies = [
  "thiserror 1.0.69",
  "time",
  "tokio",
+ "toml 0.8.2",
  "tracing",
  "tracing-subscriber",
  "uuid",
@@ -8404,6 +8405,16 @@ name = "strata-verify-plugins"
 version = "0.1.0"
 dependencies = [
  "tempfile",
+]
+
+[[package]]
+name = "strata-verify-quality"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "syn 2.0.117",
+ "toml 0.8.2",
+ "walkdir",
 ]
 
 [[package]]

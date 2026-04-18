@@ -1,0 +1,22 @@
+# Quality-gate baseline waivers for `strata-verify-quality`.
+#
+# `known_count` is the current library-code violation count captured at
+# the time this tool landed (v14 / H3-AST-QUALITY-GATE, session date
+# 2026-04-18). It is NOT a license to introduce new violations — it is a
+# ratchet. Future sprints decrease these numbers as real violations are
+# fixed; any commit that would INCREASE them fails the gate.
+#
+# CLAUDE.md's "zero" targets remain the north star; these counts track
+# the distance from that target so it's visible in CI.
+
+[library_unwrap]
+known_count = 470
+reason = "v14 baseline. Largest offenders: strata-fs/src/apfs.rs (30), strata-fs/src/container/vhd.rs (29), strata-shield-engine repo-doubles (shared source with strata-core). Ratchet down during each future session."
+
+[library_unsafe]
+known_count = 5
+reason = "v14 baseline. VHD/VMDK binding crates require unsafe for memory-mapped access. Auditing the specific blocks is a separate follow-on."
+
+[library_println]
+known_count = 5
+reason = "v14 baseline. Any new library println! must justify itself; reduce this number when removing existing ones."

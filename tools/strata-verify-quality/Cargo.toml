@@ -1,0 +1,16 @@
+[package]
+name = "strata-verify-quality"
+version = "0.1.0"
+edition = "2021"
+description = "AST-aware quality gate: counts production-code unwrap/unsafe/println using syn, distinguishes library code from test modules and CLI binaries."
+license = "Proprietary"
+
+[[bin]]
+name = "strata-verify-quality"
+path = "src/main.rs"
+
+[dependencies]
+syn = { version = "2", features = ["full", "visit", "extra-traits"] }
+walkdir = "2"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
