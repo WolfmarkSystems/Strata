@@ -13,6 +13,8 @@
 //!
 //! Zero `.unwrap()`, zero `unsafe {}`, zero `println!` per CLAUDE.md.
 
+pub mod translation_gaps;
+
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
