@@ -98,6 +98,7 @@ pub mod hulu;
 pub mod icloudbackup;
 pub mod icloudkeyvalue;
 pub mod icloudtabs;
+pub mod imessage_ios26;
 pub mod imessageattach;
 pub mod instagram;
 pub mod interactionc;
