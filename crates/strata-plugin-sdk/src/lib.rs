@@ -38,6 +38,73 @@ pub struct PluginContext {
     pub prior_results: Vec<PluginOutput>,
 }
 
+impl PluginContext {
+    /// Resolve a logical path against `root_path`.
+    pub fn resolve(&self, path: &str) -> std::path::PathBuf {
+        let rel = path.trim_start_matches('/');
+        if rel.is_empty() {
+            std::path::PathBuf::from(&self.root_path)
+        } else {
+            std::path::Path::new(&self.root_path).join(rel)
+        }
+    }
+
+    /// Read a file. Returns None on missing / unreadable targets so
+    /// plugins can chain Option methods instead of unwrapping errors.
+    pub fn read_file(&self, path: &str) -> Option<Vec<u8>> {
+        std::fs::read(self.resolve(path)).ok()
+    }
+
+    /// File-or-dir existence check rooted at `root_path`.
+    pub fn file_exists(&self, path: &str) -> bool {
+        self.resolve(path).exists()
+    }
+
+    /// List the children of a directory. Empty vec on missing /
+    /// non-directory paths.
+    pub fn list_dir(&self, path: &str) -> Vec<String> {
+        let target = self.resolve(path);
+        let Ok(entries) = std::fs::read_dir(target) else {
+            return Vec::new();
+        };
+        entries
+            .flatten()
+            .filter_map(|e| e.file_name().into_string().ok())
+            .collect()
+    }
+
+    /// Depth-bounded case-insensitive recursive search for files
+    /// whose leaf name equals `name`. Cap of 8 levels keeps plugins
+    /// from accidentally walking enormous user-data trees.
+    pub fn find_by_name(&self, name: &str) -> Vec<std::path::PathBuf> {
+        let needle = name.to_ascii_lowercase();
+        let mut out = Vec::new();
+        let mut stack: Vec<(std::path::PathBuf, u32)> =
+            vec![(std::path::PathBuf::from(&self.root_path), 0)];
+        while let Some((dir, depth)) = stack.pop() {
+            if depth > 8 {
+                continue;
+            }
+            let Ok(iter) = std::fs::read_dir(&dir) else {
+                continue;
+            };
+            for entry in iter.flatten() {
+                let p = entry.path();
+                let Some(fname) = p.file_name().and_then(|s| s.to_str()) else {
+                    continue;
+                };
+                if fname.to_ascii_lowercase() == needle {
+                    out.push(p.clone());
+                }
+                if p.is_dir() {
+                    stack.push((p, depth + 1));
+                }
+            }
+        }
+        out
+    }
+}
+
 /// The result returned by a plugin.
 pub type PluginResult = Result<Vec<Artifact>, PluginError>;
 
@@ -253,6 +320,65 @@ pub fn score_with_corroboration(outputs: &mut [PluginOutput]) {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod context_helper_tests {
+    use super::*;
+
+    fn ctx_for(root: &std::path::Path) -> PluginContext {
+        PluginContext {
+            root_path: root.to_string_lossy().into_owned(),
+            config: Default::default(),
+            prior_results: Default::default(),
+        }
+    }
+
+    #[test]
+    fn read_file_returns_none_on_missing() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        let ctx = ctx_for(tmp.path());
+        assert!(ctx.read_file("/does/not/exist").is_none());
+    }
+
+    #[test]
+    fn read_file_reads_bytes() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        std::fs::write(tmp.path().join("a.txt"), b"hello").expect("w");
+        let ctx = ctx_for(tmp.path());
+        assert_eq!(ctx.read_file("/a.txt").as_deref(), Some(b"hello".as_slice()));
+    }
+
+    #[test]
+    fn file_exists_positive_and_negative() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        std::fs::write(tmp.path().join("x.txt"), b"").expect("w");
+        let ctx = ctx_for(tmp.path());
+        assert!(ctx.file_exists("/x.txt"));
+        assert!(!ctx.file_exists("/nope.txt"));
+    }
+
+    #[test]
+    fn list_dir_returns_entries() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        std::fs::write(tmp.path().join("a.txt"), b"").expect("w");
+        std::fs::write(tmp.path().join("b.txt"), b"").expect("w");
+        let ctx = ctx_for(tmp.path());
+        let mut entries = ctx.list_dir("/");
+        entries.sort();
+        assert_eq!(entries, vec!["a.txt", "b.txt"]);
+    }
+
+    #[test]
+    fn find_by_name_walks_recursively_case_insensitive() {
+        let tmp = tempfile::tempdir().expect("tmp");
+        std::fs::create_dir_all(tmp.path().join("dir1/dir2")).expect("mk");
+        std::fs::write(tmp.path().join("dir1/dir2/SYSTEM"), b"").expect("w");
+        let ctx = ctx_for(tmp.path());
+        let hits = ctx.find_by_name("system");
+        assert_eq!(hits.len(), 1);
+        assert!(hits[0].ends_with("SYSTEM"));
     }
 }
 
