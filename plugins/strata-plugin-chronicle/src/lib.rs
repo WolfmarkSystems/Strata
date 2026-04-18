@@ -1,7 +1,12 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+pub mod ai_actions;
 pub mod cam_database;
+pub mod click_to_do;
+pub mod shellbags_win7;
+pub mod userassist_versions;
+pub mod winxp;
 
 use rusqlite::OpenFlags;
 use strata_plugin_sdk::{

@@ -82,16 +82,15 @@ pub fn gap_from_message(m: &MessageTranslationFacts) -> Option<TranslationGap> {
     if !m.is_translated_flag {
         // A language mismatch alone is low-confidence signal — flag
         // it, but at reduced confidence so reporting can sort.
-        let mismatch = match (m.source_language, m.device_locale) {
+        let mismatch = matches!(
+            (m.source_language, m.device_locale),
             (Some(src), Some(locale))
                 if !src.is_empty()
                     && !locale.is_empty()
-                    && !locale.to_ascii_lowercase().starts_with(&src.to_ascii_lowercase()[..src.len().min(2)]) =>
-            {
-                true
-            }
-            _ => false,
-        };
+                    && !locale
+                        .to_ascii_lowercase()
+                        .starts_with(&src.to_ascii_lowercase()[..src.len().min(2)])
+        );
         if !mismatch {
             return None;
         }
