@@ -16,6 +16,7 @@ pub mod hashing;
 pub mod plugins;
 pub mod store;
 pub mod types;
+pub mod vfs_materialize;
 
 // ── Public API surface ──────────────────────────────────────────────────────
 
@@ -37,6 +38,8 @@ pub use plugins::{
     run_all_on_path, run_all_on_vfs, run_all_with_persistence,
     run_all_with_persistence_vfs, run_plugin,
 };
+
+pub use vfs_materialize::{materialize_targets, MaterializeReport};
 
 pub use csam::{
     csam_confirm_hit, csam_create_session, csam_dismiss_hit, csam_drop_session,

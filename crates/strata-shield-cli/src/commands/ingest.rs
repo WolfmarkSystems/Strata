@@ -449,21 +449,51 @@ pub fn run_ingest(args: IngestRunArgs) -> i32 {
             None
         };
 
-    let results = match mounted_vfs {
-        Some(vfs) => strata_engine_adapter::run_all_with_persistence_vfs(
-            effective_source.as_path(),
-            vfs,
-            args.case_dir.as_path(),
-            &case_id,
-            filter,
-        ),
-        None => strata_engine_adapter::run_all_with_persistence(
-            effective_source.as_path(),
-            args.case_dir.as_path(),
-            &case_id,
-            filter,
-        ),
+    // v12 bridge: when a VFS is mounted, materialize known forensic
+    // targets to <case_dir>/extracted/ once up-front. All plugins
+    // then see real evidence files through their existing std::fs
+    // call sites, AND can additionally query the VFS directly through
+    // ctx.vfs. This multiplies the v11 "only migrated plugins see
+    // the VFS" result across all 26 plugins without per-plugin
+    // surgery.
+    let (results, scratch_root) = match mounted_vfs {
+        Some(vfs) => {
+            let scratch = args.case_dir.join("extracted");
+            match strata_engine_adapter::materialize_targets(&vfs, &scratch) {
+                Ok(report) => {
+                    if !args.quiet {
+                        eprintln!(
+                            "[evidence] materialized {} files ({} bytes) to {}",
+                            report.files_written,
+                            report.bytes_written,
+                            scratch.display()
+                        );
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Warning: materialize_targets failed: {e}");
+                }
+            }
+            let r = strata_engine_adapter::run_all_with_persistence_vfs(
+                scratch.as_path(),
+                vfs,
+                args.case_dir.as_path(),
+                &case_id,
+                filter,
+            );
+            (r, Some(scratch))
+        }
+        None => {
+            let r = strata_engine_adapter::run_all_with_persistence(
+                effective_source.as_path(),
+                args.case_dir.as_path(),
+                &case_id,
+                filter,
+            );
+            (r, None)
+        }
     };
+    let _ = scratch_root;
 
     let mut per_plugin: Vec<IngestRunPluginOutcome> = Vec::with_capacity(results.len());
     let mut ok = 0usize;
