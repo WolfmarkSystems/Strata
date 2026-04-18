@@ -13,6 +13,7 @@
 //!
 //! Zero `.unwrap()`, zero `unsafe {}`, zero `println!` per CLAUDE.md.
 
+pub mod apple_intelligence;
 pub mod facetime26;
 pub mod translation_gaps;
 
