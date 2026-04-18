@@ -416,12 +416,54 @@ pub fn run_ingest(args: IngestRunArgs) -> i32 {
     } else {
         case_id_sanitised
     };
-    let results = strata_engine_adapter::run_all_with_persistence(
-        effective_source.as_path(),
-        args.case_dir.as_path(),
-        &case_id,
-        filter,
-    );
+
+    // E2E-1: if the effective source is a forensic image file, open it,
+    // parse partitions, mount filesystems via the FS dispatcher, and
+    // build a CompositeVfs. Plugins walk the mounted evidence through
+    // `ctx.vfs` / `ctx.read_file` / `ctx.find_by_name`.
+    let mounted_vfs: Option<std::sync::Arc<dyn strata_fs::vfs::VirtualFilesystem>> =
+        if effective_source.is_file() {
+            match strata_evidence::open_evidence(effective_source.as_path()) {
+                Ok(image_box) => {
+                    let image: std::sync::Arc<dyn strata_evidence::EvidenceImage> =
+                        std::sync::Arc::from(image_box);
+                    if !args.quiet {
+                        eprintln!(
+                            "[evidence] opened {} ({} bytes, format {})",
+                            effective_source.display(),
+                            image.size(),
+                            image.format_name()
+                        );
+                    }
+                    mount_partitions_composite(image.clone(), args.quiet)
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Warning: open_evidence({}) failed: {e}; falling back to host fs",
+                        effective_source.display()
+                    );
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+    let results = match mounted_vfs {
+        Some(vfs) => strata_engine_adapter::run_all_with_persistence_vfs(
+            effective_source.as_path(),
+            vfs,
+            args.case_dir.as_path(),
+            &case_id,
+            filter,
+        ),
+        None => strata_engine_adapter::run_all_with_persistence(
+            effective_source.as_path(),
+            args.case_dir.as_path(),
+            &case_id,
+            filter,
+        ),
+    };
 
     let mut per_plugin: Vec<IngestRunPluginOutcome> = Vec::with_capacity(results.len());
     let mut ok = 0usize;
@@ -732,5 +774,88 @@ mod tests {
         };
         let j = serde_json::to_string(&s).expect("ser");
         assert!(j.contains("per_plugin"));
+    }
+}
+
+/// E2E-1 — Given an opened evidence image, parse the MBR/GPT
+/// partition table, mount each partition's filesystem via
+/// `strata-fs::fs_dispatch::open_filesystem`, and compose the
+/// mounted filesystems into a `CompositeVfs`. Returns `None` when the
+/// image has no readable partitions (caller falls back to host-fs
+/// mode). Unsupported filesystem types (APFS/HFS+/ext*/FAT today)
+/// are logged and skipped rather than aborting the mount.
+fn mount_partitions_composite(
+    image: std::sync::Arc<dyn strata_evidence::EvidenceImage>,
+    quiet: bool,
+) -> Option<std::sync::Arc<dyn strata_fs::vfs::VirtualFilesystem>> {
+    let mut composite = strata_fs::vfs::CompositeVfs::new();
+    let mut mounted_count = 0usize;
+
+    // Try GPT first, then fall back to MBR.
+    let parts_gpt = strata_evidence::read_gpt(image.as_ref()).unwrap_or_default();
+    let mut parts_mbr = Vec::new();
+    if parts_gpt.is_empty() {
+        parts_mbr = strata_evidence::read_mbr(image.as_ref()).unwrap_or_default();
+    }
+
+    let partitions: Vec<(u64, u64, String)> = if !parts_gpt.is_empty() {
+        parts_gpt
+            .iter()
+            .map(|p| {
+                (
+                    p.offset_bytes,
+                    p.size_bytes,
+                    if p.name.is_empty() {
+                        format!("part{}", p.index)
+                    } else {
+                        p.name.clone()
+                    },
+                )
+            })
+            .collect()
+    } else if !parts_mbr.is_empty() {
+        parts_mbr
+            .iter()
+            .map(|p| (p.offset_bytes, p.size_bytes, format!("part{}", p.index)))
+            .collect()
+    } else {
+        // No partition table — try to mount as a single filesystem at offset 0.
+        Vec::from([(0u64, image.size(), "fs0".to_string())])
+    };
+
+    for (offset, size, name) in partitions {
+        if size == 0 {
+            continue;
+        }
+        match strata_fs::fs_dispatch::open_filesystem(
+            std::sync::Arc::clone(&image),
+            offset,
+            size,
+        ) {
+            Ok(walker) => {
+                composite.mount(&name, std::sync::Arc::from(walker));
+                mounted_count += 1;
+                if !quiet {
+                    eprintln!(
+                        "[evidence] mounted {} at offset {} size {}",
+                        name, offset, size
+                    );
+                }
+            }
+            Err(e) => {
+                if !quiet {
+                    eprintln!(
+                        "[evidence] skipped {} at offset {}: {}",
+                        name, offset, e
+                    );
+                }
+            }
+        }
+    }
+
+    if mounted_count == 0 {
+        None
+    } else {
+        Some(std::sync::Arc::new(composite))
     }
 }

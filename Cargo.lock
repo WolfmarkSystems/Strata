@@ -8229,6 +8229,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+ "strata-fs",
  "tempfile",
  "thiserror 1.0.69",
 ]
@@ -8332,6 +8333,7 @@ dependencies = [
  "strata-artifacts",
  "strata-core",
  "strata-engine-adapter",
+ "strata-evidence",
  "strata-fs",
  "strata-plugin-sdk",
  "strata-shield-engine",

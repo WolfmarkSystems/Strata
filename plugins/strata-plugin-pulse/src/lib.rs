@@ -205,6 +205,7 @@ mod tests {
         let p = PulsePlugin::new();
         let ctx = PluginContext {
             root_path: tmp.path().to_string_lossy().to_string(),
+            vfs: None,
             config: std::collections::HashMap::new(),
             prior_results: vec![],
         };
@@ -217,6 +218,7 @@ mod tests {
     fn legacy_run_returns_empty_ok() {
         let ctx = PluginContext {
             root_path: ".".to_string(),
+            vfs: None,
             config: std::collections::HashMap::new(),
             prior_results: vec![],
         };

@@ -1229,6 +1229,7 @@ mod tests {
         let plugin = SigmaPlugin::new();
         let ctx = PluginContext {
             root_path: "/tmp".to_string(),
+            vfs: None,
             config: HashMap::new(),
             prior_results: prior,
         };

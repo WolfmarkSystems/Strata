@@ -150,6 +150,7 @@ mod tests {
         let p = CsamPlugin::new();
         let ctx = PluginContext {
             root_path: "/tmp".to_string(),
+            vfs: None,
             config: std::collections::HashMap::new(),
             prior_results: vec![],
         };

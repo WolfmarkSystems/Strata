@@ -293,6 +293,7 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let ctx = PluginContext {
             root_path: dir.path().to_string_lossy().to_string(),
+            vfs: None,
             config: std::collections::HashMap::new(),
             prior_results: Vec::new(),
         };

@@ -99,6 +99,34 @@ impl StrataPlugin for PhantomPlugin {
         let root = Path::new(&ctx.root_path);
         let mut results = Vec::new();
 
+        // VFS-PLUGIN-2 pilot: when the evidence is a mounted image,
+        // find Windows registry hives by name and parse them via the
+        // existing per-hive parsers. Each hive read is gated at
+        // 512 MB (the v9 host-fs path's gate).
+        if ctx.vfs.is_some() {
+            const HIVE_MAX: usize = 512 * 1024 * 1024;
+            for (hive_name, parse_fn) in [
+                ("SYSTEM", parsers::system::parse as fn(&Path, &[u8]) -> Vec<Artifact>),
+                ("SOFTWARE", parsers::software::parse),
+                ("SAM", parsers::sam::parse),
+                ("SECURITY", parsers::security::parse),
+                ("NTUSER.DAT", parsers::ntuser::parse),
+                ("UsrClass.dat", parsers::usrclass::parse),
+            ] {
+                for logical_path in ctx.find_by_name(hive_name) {
+                    let logical_str = logical_path.to_string_lossy().into_owned();
+                    let Some(bytes) = ctx.read_file(&logical_str) else {
+                        continue;
+                    };
+                    if bytes.len() > HIVE_MAX {
+                        continue;
+                    }
+                    results.extend(parse_fn(&logical_path, &bytes));
+                }
+            }
+            return Ok(results);
+        }
+
         let files = match walk_dir(root) {
             Ok(f) => f,
             Err(_) => return Ok(results),

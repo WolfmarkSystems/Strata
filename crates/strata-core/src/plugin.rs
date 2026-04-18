@@ -178,6 +178,7 @@ impl PluginManager {
     ) -> Vec<strata_plugin_sdk::Artifact> {
         let context = PluginContext {
             root_path: root_path.to_string_lossy().to_string(),
+            vfs: None,
             config: std::collections::HashMap::new(),
             prior_results: Vec::new(),
         };

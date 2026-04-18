@@ -170,6 +170,7 @@ pub fn run_plugin(evidence_id: &str, plugin_name: &str) -> AdapterResult<Vec<Plu
 
     let context = PluginContext {
         root_path,
+        vfs: None,
         config: HashMap::new(),
         prior_results: Vec::new(),
     };
@@ -215,6 +216,7 @@ pub fn run_all_on_path(
         }
         let context = PluginContext {
             root_path: root_str.clone(),
+            vfs: None,
             config: HashMap::new(),
             prior_results: prior.clone(),
         };
@@ -225,6 +227,82 @@ pub fn run_all_on_path(
             }
             Err(e) => {
                 results.push((name, Err(format!("{e}"))));
+            }
+        }
+    }
+    results
+}
+
+/// VFS-aware variant of `run_all_on_path`. Plugins receive a
+/// `PluginContext` whose `vfs` is the supplied filesystem, enabling
+/// them to call `ctx.read_file("/path")` / `ctx.find_by_name("SYSTEM")`
+/// against a mounted evidence image rather than the host filesystem
+/// at `root_path`. `root_path` is still passed for backward
+/// compatibility with plugins that haven't migrated.
+pub fn run_all_on_vfs(
+    root_path: &std::path::Path,
+    vfs: std::sync::Arc<dyn strata_fs::vfs::VirtualFilesystem>,
+    plugin_filter: Option<&[String]>,
+) -> Vec<(String, Result<PluginOutput, String>)> {
+    let plugins = build_plugins();
+    let root_str = root_path.to_string_lossy().into_owned();
+    let mut prior: Vec<PluginOutput> = Vec::new();
+    let mut results: Vec<(String, Result<PluginOutput, String>)> =
+        Vec::with_capacity(plugins.len());
+    for plugin in plugins.iter() {
+        let name = plugin.name().to_string();
+        if let Some(filter) = plugin_filter {
+            if !filter.iter().any(|n| n == &name) {
+                continue;
+            }
+        }
+        let context = PluginContext {
+            root_path: root_str.clone(),
+            vfs: Some(std::sync::Arc::clone(&vfs)),
+            config: HashMap::new(),
+            prior_results: prior.clone(),
+        };
+        match plugin.execute(context) {
+            Ok(output) => {
+                prior.push(output.clone());
+                results.push((name, Ok(output)));
+            }
+            Err(e) => {
+                results.push((name, Err(format!("{e}"))));
+            }
+        }
+    }
+    results
+}
+
+/// VFS-aware counterpart of `run_all_with_persistence`. Plugins see
+/// the mounted VFS; artifacts write through to the per-case
+/// `artifacts.sqlite` as before.
+pub fn run_all_with_persistence_vfs(
+    root_path: &std::path::Path,
+    vfs: std::sync::Arc<dyn strata_fs::vfs::VirtualFilesystem>,
+    case_dir: &std::path::Path,
+    case_id: &str,
+    plugin_filter: Option<&[String]>,
+) -> Vec<(String, Result<PluginOutput, String>)> {
+    let results = run_all_on_vfs(root_path, vfs, plugin_filter);
+    let mut db =
+        match strata_core::artifacts::ArtifactDatabase::open_or_create(case_dir, case_id) {
+            Ok(d) => d,
+            Err(e) => {
+                tracing::warn!(
+                    "artifact database open failed: {e}; persistence skipped"
+                );
+                return results;
+            }
+        };
+    for (plugin_name, outcome) in &results {
+        if let Ok(output) = outcome {
+            if output.artifacts.is_empty() {
+                continue;
+            }
+            if let Err(e) = db.insert_batch(plugin_name, &output.artifacts) {
+                tracing::warn!("artifact persistence failed for {plugin_name}: {e}");
             }
         }
     }

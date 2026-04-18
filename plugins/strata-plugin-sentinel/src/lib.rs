@@ -406,6 +406,7 @@ mod tests {
         let p = SentinelPlugin::new();
         let ctx = PluginContext {
             root_path: tmp.path().to_string_lossy().to_string(),
+            vfs: None,
             config: std::collections::HashMap::new(),
             prior_results: Vec::new(),
         };
@@ -423,6 +424,7 @@ mod tests {
         let p = SentinelPlugin::new();
         let ctx = PluginContext {
             root_path: tmp.path().to_string_lossy().to_string(),
+            vfs: None,
             config: std::collections::HashMap::new(),
             prior_results: Vec::new(),
         };
@@ -444,6 +446,7 @@ mod tests {
         let p = SentinelPlugin::new();
         let ctx = PluginContext {
             root_path: tmp.path().to_string_lossy().to_string(),
+            vfs: None,
             config: std::collections::HashMap::new(),
             prior_results: Vec::new(),
         };

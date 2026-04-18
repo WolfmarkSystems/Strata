@@ -1,6 +1,11 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::Arc;
+
+// Re-export the VirtualFilesystem trait from strata-fs so plugins
+// can pull it from the SDK.
+pub use strata_fs::vfs::{VirtualFilesystem, WalkDecision};
 
 /// Plugin API version
 pub const PLUGIN_API_VERSION: &str = "0.3.0";
@@ -32,14 +37,21 @@ impl Artifact {
 /// The context provided to each plugin during execution.
 #[derive(Clone)]
 pub struct PluginContext {
+    /// Legacy root path (host filesystem for directory sources).
     pub root_path: String,
+    /// Optional mounted VFS when evidence is an E01/Raw/VMDK/VHD.
+    /// When present, the helper methods route through it; when
+    /// `None`, they fall back to `root_path` on the host filesystem.
+    pub vfs: Option<Arc<dyn VirtualFilesystem>>,
     pub config: HashMap<String, String>,
     /// Results from previously-run plugins (used by Sigma for correlation).
     pub prior_results: Vec<PluginOutput>,
 }
 
 impl PluginContext {
-    /// Resolve a logical path against `root_path`.
+    /// Resolve a logical path against `root_path`. VFS-backed
+    /// contexts bypass `resolve` — callers use `read_file`/`list_dir`
+    /// directly with the logical path.
     pub fn resolve(&self, path: &str) -> std::path::PathBuf {
         let rel = path.trim_start_matches('/');
         if rel.is_empty() {
@@ -51,18 +63,32 @@ impl PluginContext {
 
     /// Read a file. Returns None on missing / unreadable targets so
     /// plugins can chain Option methods instead of unwrapping errors.
+    /// Routes through the VFS when one is mounted.
     pub fn read_file(&self, path: &str) -> Option<Vec<u8>> {
+        if let Some(vfs) = &self.vfs {
+            return vfs.read_file(path).ok();
+        }
         std::fs::read(self.resolve(path)).ok()
     }
 
-    /// File-or-dir existence check rooted at `root_path`.
+    /// File-or-dir existence check. Routes through the VFS when
+    /// mounted, else checks the host filesystem rooted at `root_path`.
     pub fn file_exists(&self, path: &str) -> bool {
+        if let Some(vfs) = &self.vfs {
+            return vfs.exists(path);
+        }
         self.resolve(path).exists()
     }
 
     /// List the children of a directory. Empty vec on missing /
-    /// non-directory paths.
+    /// non-directory paths. Routes through the VFS when mounted.
     pub fn list_dir(&self, path: &str) -> Vec<String> {
+        if let Some(vfs) = &self.vfs {
+            return vfs
+                .list_dir(path)
+                .map(|v| v.into_iter().map(|e| e.name).collect())
+                .unwrap_or_default();
+        }
         let target = self.resolve(path);
         let Ok(entries) = std::fs::read_dir(target) else {
             return Vec::new();
@@ -74,10 +100,25 @@ impl PluginContext {
     }
 
     /// Depth-bounded case-insensitive recursive search for files
-    /// whose leaf name equals `name`. Cap of 8 levels keeps plugins
-    /// from accidentally walking enormous user-data trees.
+    /// whose leaf name equals `name`. Returns **logical path
+    /// strings** (suitable for `read_file`) when VFS-backed, or
+    /// **host-filesystem PathBufs** when not.
+    ///
+    /// Cap of 8 levels keeps plugins from accidentally walking
+    /// enormous user-data trees.
     pub fn find_by_name(&self, name: &str) -> Vec<std::path::PathBuf> {
         let needle = name.to_ascii_lowercase();
+        if let Some(vfs) = &self.vfs {
+            let mut out = Vec::new();
+            let mut filter = |e: &strata_fs::vfs::VfsEntry| {
+                if !e.is_directory && e.name.to_ascii_lowercase() == needle {
+                    out.push(std::path::PathBuf::from(&e.path));
+                }
+                WalkDecision::Descend
+            };
+            let _ = vfs.walk(&mut filter);
+            return out;
+        }
         let mut out = Vec::new();
         let mut stack: Vec<(std::path::PathBuf, u32)> =
             vec![(std::path::PathBuf::from(&self.root_path), 0)];
@@ -330,6 +371,7 @@ mod context_helper_tests {
     fn ctx_for(root: &std::path::Path) -> PluginContext {
         PluginContext {
             root_path: root.to_string_lossy().into_owned(),
+            vfs: None,
             config: Default::default(),
             prior_results: Default::default(),
         }

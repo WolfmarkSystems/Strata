@@ -1086,6 +1086,7 @@ impl AppState {
 
         let context = strata_plugin_sdk::PluginContext {
             root_path,
+            vfs: None,
             config: std::collections::HashMap::new(),
             prior_results: self.plugin_results.clone(),
         };
