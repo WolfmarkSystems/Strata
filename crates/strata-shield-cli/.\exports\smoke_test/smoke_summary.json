@@ -1,8 +1,8 @@
 {
   "tool_version": "0.1.0",
-  "timestamp_utc": "2026-04-18T19:34:02.363071+00:00",
+  "timestamp_utc": "2026-04-18T19:54:27.558766+00:00",
   "platform": "windows",
-  "image_path": "tests_temp_smoke_test_missing_image_1776540839509189000/missing.dd",
+  "image_path": "tests_temp_smoke_test_missing_image_1776542064604769000/missing.dd",
   "out_dir": "",
   "mft_count": 50,
   "timeline_enabled": true,
@@ -32,5 +32,5 @@
   },
   "elapsed_ms": 7,
   "status": "error",
-  "error": "Image file not found: tests_temp_smoke_test_missing_image_1776540839509189000/missing.dd"
+  "error": "Image file not found: tests_temp_smoke_test_missing_image_1776542064604769000/missing.dd"
 }

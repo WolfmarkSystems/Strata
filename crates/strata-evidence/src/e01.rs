@@ -26,7 +26,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use crate::image::{EvidenceError, EvidenceImage, EvidenceResult, ImageMetadata};
+use crate::image::{EvidenceError, EvidenceImage, EvidenceResult, EvidenceWarning, ImageMetadata};
 
 /// EWF v1 magic. Bytes: 'E' 'V' 'F' 0x09 0x0D 0x0A 0xFF 0x00.
 pub const EWF_MAGIC: [u8; 8] = [0x45, 0x56, 0x46, 0x09, 0x0D, 0x0A, 0xFF, 0x00];
@@ -83,6 +83,13 @@ pub struct E01Image {
     /// inside the same chunk don't re-decompress. Guarded by a mutex
     /// because `EvidenceImage` demands `Sync` + `read_at(&self, …)`.
     cache: Mutex<ChunkCache>,
+    /// v14/EWF-TRIM-WARN-1: upper byte boundary of the acquired chunk
+    /// range (= `chunks.len() * chunk_size`). Reads past this offset
+    /// but below `total_size` indicate acquisition trim and record a
+    /// `OffsetBeyondAcquired` warning.
+    acquired_ceiling: u64,
+    /// v14/EWF-TRIM-WARN-1: accumulated structured warnings.
+    warnings: Mutex<Vec<EvidenceWarning>>,
 }
 
 struct ChunkCache {
@@ -175,6 +182,7 @@ impl E01Image {
             .map(|s| s.saturating_mul(bytes_per_sector as u64))
             .unwrap_or_else(|| chunks.len() as u64 * chunk_size as u64);
 
+        let acquired_ceiling = (chunks.len() as u64).saturating_mul(chunk_size as u64);
         Ok(Self {
             segment_paths,
             segment_files,
@@ -186,7 +194,27 @@ impl E01Image {
             table_sections_parsed,
             table2_sections_seen,
             cache: Mutex::new(ChunkCache::new(32)),
+            acquired_ceiling,
+            warnings: Mutex::new(Vec::new()),
         })
+    }
+
+    /// Ceiling (in bytes) of the acquired chunk range. `read_at` calls
+    /// whose `offset >= acquired_ceiling` but `< size()` indicate
+    /// acquisition trim and record a structured warning.
+    pub fn acquired_ceiling(&self) -> u64 {
+        self.acquired_ceiling
+    }
+
+    fn record_warning(&self, w: EvidenceWarning) {
+        if let Ok(mut guard) = self.warnings.lock() {
+            // Cap at 256 warnings per image to bound memory on pathological
+            // trimmed images. After the cap we silently stop recording;
+            // the first handful convey the same forensic signal.
+            if guard.len() < 256 {
+                guard.push(w);
+            }
+        }
     }
 
     pub fn segment_count(&self) -> usize {
@@ -344,6 +372,34 @@ impl EvidenceImage for E01Image {
         while filled < buf.len() && cursor < self.total_size {
             let chunk_idx = cursor / self.chunk_size as u64;
             let in_chunk = (cursor % self.chunk_size as u64) as usize;
+            // EWF-TRIM-WARN-1: if the chunk table doesn't cover this
+            // offset, the image was acquisition-trimmed. Record a
+            // structured warning and zero-fill the remainder of this
+            // chunk's window. Callers see a successful read returning
+            // zeros rather than a hard I/O error; warnings() lets the
+            // examiner distinguish trim from real evidence.
+            if chunk_idx as usize >= self.chunks.len() {
+                self.record_warning(EvidenceWarning::OffsetBeyondAcquired {
+                    requested_offset: cursor,
+                    acquired_ceiling: self.acquired_ceiling,
+                    segment_count: self.segment_files.len() as u32,
+                });
+                let remaining_in_chunk =
+                    (self.chunk_size as u64).saturating_sub(in_chunk as u64) as usize;
+                let remaining_in_buf = buf.len() - filled;
+                let n = remaining_in_chunk.min(remaining_in_buf);
+                if n == 0 {
+                    break;
+                }
+                // Zero-fill — buf is caller-provided; we only touch
+                // the slice we claim to have filled.
+                for byte in &mut buf[filled..filled + n] {
+                    *byte = 0;
+                }
+                filled += n;
+                cursor = cursor.saturating_add(n as u64);
+                continue;
+            }
             let payload = self.read_chunk(chunk_idx)?;
             let remaining_in_chunk = payload.len().saturating_sub(in_chunk);
             let remaining_in_buf = buf.len() - filled;
@@ -356,6 +412,13 @@ impl EvidenceImage for E01Image {
             cursor = cursor.saturating_add(n as u64);
         }
         Ok(filled)
+    }
+
+    fn warnings(&self) -> Vec<EvidenceWarning> {
+        self.warnings
+            .lock()
+            .map(|g| g.clone())
+            .unwrap_or_default()
     }
 }
 
@@ -933,5 +996,134 @@ mod tests {
             "expected ≥1 table2 mirror section observed, got {}",
             stats.table2_sections_seen
         );
+    }
+
+    // ── EWF-TRIM-WARN-1 tests ──────────────────────────────────────
+
+    #[test]
+    fn evidence_warning_serializes_with_tag() {
+        let w = EvidenceWarning::OffsetBeyondAcquired {
+            requested_offset: 0x3A000000,
+            acquired_ceiling: 0x1C000000,
+            segment_count: 4,
+        };
+        let j = serde_json::to_string(&w).expect("ser");
+        assert!(j.contains("\"kind\":\"offset_beyond_acquired\""), "got {j}");
+        assert!(j.contains("\"requested_offset\":973078528"), "got {j}");
+        let round: EvidenceWarning = serde_json::from_str(&j).expect("de");
+        assert_eq!(round, w);
+    }
+
+    #[test]
+    fn raw_image_returns_empty_warnings_by_default() {
+        // RawImage doesn't override warnings(); the trait default
+        // should apply.
+        let tmp = tempfile::tempdir().expect("tmp");
+        let p = tmp.path().join("r.dd");
+        {
+            let mut f = File::create(&p).expect("c");
+            f.write_all(&[0u8; 4096]).expect("w");
+        }
+        let img = crate::raw::RawImage::open(&p).expect("raw open");
+        assert!(img.warnings().is_empty());
+    }
+
+    #[test]
+    fn e01_warnings_vec_starts_empty() {
+        if !jean_present() {
+            eprintln!("SKIP: {JEAN_PATH} not present");
+            return;
+        }
+        let img = E01Image::open(std::path::Path::new(JEAN_PATH)).expect("open");
+        // Before any read_at call, warnings is empty.
+        assert!(img.warnings().is_empty());
+    }
+
+    #[test]
+    fn e01_read_past_acquired_ceiling_records_warning() {
+        if !jean_present() {
+            eprintln!("SKIP: {JEAN_PATH} not present");
+            return;
+        }
+        let img = E01Image::open(std::path::Path::new(JEAN_PATH)).expect("open");
+        let ceiling = img.acquired_ceiling();
+        let size = img.size();
+        if size <= ceiling {
+            // Image is NOT trim-afflicted (acquired covers logical
+            // disk). Nothing to verify on this path.
+            eprintln!("SKIP: image is not trim-afflicted (size={size}, ceiling={ceiling})");
+            return;
+        }
+        // Probe 1 KB into the trimmed zone.
+        let probe = ceiling + 1024;
+        let mut buf = vec![0u8; 4096];
+        let n = img.read_at(probe, &mut buf).expect("read succeeds with zeros");
+        // Read should succeed (not return an error) and yield zeros.
+        assert!(n > 0, "read_at past ceiling should still return bytes (zeros)");
+        assert!(
+            buf[..n].iter().all(|b| *b == 0),
+            "read past ceiling must be zero-filled"
+        );
+        // And it should have recorded a warning.
+        let warnings = img.warnings();
+        assert!(
+            !warnings.is_empty(),
+            "expected at least one OffsetBeyondAcquired warning after past-ceiling read"
+        );
+        let has_trim = warnings.iter().any(|w| {
+            matches!(
+                w,
+                EvidenceWarning::OffsetBeyondAcquired { acquired_ceiling: c, .. }
+                    if *c == ceiling
+            )
+        });
+        assert!(has_trim, "warnings: {warnings:?}");
+    }
+
+    #[test]
+    fn e01_warning_cap_bounds_memory() {
+        if !jean_present() {
+            eprintln!("SKIP: {JEAN_PATH} not present");
+            return;
+        }
+        let img = E01Image::open(std::path::Path::new(JEAN_PATH)).expect("open");
+        let ceiling = img.acquired_ceiling();
+        let size = img.size();
+        if size <= ceiling {
+            return;
+        }
+        // Hammer the trimmed zone. chunk_size is 32 KiB typical; step
+        // by chunk_size so each call produces a fresh warning.
+        let chunk = img.chunk_size as u64;
+        let mut buf = vec![0u8; 512];
+        let mut offset = ceiling;
+        let mut pushed = 0;
+        while offset + 512 < size && pushed < 512 {
+            let _ = img.read_at(offset, &mut buf);
+            offset += chunk;
+            pushed += 1;
+        }
+        let count = img.warnings().len();
+        // Cap lives at 256 per record_warning(); read_at may produce
+        // multiple warnings per call if a single read crosses several
+        // chunk windows. Just verify we stopped growing long before
+        // the issued-call count, i.e. the cap is effective.
+        assert!(
+            count <= 256,
+            "warning cap must bound memory; got {count} (cap=256)"
+        );
+    }
+
+    #[test]
+    fn e01_acquired_ceiling_matches_chunk_coverage() {
+        if !jean_present() {
+            eprintln!("SKIP: {JEAN_PATH} not present");
+            return;
+        }
+        let img = E01Image::open(std::path::Path::new(JEAN_PATH)).expect("open");
+        let stats = img.chunk_table_stats();
+        // acquired_ceiling should equal chunks_mapped * chunk_size.
+        let expected = stats.chunks_mapped * img.chunk_size as u64;
+        assert_eq!(img.acquired_ceiling(), expected);
     }
 }

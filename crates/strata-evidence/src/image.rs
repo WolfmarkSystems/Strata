@@ -5,6 +5,41 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// Structured diagnostic emitted by an evidence reader when a read
+/// silently succeeded (returned zero bytes, for example) but something
+/// about the underlying image is worth surfacing to the examiner.
+///
+/// Added in v14/EWF-TRIM-WARN-1. Defaulted trait method means non-EWF
+/// formats don't have to opt in; they return an empty vec.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum EvidenceWarning {
+    /// The caller requested bytes at an offset that lies beyond the
+    /// acquired range of the image. Most common cause: EWF chunk table
+    /// advertises a logical disk larger than was actually captured
+    /// (aka "acquisition trim"). The reader returned zeros so the
+    /// caller can keep walking, but the bytes are not real evidence.
+    OffsetBeyondAcquired {
+        requested_offset: u64,
+        acquired_ceiling: u64,
+        segment_count: u32,
+    },
+    /// A chunk-table entry points at an offset that is not inside its
+    /// declared segment. Indicates a corrupt or tampered chunk table.
+    ChunkOffsetInvalid {
+        chunk_number: u64,
+        stored_offset: u64,
+    },
+    /// The computed hash for the image does not match the stored hash
+    /// in the acquisition metadata. Informational — does not short-
+    /// circuit reads.
+    HashMismatch {
+        expected: String,
+        observed: String,
+        algorithm: String,
+    },
+}
+
 /// Read-only byte-oriented view of a forensic image. Every concrete
 /// reader (Raw, E01, VMDK, VHD, VHDX, DMG) implements this trait.
 ///
@@ -28,6 +63,14 @@ pub trait EvidenceImage: Send + Sync {
 
     /// Acquisition metadata where available.
     fn metadata(&self) -> ImageMetadata;
+
+    /// Structured warnings accumulated during reads. Defaulted to an
+    /// empty vec so non-EWF formats don't need to opt in. E01Image
+    /// populates this with `OffsetBeyondAcquired` for reads past the
+    /// acquired chunk range.
+    fn warnings(&self) -> Vec<EvidenceWarning> {
+        Vec::new()
+    }
 }
 
 /// Acquisition metadata. All fields optional — E01 populates most,

@@ -19,7 +19,7 @@ pub mod vmdk;
 
 pub use dispatch::{open_evidence, ImageFormat};
 pub use e01::E01Image;
-pub use image::{EvidenceError, EvidenceImage, EvidenceResult, ImageMetadata};
+pub use image::{EvidenceError, EvidenceImage, EvidenceResult, EvidenceWarning, ImageMetadata};
 pub use partition::{
     gpt::{read_gpt, GptPartition},
     mbr::{read_mbr, MbrPartition},
