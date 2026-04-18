@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 pub mod adb_backup;
 pub mod chromium;
 pub mod factory_reset;
+pub mod google_home;
 pub mod samsung;
 pub mod samsung_android16;
 pub mod turbo_usage;

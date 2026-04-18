@@ -1,4 +1,7 @@
+pub mod alexa;
+pub mod connected_car;
 pub mod onedrive;
+pub mod smart_tv;
 
 use std::collections::HashSet;
 use std::path::Path;

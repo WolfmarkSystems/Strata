@@ -23,6 +23,8 @@ use std::path::{Path, PathBuf};
 pub mod amcache;
 pub mod cloud_cli;
 pub mod lnk;
+pub mod ring_doorbell;
+pub mod smart_locks;
 pub mod memory_carving;
 pub mod memory_structures;
 pub mod mru;

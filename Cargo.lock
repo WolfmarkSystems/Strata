@@ -8146,6 +8146,7 @@ version = "1.0.0"
 dependencies = [
  "chrono",
  "rusqlite",
+ "serde",
  "serde_json",
  "strata-plugin-sdk",
  "tempfile",
