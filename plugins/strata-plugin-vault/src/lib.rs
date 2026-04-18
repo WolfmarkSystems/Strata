@@ -17,6 +17,7 @@ use strata_plugin_sdk::{
     PluginOutput, PluginResult, PluginSummary, PluginType, StrataPlugin,
 };
 
+pub mod android_antiforensic;
 pub mod antiforensic;
 pub mod crypto_wallets;
 pub mod encrypted_artifacts;
