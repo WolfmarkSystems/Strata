@@ -9,6 +9,8 @@ path = "src/main.rs"
 
 [dependencies]
 forensic_engine = { package = "strata-shield-engine", path = "../strata-shield-engine" }
+strata-engine-adapter = { path = "../strata-engine-adapter" }
+strata-plugin-sdk = { path = "../strata-plugin-sdk" }
 strata-artifacts = { workspace = true }
 strata-fs = { workspace = true }
 clap = { version = "4.4", features = ["derive"] }
@@ -25,3 +27,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1.0", features = ["full"] }
 indicatif = "0.17"
 colored = "2.0"
+
+[dev-dependencies]
+tempfile = { workspace = true }

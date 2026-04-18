@@ -189,6 +189,48 @@ pub fn run_plugin(evidence_id: &str, plugin_name: &str) -> AdapterResult<Vec<Plu
     Ok(artifacts)
 }
 
+/// Headless plugin runner for CLI / daemon contexts. Walks a filesystem
+/// path directly (no evidence store indirection), executes every
+/// registered plugin (optionally filtered by name), and returns one
+/// outcome per plugin. Sigma is guaranteed to run last — its correlation
+/// pass receives every prior plugin's artifacts through `prior_results`.
+///
+/// Plugin failures are captured per plugin rather than aborting the
+/// whole batch, so a single misbehaving parser cannot take down an
+/// examiner's full-image run.
+pub fn run_all_on_path(
+    root_path: &std::path::Path,
+    plugin_filter: Option<&[String]>,
+) -> Vec<(String, Result<PluginOutput, String>)> {
+    let plugins = build_plugins();
+    let root_str = root_path.to_string_lossy().into_owned();
+    let mut prior: Vec<PluginOutput> = Vec::new();
+    let mut results: Vec<(String, Result<PluginOutput, String>)> = Vec::with_capacity(plugins.len());
+    for plugin in plugins.iter() {
+        let name = plugin.name().to_string();
+        if let Some(filter) = plugin_filter {
+            if !filter.iter().any(|n| n == &name) {
+                continue;
+            }
+        }
+        let context = PluginContext {
+            root_path: root_str.clone(),
+            config: HashMap::new(),
+            prior_results: prior.clone(),
+        };
+        match plugin.execute(context) {
+            Ok(output) => {
+                prior.push(output.clone());
+                results.push((name, Ok(output)));
+            }
+            Err(e) => {
+                results.push((name, Err(format!("{e}"))));
+            }
+        }
+    }
+    results
+}
+
 /// Return cached artifacts from a previously run plugin.
 pub fn get_plugin_artifacts(
     evidence_id: &str,
