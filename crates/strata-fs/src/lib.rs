@@ -21,6 +21,7 @@ pub mod apfs_advanced;
 pub mod btrfs_advanced;
 pub mod ext4_advanced;
 pub mod hfsplus;
+pub mod fs_dispatch;
 pub mod iso9660;
 pub mod mft;
 pub mod mft_walker;
