@@ -22,6 +22,7 @@
 use std::path::{Path, PathBuf};
 
 pub mod biome;
+pub mod clipboard_history;
 pub mod fsevents;
 pub mod imessage;
 pub mod ios_biome;
