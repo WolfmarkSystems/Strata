@@ -11,6 +11,8 @@ pub mod adb_backup;
 pub mod chromium;
 pub mod factory_reset;
 pub mod samsung;
+pub mod samsung_android16;
+pub mod turbo_usage;
 pub mod work_profile;
 
 use strata_plugin_sdk::{
