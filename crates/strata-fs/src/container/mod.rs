@@ -91,6 +91,12 @@ pub enum ContainerType {
     Iso,
     SplitRaw,
     Qcow2,
+    /// Cellebrite UFED export: a directory containing `.ufd` / `.ufdx`
+    /// metadata and an `EXTRACTION_FFS.zip` payload. FIX-2.
+    Ufed,
+    /// Cellebrite UFDR report package: `.ufdr` file, or a directory
+    /// containing `report.xml` with a Cellebrite signature. FIX-2.
+    Ufdr,
 }
 
 impl ContainerType {
@@ -124,6 +130,8 @@ impl ContainerType {
             ContainerType::Iso => "ISO",
             ContainerType::SplitRaw => "Split RAW",
             ContainerType::Qcow2 => "QCOW2",
+            ContainerType::Ufed => "UFED (Cellebrite export)",
+            ContainerType::Ufdr => "UFDR (Cellebrite report package)",
         }
     }
 
@@ -190,6 +198,15 @@ impl EvidenceSource {
             ContainerType::Vhd | ContainerType::Vhdx => {
                 let vhd_vfs = VhdVfs::new(path)?;
                 Some(Box::new(vhd_vfs))
+            }
+            // UFED / UFDR are logical exports: the examiner-visible tree
+            // is the directory tree on disk. We reuse FsVfs so plugins see
+            // a normal filesystem; container metadata (`.ufdx`, `.ufd`,
+            // `report.xml`) is still parsed by `strata-core::parsers::ufdr`
+            // and the `ios::cellebrite` parser through the plugin path.
+            ContainerType::Ufed | ContainerType::Ufdr => {
+                let fs_vfs = FsVfs::new(path.to_path_buf());
+                Some(Box::new(fs_vfs))
             }
         };
 
