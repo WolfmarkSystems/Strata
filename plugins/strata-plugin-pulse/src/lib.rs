@@ -27,6 +27,7 @@ pub mod gaming;
 pub mod ios;
 pub mod messaging_extended;
 pub mod telegram;
+pub mod wearables;
 pub mod whatsapp;
 
 pub struct PulsePlugin {
