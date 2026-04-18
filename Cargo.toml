@@ -16,6 +16,9 @@ members = [
     "crates/strata-fs",
     "crates/strata-insight",
     "crates/strata-plugin-sdk",
+    # strata-plugin-index is a cdylib-only dynamic-loader scaffold; not
+    # statically linked into strata-engine-adapter. See
+    # docs/PLUGIN_ARCHITECTURE.md (FIX-5).
     "plugins/strata-plugin-index",
     "plugins/strata-plugin-chronicle",
     "plugins/strata-plugin-trace",

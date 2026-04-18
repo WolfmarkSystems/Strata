@@ -13,6 +13,27 @@ Strata is a Rust/Tauri digital forensics platform for court-ready evidence analy
 - **No `println!`.** Use `log::debug!`, `log::info!`, `log::warn!`, or `log::error!`. The CLI and Tauri layer both capture structured logs; raw stdout breaks that pipeline.
 - **No unnecessary dependencies.** Every new `Cargo.toml` entry must justify itself. Prefer crates already in the workspace. Avoid crates that pull in large transitive trees for minor convenience.
 
+### Build artifact requirement (FIX-4)
+
+Every Strata release must produce a working clickable application:
+
+- **macOS** bundle: `apps/strata-desktop/src-tauri/target/release/bundle/macos/Strata.app`
+  and DMG: `apps/strata-desktop/src-tauri/target/release/bundle/dmg/Strata_<version>_aarch64.dmg`
+- **Windows** binary: `apps/strata-desktop/src-tauri/target/release/strata-desktop.exe`
+  and MSI installer under `apps/strata-desktop/src-tauri/target/release/bundle/msi/`
+- **Linux** binary: `apps/strata-desktop/src-tauri/target/release/strata-desktop`
+  and AppImage under `apps/strata-desktop/src-tauri/target/release/bundle/appimage/`
+
+CI must verify these artifacts exist and are runnable. A build that
+does not produce a clickable desktop application is not shippable.
+The CLI (`target/release/strata`) is the fallback for headless /
+air-gapped contexts — the GUI is the primary tool for day-to-day
+casework.
+
+Note: Tauri writes into `apps/strata-desktop/src-tauri/target/`, NOT
+into the workspace root `target/`. Release workflows and release
+notes must reference the `src-tauri/target/` paths above.
+
 ### Testing
 
 - **Never remove load-bearing tests.** If a test is blocking you, understand why it exists. Fix the code, not the test. The project has 2,685+ tests; any net reduction requires an explicit explanation.
