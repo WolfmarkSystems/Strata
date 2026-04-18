@@ -443,7 +443,7 @@ mod tests {
     #[test]
     fn host_vfs_read_range_clamps() {
         let tmp = tempfile::tempdir().expect("tmp");
-        fs::write(tmp.path().join("x.bin"), &[0u8, 1, 2, 3, 4, 5, 6, 7]).expect("w");
+        fs::write(tmp.path().join("x.bin"), [0u8, 1, 2, 3, 4, 5, 6, 7]).expect("w");
         let vfs = HostVfs::new(tmp.path().to_path_buf());
         let slice = vfs.read_file_range("/x.bin", 2, 3).expect("range");
         assert_eq!(slice, vec![2u8, 3, 4]);
