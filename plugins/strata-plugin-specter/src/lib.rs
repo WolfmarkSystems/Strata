@@ -1,3 +1,6 @@
+pub mod drones;
+pub mod gaming;
+
 use std::collections::HashSet;
 use std::path::Path;
 use strata_plugin_sdk::{
