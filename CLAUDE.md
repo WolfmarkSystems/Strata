@@ -104,8 +104,9 @@ This is the canonical assignment. When adding or moving a parser, put it in the 
 
 | Plugin | Covers | Examples |
 |--------|--------|---------|
-| **Apex** *(planned)* | Apple-built app artifacts | Mail.app, Calendar.app, Contacts.app, Maps, Siri, iCloud Drive internals, Apple Notes (native), FaceTime logs |
-| **Carbon** *(planned)* | Google-built app artifacts | Chrome (desktop), Gmail, Google Drive, Google Maps, Google Photos, Android system apps built by Google |
+| **Apex** | Apple-built app artifacts | Mail.app, Calendar.app, Contacts.app, Maps, Siri, iCloud Drive internals, Apple Notes (native), FaceTime logs |
+| **Arbor** | Linux / ChromeOS system artifacts | systemd persistence, crontab, shell_artifacts, containers, ChromeOS user data, /var/log |
+| **Carbon** | Google-built app artifacts | Chrome (desktop), Gmail, Google Drive, Google Maps, Google Photos, Android system apps built by Google |
 | **Pulse** | Third-party user-installed apps (iOS + Android) | WhatsApp, Signal, Telegram, Snapchat, Instagram, TikTok, Facebook, third-party browsers |
 | **MacTrace** | macOS system-layer artifacts | LaunchAgents/Daemons, FSEvents, Unified Log, Gatekeeper, Quarantine, Time Machine, Biome, TCC, KnowledgeC |
 | **Phantom** | Windows registry persistence | SYSTEM/SOFTWARE/SAM/SECURITY hives, AmCache, ShimCache, USBSTOR, 23 persistence mechanisms |
@@ -124,6 +125,12 @@ This is the canonical assignment. When adding or moving a parser, put it in the 
 | **Specter** | Android backup artifacts | `.ab` backup parsing, package inventory, Wi-Fi config |
 | **Sigma** | Correlation engine | Runs last; receives all prior plugin results; applies 34 MITRE ATT&CK kill-chain rules |
 | **CSAM** | Child exploitation detection | Hash + dHash perceptual matching, NCMEC/Project VIC import, immutable audit log |
+
+**Total plugin crates:** 24 under `plugins/`. The 21 forensic plugins are listed above. The remaining three are internal infrastructure (not forensic analysers):
+
+- `strata-plugin-index` — builds the full-text / metadata index consumed by the UI
+- `strata-plugin-tree-example` — reference / template plugin for the tree SDK
+- `strata-plugin-csam` — kept separate for restricted-distribution build flags (not in the mapping table above for the same reason; see `strata-csam` crate for the underlying engine)
 
 **Rule:** Sigma always runs last. Do not add correlation logic to other plugins — put cross-artifact rules in Sigma.
 
