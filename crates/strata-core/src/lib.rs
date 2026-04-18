@@ -7,6 +7,7 @@ pub use strata_fs::errors;
 pub use strata_fs::virtualization;
 pub mod acquisition;
 pub mod analysis;
+pub mod artifacts;
 pub mod capabilities;
 pub mod carving;
 pub mod case;

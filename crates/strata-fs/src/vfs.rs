@@ -208,7 +208,8 @@ impl CompositeVfs {
     }
 
     pub fn roots(&self) -> Vec<&String> {
-        self.roots.keys().collect()
+        #[allow(clippy::iter_kv_map)]
+        self.roots.iter().map(|(k, _)| k).collect()
     }
 
     fn split<'a>(&self, path: &'a str) -> Option<(&String, Arc<dyn VirtualFilesystem>, &'a str)> {
@@ -229,6 +230,7 @@ impl VirtualFilesystem for CompositeVfs {
 
     fn list_dir(&self, path: &str) -> VfsResult<Vec<VfsEntry>> {
         if path == "/" {
+            #[allow(clippy::iter_kv_map)]
             return Ok(self
                 .roots
                 .iter()
@@ -291,7 +293,7 @@ impl VirtualFilesystem for CompositeVfs {
 // directory tree — Takeout, unpacked tarballs). Bridges std::fs into
 // the VFS trait.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 pub struct HostVfs {
     root: PathBuf,
@@ -332,9 +334,9 @@ impl VirtualFilesystem for HostVfs {
                 name,
                 is_directory: meta.is_dir(),
                 size: meta.len(),
-                created: meta.created().ok().map(|t| DateTime::<Utc>::from(t)),
-                modified: meta.modified().ok().map(|t| DateTime::<Utc>::from(t)),
-                accessed: meta.accessed().ok().map(|t| DateTime::<Utc>::from(t)),
+                created: meta.created().ok().map(DateTime::<Utc>::from),
+                modified: meta.modified().ok().map(DateTime::<Utc>::from),
+                accessed: meta.accessed().ok().map(DateTime::<Utc>::from),
                 metadata_changed: None,
                 attributes: VfsAttributes::default(),
                 inode_number: None,
@@ -356,9 +358,9 @@ impl VirtualFilesystem for HostVfs {
         Ok(VfsMetadata {
             size: m.len(),
             is_directory: m.is_dir(),
-            created: m.created().ok().map(|t| DateTime::<Utc>::from(t)),
-            modified: m.modified().ok().map(|t| DateTime::<Utc>::from(t)),
-            accessed: m.accessed().ok().map(|t| DateTime::<Utc>::from(t)),
+            created: m.created().ok().map(DateTime::<Utc>::from),
+            modified: m.modified().ok().map(DateTime::<Utc>::from),
+            accessed: m.accessed().ok().map(DateTime::<Utc>::from),
             attributes: VfsAttributes::default(),
         })
     }

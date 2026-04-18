@@ -405,7 +405,23 @@ pub fn run_ingest(args: IngestRunArgs) -> i32 {
     };
 
     let filter: Option<&[String]> = effective_filter.as_deref();
-    let results = strata_engine_adapter::run_all_on_path(effective_source.as_path(), filter);
+    // PERSIST-2: always persist artifacts to <case_dir>/artifacts.sqlite.
+    let case_id_sanitised = args
+        .case_name
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .collect::<String>();
+    let case_id = if case_id_sanitised.is_empty() {
+        "case".to_string()
+    } else {
+        case_id_sanitised
+    };
+    let results = strata_engine_adapter::run_all_with_persistence(
+        effective_source.as_path(),
+        args.case_dir.as_path(),
+        &case_id,
+        filter,
+    );
 
     let mut per_plugin: Vec<IngestRunPluginOutcome> = Vec::with_capacity(results.len());
     let mut ok = 0usize;

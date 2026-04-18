@@ -231,6 +231,38 @@ pub fn run_all_on_path(
     results
 }
 
+/// PERSIST-2 — run every plugin AND write every emitted artifact to
+/// the per-case `artifacts.sqlite` database. Examiners querying the
+/// case database afterwards see what every plugin extracted — the
+/// single biggest user-facing change from v9.
+pub fn run_all_with_persistence(
+    root_path: &std::path::Path,
+    case_dir: &std::path::Path,
+    case_id: &str,
+    plugin_filter: Option<&[String]>,
+) -> Vec<(String, Result<PluginOutput, String>)> {
+    let results = run_all_on_path(root_path, plugin_filter);
+    let mut db = match strata_core::artifacts::ArtifactDatabase::open_or_create(case_dir, case_id)
+    {
+        Ok(d) => d,
+        Err(e) => {
+            tracing::warn!("artifact database open failed: {e}; persistence skipped");
+            return results;
+        }
+    };
+    for (plugin_name, outcome) in &results {
+        if let Ok(output) = outcome {
+            if output.artifacts.is_empty() {
+                continue;
+            }
+            if let Err(e) = db.insert_batch(plugin_name, &output.artifacts) {
+                tracing::warn!("artifact persistence failed for {plugin_name}: {e}");
+            }
+        }
+    }
+    results
+}
+
 /// Return cached artifacts from a previously run plugin.
 pub fn get_plugin_artifacts(
     evidence_id: &str,
