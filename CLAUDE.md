@@ -20,6 +20,83 @@ Strata is a Rust/Tauri digital forensics platform for court-ready evidence analy
 
 ---
 
+## Working Principles (Karpathy skills)
+
+*Source: [forrestchang/andrej-karpathy-skills/CLAUDE.md](https://github.com/forrestchang/andrej-karpathy-skills/blob/main/CLAUDE.md).
+Merged into Strata's CLAUDE.md in v16 Session 3. Behavioral
+guidelines to reduce common LLM coding mistakes — these sit
+above the "Hard Rules" because how to approach work matters
+before what rules apply.*
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+### 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+### 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+### 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+### How these apply to Strata specifically
+
+Two places where Strata's existing discipline is more prescriptive than the Karpathy defaults — documented here so the interaction is explicit rather than a point of silent conflict:
+
+- **Simplicity First vs. forensic-correctness requirements.** Strata has non-negotiable features that look like overengineering at first glance: every `ArtifactRecord` MUST populate `mitre_technique`; every ML finding MUST carry `is_advisory = true` + `ADVISORY_NOTICE`; every deferred behavior MUST have a tripwire test pinning its current state (`_still_X` / `_pending_Y` / `_pinned_as_unsupported_until_Z`). These are spec requirements, not "flexibility." When Simplicity First and a forensic-correctness requirement conflict, forensic correctness wins — document the justification inline.
+- **Surgical Changes vs. research-doc-driven cleanups.** When a session's queue explicitly invites a retirement/replacement (e.g., v16 Session 3's "delete in-tree APFS modules and adopt external crate" instruction), the cleanup is the user's request — not an un-asked improvement. The Surgical-Changes test ("every changed line should trace directly to the user's request") still applies; the tracing just goes through the queue instead of a single inline sentence.
+
+---
+
 ## Hard Rules
 
 ### Code Safety

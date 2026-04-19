@@ -33,6 +33,9 @@
 //! Zero `.unwrap()`, zero `unsafe {}`, zero `println!` per
 //! CLAUDE.md.
 
+pub mod single;
+pub use single::ApfsSingleWalker;
+
 use std::io::{Read, Seek};
 
 use apfs::superblock::{find_latest_nxsb, read_nxsb, NxSuperblock};
@@ -97,6 +100,62 @@ pub fn read_container_superblock<R: Read + Seek>(
 ) -> Result<NxSuperblock, ForensicError> {
     let initial = read_nxsb(reader).map_err(apfs_error_to_forensic)?;
     find_latest_nxsb(reader, &initial).map_err(apfs_error_to_forensic)
+}
+
+/// `APFS_FS_UNENCRYPTED = 0x1` per TN1150. If the bit is SET, the
+/// volume is NOT encrypted. Walker probes `ApfsSuperblock.fs_flags`
+/// for this bit at open time and surfaces encryption status on
+/// every `VfsEntry` via `VfsAttributes.encrypted`.
+///
+/// Per v16 research doc §6: walker does NOT attempt decryption —
+/// only marks. Encrypted content returns `VfsError::Other` on
+/// `read_file` with a pickup-signal message. Offline key recovery
+/// is the examiner's step with the key bundle.
+pub const APFS_FS_UNENCRYPTED: u64 = 0x1;
+
+/// Probe whether the first non-zero fs_oid volume is encrypted.
+/// Reads the container OMAP + volume block + volume superblock
+/// via the external crate's public submodule helpers.
+///
+/// Returns `Ok(true)` if the volume is encrypted, `Ok(false)` if
+/// not, `Err` on any structural parse failure. Caller should treat
+/// Err as "unable to determine" and fall back to marking-as-
+/// unencrypted with a log warning — encryption misdetection is
+/// forensically less dangerous than refusing to walk a valid
+/// volume.
+///
+/// Note: this reads the **first** volume only — the one
+/// `apfs::ApfsVolume::open()` will subsequently use. Session 5's
+/// `ApfsMultiWalker` probes encryption per-volume.
+pub fn probe_first_volume_encryption<R: Read + Seek>(
+    reader: &mut R,
+    nxsb: &NxSuperblock,
+) -> Result<bool, ForensicError> {
+    use apfs::omap::{omap_lookup, read_omap_tree_root};
+    use apfs::superblock::ApfsSuperblock;
+
+    let first_oid = nxsb
+        .fs_oids
+        .iter()
+        .copied()
+        .find(|&o| o != 0)
+        .ok_or_else(|| ForensicError::MalformedData("apfs: no volume OIDs".into()))?;
+
+    let block_size = nxsb.block_size;
+    let container_omap_root = read_omap_tree_root(reader, nxsb.omap_oid, block_size)
+        .map_err(apfs_error_to_forensic)?;
+    let volume_block = omap_lookup(reader, container_omap_root, block_size, first_oid)
+        .map_err(apfs_error_to_forensic)?;
+
+    // Read the volume superblock block.
+    use std::io::SeekFrom;
+    reader.seek(SeekFrom::Start(volume_block * block_size as u64))?;
+    let mut buf = vec![0u8; block_size as usize];
+    reader.read_exact(&mut buf)?;
+
+    let vol_sb = ApfsSuperblock::parse(&buf).map_err(apfs_error_to_forensic)?;
+    // APFS_FS_UNENCRYPTED set → NOT encrypted. So encrypted iff bit is clear.
+    Ok(vol_sb.fs_flags & APFS_FS_UNENCRYPTED == 0)
 }
 
 /// Map `apfs::ApfsError` into Strata's `ForensicError`. Lossy —
