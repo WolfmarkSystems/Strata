@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use strata_evidence::EvidenceImage;
 
+use crate::ext4_walker::Ext4Walker;
 use crate::ntfs_walker::NtfsWalker;
 use crate::vfs::{VfsError, VfsResult, VirtualFilesystem};
 
@@ -123,10 +124,21 @@ pub fn detect_filesystem(
 }
 
 /// Open the appropriate `VirtualFilesystem` for the filesystem at
-/// `partition_offset..partition_offset + partition_size`. Returns
-/// `VfsError::Unsupported` for known-but-not-yet-wired filesystem
-/// types (APFS / HFS+ / ext4 / FAT — walkers land in successor
-/// sprints FS-APFS-1 / FS-HFSPLUS-1 / FS-EXT4-1 / FS-FAT-1).
+/// `partition_offset..partition_offset + partition_size`.
+///
+/// Live walker arms (v15 Session B):
+/// - NTFS (since v11)
+/// - ext2 / ext3 / ext4 (v15 Session B — wraps `ext4-view = "0.9"`)
+///
+/// Pending (v15 Session C):
+/// - HFS+ — returns `VfsError::Unsupported` (walker in progress)
+/// - FAT12 / FAT16 / FAT32 / exFAT — returns `VfsError::Unsupported`
+///
+/// Pending (v16):
+/// - APFS — returns `VfsError::Other("APFS walker deferred to v0.16
+///   — see roadmap")` so the CLI surface carries the roadmap pickup
+///   signal directly to the examiner rather than a generic
+///   Unsupported message.
 pub fn open_filesystem(
     image: Arc<dyn EvidenceImage>,
     partition_offset: u64,
@@ -138,15 +150,18 @@ pub fn open_filesystem(
             let walker = NtfsWalker::open(image, partition_offset, partition_size)?;
             Ok(Box::new(walker))
         }
-        FsType::Apfs
-        | FsType::HfsPlus
-        | FsType::Ext2
-        | FsType::Ext3
-        | FsType::Ext4
+        FsType::Ext2 | FsType::Ext3 | FsType::Ext4 => {
+            let walker = Ext4Walker::open(image, partition_offset, partition_size)?;
+            Ok(Box::new(walker))
+        }
+        FsType::HfsPlus
         | FsType::Fat12
         | FsType::Fat16
         | FsType::Fat32
         | FsType::ExFat => Err(VfsError::Unsupported),
+        FsType::Apfs => Err(VfsError::Other(
+            "APFS walker deferred to v0.16 — see roadmap".into(),
+        )),
         FsType::Unknown => Err(VfsError::Other(format!(
             "unknown filesystem at partition offset {partition_offset}"
         ))),
@@ -282,5 +297,113 @@ mod tests {
         assert_eq!(FsType::Ntfs.as_str(), "NTFS");
         assert_eq!(FsType::Ext4.as_str(), "ext4");
         assert_eq!(FsType::Unknown.as_str(), "Unknown");
+    }
+
+    // ── v15 Session B — FS-DISPATCH-EXT4 negative tests ─────────
+    //
+    // Protect against scope drift: Session C work (HFS+ and FAT
+    // walker arms) MUST still return Unsupported. APFS MUST return
+    // the explicit v0.16 message so examiners see the roadmap
+    // pickup signal rather than a generic error.
+
+    fn dispatch_from_mem(bytes: Vec<u8>) -> VfsResult<Box<dyn VirtualFilesystem>> {
+        let img: Arc<dyn EvidenceImage> = Arc::new(MemImage { bytes });
+        let size = img.size();
+        open_filesystem(img, 0, size)
+    }
+
+    #[test]
+    fn dispatch_hfsplus_still_unsupported_until_session_c() {
+        let mut bytes = vec![0u8; 4096];
+        bytes[0x400..0x402].copy_from_slice(b"H+");
+        let res = dispatch_from_mem(bytes);
+        match res {
+            Err(VfsError::Unsupported) => {}
+            Err(e) => panic!(
+                "HFS+ dispatcher must remain Unsupported; got {e:?}"
+            ),
+            Ok(_) => panic!(
+                "HFS+ dispatcher must remain Unsupported until Session C; got live walker"
+            ),
+        }
+    }
+
+    #[test]
+    fn dispatch_fat32_still_unsupported_until_session_c() {
+        let mut bytes = vec![0u8; 2048];
+        bytes[82..90].copy_from_slice(b"FAT32   ");
+        let res = dispatch_from_mem(bytes);
+        assert!(
+            matches!(res, Err(VfsError::Unsupported)),
+            "FAT32 dispatcher arm must remain Unsupported until Session C"
+        );
+    }
+
+    #[test]
+    fn dispatch_exfat_still_unsupported_until_session_c() {
+        let mut bytes = vec![0u8; 2048];
+        bytes[3..11].copy_from_slice(b"EXFAT   ");
+        let res = dispatch_from_mem(bytes);
+        assert!(
+            matches!(res, Err(VfsError::Unsupported)),
+            "exFAT dispatcher arm must remain Unsupported until Session C"
+        );
+    }
+
+    #[test]
+    fn dispatch_apfs_returns_explicit_v016_message() {
+        let mut bytes = vec![0u8; 2048];
+        bytes[32..36].copy_from_slice(b"NXSB");
+        let res = dispatch_from_mem(bytes);
+        match res {
+            Err(VfsError::Other(msg)) => {
+                assert!(
+                    msg.contains("v0.16"),
+                    "APFS err must carry explicit v0.16 pickup signal; got: {msg}"
+                );
+                assert!(
+                    msg.to_ascii_lowercase().contains("apfs"),
+                    "APFS err must name the filesystem; got: {msg}"
+                );
+            }
+            Err(e) => panic!(
+                "APFS dispatcher must return v0.16 message, not {e:?}"
+            ),
+            Ok(_) => panic!(
+                "APFS dispatcher must return v0.16 message, not a live walker"
+            ),
+        }
+    }
+
+    #[test]
+    fn dispatch_ext4_arm_attempts_live_walker_construction() {
+        // The fake ext4 detection succeeds via the magic + extents
+        // flag trick, but Ext4Walker::open will fail on the zeroed
+        // buffer because there is no real superblock. The critical
+        // assertion is: the error surfaces from the walker (via
+        // VfsError::Other wrapping the ext4-view parser message),
+        // NOT from the dispatcher returning Unsupported. This
+        // proves the arm is live-routed.
+        let mut bytes = vec![0u8; 4096];
+        bytes[0x400 + 56] = 0x53;
+        bytes[0x400 + 57] = 0xEF;
+        bytes[0x400 + 96] = 0x40;
+        let res = dispatch_from_mem(bytes);
+        match res {
+            Err(VfsError::Unsupported) => {
+                panic!("ext4 dispatcher arm must NOT return Unsupported in v15");
+            }
+            Err(VfsError::Other(msg)) => {
+                assert!(
+                    msg.contains("ext4 open"),
+                    "expected Ext4Walker::open error, got: {msg}"
+                );
+            }
+            Ok(_) => {
+                // If ext4-view somehow accepts our zeroed buffer,
+                // the arm is still live — that's the ship criterion.
+            }
+            Err(e) => panic!("unexpected dispatcher error: {e:?}"),
+        }
     }
 }
