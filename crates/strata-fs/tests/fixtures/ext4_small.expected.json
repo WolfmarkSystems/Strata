@@ -1,0 +1,54 @@
+{
+  "fixture": "ext4_small.img",
+  "generator": "mkext4.sh",
+  "size_bytes": 2097152,
+  "volume_label": "strata-ext4",
+  "volume_uuid": "00000000-0000-0000-0000-000000000001",
+  "filesystem": "ext4",
+  "journal": false,
+  "block_size": 1024,
+  "expected_entries_by_path": [
+    {
+      "path": "/readme.txt",
+      "is_directory": false,
+      "size": 17,
+      "content_sha256_ascii": "hello ext4 walker"
+    },
+    {
+      "path": "/multi.txt",
+      "is_directory": false,
+      "size": 18,
+      "content_sha256_ascii": "one two three four"
+    },
+    {
+      "path": "/dir1",
+      "is_directory": true
+    },
+    {
+      "path": "/dir1/dir2",
+      "is_directory": true
+    },
+    {
+      "path": "/dir1/dir2/dir3",
+      "is_directory": true
+    },
+    {
+      "path": "/dir1/dir2/dir3/deep.txt",
+      "is_directory": false,
+      "size": 12,
+      "content_sha256_ascii": "deep content"
+    }
+  ],
+  "acceptance_criteria": {
+    "walker_must_enumerate_root_with_at_least_three_entries": true,
+    "walker_must_read_readme_txt_matching_content": true,
+    "walker_must_descend_three_levels_into_dir1_dir2_dir3": true,
+    "walker_must_report_unix_mode_on_regular_files": true
+  },
+  "notes": [
+    "content_sha256_ascii is literal ASCII content rather than SHA — the strings are short enough that byte-match is the simplest verification.",
+    "Timestamps are intentionally epoch (1970-01-01) via SOURCE_DATE_EPOCH in mkext4.sh for determinism; ext4_view v0.9.3 does not expose timestamps through Metadata anyway.",
+    "Block size 1024 chosen via mkfs.ext4 default for small 2 MiB volumes.",
+    "No journal (^has_journal) because a journal would inflate the fixture and serve no purpose for the walker's read-only unit tests."
+  ]
+}

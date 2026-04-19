@@ -28,6 +28,7 @@ notify = { workspace = true }
 rayon = { workspace = true, optional = true }
 
 ewf = { workspace = true }
+ext4-view = "0.9"
 
 [target.'cfg(windows)'.dependencies]
 ntfs = { workspace = true }
