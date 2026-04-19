@@ -1,0 +1,51 @@
+{
+  "fixture": "apfs_small.img",
+  "source": "hdiutil create -size 10m -fs APFS -volname STRATA-APFS -type SPARSE; populate; dd to flat",
+  "size_bytes": 10444800,
+  "container": {
+    "magic": "NXSB",
+    "block_size": 4096,
+    "volume_count": 1,
+    "is_fusion": false
+  },
+  "volume": {
+    "name": "STRATA-APFS",
+    "num_files": 7,
+    "num_directories": 5,
+    "num_symlinks": 0
+  },
+  "expected_content": {
+    "/alpha.txt": { "size": 6, "bytes": "alpha\n" },
+    "/beta.txt":  { "size": 5, "bytes": "beta\n" },
+    "/gamma.txt": { "size": 6, "bytes": "gamma\n" },
+    "/forky.txt": {
+      "size": 5,
+      "bytes": "fork\n",
+      "xattrs": { "com.strata.test": "probe_value" }
+    },
+    "/multi.bin": {
+      "size": 12000,
+      "description": "12000 bytes of 'Z' spanning 3 × 4 KiB extents — exercises multi-extent read"
+    },
+    "/dir1":                    { "is_directory": true },
+    "/dir1/dir2":               { "is_directory": true },
+    "/dir1/dir2/dir3":          { "is_directory": true },
+    "/dir1/dir2/dir3/deep.txt": { "size": 5, "bytes": "deep\n" },
+    "/.fseventsd":              { "is_directory": true, "note": "macOS auto-created metadata; walker surfaces it" }
+  },
+  "acceptance_contract_for_session_4_walker": {
+    "list_dir_root_returns_at_least": [
+      "alpha.txt", "beta.txt", "gamma.txt", "forky.txt", "multi.bin", "dir1"
+    ],
+    "list_dir_dir1_dir2_dir3_contains": ["deep.txt"],
+    "read_file_alpha_txt_equals_bytes": "alpha\n",
+    "read_file_multi_bin_equals_12000_Z": true,
+    "fusion_detect_returns_false": true,
+    "enumerate_volume_oids_returns_exactly_one_nonzero_oid": true
+  },
+  "notes": [
+    "Generated on macOS via hdiutil + newfs_apfs. Not byte-deterministic — regeneration produces a different volume UUID and checkpoint XIDs. Tests match on structural invariants, not byte hashes.",
+    "Validated Session 1.5 against external apfs crate v0.2.4: 7/7 core parser checks passed (root enum, 3-level nested walk, small-file read, multi-extent read, deep-nested read, walk() all 9 paths, stat kind/size/mode/uid/gid/nlink).",
+    "The committed fixture at this exact path is the one Session 1.5 probe used — /tmp/apfs_probe_fixture.img moved here unchanged."
+  ]
+}

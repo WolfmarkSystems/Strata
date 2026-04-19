@@ -11,6 +11,7 @@ expected-enumeration manifests consumed by the `Ext4Walker`,
 | ext4 | `ext4_small.img` (2 MiB) | `mkext4.sh` | `ext4_small.expected.json` | **no** — Linux-only generation |
 | HFS+ | `hfsplus_small.img` (2 MiB) | `mkhfsplus.sh` | `hfsplus_small.expected.json` | **yes** — committed one-time snapshot |
 | FAT16 | `fat16_small.img` (16 MiB) | `mkfat16.sh` | `fat16_small.expected.json` | **yes** — committed one-time snapshot |
+| APFS | `apfs_small.img` (10 MiB) | `mkapfs.sh` | `apfs_small.expected.json` | **yes** — committed one-time snapshot (Session 1.5 probe fixture) |
 
 ## FAT16 — macOS-native generation, fixture committed
 

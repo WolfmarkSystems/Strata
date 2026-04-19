@@ -29,6 +29,14 @@ rayon = { workspace = true, optional = true }
 
 ewf = { workspace = true }
 ext4-view = "0.9"
+# MIT-licensed external APFS parser. Real-fixture validated per
+# docs/RESEARCH_v16_APFS_RUST_ECOSYSTEM.md Session 1.5 (7/7 core
+# parser checks passed against hdiutil-generated container).
+# Wrapped by Strata-owned code in crates/strata-fs/src/apfs_walker/
+# for multi-volume iteration, xattrs, encryption marking, and
+# fusion-drive detection the crate doesn't expose on its high-
+# level ApfsVolume API.
+apfs = "0.2"
 
 [target.'cfg(windows)'.dependencies]
 ntfs = { workspace = true }
