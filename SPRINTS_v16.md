@@ -604,11 +604,48 @@ Zero unwrap, zero unsafe, no println in production paths.
 # ═══════════════════════════════════════════════════════════════════════
 
 **Sprint ID:** FS-APFS-OBJMAP
-**Prerequisite:** Session 1 research doc docs/RESEARCH_v16_APFS_SHAPE.md
+**Prerequisites:**
+  - Session 1 research doc `docs/RESEARCH_v16_APFS_SHAPE.md` (APFS
+    shape audit, Send/Sync probes)
+  - **Session 1.5 ecosystem research doc
+    `docs/RESEARCH_v16_APFS_RUST_ECOSYSTEM.md`** (external-crate
+    evaluation — see scope revision below)
+
+**Scope revision per Session 1.5:** Session 1.5's real-fixture
+probe validated the MIT-licensed `apfs` v0.2.x crate against an
+hdiutil-generated APFS container and passed 7/7 core parser
+checks. `exhume_apfs` was GPL-disqualified at license check;
+`dpp` is an installer-payload pipeline, not a forensic walker.
+
+Session 3 therefore adopts the `apfs` crate rather than extending
+the in-tree parser:
+
+  1. Add `apfs = "0.2"` to `crates/strata-fs/Cargo.toml`.
+  2. Create `crates/strata-fs/src/apfs_walker/mod.rs` with the
+     Strata-owned wrapper: fusion-drive detection (reads
+     `NxSuperblock.incompatible_features & 0x100`), multi-volume
+     OID enumeration (iterates `NxSuperblock.fs_oids`), and
+     Send/Sync probes on `apfs::ApfsVolume<File>`.
+  3. Delete `crates/strata-fs/src/apfs.rs`,
+     `crates/strata-fs/src/apfs_walker.rs`,
+     `crates/strata-fs/src/apfs_advanced.rs` and their Session 1
+     Send/Sync probes in a dedicated cleanup commit — the
+     heuristic-scanner + stub fallbacks are the v14-audit failure
+     mode and should not ship in forensic code.
+
+Scope collapses from ~420 LOC APFS in-tree parser to ~120 LOC
+wrapper (fusion-detect + volume-oid-enumeration helpers +
+Send/Sync probes). HFS+ read_file extent reading (Sprint 2 of
+this session) is unchanged — still ~260 LOC of Strata-owned
+in-tree work.
+
 **Why first in Session 3:** Every APFS structure above the container
 superblock is reached through the object map. Without working OID
 resolution, volume superblocks can't be parsed, filesystem trees
-can't be walked, nothing above this layer works.
+can't be walked, nothing above this layer works. The `apfs` crate
+handles the OMAP B-tree internally; Strata's wrapper surfaces
+fusion detect + multi-volume iteration that the crate doesn't
+expose through its high-level `ApfsVolume::open()` API.
 
 ## Phase A — Container superblock parser
 
