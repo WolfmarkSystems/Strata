@@ -4,6 +4,22 @@ Strata is a Rust/Tauri digital forensics platform for court-ready evidence analy
 
 ---
 
+## Key numbers (v0.15.0, 2026-04-19)
+
+- **Test count:** 3,771 passing across `cargo test --workspace`
+- **Filesystem walkers live through the dispatcher:**
+  - NTFS (since v11, `strata-fs::ntfs_walker`)
+  - ext2/ext3/ext4 (v15 Session B, wraps `ext4-view = 0.9`)
+  - HFS+ (v15 Session D, in-tree walker with real B-tree iteration)
+  - FAT12/FAT16/FAT32 (v15 Session E, in-tree walker)
+- **Dispatcher deferrals with explicit pickup signals:**
+  - exFAT — `"exFAT walker deferred — see roadmap"`
+  - APFS — `"APFS walker deferred to v0.16 — see roadmap"`
+- **AST quality gate baseline** (enforced by `tools/strata-verify-quality`): 470 library `.unwrap()` / 5 `unsafe{}` (VHD/VMDK FFI waiver) / 5 `println!`. Every commit since v14 has shipped zero new violations — the ratchet holds.
+- **9 load-bearing tests preserved** (see below).
+
+---
+
 ## Hard Rules
 
 ### Code Safety
