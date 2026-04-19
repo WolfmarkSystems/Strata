@@ -3,8 +3,11 @@ pub use std::fs::{
     write, File,
 };
 
-pub mod apfs;
-pub mod apfs_walker;
+// apfs / apfs_walker / apfs_advanced retired in v16 Session 3.
+// Replaced by the MIT-licensed `apfs` crate v0.2.x (external)
+// wrapped by Strata-owned glue in a future sprint. See
+// docs/RESEARCH_v16_APFS_RUST_ECOSYSTEM.md for the audit + real-
+// fixture validation that drove the retirement decision.
 pub mod audit;
 pub mod bitlocker;
 pub mod btrfs;
@@ -17,7 +20,9 @@ pub mod ext4;
 pub mod fat;
 pub mod virtualization;
 // pub mod hfsplus;
-pub mod apfs_advanced;
+// apfs_advanced retired in v16 Session 3 (70 LOC of stubs, never
+// wired to anything). Follow-on sprint may re-expose equivalents
+// on top of the external `apfs` crate if genuine use cases emerge.
 pub mod btrfs_advanced;
 pub mod ext4_advanced;
 pub mod hfsplus;
@@ -44,10 +49,10 @@ pub mod xfs_advanced;
 pub mod zfs;
 pub use errors::ForensicError;
 
-pub use apfs::{
-    apfs_detect, apfs_enumerate_directory, apfs_list_volumes, apfs_open, apfs_read_file,
-    ApfsDirEntry, ApfsFileType, ApfsReader, ApfsVolume,
-};
+// `apfs::*` re-exports retired in v16 Session 3 with the in-tree
+// modules. External consumers (tree UI, shield CLI, etc.) should
+// migrate to the new Strata-owned APFS wrapper when it ships, or
+// to the `apfs` crate directly for container/OMAP/catalog work.
 pub use bitlocker::{
     detect_bitlocker, extract_recovery_password, parse_bitlocker_metadata, BitlockerMethod,
     BitlockerVolume, ConversionStatus, KeyProtector, ProtectionStatus,

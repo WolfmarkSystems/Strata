@@ -235,93 +235,18 @@ pub trait VirtualFileSystem: Send + Sync {
 
     fn enumerate_apfs_directory(
         &self,
-        vol_info: &VolumeInfo,
-        target_path: &Path,
+        _vol_info: &VolumeInfo,
+        _target_path: &Path,
     ) -> Result<Vec<VfsEntry>, ForensicError> {
-        use crate::apfs::ApfsReader;
-        let mut entries = Vec::new();
-
-        let volume_root = format!("/vol{}", vol_info.volume_index);
-        let normalized = self.normalize_virtual_path(target_path);
-
-        // Resolve Inode from path (format: .../dirname_inode)
-        let target_inode = if normalized == volume_root {
-            2 // Root inode
-        } else {
-            target_path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .and_then(|s| s.rsplit('_').next())
-                .and_then(|s| s.parse::<u64>().ok())
-                .unwrap_or(2)
-        };
-
-        match ApfsReader::open_at_offset(self.root(), vol_info.offset) {
-            Ok(mut reader) => {
-                let dir_res: Result<Vec<crate::apfs::ApfsDirEntry>, crate::errors::ForensicError> =
-                    reader.enumerate_directory(vol_info.volume_index, target_inode);
-                match dir_res {
-                    Ok(dir_entries) => {
-                        for entry in dir_entries {
-                            let is_dir =
-                                matches!(entry.entry_type, crate::apfs::ApfsFileType::Directory);
-
-                            // Encode inode in path for recursive navigation: /vol0/folder_123
-                            let v_name = if is_dir {
-                                format!("{}_{}", entry.name, entry.inode)
-                            } else {
-                                entry.name.clone()
-                            };
-
-                            entries.push(VfsEntry {
-                                path: target_path.join(&v_name),
-                                name: entry.name,
-                                is_dir,
-                                size: 0,
-                                modified: None,
-                            });
-                        }
-                    }
-                    Err(e) => {
-                        warn!(
-                            "[VFS][APFS] Failed to enumerate directory {}: {:?}",
-                            target_inode, e
-                        );
-                    }
-                }
-            }
-            Err(e) => {
-                warn!("[VFS][APFS] Failed to open APFS reader: {:?}", e);
-            }
-        }
-
-        // Fallback: Populate with real volume names from the container if we found them
-        if entries.is_empty() && (normalized == volume_root || normalized == "/") {
-            if let Ok(reader) = ApfsReader::open_at_offset(self.root(), vol_info.offset) {
-                let vol_list = reader.list_volumes();
-                for vol in vol_list {
-                    entries.push(VfsEntry {
-                        path: PathBuf::from(format!("{}/{}", volume_root, vol.name)),
-                        name: vol.name.clone(),
-                        is_dir: true,
-                        size: vol.total_size,
-                        modified: None,
-                    });
-                }
-            }
-        }
-
-        if entries.is_empty() && normalized == volume_root {
-            entries.push(VfsEntry {
-                path: PathBuf::from(format!("{}/APFS_Container", volume_root)),
-                name: "APFS_Container".to_string(),
-                is_dir: true,
-                size: vol_info.size,
-                modified: None,
-            });
-        }
-
-        Ok(entries)
+        // v16 Session 3 — APFS virtualization path retired alongside
+        // the in-tree apfs::ApfsReader module. The modern APFS walk
+        // surface lives behind `fs_dispatch::open_filesystem` →
+        // ApfsSingleWalker / ApfsMultiWalker (Session 4 / 5 on top
+        // of the external `apfs` crate). This legacy virtualization
+        // module pre-dates the dispatcher and is kept green-
+        // compiling but neutralized rather than migrated. Matches
+        // the already-stubbed NTFS / ext4 paths on this same type.
+        Ok(Vec::new())
     }
 
     fn enumerate_hfsplus_directory(
@@ -1373,28 +1298,15 @@ impl VirtualFileSystem for RawVfs {
                 serial_number: None,
             }];
 
-            // If APFS, try to find snapshots
-            if final_fs == FileSystemType::APFS {
-                use crate::apfs::ApfsReader;
-                if let Ok(apfs) = ApfsReader::open_at_offset(&self.root, filesystem_offset) {
-                    for (i, vol) in apfs.volumes.iter().enumerate() {
-                        for (s_idx, snap) in vol.snapshots.iter().enumerate() {
-                            base_volumes.push(VolumeInfo {
-                                volume_index: (i + 1) * 100 + s_idx,
-                                offset: vol.offset, // Same physical offset, but logic would switch snapshot
-                                size: vol.total_size,
-                                sector_size: 512,
-                                filesystem: FileSystemType::APFS,
-                                label: Some(snap.name.clone()),
-                                cluster_size: None,
-                                mft_offset: None,
-                                mft_record_size: None,
-                                serial_number: None,
-                            });
-                        }
-                    }
-                }
-            }
+            // v16 Session 3 — APFS snapshot heuristic enumeration
+            // retired alongside the in-tree ApfsReader. Snapshot
+            // iteration is deferred beyond v16 per
+            // docs/RESEARCH_v16_APFS_SHAPE.md §4 (latest XID only
+            // through v0.16; tripwire test name
+            // apfs_walker_walks_current_state_only_pending_snapshot_enumeration
+            // pins the deferral). When snapshots ship in v17 they
+            // go through the external apfs crate's structural walk,
+            // not the retired heuristic `.snapshots` field.
 
             // If NTFS, try to find VSS (Volume Shadow Copy) snapshots
             if final_fs == FileSystemType::NTFS {
@@ -2950,40 +2862,15 @@ impl VirtualFileSystem for EwfVfs {
 
     fn enumerate_apfs_directory(
         &self,
-        vol_info: &VolumeInfo,
+        _vol_info: &VolumeInfo,
         _target_path: &Path,
     ) -> Result<Vec<VfsEntry>, ForensicError> {
-        info!(
-            "[EwfVfs] Cross-platform APFS enumeration via ApfsWalker: vol={} offset={}",
-            vol_info.volume_index, vol_info.offset
-        );
-
-        let reader = EwfSeekReader::new(self, vol_info.offset);
-        let mut walker = crate::apfs_walker::ApfsWalker::new(reader, 0)?;
-        let path_entries = walker.enumerate_with_paths(200_000)?;
-
-        let vfs_entries: Vec<VfsEntry> = path_entries
-            .iter()
-            .map(|e| {
-                let vfs_path = format!("/apfs_vol{}{}", vol_info.volume_index, e.path);
-                let modified_dt = e.modified.and_then(|ts| DateTime::from_timestamp(ts, 0));
-                VfsEntry {
-                    path: PathBuf::from(&vfs_path),
-                    name: e.name.clone(),
-                    is_dir: e.is_directory,
-                    size: e.size,
-                    modified: modified_dt,
-                }
-            })
-            .collect();
-
-        info!(
-            "[EwfVfs] ApfsWalker returned {} entries for volume {}",
-            vfs_entries.len(),
-            vol_info.volume_index
-        );
-
-        Ok(vfs_entries)
+        // v16 Session 3 — see the sibling implementation earlier in
+        // this file for the full retirement rationale. EwfVfs's
+        // APFS path previously called crate::apfs_walker::ApfsWalker
+        // which has been retired. The dispatcher's ApfsSingleWalker
+        // / ApfsMultiWalker (Sessions 4 / 5) is the modern API.
+        Ok(Vec::new())
     }
 
     fn open_file(&self, path: &Path) -> Result<Vec<u8>, ForensicError> {
