@@ -4,18 +4,23 @@ Strata is a Rust/Tauri digital forensics platform for court-ready evidence analy
 
 ---
 
-## Key numbers (v0.15.0, 2026-04-19)
+## Key numbers (v0.16.0, 2026-04-19)
 
-- **Test count:** 3,771 passing across `cargo test --workspace`
+- **Test count:** 3,836 passing across `cargo test --workspace`
 - **Filesystem walkers live through the dispatcher:**
   - NTFS (since v11, `strata-fs::ntfs_walker`)
   - ext2/ext3/ext4 (v15 Session B, wraps `ext4-view = 0.9`)
-  - HFS+ (v15 Session D, in-tree walker with real B-tree iteration)
+  - HFS+ (v15 Session D, in-tree walker with real B-tree iteration, v16 Session 3 added `read_file` extent reading)
   - FAT12/FAT16/FAT32 (v15 Session E, in-tree walker)
+  - APFS single-volume (v16 Session 4, wraps `apfs = 0.2`)
+  - APFS multi-volume (v16 Session 5, CompositeVfs with `/vol{N}:/path` scoping; dispatcher auto-detects via `fs_oids` count)
 - **Dispatcher deferrals with explicit pickup signals:**
-  - exFAT — `"exFAT walker deferred — see roadmap"`
-  - APFS — `"APFS walker deferred to v0.16 — see roadmap"`
-- **AST quality gate baseline** (enforced by `tools/strata-verify-quality`): 470 library `.unwrap()` / 5 `unsafe{}` (VHD/VMDK FFI waiver) / 5 `println!`. Every commit since v14 has shipped zero new violations — the ratchet holds.
+  - exFAT — `"exFAT walker deferred — see roadmap"` (v17 candidate)
+- **Explicit out-of-scope deferrals (tripwired):**
+  - APFS snapshot enumeration — current-state only per `apfs_walker_walks_current_state_only_pending_snapshot_enumeration` (v17 candidate)
+  - APFS fusion drives — `"APFS fusion drives not yet supported"` rejected at walker open()
+  - APFS decryption — examiner offline key recovery out of scope permanently
+- **AST quality gate baseline** (enforced by `tools/strata-verify-quality`): 470 library `.unwrap()` / 5 `unsafe{}` (VHD/VMDK FFI waiver) / 5 `println!`. Every commit since v14 — including all five v16 sessions — has shipped zero new violations. The ratchet holds.
 - **9 load-bearing tests preserved** (see below).
 
 ---
