@@ -30,6 +30,16 @@ apps/shield/evidence/
 *.dmg
 *.vmdk
 *.vhd
+
+# v16 Session 3 fix — filesystem-walker integration-test fixtures
+# live under crates/strata-fs/tests/fixtures/ and are committed
+# intentionally as one-time snapshots (HFS+ via Session D, FAT16
+# via Session E, APFS via Session 1.5 probe fixture moved in
+# Session 3). Sessions D/E session state claimed "committed" but
+# the *.img pattern above was silently blocking them — this
+# un-ignore restores the intent.
+!crates/strata-fs/tests/fixtures/*.img
+
 .DS_Store
 **/.DS_Store
 crates/strata-core/exports/
