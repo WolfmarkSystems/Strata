@@ -599,3 +599,126 @@ pub fn apfs_read_file(
     let mut reader = apfs_open(path)?;
     reader.read_file(volume, inode, offset, size)
 }
+
+// ── v16 Session 1 — FS-APFS-RESEARCH Send/Sync probes ──────────────
+//
+// Per v15 Lesson 1 (Session C Phase 0): compiler probes verify trait
+// contracts. Every APFS public type exposed by this module must be
+// `Send + Sync` for Path A (held-handle) walker architecture in
+// Session 4. If any fails, the offending field must be documented
+// and the walker architecture decision revisited.
+//
+// Findings recorded in `docs/RESEARCH_v16_APFS_SHAPE.md` §2.
+
+#[cfg(test)]
+mod _apfs_send_sync_probe {
+    use super::*;
+    use crate::apfs_walker::{ApfsBootParams, ApfsFileEntry, ApfsPathEntry};
+
+    fn assert_send<T: Send>() {}
+    fn assert_sync<T: Sync>() {}
+
+    // ── apfs.rs types ─────────────────────────────────────────
+
+    #[test]
+    fn apfs_superblock_is_send_and_sync() {
+        assert_send::<ApfsSuperblock>();
+        assert_sync::<ApfsSuperblock>();
+    }
+
+    #[test]
+    fn apfs_volume_is_send_and_sync() {
+        assert_send::<ApfsVolume>();
+        assert_sync::<ApfsVolume>();
+    }
+
+    #[test]
+    fn apfs_snapshot_is_send_and_sync() {
+        assert_send::<ApfsSnapshot>();
+        assert_sync::<ApfsSnapshot>();
+    }
+
+    #[test]
+    fn apfs_btree_node_is_send_and_sync() {
+        assert_send::<ApfsBtreeNode>();
+        assert_sync::<ApfsBtreeNode>();
+    }
+
+    #[test]
+    fn btree_toc_entry_is_send_and_sync() {
+        assert_send::<BtreeTocEntry>();
+        assert_sync::<BtreeTocEntry>();
+    }
+
+    #[test]
+    fn apfs_dir_entry_is_send_and_sync() {
+        assert_send::<ApfsDirEntry>();
+        assert_sync::<ApfsDirEntry>();
+    }
+
+    #[test]
+    fn apfs_file_type_is_send_and_sync() {
+        assert_send::<ApfsFileType>();
+        assert_sync::<ApfsFileType>();
+    }
+
+    // Note: ApfsReader holds a `File` handle. `std::fs::File` is
+    // `Send + Sync` so the composite should be too; verify.
+    #[test]
+    fn apfs_reader_is_send_and_sync() {
+        assert_send::<ApfsReader>();
+        assert_sync::<ApfsReader>();
+    }
+
+    // ── apfs_walker.rs types ──────────────────────────────────
+
+    #[test]
+    fn apfs_boot_params_is_send_and_sync() {
+        assert_send::<ApfsBootParams>();
+        assert_sync::<ApfsBootParams>();
+    }
+
+    #[test]
+    fn apfs_file_entry_is_send_and_sync() {
+        assert_send::<ApfsFileEntry>();
+        assert_sync::<ApfsFileEntry>();
+    }
+
+    #[test]
+    fn apfs_path_entry_is_send_and_sync() {
+        assert_send::<ApfsPathEntry>();
+        assert_sync::<ApfsPathEntry>();
+    }
+
+    // ApfsWalker<R> is generic over R: Read + Seek. It is Send+Sync
+    // iff R is Send+Sync. Probing with std::fs::File verifies the
+    // shape a dispatcher-level PartitionReader will need to satisfy.
+    #[test]
+    fn apfs_walker_over_file_is_send_and_sync() {
+        use crate::apfs_walker::ApfsWalker;
+        assert_send::<ApfsWalker<std::fs::File>>();
+        assert_sync::<ApfsWalker<std::fs::File>>();
+    }
+
+    // ── apfs_advanced.rs types ────────────────────────────────
+
+    #[test]
+    fn apfs_advanced_types_are_send_and_sync() {
+        use crate::apfs_advanced::{
+            ApfsAdvancedAnalyzer, ApfsSnapshot as AdvApfsSnapshot, FSEventRecord, Firmlink,
+            SpaceMetrics, Xattr,
+        };
+        assert_send::<ApfsAdvancedAnalyzer>();
+        assert_sync::<ApfsAdvancedAnalyzer>();
+        assert_send::<AdvApfsSnapshot>();
+        assert_sync::<AdvApfsSnapshot>();
+        assert_send::<SpaceMetrics>();
+        assert_sync::<SpaceMetrics>();
+        assert_send::<FSEventRecord>();
+        assert_sync::<FSEventRecord>();
+        assert_send::<Firmlink>();
+        assert_sync::<Firmlink>();
+        assert_send::<Xattr>();
+        assert_sync::<Xattr>();
+    }
+}
