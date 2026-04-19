@@ -23,6 +23,7 @@ strata-plugin-nimbus    = { path = "../../plugins/strata-plugin-nimbus" }
 strata-plugin-recon     = { path = "../../plugins/strata-plugin-recon" }
 strata-plugin-remnant   = { path = "../../plugins/strata-plugin-remnant" }
 strata-plugin-sigma     = { path = "../../plugins/strata-plugin-sigma" }
+strata-plugin-advisory  = { path = "../../plugins/strata-plugin-advisory" }
 strata-plugin-specter   = { path = "../../plugins/strata-plugin-specter" }
 strata-plugin-trace     = { path = "../../plugins/strata-plugin-trace" }
 strata-plugin-vector    = { path = "../../plugins/strata-plugin-vector" }
@@ -66,3 +67,5 @@ chrono   = { version = "0.4", features = ["serde"] }
 [dev-dependencies]
 tempfile = { workspace = true }
 uuid     = { workspace = true }
+strata-plugin-advisory = { path = "../../plugins/strata-plugin-advisory" }
+strata-plugin-sigma    = { path = "../../plugins/strata-plugin-sigma" }

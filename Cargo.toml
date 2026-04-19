@@ -36,6 +36,7 @@ members = [
     "plugins/strata-plugin-vector",
     "plugins/strata-plugin-recon",
     "plugins/strata-plugin-sigma",
+    "plugins/strata-plugin-advisory",
     "plugins/strata-plugin-phantom",
     "plugins/strata-plugin-guardian",
     "plugins/strata-plugin-netflow",

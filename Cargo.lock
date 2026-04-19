@@ -7835,6 +7835,7 @@ dependencies = [
  "strata-core",
  "strata-csam",
  "strata-fs",
+ "strata-plugin-advisory",
  "strata-plugin-apex",
  "strata-plugin-arbor",
  "strata-plugin-carbon",
@@ -8025,6 +8026,18 @@ dependencies = [
  "strata-plugin-sdk",
  "tempfile",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "strata-plugin-advisory"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+ "log",
+ "strata-ml-anomaly",
+ "strata-ml-obstruction",
+ "strata-ml-summary",
+ "strata-plugin-sdk",
 ]
 
 [[package]]

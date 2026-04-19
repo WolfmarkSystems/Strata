@@ -57,6 +57,18 @@ fn build_plugins() -> Vec<Box<dyn StrataPlugin>> {
         Box::new(strata_plugin_arbor::ArborPlugin::new()),
         // Note: strata-plugin-index is a cdylib-only dynamic plugin and is
         // loaded through the dynamic loader path, not the static registry.
+        //
+        // v16 Session 2 — ML-WIRE-1. The advisory analytics plugin runs
+        // after every forensic plugin (its `run` consumes
+        // `ctx.prior_results`) and BEFORE Sigma so Sigma's rules
+        // 30/31/32 see its emitted records. Registered here rather
+        // than as a new named pipeline stage because the existing
+        // plugin-registry ordering IS the pipeline-stage mechanism —
+        // adding a second orchestration surface would duplicate
+        // concerns with zero behavior gain. Closes the pre-v0.14
+        // Opus audit debt where strata-ml-* crates were real code
+        // called only from legacy apps/tree/.
+        Box::new(strata_plugin_advisory::AdvisoryPlugin::new()),
         Box::new(strata_plugin_sigma::SigmaPlugin::new()),
     ]
 }

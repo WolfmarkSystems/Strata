@@ -1,0 +1,17 @@
+[package]
+name = "strata-plugin-advisory"
+version = "1.0.0"
+edition = "2021"
+description = "Advisory analytics plugin — runs AnomalyEngine, ObstructionScorer, and SummaryGenerator against the plugin pipeline output and emits ArtifactRecords that the Sigma correlation plugin (registered after this one) consumes for rules 30/31/32. Wires the ML modules that v0.14 Opus audit found were real code but unreached by strata ingest run."
+license = "Proprietary"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+strata-plugin-sdk = { path = "../../crates/strata-plugin-sdk" }
+strata-ml-anomaly = { path = "../../crates/strata-ml-anomaly" }
+strata-ml-obstruction = { path = "../../crates/strata-ml-obstruction" }
+strata-ml-summary = { path = "../../crates/strata-ml-summary" }
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"

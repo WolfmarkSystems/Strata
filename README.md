@@ -53,7 +53,7 @@ The tools that exist were built for enterprise budgets and conference demos. Str
 - **ATT&CK kill chain reconstruction** — automatically maps detected artifacts to all 14 ATT&CK tactic stages
 - **Behavioral detection** — beaconing analysis, credential harvesting patterns, lateral movement chain visualization
 - **Memory forensics** — raw memory image carving (.raw/.mem/.vmem/.dmp/.lime), process list heuristics, network connection extraction
-- **ML-powered analysis** — anomaly detection, executive case summary, anti-forensic obstruction scoring (0–100)
+- **Advisory analytics** — deterministic statistics and templates wired into every `strata ingest run`: IQR-based anomaly detection over plugin artifact timelines, anti-forensic obstruction scoring (0–100), template-rendered executive case summaries. No ML models, no LLM calls, no external API dependencies. Findings feed Sigma rules 30/31/32 for cross-artifact correlation. All output tagged ADVISORY and requires examiner verification.
 - **CSAM detection module** — hash-based and perceptual detection, NCMEC/Project VIC compatible, immutable audit trail, free on all tiers
 - **Vault detection** — VeraCrypt volumes, photo vault apps, anti-forensic tools, steganography indicators, Tor Browser artifacts
 - **Court-ready reporting** — HTML/PDF export, UCMJ court-martial format, agency branding, Ed25519 cryptographic report sealing, FACT attribution framework
