@@ -275,6 +275,28 @@ If both pass — and they almost certainly will, given both are plain data struc
 
 If either fails, the error message identifies the offending field and the fix is local to that struct (almost always replacing an `Rc` with `Arc` or unwrapping a `RefCell`).
 
+### Verified result (v15 Session C Phase 0, 2026-04-19)
+
+Both probes **pass**. Run output from
+`cargo test -p strata-fs --lib hfsplus::_send_sync_probe`:
+
+```
+running 4 tests
+test hfsplus::_send_sync_probe::hfsplus_catalog_entry_is_send ... ok
+test hfsplus::_send_sync_probe::hfsplus_filesystem_is_send ... ok
+test hfsplus::_send_sync_probe::vfs_entry_is_send ... ok
+test hfsplus::_send_sync_probe::hfsplus_filesystem_is_sync ... ok
+
+test result: ok. 4 passed; 0 failed
+```
+
+Path A (held handle) is confirmed viable in code. The iterator chain
+described in §3 is `Send` automatically and the Phase B walker's
+`walk()` can return a `Send`-bound iterator without any `Rc → Arc`
+or `RefCell` surgery on the domain types. The probes live in
+`crates/strata-fs/src/hfsplus.rs` under `mod _send_sync_probe` so
+they guard against regression in any future refactor.
+
 ---
 
 ## 7. Recommendation
