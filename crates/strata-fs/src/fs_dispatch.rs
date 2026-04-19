@@ -13,6 +13,7 @@ use std::sync::Arc;
 use strata_evidence::EvidenceImage;
 
 use crate::ext4_walker::Ext4Walker;
+use crate::hfsplus_walker::HfsPlusWalker;
 use crate::ntfs_walker::NtfsWalker;
 use crate::vfs::{VfsError, VfsResult, VirtualFilesystem};
 
@@ -126,15 +127,16 @@ pub fn detect_filesystem(
 /// Open the appropriate `VirtualFilesystem` for the filesystem at
 /// `partition_offset..partition_offset + partition_size`.
 ///
-/// Live walker arms (v15 Session B):
-/// - NTFS (since v11)
-/// - ext2 / ext3 / ext4 (v15 Session B — wraps `ext4-view = "0.9"`)
+/// Live walker arms:
+/// - **NTFS** (v11)
+/// - **ext2 / ext3 / ext4** (v15 Session B — wraps `ext4-view = 0.9`)
+/// - **HFS+** (v15 Session D — wraps in-tree `HfsPlusWalker` on top
+///   of the Phase B B-tree leaf iteration)
 ///
-/// Pending (v15 Session C):
-/// - HFS+ — returns `VfsError::Unsupported` (walker in progress)
-/// - FAT12 / FAT16 / FAT32 / exFAT — returns `VfsError::Unsupported`
+/// Pending (v15 Session E):
+/// - FAT12 / FAT16 / FAT32 / exFAT — returns `VfsError::Unsupported`.
 ///
-/// Pending (v16):
+/// Pending (v0.16):
 /// - APFS — returns `VfsError::Other("APFS walker deferred to v0.16
 ///   — see roadmap")` so the CLI surface carries the roadmap pickup
 ///   signal directly to the examiner rather than a generic
@@ -154,11 +156,14 @@ pub fn open_filesystem(
             let walker = Ext4Walker::open(image, partition_offset, partition_size)?;
             Ok(Box::new(walker))
         }
-        FsType::HfsPlus
-        | FsType::Fat12
-        | FsType::Fat16
-        | FsType::Fat32
-        | FsType::ExFat => Err(VfsError::Unsupported),
+        FsType::HfsPlus => {
+            let walker =
+                HfsPlusWalker::open_on_partition(image, partition_offset, partition_size)?;
+            Ok(Box::new(walker))
+        }
+        FsType::Fat12 | FsType::Fat16 | FsType::Fat32 | FsType::ExFat => {
+            Err(VfsError::Unsupported)
+        }
         FsType::Apfs => Err(VfsError::Other(
             "APFS walker deferred to v0.16 — see roadmap".into(),
         )),
@@ -313,18 +318,42 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_hfsplus_still_unsupported_until_session_c() {
+    fn dispatch_hfsplus_arm_attempts_live_walker_construction() {
+        // v15 Session D Sprint 4 — converted from the Session B
+        // negative test `dispatch_hfsplus_still_unsupported_until_session_c`
+        // now that the HfsPlusWalker ships. Pattern matches the ext4
+        // arm's `dispatch_ext4_arm_attempts_live_walker_construction`:
+        // the zeroed buffer detects as HFS+ via the H+ magic at
+        // offset 0x400 + 0 = 0x400, but HfsPlusFilesystem::open_reader
+        // fails on the missing volume-header fields (signature is
+        // there but blocksize / fork data are zero). Critical
+        // assertion: the error surfaces from the walker's open
+        // (VfsError::Other wrapping the parser's message), NOT from
+        // the dispatcher returning Unsupported. That's the
+        // live-routing proof.
         let mut bytes = vec![0u8; 4096];
         bytes[0x400..0x402].copy_from_slice(b"H+");
         let res = dispatch_from_mem(bytes);
         match res {
-            Err(VfsError::Unsupported) => {}
-            Err(e) => panic!(
-                "HFS+ dispatcher must remain Unsupported; got {e:?}"
-            ),
-            Ok(_) => panic!(
-                "HFS+ dispatcher must remain Unsupported until Session C; got live walker"
-            ),
+            Err(VfsError::Unsupported) => {
+                panic!("HFS+ dispatcher arm must NOT return Unsupported in v15 Session D+");
+            }
+            Err(VfsError::Other(msg)) => {
+                // Accept any walker-originated error — the specifics
+                // depend on which field the zeroed-buffer hits.
+                // What matters: the message goes through the walker,
+                // not the dispatcher's bare Unsupported branch.
+                assert!(
+                    !msg.is_empty(),
+                    "expected HfsPlusWalker::open error with diagnostic text"
+                );
+            }
+            Ok(_) => {
+                // If the volume happened to parse (won't with
+                // zeroed fields, but the route is live), that
+                // still satisfies the ship criterion.
+            }
+            Err(e) => panic!("unexpected dispatcher error: {e:?}"),
         }
     }
 
