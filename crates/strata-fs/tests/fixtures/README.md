@@ -1,61 +1,88 @@
-# ext4 test fixture
+# strata-fs walker test fixtures
 
-This directory holds the binary fixture consumed by `strata-fs`'s
-`Ext4Walker` integration test.
+Binary filesystem images + reproducible generation scripts +
+expected-enumeration manifests consumed by the `Ext4Walker` and
+`HfsPlusWalker` integration tests.
 
-## Files
+## Layout
 
-| File | Committed? | Purpose |
-|---|:---:|---|
-| `mkext4.sh` | yes | Reproducible generation script for `ext4_small.img` |
-| `ext4_small.expected.json` | yes | Expected enumeration / metadata manifest |
-| `ext4_small.img` | **no** (see below) | 2 MB ext4 filesystem image |
+| Filesystem | Fixture image | Generator | Manifest | Committed? |
+|---|---|---|---|:---:|
+| ext4 | `ext4_small.img` (2 MiB) | `mkext4.sh` | `ext4_small.expected.json` | **no** — Linux-only generation |
+| HFS+ | `hfsplus_small.img` (2 MiB) | `mkhfsplus.sh` | `hfsplus_small.expected.json` | **yes** — committed one-time snapshot |
 
-## Why `ext4_small.img` is not committed yet
+## ext4 — Linux-only generation, fixture not committed
 
-`ext4_small.img` must be generated from a Linux host with `e2fsprogs`
-installed (`mkfs.ext4`) and loopback-mount privileges. The v15
-Session B run happened on a macOS developer machine where
-`mkfs.ext4`, Docker, and QEMU were all unavailable, so the binary
-fixture generation is deferred to a Linux CI runner or a Linux
-developer machine in Session C.
+`ext4_small.img` must be generated on a Linux host with `e2fsprogs`
+installed (`mkfs.ext4`) and loopback-mount privileges. macOS
+developer machines lack `mkfs.ext4`, Docker, and QEMU, so the
+binary fixture generation is deferred to a Linux CI runner or a
+Linux developer machine.
 
-Integration tests that consume the fixture
+Integration tests
 (`ext4_walker::tests::walker_on_committed_fixture_enumerates_expected_paths`)
-skip-guard on `ext4_small.img` presence: when absent, the test prints
-`SKIP` and exits 0; when present, it validates enumeration against
-`ext4_small.expected.json` exactly.
+skip-guard on `ext4_small.img` presence: when absent, the test
+prints `SKIP` and exits 0; when present, it validates enumeration
+against `ext4_small.expected.json` exactly.
 
-This follows the same discipline as the NTFS walker's
-`tests/ground_truth_ntfs.rs`, which skip-guards on the non-distributed
-Test Material corpus.
+`mkext4.sh` is deterministic (fixed UUID, fixed label,
+`SOURCE_DATE_EPOCH=0`) — running it twice on the same platform
+yields byte-identical output.
 
-## Regenerating the fixture
-
-On any Linux host with `e2fsprogs`:
+### Regenerating ext4
 
 ```bash
 cd crates/strata-fs/tests/fixtures
-./mkext4.sh
-# produces ext4_small.img
+./mkext4.sh     # Linux host; produces ext4_small.img
 ```
 
-The script is deterministic: given the same inputs it produces the
-same `.img` byte-for-byte. If `ext4_small.img` already exists and
-differs from what the script would produce, the script will error
-rather than silently overwrite — this prevents accidental drift
-between the committed fixture and the committed expected-json.
+## HFS+ — macOS-native generation, fixture committed
 
-## Acceptance contract
+`hfsplus_small.img` IS committed directly as a one-time snapshot.
+Generation uses macOS base-system tools (`hdiutil` + `newfs_hfs`),
+no Homebrew or Linux VM required.
+
+Unlike ext4, HFS+ generation via `newfs_hfs` is **not byte-stable** —
+every regeneration produces a new volume UUID and new inode
+timestamps. Committing one snapshot + testing against structural
+invariants (file/folder names, parent-child relationships,
+directory structure) is the honest discipline here.
+
+Integration tests
+(`hfsplus_walker::tests::walker_on_committed_fixture_enumerates_expected_structure`)
+walk the committed image and cross-reference
+`hfsplus_small.expected.json`.
+
+### Regenerating HFS+
+
+```bash
+cd crates/strata-fs/tests/fixtures
+./mkhfsplus.sh   # macOS host; produces hfsplus_small.img
+```
+
+The script refuses to overwrite an existing `.img` — delete it
+manually if you intend to regenerate, and expect the new snapshot
+to differ from the committed one in UUID/timestamp fields even
+though the user-visible file/folder tree is identical.
+
+## Acceptance contracts
 
 A committed `ext4_small.img` SHALL:
 
-- Be exactly 2 MiB (2,097,152 bytes).
-- Contain a valid ext4 filesystem (`mkfs.ext4 -L strata-ext4`).
+- Be exactly 2 MiB (2,097,152 bytes)
+- Contain a valid ext4 filesystem (`mkfs.ext4 -L strata-ext4`)
 - Populate the root directory and nested directories per
-  `ext4_small.expected.json`.
-- Reproduce bit-for-bit given the script + its environment.
+  `ext4_small.expected.json`
+- Reproduce bit-for-bit given the script + its environment
 
-`ext4_walker::tests::walker_on_committed_fixture_enumerates_expected_paths`
-validates the first three points by walking the committed image and
-cross-referencing the manifest.
+A committed `hfsplus_small.img` SHALL:
+
+- Be exactly 2 MiB (2,097,152 bytes)
+- Contain a valid HFS+ filesystem with label `STRATA-HFS`
+- Populate the following structure:
+  - `/readme.txt` (11 bytes, data fork only)
+  - `/forky.txt` (14 bytes data fork + 9 bytes resource fork)
+  - `/docs/nested/buried.txt` (13 bytes, three levels deep)
+- Surface real catalog records via `HfsPlusFilesystem::read_catalog`
+  (no stub placeholder — see Session D Phase B Part 1 for the
+  implementation)

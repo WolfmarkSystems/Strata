@@ -29,10 +29,21 @@ use crate::vfs::{
 const ROOT_CNID: u32 = 2;
 
 /// Names HFS+ uses internally that the walker hides by default for
-/// forensic clarity.  Per SPRINTS_v15 Session C Sprint 1: the HFS+
-/// Private Data directory is skipped unless `--include-private` is
-/// set (future flag surface; always-skip for now).
-const HFS_PRIVATE_DATA_NAME: &str = "\u{0}\u{0}\u{0}\u{0}HFS+ Private Data\u{0d}";
+/// forensic clarity. Tested against a real newfs_hfs volume: macOS
+/// creates TWO private directories whose names both contain
+/// `"HFS+ Private"`:
+///
+///   - `"\u{0}\u{0}\u{0}\u{0}HFS+ Private Data"` — hard-link data
+///     store for file hard links.
+///   - `".HFS+ Private Directory Data\r"` — hard-link data store
+///     for directory hard links.
+///
+/// Walker substring-matches on `"HFS+ Private"` — a string that
+/// never appears in a user-visible filename on a legitimate HFS+
+/// volume. Future `--include-private` flag would expose them.
+fn is_hfs_private_name(name: &str) -> bool {
+    name.contains("HFS+ Private")
+}
 
 pub struct HfsPlusWalker {
     inner: Mutex<HfsPlusFilesystem>,
@@ -156,7 +167,7 @@ impl VirtualFilesystem for HfsPlusWalker {
             .ok_or_else(|| VfsError::NotFound(path.to_string()))?;
         let out: Vec<VfsEntry> = entries
             .iter()
-            .filter(|e| e.parent_cnid == target_cnid && e.name != HFS_PRIVATE_DATA_NAME)
+            .filter(|e| e.parent_cnid == target_cnid && !is_hfs_private_name(&e.name))
             .map(|e| entry_to_vfs(e, path))
             .collect();
         Ok(out)
@@ -369,19 +380,19 @@ mod tests {
         v[1024 + 40..1024 + 44].copy_from_slice(&block_size.to_be_bytes());
         v[1024 + 44..1024 + 48].copy_from_slice(&num_blocks_total.to_be_bytes());
         let cat_logical: u64 = 1024;
-        v[1024 + 288..1024 + 296].copy_from_slice(&cat_logical.to_be_bytes());
-        v[1024 + 288 + 12..1024 + 288 + 16].copy_from_slice(&2u32.to_be_bytes());
-        v[1024 + 288 + 16..1024 + 288 + 20].copy_from_slice(&8u32.to_be_bytes());
-        v[1024 + 288 + 20..1024 + 288 + 24].copy_from_slice(&2u32.to_be_bytes());
+        v[1024 + 272..1024 + 280].copy_from_slice(&cat_logical.to_be_bytes());
+        v[1024 + 272 + 12..1024 + 272 + 16].copy_from_slice(&2u32.to_be_bytes());
+        v[1024 + 272 + 16..1024 + 272 + 20].copy_from_slice(&8u32.to_be_bytes());
+        v[1024 + 272 + 20..1024 + 272 + 24].copy_from_slice(&2u32.to_be_bytes());
 
         let hdr_node_off = 4096;
         v[hdr_node_off + 8] = 1;
         v[hdr_node_off + 10..hdr_node_off + 12].copy_from_slice(&3u16.to_be_bytes());
         let rec_off = hdr_node_off + 14;
-        v[rec_off + 8..rec_off + 10].copy_from_slice(&node_size.to_be_bytes());
-        v[rec_off + 16..rec_off + 20].copy_from_slice(&1u32.to_be_bytes());
-        v[rec_off + 24..rec_off + 28].copy_from_slice(&1u32.to_be_bytes());
-        v[rec_off + 28..rec_off + 32].copy_from_slice(&1u32.to_be_bytes());
+        v[rec_off + 18..rec_off + 20].copy_from_slice(&node_size.to_be_bytes());
+        v[rec_off + 2..rec_off + 6].copy_from_slice(&1u32.to_be_bytes());
+        v[rec_off + 10..rec_off + 14].copy_from_slice(&1u32.to_be_bytes());
+        v[rec_off + 14..rec_off + 18].copy_from_slice(&1u32.to_be_bytes());
 
         let leaf_off = 4608;
         v[leaf_off + 8] = 0xFF;

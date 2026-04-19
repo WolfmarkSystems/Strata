@@ -1,0 +1,58 @@
+{
+  "fixture": "hfsplus_small.img",
+  "generator": "mkhfsplus.sh",
+  "size_bytes": 2097152,
+  "volume_label": "STRATA-HFS",
+  "filesystem": "HFS+",
+  "case_sensitive": false,
+  "journal": false,
+  "expected_entries_by_parent_cnid": {
+    "2": [
+      {
+        "name": "readme.txt",
+        "is_directory": false,
+        "data_fork_bytes": "hello hfs+\n",
+        "data_fork_size": 11,
+        "resource_fork_size": 0
+      },
+      {
+        "name": "forky.txt",
+        "is_directory": false,
+        "data_fork_bytes": "file with fork",
+        "data_fork_size": 14,
+        "resource_fork_bytes": "RSRC_DATA",
+        "resource_fork_size": 9
+      },
+      {
+        "name": "docs",
+        "is_directory": true
+      }
+    ]
+  },
+  "expected_tree_structure": [
+    "/readme.txt",
+    "/forky.txt",
+    "/docs",
+    "/docs/nested",
+    "/docs/nested/buried.txt"
+  ],
+  "acceptance_criteria": {
+    "walker_must_list_root_with_three_entries": true,
+    "walker_must_descend_into_docs_nested": true,
+    "walker_must_surface_forky_txt_at_root": true,
+    "walker_skips_hfsplus_private_data_directory": true,
+    "hfs_plus_private_data_is_present_on_disk": true
+  },
+  "deferred_to_phase_b_part_3": [
+    "data_fork_content_read",
+    "resource_fork_content_read",
+    "resource_fork_exposure_as_rsrc_alternate_stream",
+    "bsd_permissions_uid_gid_mode_extraction",
+    "timestamp_extraction"
+  ],
+  "notes": [
+    "newfs_hfs does not offer deterministic UUID/timestamp options on macOS. Regenerating via mkhfsplus.sh produces a valid HFS+ volume with the same content structure but different volume UUID and inode creation timestamps — committed .img is a one-time snapshot, not a byte-stable regeneration target.",
+    "The HFS+ Private Data directory is created by newfs_hfs on every volume; walker integration tests assert it is NOT enumerated (HfsPlusWalker filters it out by default per SPRINTS_v15 Session C special considerations).",
+    "forky.txt has a resource fork created via the macOS named-fork path /file/..namedfork/rsrc. Session D Phase B Part 2 surfaces only the catalog entry; resource-fork exposure as a .rsrc alternate stream is Phase B Part 3 work."
+  ]
+}

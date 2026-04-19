@@ -178,8 +178,16 @@ impl HfsPlusFilesystem {
             ),
         };
 
-        // Parse Catalog File fork data (offset 288 in VolumeHeader)
-        let catalog_fork_data = &header[288..368];
+        // Parse Catalog File fork data (offset 272 in VolumeHeader
+        // per Apple TN1150: allocationFile at 112, extentsFile at
+        // 192, catalogFile at 272). The earlier "288" constant was
+        // off by 16 bytes — it was picking up 16 bytes into the
+        // catalog fork, mixing the tail of logicalSize with the
+        // head of clumpSize. Test coverage caught this when
+        // ground_truth_hfsplus.rs ran against a real newfs_hfs
+        // volume; synth-volume tests happened to be aligned to the
+        // buggy constant and so didn't surface the problem.
+        let catalog_fork_data = &header[272..352];
         let logic_size = u64::from_be_bytes(
             catalog_fork_data[0..8]
                 .try_into()
@@ -228,23 +236,37 @@ impl HfsPlusFilesystem {
             let mut btree_header_rec = [0u8; 106];
             boxed.read_exact(&mut btree_header_rec)?;
 
-            catalog_file.node_size = u16::from_be_bytes(
-                btree_header_rec[8..10]
-                    .try_into()
-                    .map_err(|_| ForensicError::InvalidImageFormat)?,
-            );
+            // B-tree Header Record layout per Apple TN1150:
+            //   offset 0   treeDepth       (u16)
+            //   offset 2   rootNode        (u32)
+            //   offset 6   leafRecords     (u32)
+            //   offset 10  firstLeafNode   (u32)
+            //   offset 14  lastLeafNode    (u32)
+            //   offset 18  nodeSize        (u16)
+            //   offset 20  maxKeyLength    (u16)
+            //   ...
+            // The pre-Session-D code read these at completely wrong
+            // offsets (8 / 16 / 24 / 28) which yielded garbage on
+            // any real HFS+ volume. Synth tests happened to write
+            // the same wrong offsets so they silently passed. The
+            // real-fixture ground_truth test surfaces the bug.
             catalog_file.root_node = u32::from_be_bytes(
-                btree_header_rec[16..20]
+                btree_header_rec[2..6]
                     .try_into()
                     .map_err(|_| ForensicError::InvalidImageFormat)?,
             );
             catalog_file.first_leaf_node = u32::from_be_bytes(
-                btree_header_rec[24..28]
+                btree_header_rec[10..14]
                     .try_into()
                     .map_err(|_| ForensicError::InvalidImageFormat)?,
             );
             catalog_file.last_leaf_node = u32::from_be_bytes(
-                btree_header_rec[28..32]
+                btree_header_rec[14..18]
+                    .try_into()
+                    .map_err(|_| ForensicError::InvalidImageFormat)?,
+            );
+            catalog_file.node_size = u16::from_be_bytes(
+                btree_header_rec[18..20]
                     .try_into()
                     .map_err(|_| ForensicError::InvalidImageFormat)?,
             );
@@ -1123,13 +1145,13 @@ mod tests {
         // Catalog fork data at volume-header offset 288.
         // logicalSize u64 BE: 1024 (two nodes of 512 bytes each)
         let cat_logical: u64 = 1024;
-        v[1024 + 288..1024 + 296].copy_from_slice(&cat_logical.to_be_bytes());
+        v[1024 + 272..1024 + 280].copy_from_slice(&cat_logical.to_be_bytes());
         // clumpSize u32 BE: 0 (don't care)
         // totalBlocks u32 BE at offset 12: 2
-        v[1024 + 288 + 12..1024 + 288 + 16].copy_from_slice(&2u32.to_be_bytes());
+        v[1024 + 272 + 12..1024 + 272 + 16].copy_from_slice(&2u32.to_be_bytes());
         // First extent { startBlock 8, blockCount 2 } at offset 16
-        v[1024 + 288 + 16..1024 + 288 + 20].copy_from_slice(&8u32.to_be_bytes());
-        v[1024 + 288 + 20..1024 + 288 + 24].copy_from_slice(&2u32.to_be_bytes());
+        v[1024 + 272 + 16..1024 + 272 + 20].copy_from_slice(&8u32.to_be_bytes());
+        v[1024 + 272 + 20..1024 + 272 + 24].copy_from_slice(&2u32.to_be_bytes());
 
         // B-tree HEADER node at byte 4096 (block 8):
         //   Descriptor: kind = 1 (header), numRecords = 3
@@ -1143,10 +1165,10 @@ mod tests {
         //   firstLeafNode at record offset 24 (u32 BE)
         //   lastLeafNode at record offset 28 (u32 BE)
         let rec_off = hdr_node_off + 14;
-        v[rec_off + 8..rec_off + 10].copy_from_slice(&node_size.to_be_bytes());
-        v[rec_off + 16..rec_off + 20].copy_from_slice(&1u32.to_be_bytes()); // root = node 1
-        v[rec_off + 24..rec_off + 28].copy_from_slice(&1u32.to_be_bytes()); // first_leaf
-        v[rec_off + 28..rec_off + 32].copy_from_slice(&1u32.to_be_bytes()); // last_leaf
+        v[rec_off + 18..rec_off + 20].copy_from_slice(&node_size.to_be_bytes());
+        v[rec_off + 2..rec_off + 6].copy_from_slice(&1u32.to_be_bytes()); // root = node 1
+        v[rec_off + 10..rec_off + 14].copy_from_slice(&1u32.to_be_bytes()); // first_leaf
+        v[rec_off + 14..rec_off + 18].copy_from_slice(&1u32.to_be_bytes()); // last_leaf
 
         // LEAF node at byte 4608 (block 9):
         //   Descriptor: fLink = 0, bLink = 0, kind = -1, height = 1,
@@ -1230,20 +1252,20 @@ mod tests {
             v[1024 + 40..1024 + 44].copy_from_slice(&block_size.to_be_bytes());
             v[1024 + 44..1024 + 48].copy_from_slice(&num_blocks_total.to_be_bytes());
             let cat_logical: u64 = 1024;
-            v[1024 + 288..1024 + 296].copy_from_slice(&cat_logical.to_be_bytes());
-            v[1024 + 288 + 12..1024 + 288 + 16].copy_from_slice(&2u32.to_be_bytes());
-            v[1024 + 288 + 16..1024 + 288 + 20].copy_from_slice(&8u32.to_be_bytes());
-            v[1024 + 288 + 20..1024 + 288 + 24].copy_from_slice(&2u32.to_be_bytes());
+            v[1024 + 272..1024 + 280].copy_from_slice(&cat_logical.to_be_bytes());
+            v[1024 + 272 + 12..1024 + 272 + 16].copy_from_slice(&2u32.to_be_bytes());
+            v[1024 + 272 + 16..1024 + 272 + 20].copy_from_slice(&8u32.to_be_bytes());
+            v[1024 + 272 + 20..1024 + 272 + 24].copy_from_slice(&2u32.to_be_bytes());
 
             let hdr_node_off = 4096;
             v[hdr_node_off + 8] = 1;
             v[hdr_node_off + 10..hdr_node_off + 12]
                 .copy_from_slice(&3u16.to_be_bytes());
             let rec_off = hdr_node_off + 14;
-            v[rec_off + 8..rec_off + 10].copy_from_slice(&node_size.to_be_bytes());
-            v[rec_off + 16..rec_off + 20].copy_from_slice(&1u32.to_be_bytes());
-            v[rec_off + 24..rec_off + 28].copy_from_slice(&1u32.to_be_bytes());
-            v[rec_off + 28..rec_off + 32].copy_from_slice(&1u32.to_be_bytes());
+            v[rec_off + 18..rec_off + 20].copy_from_slice(&node_size.to_be_bytes());
+            v[rec_off + 2..rec_off + 6].copy_from_slice(&1u32.to_be_bytes());
+            v[rec_off + 10..rec_off + 14].copy_from_slice(&1u32.to_be_bytes());
+            v[rec_off + 14..rec_off + 18].copy_from_slice(&1u32.to_be_bytes());
 
             let leaf_off = 4608;
             v[leaf_off + 8] = 0xFF;
