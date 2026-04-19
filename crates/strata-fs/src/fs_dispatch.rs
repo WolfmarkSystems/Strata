@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use strata_evidence::EvidenceImage;
 
+use crate::apfs_walker::ApfsSingleWalker;
 use crate::ext4_walker::Ext4Walker;
 use crate::fat_walker::FatWalker;
 use crate::hfsplus_walker::HfsPlusWalker;
@@ -128,22 +129,37 @@ pub fn detect_filesystem(
 /// Open the appropriate `VirtualFilesystem` for the filesystem at
 /// `partition_offset..partition_offset + partition_size`.
 ///
-/// Live walker arms (v0.15.0):
+/// Live walker arms:
 /// - **NTFS** (v11)
 /// - **ext2 / ext3 / ext4** (v15 Session B — wraps `ext4-view = 0.9`)
 /// - **HFS+** (v15 Session D — in-tree walker + Phase B B-tree leaves)
 /// - **FAT12 / FAT16 / FAT32** (v15 Session E — in-tree walker)
+/// - **APFS single-volume** (v16 Session 4 — wraps `apfs = 0.2`
+///   via `ApfsSingleWalker` from `apfs_walker/single.rs`). The
+///   walker rejects fusion containers internally at open time
+///   with the literal "fusion" pickup-signal string before any
+///   walker state is constructed.
+///
+/// Pending (v16 Session 5):
+/// - **APFS multi-volume** — the single-volume walker above picks
+///   the first non-zero fs_oid only (via `apfs::ApfsVolume::open`'s
+///   internal selection). Multi-volume containers (typical Mac
+///   boot drives: Macintosh HD + Data + Preboot + Recovery) get
+///   only the first volume exposed through the current arm.
+///   Session 5 extends the dispatcher with a volume-count branch
+///   that routes multi-volume containers to `ApfsMultiWalker`
+///   (a CompositeVfs using `/vol{N}:/path` scoping per
+///   RESEARCH_v16_APFS_SHAPE.md §5). Session 5 also adds the
+///   `dispatch_apfs_multi_still_returns_v16_session_5` tripwire
+///   that fires pre-flip; Session 4's dispatcher does not
+///   differentiate single vs multi and neither does the test
+///   suite here.
 ///
 /// Pending (follow-up sprint):
 /// - **exFAT** — distinct on-disk format from FAT12/16/32. Returns
 ///   `VfsError::Other("exFAT walker deferred — see roadmap")` with
 ///   explicit pickup signal. Deferred per SPRINTS_v15's
-///   scope-balloon clause; not blocking for v0.15.0.
-///
-/// Pending (v0.16):
-/// - **APFS** — returns `VfsError::Other("APFS walker deferred to
-///   v0.16 — see roadmap")` so the CLI surface carries the roadmap
-///   pickup signal directly to the examiner.
+///   scope-balloon clause.
 pub fn open_filesystem(
     image: Arc<dyn EvidenceImage>,
     partition_offset: u64,
@@ -172,9 +188,11 @@ pub fn open_filesystem(
         FsType::ExFat => Err(VfsError::Other(
             "exFAT walker deferred — see roadmap".into(),
         )),
-        FsType::Apfs => Err(VfsError::Other(
-            "APFS walker deferred to v0.16 — see roadmap".into(),
-        )),
+        FsType::Apfs => {
+            let walker =
+                ApfsSingleWalker::open_on_partition(image, partition_offset, partition_size)?;
+            Ok(Box::new(walker))
+        }
         FsType::Unknown => Err(VfsError::Other(format!(
             "unknown filesystem at partition offset {partition_offset}"
         ))),
@@ -423,27 +441,49 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_apfs_returns_explicit_v016_message() {
+    fn dispatch_apfs_single_arm_routes_to_live_walker() {
+        // v16 Session 4 Sprint 2 — converted from the Session B
+        // negative test `dispatch_apfs_returns_explicit_v016_message`.
+        // Pattern matches Sessions B (ext4), D (HFS+), E (FAT):
+        // zero-buffer detects as APFS via the NXSB magic at
+        // offset 32, then ApfsSingleWalker::open fails on the
+        // minimal-bytes container (the nxsb + omap walk can't
+        // produce a valid volume on 2K of zeros). Critical
+        // assertion: the error surfaces from the walker's open
+        // (VfsError::Other wrapping the apfs crate's parser
+        // message), NOT from a bare dispatcher Unsupported or
+        // the retired "v0.16" message.
         let mut bytes = vec![0u8; 2048];
         bytes[32..36].copy_from_slice(b"NXSB");
         let res = dispatch_from_mem(bytes);
         match res {
+            Err(VfsError::Unsupported) => {
+                panic!("APFS dispatcher arm must NOT return Unsupported in v16 Session 4+");
+            }
             Err(VfsError::Other(msg)) => {
+                // Must NOT be the retired "v0.16 — see roadmap"
+                // message. That string is the pickup signal for
+                // a DEFERRED arm; live routing produces walker-
+                // open errors with different phrasing.
                 assert!(
-                    msg.contains("v0.16"),
-                    "APFS err must carry explicit v0.16 pickup signal; got: {msg}"
+                    !msg.contains("v0.16"),
+                    "APFS arm is live post-Session-4; the retired v0.16 pickup \
+                     signal must not appear in walker errors. Got: {msg}"
                 );
+                // Walker error should carry apfs-crate-sourced
+                // diagnostic text so examiners can trace the
+                // failure.
                 assert!(
-                    msg.to_ascii_lowercase().contains("apfs"),
-                    "APFS err must name the filesystem; got: {msg}"
+                    !msg.is_empty(),
+                    "expected ApfsSingleWalker::open error with diagnostic text"
                 );
             }
-            Err(e) => panic!(
-                "APFS dispatcher must return v0.16 message, not {e:?}"
-            ),
-            Ok(_) => panic!(
-                "APFS dispatcher must return v0.16 message, not a live walker"
-            ),
+            Ok(_) => {
+                // Unlikely on a 2K zero buffer, but if the apfs
+                // crate did manage to construct a walker on this
+                // input, live routing still verifies.
+            }
+            Err(e) => panic!("unexpected dispatcher error: {e:?}"),
         }
     }
 
