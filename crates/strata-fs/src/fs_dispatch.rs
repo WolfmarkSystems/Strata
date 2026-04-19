@@ -13,6 +13,7 @@ use std::sync::Arc;
 use strata_evidence::EvidenceImage;
 
 use crate::ext4_walker::Ext4Walker;
+use crate::fat_walker::FatWalker;
 use crate::hfsplus_walker::HfsPlusWalker;
 use crate::ntfs_walker::NtfsWalker;
 use crate::vfs::{VfsError, VfsResult, VirtualFilesystem};
@@ -127,20 +128,22 @@ pub fn detect_filesystem(
 /// Open the appropriate `VirtualFilesystem` for the filesystem at
 /// `partition_offset..partition_offset + partition_size`.
 ///
-/// Live walker arms:
+/// Live walker arms (v0.15.0):
 /// - **NTFS** (v11)
 /// - **ext2 / ext3 / ext4** (v15 Session B — wraps `ext4-view = 0.9`)
-/// - **HFS+** (v15 Session D — wraps in-tree `HfsPlusWalker` on top
-///   of the Phase B B-tree leaf iteration)
+/// - **HFS+** (v15 Session D — in-tree walker + Phase B B-tree leaves)
+/// - **FAT12 / FAT16 / FAT32** (v15 Session E — in-tree walker)
 ///
-/// Pending (v15 Session E):
-/// - FAT12 / FAT16 / FAT32 / exFAT — returns `VfsError::Unsupported`.
+/// Pending (follow-up sprint):
+/// - **exFAT** — distinct on-disk format from FAT12/16/32. Returns
+///   `VfsError::Other("exFAT walker deferred — see roadmap")` with
+///   explicit pickup signal. Deferred per SPRINTS_v15's
+///   scope-balloon clause; not blocking for v0.15.0.
 ///
 /// Pending (v0.16):
-/// - APFS — returns `VfsError::Other("APFS walker deferred to v0.16
-///   — see roadmap")` so the CLI surface carries the roadmap pickup
-///   signal directly to the examiner rather than a generic
-///   Unsupported message.
+/// - **APFS** — returns `VfsError::Other("APFS walker deferred to
+///   v0.16 — see roadmap")` so the CLI surface carries the roadmap
+///   pickup signal directly to the examiner.
 pub fn open_filesystem(
     image: Arc<dyn EvidenceImage>,
     partition_offset: u64,
@@ -161,9 +164,14 @@ pub fn open_filesystem(
                 HfsPlusWalker::open_on_partition(image, partition_offset, partition_size)?;
             Ok(Box::new(walker))
         }
-        FsType::Fat12 | FsType::Fat16 | FsType::Fat32 | FsType::ExFat => {
-            Err(VfsError::Unsupported)
+        FsType::Fat12 | FsType::Fat16 | FsType::Fat32 => {
+            let walker =
+                FatWalker::open_on_partition(image, partition_offset, partition_size)?;
+            Ok(Box::new(walker))
         }
+        FsType::ExFat => Err(VfsError::Other(
+            "exFAT walker deferred — see roadmap".into(),
+        )),
         FsType::Apfs => Err(VfsError::Other(
             "APFS walker deferred to v0.16 — see roadmap".into(),
         )),
@@ -358,25 +366,60 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_fat32_still_unsupported_until_session_c() {
+    fn dispatch_fat32_arm_attempts_live_walker_construction() {
+        // v15 Session E Sprint 4 — converted from the Session B
+        // negative test `dispatch_fat32_still_unsupported_until_session_c`.
+        // Pattern matches Sessions B (ext4) and D (HFS+). The zeroed
+        // boot sector with only "FAT32   " at offset 82 detects as
+        // FAT32 via the informational fs_type label (the detection
+        // path — NOT the walker's canonical cluster-count rule); then
+        // FatFilesystem::open_reader fails on the zeroed boot sector
+        // because the 0x55 0xAA boot signature is absent and the
+        // geometry sanity check rejects zero sectors_per_cluster.
+        // Critical assertion: the error surfaces from the walker's
+        // open (NotFat or Invalid mapped through VfsError), NOT from
+        // a bare dispatcher Unsupported — that's live-routing proof.
         let mut bytes = vec![0u8; 2048];
         bytes[82..90].copy_from_slice(b"FAT32   ");
         let res = dispatch_from_mem(bytes);
-        assert!(
-            matches!(res, Err(VfsError::Unsupported)),
-            "FAT32 dispatcher arm must remain Unsupported until Session C"
-        );
+        match res {
+            Err(VfsError::Unsupported) => {
+                panic!("FAT32 dispatcher arm must NOT return Unsupported in v15 Session E+");
+            }
+            Err(VfsError::Other(msg)) => {
+                assert!(
+                    !msg.is_empty(),
+                    "expected FatWalker::open error with diagnostic text, got: {msg}"
+                );
+            }
+            Ok(_) => { /* also acceptable — arm is live */ }
+            Err(e) => panic!("unexpected dispatcher error: {e:?}"),
+        }
     }
 
     #[test]
-    fn dispatch_exfat_still_unsupported_until_session_c() {
+    fn dispatch_exfat_returns_explicit_deferral_message() {
+        // exFAT arm stays deferred per SPRINTS_v15's scope-balloon
+        // clause — FAT12/16/32 shipping clean was the priority for
+        // v0.15.0. This test pins the deferral message so CLI users
+        // see a concrete pickup signal rather than a generic error.
         let mut bytes = vec![0u8; 2048];
         bytes[3..11].copy_from_slice(b"EXFAT   ");
         let res = dispatch_from_mem(bytes);
-        assert!(
-            matches!(res, Err(VfsError::Unsupported)),
-            "exFAT dispatcher arm must remain Unsupported until Session C"
-        );
+        match res {
+            Err(VfsError::Other(msg)) => {
+                assert!(
+                    msg.to_ascii_lowercase().contains("exfat"),
+                    "exFAT err must name the filesystem; got: {msg}"
+                );
+                assert!(
+                    msg.contains("deferred") || msg.contains("roadmap"),
+                    "exFAT err must carry an explicit deferral signal; got: {msg}"
+                );
+            }
+            Err(e) => panic!("exFAT must return Other(deferral), not {e:?}"),
+            Ok(_) => panic!("exFAT must return deferral, not live walker"),
+        }
     }
 
     #[test]
