@@ -1,8 +1,8 @@
 # strata-fs walker test fixtures
 
 Binary filesystem images + reproducible generation scripts +
-expected-enumeration manifests consumed by the `Ext4Walker` and
-`HfsPlusWalker` integration tests.
+expected-enumeration manifests consumed by the `Ext4Walker`,
+`HfsPlusWalker`, and `FatWalker` integration tests.
 
 ## Layout
 
@@ -10,6 +10,30 @@ expected-enumeration manifests consumed by the `Ext4Walker` and
 |---|---|---|---|:---:|
 | ext4 | `ext4_small.img` (2 MiB) | `mkext4.sh` | `ext4_small.expected.json` | **no** — Linux-only generation |
 | HFS+ | `hfsplus_small.img` (2 MiB) | `mkhfsplus.sh` | `hfsplus_small.expected.json` | **yes** — committed one-time snapshot |
+| FAT16 | `fat16_small.img` (16 MiB) | `mkfat16.sh` | `fat16_small.expected.json` | **yes** — committed one-time snapshot |
+
+## FAT16 — macOS-native generation, fixture committed
+
+`fat16_small.img` IS committed directly (16 MiB). Generation uses
+macOS base-system tools (`hdiutil` + `newfs_msdos`), no Homebrew
+or Linux VM required.
+
+FAT16 chosen over FAT32 for committable size: FAT32 requires
+≥65525 clusters which at 512-byte sectors forces ≥33 MiB image
+size. A 16 MiB FAT16 volume exercises every walker code path
+except the FAT32-root-is-a-cluster-chain case (covered by synth
+unit tests inside `fat_walker/mod.rs`).
+
+Like HFS+, `newfs_msdos` isn't byte-stable across regenerations
+(volume ID + FAT entries allocated slightly differently); tests
+match on structural invariants + file content, not byte hashes.
+
+### Regenerating FAT16
+
+```bash
+cd crates/strata-fs/tests/fixtures
+./mkfat16.sh   # macOS host; produces fat16_small.img
+```
 
 ## ext4 — Linux-only generation, fixture not committed
 

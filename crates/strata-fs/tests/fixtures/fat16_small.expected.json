@@ -1,0 +1,65 @@
+{
+  "fixture": "fat16_small.img",
+  "generator": "mkfat16.sh",
+  "size_bytes": 16777216,
+  "volume_label": "STRATAFAT",
+  "filesystem": "FAT16",
+  "bytes_per_sector": 512,
+  "sectors_per_cluster": 4,
+  "cluster_size": 2048,
+  "expected_tree_structure": [
+    "/readme.txt",
+    "/big.bin",
+    "/Long Filename Example.txt",
+    "/dir1",
+    "/dir1/dir2",
+    "/dir1/dir2/dir3",
+    "/dir1/dir2/dir3/deep.txt"
+  ],
+  "expected_content": {
+    "/readme.txt": {
+      "bytes": "hello fat16\n",
+      "size": 12,
+      "clusters": 1,
+      "exercises": "single-cluster read path + lowercase case-flag rendering"
+    },
+    "/big.bin": {
+      "bytes": "XXX... (5000 bytes of 'X')",
+      "size": 5000,
+      "clusters": 3,
+      "exercises": "multi-cluster FAT table following + EOC sentinel handling"
+    },
+    "/Long Filename Example.txt": {
+      "bytes": "needs long filename\n",
+      "size": 20,
+      "clusters": 1,
+      "exercises": "LFN chain assembly + short_name_checksum spec conformance"
+    },
+    "/dir1/dir2/dir3/deep.txt": {
+      "bytes": "buried\n",
+      "size": 7,
+      "clusters": 1,
+      "exercises": "nested directory traversal, 3 levels deep"
+    }
+  },
+  "acceptance_criteria": {
+    "walker_must_list_root_with_four_entries": true,
+    "walker_must_surface_readme_txt_lowercase_via_case_flag": true,
+    "walker_must_surface_long_filename_via_lfn_assembly": true,
+    "walker_must_descend_three_levels_into_dir1_dir2_dir3": true,
+    "walker_must_read_multi_cluster_big_bin_content_intact": true,
+    "walker_must_filter_volume_label_from_enumeration": true,
+    "walker_must_filter_applescript_dot_underscore_sidecars": false
+  },
+  "deferred_follow_ups": [
+    "FAT12 variant (requires larger-cluster or small-size image — synth unit tests cover the packed-entry decode path)",
+    "FAT32 variant (requires ≥33 MiB image — synth unit tests cover the root-cluster-as-chain path)",
+    "exFAT walker (out of v0.15.0 scope per SPRINTS_v15 deferral clause)",
+    "Date/time decoding in VfsEntry.created/modified/accessed (Phase B Part 3 equivalent to HFS+)"
+  ],
+  "notes": [
+    "newfs_msdos on macOS writes a full LFN chain for names that don't fit 8.3 case-insensitively (like 'Long Filename Example.txt'), and uses the NT case-preservation flag byte at directory entry offset 12 for names that fit 8.3 in lowercase (like 'readme.txt', 'big.bin', 'dir1'). The walker must honor both mechanisms — failing to honor the case-flag byte surfaces 'README.TXT' instead of 'readme.txt' and breaks test assertions that match the user's original writes.",
+    "Case-flag bits: 0x08 = name lowercase, 0x10 = extension lowercase. Documented in the FAT long filename extension spec; used by both Windows NT and macOS FAT drivers.",
+    "FAT16 is chosen over FAT32 for committable fixture size. FAT32's 65525-cluster minimum forces ≥33 MiB images, which would bloat the repo. FAT12 + FAT32 code paths get synth unit-test coverage in fat_walker/mod.rs."
+  ]
+}

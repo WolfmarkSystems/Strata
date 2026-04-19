@@ -31,6 +31,7 @@ pub mod ntfs_usn;
 pub mod ntfs_walker;
 pub mod ext4_walker;
 pub mod hfsplus_walker;
+pub mod fat_walker;
 pub mod regions;
 pub mod shadowcopy;
 pub mod snapshot;
