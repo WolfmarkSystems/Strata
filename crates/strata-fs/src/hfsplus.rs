@@ -265,37 +265,326 @@ impl HfsPlusFilesystem {
         Ok(buf)
     }
 
+    /// Walk the Catalog B-tree leaf-node chain and return every
+    /// catalog record as an `HfsPlusCatalogEntry`.
+    ///
+    /// v15 Session D Sprint 1 Phase B Part 1 — replaces the
+    /// structural stub that preceded this implementation. Iteration
+    /// follows the `fLink` sibling chain starting at
+    /// `self.catalog_file.first_leaf_node`, decoding each leaf
+    /// node's variable-length records via the tail offset table.
+    /// Thread records (folder-thread / file-thread) are skipped for
+    /// flat enumeration — their back-pointer role (CNID → parent
+    /// name) is useful for path reconstruction, which is a separate
+    /// follow-on concern.
+    ///
+    /// Safety bounds:
+    /// - Every byte-slice access is `.get(range).ok_or(...)` so a
+    ///   malformed leaf produces `Err`, not panic.
+    /// - Iteration cap of 100,000 nodes prevents a hostile
+    ///   `fLink`-cycle from looping forever.
+    /// - Big-endian decode throughout — HFS+ is BE on disk.
     pub fn read_catalog(&mut self) -> Result<Vec<HfsPlusCatalogEntry>, ForensicError> {
-        // NOTE: This remains a structural stub post-Phase-A. The
-        // refactor swaps the I/O handle under the struct but does
-        // not implement real B-tree leaf-node traversal. Wrapping
-        // this output in a VFS walker would produce a single
-        // placeholder entry per volume — explicitly forbidden by
-        // SPRINTS_v15.md Session C's "no shallow walker stubs" rule.
-        //
-        // Phase B pickup signal: replace this body with real
-        // leaf-node iteration over
-        // `self.catalog_file.first_leaf_node .. last_leaf_node`,
-        // decoding each node's records into `HfsPlusCatalogEntry`
-        // items. Documented in
-        // `docs/RESEARCH_v15_HFSPLUS_SHAPE.md` §3 and in
-        // `SESSION_STATE_v15_BLOCKER.md`.
+        let node_size = self.catalog_file.node_size as usize;
+        if node_size == 0 || self.catalog_file.first_leaf_node == 0 {
+            return Ok(Vec::new());
+        }
 
-        let _node_size = self.catalog_file.node_size;
-        let mut entries = Vec::new();
+        let mut entries: Vec<HfsPlusCatalogEntry> = Vec::new();
+        let mut node_idx = self.catalog_file.first_leaf_node;
+        let mut visited = 0usize;
+        const MAX_NODES: usize = 100_000;
 
-        if self.catalog_file.logical_size > 0 {
-            entries.push(HfsPlusCatalogEntry {
-                record_type: HfsPlusRecordType::CatalogFolder,
-                cnid: 2, // Root folder
-                parent_cnid: 1,
-                name: "root".to_string(),
-                entry_type: HfsPlusEntryType::Directory,
-            });
+        while node_idx != 0 && visited < MAX_NODES {
+            visited += 1;
+            let node = self.read_catalog_node(node_idx)?;
+            if node.len() < 14 {
+                return Err(ForensicError::InvalidImageFormat);
+            }
+            let desc = parse_node_descriptor(&node)?;
+            // Skip non-leaves via the sibling link. For walker
+            // enumeration we only consume leaves — index nodes are
+            // shortcuts the tree builds for name lookup.
+            if desc.kind != NODE_KIND_LEAF {
+                node_idx = desc.flink;
+                continue;
+            }
+            let offsets = parse_record_offsets(&node, desc.num_records)?;
+            for i in 0..(desc.num_records as usize) {
+                let start = *offsets
+                    .get(i)
+                    .ok_or(ForensicError::InvalidImageFormat)? as usize;
+                let end = *offsets
+                    .get(i + 1)
+                    .ok_or(ForensicError::InvalidImageFormat)? as usize;
+                if start >= end || end > node.len() {
+                    // Corrupt record offset — skip this record and
+                    // continue, don't fail the whole walk.
+                    continue;
+                }
+                let record = &node[start..end];
+                if let Some(entry) = parse_catalog_record(record)? {
+                    entries.push(entry);
+                }
+            }
+            node_idx = desc.flink;
         }
 
         Ok(entries)
     }
+
+    /// Read a single B-tree node by its node index. Resolves the
+    /// byte offset as `node_idx * node_size` inside the catalog
+    /// file's first extent — a simplification that works correctly
+    /// for any B-tree whose leaves fit in the initial extent run
+    /// (the overwhelmingly common case for filesystems with
+    /// catalogs under a few MB, which is everything we'll see in
+    /// tests and typical forensic evidence).
+    ///
+    /// Extent-overflow traversal (for catalogs spanning multiple
+    /// non-contiguous extents) is a documented follow-on; the
+    /// initial fixture-scale tests don't hit it.
+    fn read_catalog_node(&mut self, node_idx: u32) -> Result<Vec<u8>, ForensicError> {
+        let node_size = self.catalog_file.node_size as u64;
+        if self.catalog_file.extents.is_empty() {
+            return Err(ForensicError::InvalidImageFormat);
+        }
+        let first_block = self.catalog_file.extents[0].start_block as u64;
+        let first_block_count = self.catalog_file.extents[0].block_count as u64;
+        let block_size = self.volume_header.blocksize as u64;
+        let node_offset_in_file = (node_idx as u64).saturating_mul(node_size);
+        // Sanity: first extent covers this node.
+        let extent_end_in_file = first_block_count.saturating_mul(block_size);
+        if node_offset_in_file.saturating_add(node_size) > extent_end_in_file {
+            // Node lies past the first extent. Not supported in
+            // Part 1; caller receives an error rather than silent
+            // wrong data.
+            return Err(ForensicError::InvalidImageFormat);
+        }
+        let absolute = self.base_offset
+            + first_block.saturating_mul(block_size)
+            + node_offset_in_file;
+        self.reader.seek(SeekFrom::Start(absolute))?;
+        let mut buf = vec![0u8; node_size as usize];
+        self.reader.read_exact(&mut buf)?;
+        Ok(buf)
+    }
+}
+
+// ── B-tree node decoding helpers (Sprint 1 Phase B Part 1) ────────────
+
+/// HFS+ B-tree node kinds. Walker cares only about leaf nodes —
+/// index/header/map nodes are skipped via sibling-link iteration.
+const NODE_KIND_LEAF: i8 = -1; // 0xFF as i8 per Apple TN1150
+const NODE_KIND_INDEX: i8 = 0;
+const NODE_KIND_HEADER: i8 = 1;
+const NODE_KIND_MAP: i8 = 2;
+
+#[derive(Debug, Clone, Copy)]
+struct BtNodeDescriptor {
+    flink: u32,
+    #[allow(dead_code)]
+    blink: u32,
+    kind: i8,
+    #[allow(dead_code)]
+    height: u8,
+    num_records: u16,
+}
+
+fn parse_node_descriptor(node: &[u8]) -> Result<BtNodeDescriptor, ForensicError> {
+    let head = node
+        .get(0..14)
+        .ok_or(ForensicError::InvalidImageFormat)?;
+    let flink = u32::from_be_bytes(
+        head[0..4]
+            .try_into()
+            .map_err(|_| ForensicError::InvalidImageFormat)?,
+    );
+    let blink = u32::from_be_bytes(
+        head[4..8]
+            .try_into()
+            .map_err(|_| ForensicError::InvalidImageFormat)?,
+    );
+    let kind = head[8] as i8;
+    let height = head[9];
+    let num_records = u16::from_be_bytes(
+        head[10..12]
+            .try_into()
+            .map_err(|_| ForensicError::InvalidImageFormat)?,
+    );
+    // Sanity: reject kinds outside the known range. Keeps the
+    // discriminator from silently matching via i8 wrap on a
+    // corrupt node.
+    if !matches!(
+        kind,
+        NODE_KIND_LEAF | NODE_KIND_INDEX | NODE_KIND_HEADER | NODE_KIND_MAP
+    ) {
+        return Err(ForensicError::InvalidImageFormat);
+    }
+    Ok(BtNodeDescriptor {
+        flink,
+        blink,
+        kind,
+        height,
+        num_records,
+    })
+}
+
+/// Decode the tail offset table into a Vec of byte offsets (one per
+/// record plus the end-of-used-space sentinel, so length =
+/// `num_records + 1`). Entries are ordered ascending (we reverse
+/// from the on-disk last-record-first layout).
+fn parse_record_offsets(node: &[u8], num_records: u16) -> Result<Vec<u16>, ForensicError> {
+    let needed = 2 * (num_records as usize + 1);
+    if node.len() < needed {
+        return Err(ForensicError::InvalidImageFormat);
+    }
+    let mut out: Vec<u16> = Vec::with_capacity(num_records as usize + 1);
+    // On-disk: offset_at(n) lives at node[len - 2*(n+1) .. len - 2*n].
+    // We want indexes 0..=num_records in ascending order.
+    for n in 0..=(num_records as usize) {
+        let end = node.len() - 2 * n;
+        let start = end - 2;
+        let raw = u16::from_be_bytes(
+            node[start..end]
+                .try_into()
+                .map_err(|_| ForensicError::InvalidImageFormat)?,
+        );
+        out.push(raw);
+    }
+    Ok(out)
+}
+
+/// HFS+ catalog record-type discriminator (first 2 bytes of record
+/// data, BE i16).
+const REC_TYPE_FOLDER: i16 = 1;
+const REC_TYPE_FILE: i16 = 2;
+const REC_TYPE_FOLDER_THREAD: i16 = 3;
+const REC_TYPE_FILE_THREAD: i16 = 4;
+
+fn parse_catalog_record(record: &[u8]) -> Result<Option<HfsPlusCatalogEntry>, ForensicError> {
+    // Key: keyLength (u16 BE, does not include itself) + parentID (u32
+    // BE) + nodeName.length (u16 BE) + UTF-16BE data.
+    if record.len() < 2 {
+        return Err(ForensicError::InvalidImageFormat);
+    }
+    let key_length = u16::from_be_bytes(
+        record[0..2]
+            .try_into()
+            .map_err(|_| ForensicError::InvalidImageFormat)?,
+    );
+    // Total key bytes on the wire = keyLength + 2 (keyLength itself
+    // is not counted). Data follows at an even byte boundary — some
+    // documents specify 2-byte alignment after the key, so align up.
+    let key_end = 2 + key_length as usize;
+    if key_end > record.len() {
+        return Err(ForensicError::InvalidImageFormat);
+    }
+    let data_start = if key_end.is_multiple_of(2) {
+        key_end
+    } else {
+        key_end + 1
+    };
+    if data_start >= record.len() {
+        return Err(ForensicError::InvalidImageFormat);
+    }
+
+    let key = &record[0..key_end];
+    // Parse key parentID + name
+    if key.len() < 8 {
+        return Err(ForensicError::InvalidImageFormat);
+    }
+    let parent_cnid = u32::from_be_bytes(
+        key[2..6]
+            .try_into()
+            .map_err(|_| ForensicError::InvalidImageFormat)?,
+    );
+    let name_len_units = u16::from_be_bytes(
+        key[6..8]
+            .try_into()
+            .map_err(|_| ForensicError::InvalidImageFormat)?,
+    ) as usize;
+    let name_bytes_needed = 8 + name_len_units * 2;
+    if name_bytes_needed > key.len() {
+        return Err(ForensicError::InvalidImageFormat);
+    }
+    let name = decode_utf16be_name(&key[8..8 + name_len_units * 2])?;
+
+    // Data: first 2 bytes = recordType (BE i16)
+    let data = &record[data_start..];
+    if data.len() < 2 {
+        return Err(ForensicError::InvalidImageFormat);
+    }
+    let rec_type = i16::from_be_bytes(
+        data[0..2]
+            .try_into()
+            .map_err(|_| ForensicError::InvalidImageFormat)?,
+    );
+    match rec_type {
+        REC_TYPE_FOLDER => {
+            if data.len() < 12 {
+                return Err(ForensicError::InvalidImageFormat);
+            }
+            // folderID at offset 8
+            let cnid = u32::from_be_bytes(
+                data[8..12]
+                    .try_into()
+                    .map_err(|_| ForensicError::InvalidImageFormat)?,
+            );
+            Ok(Some(HfsPlusCatalogEntry {
+                record_type: HfsPlusRecordType::CatalogFolder,
+                cnid,
+                parent_cnid,
+                name,
+                entry_type: HfsPlusEntryType::Directory,
+            }))
+        }
+        REC_TYPE_FILE => {
+            if data.len() < 12 {
+                return Err(ForensicError::InvalidImageFormat);
+            }
+            // fileID at offset 8
+            let cnid = u32::from_be_bytes(
+                data[8..12]
+                    .try_into()
+                    .map_err(|_| ForensicError::InvalidImageFormat)?,
+            );
+            Ok(Some(HfsPlusCatalogEntry {
+                record_type: HfsPlusRecordType::CatalogFile,
+                cnid,
+                parent_cnid,
+                name,
+                entry_type: HfsPlusEntryType::File,
+            }))
+        }
+        REC_TYPE_FOLDER_THREAD | REC_TYPE_FILE_THREAD => {
+            // Thread records are back-pointers, not filesystem
+            // entries. Skip for flat enumeration.
+            Ok(None)
+        }
+        _ => {
+            // Unknown record type — skip without erroring, so
+            // forensic evidence with extension records we don't
+            // recognize still yields the records we do.
+            Ok(None)
+        }
+    }
+}
+
+/// Decode a UTF-16BE byte sequence into a `String` preserving the
+/// original bytes' normalization (no re-normalization). Returns
+/// `Err` on invalid-surrogate sequences rather than lossy-decoding
+/// — examiners need to know if a name couldn't be faithfully
+/// represented.
+fn decode_utf16be_name(bytes: &[u8]) -> Result<String, ForensicError> {
+    if !bytes.len().is_multiple_of(2) {
+        return Err(ForensicError::InvalidImageFormat);
+    }
+    let units: Vec<u16> = bytes
+        .chunks_exact(2)
+        .map(|c| u16::from_be_bytes([c[0], c[1]]))
+        .collect();
+    String::from_utf16(&units).map_err(|_| ForensicError::InvalidImageFormat)
 }
 
 /// Shim that makes any `Read + Seek` look partition-relative by
@@ -584,21 +873,412 @@ mod tests {
     }
 
     #[test]
-    fn read_catalog_stub_still_returns_placeholder() {
-        // Post-Phase-A behavior preservation: the stub still returns
-        // one "root" entry when logical_size > 0 and empty vec
-        // otherwise. If Phase B ever implements real B-tree
-        // traversal, THIS TEST should be updated to reflect the
-        // actual enumeration — it's intentionally testing the
-        // placeholder behavior so nobody accidentally merges a
-        // walker that enumerates the placeholder as if it were
-        // real data.
+    fn read_catalog_returns_empty_when_first_leaf_zero() {
+        // v15 Session D — Phase B Part 1 replaced the stub with real
+        // B-tree iteration. When the catalog has no populated leaves
+        // (either logical_size == 0 or first_leaf_node == 0), the
+        // iteration returns an empty Vec cleanly — NOT a placeholder
+        // "root" entry as the old stub did.
+        //
+        // This test formerly pinned the stub's placeholder behavior
+        // under the name `read_catalog_stub_still_returns_placeholder`.
+        // The rename + assertion flip in Sprint 1 Phase B is
+        // deliberate: the limitation is REMOVED in this commit, so
+        // the pinning test becomes a positive assertion about the
+        // real behavior.
         let bytes = synth_hfsplus_volume_bytes();
         let cursor = Cursor::new(bytes);
         let mut fs = HfsPlusFilesystem::open_reader(cursor).expect("open");
         let cat = fs.read_catalog().expect("read_catalog");
-        // logical_size on our synth volume is 0 (we don't set the
-        // catalog fork size field), so the stub returns empty.
-        assert!(cat.is_empty(), "stub returns empty when logical_size == 0");
+        assert!(
+            cat.is_empty(),
+            "real iteration returns empty on a volume with no catalog extents"
+        );
+    }
+
+    // ── B-tree decoder unit tests (Sprint 1 Phase B Part 1) ────
+
+    #[test]
+    fn parse_node_descriptor_decodes_leaf() {
+        let mut n = vec![0u8; 512];
+        // fLink = 5
+        n[0..4].copy_from_slice(&5u32.to_be_bytes());
+        // bLink = 0
+        n[4..8].copy_from_slice(&0u32.to_be_bytes());
+        // kind = -1 (leaf)
+        n[8] = 0xFF;
+        // height = 1
+        n[9] = 1;
+        // numRecords = 3
+        n[10..12].copy_from_slice(&3u16.to_be_bytes());
+        let d = parse_node_descriptor(&n).expect("decode");
+        assert_eq!(d.flink, 5);
+        assert_eq!(d.kind, NODE_KIND_LEAF);
+        assert_eq!(d.num_records, 3);
+    }
+
+    #[test]
+    fn parse_node_descriptor_rejects_short_buffer() {
+        let n = vec![0u8; 10];
+        assert!(parse_node_descriptor(&n).is_err());
+    }
+
+    #[test]
+    fn parse_node_descriptor_rejects_unknown_kind() {
+        let mut n = vec![0u8; 14];
+        n[8] = 42; // not in {-1, 0, 1, 2}
+        assert!(parse_node_descriptor(&n).is_err());
+    }
+
+    #[test]
+    fn parse_record_offsets_is_ascending_end_to_start() {
+        // Simulate a 512-byte node with 2 records:
+        //   record 0 at offset 14 (right after descriptor)
+        //   record 1 at offset 64
+        //   free-space start at offset 128
+        // On-disk offset table ends at byte 512 and stores the
+        // offsets in reverse: [free, rec1, rec0].
+        let node_size = 512;
+        let mut n = vec![0u8; node_size];
+        let free_start = 128u16;
+        let r1 = 64u16;
+        let r0 = 14u16;
+        // Tail three u16 BE values in reverse order:
+        //   bytes 510..512 → offset of record 0 (14)
+        //   bytes 508..510 → offset of record 1 (64)
+        //   bytes 506..508 → free-space sentinel (128)
+        n[510..512].copy_from_slice(&r0.to_be_bytes());
+        n[508..510].copy_from_slice(&r1.to_be_bytes());
+        n[506..508].copy_from_slice(&free_start.to_be_bytes());
+
+        let offsets = parse_record_offsets(&n, 2).expect("decode");
+        assert_eq!(offsets.len(), 3);
+        assert_eq!(offsets[0], 14);
+        assert_eq!(offsets[1], 64);
+        assert_eq!(offsets[2], 128);
+    }
+
+    fn encode_utf16be(s: &str) -> Vec<u8> {
+        let mut out = Vec::new();
+        for unit in s.encode_utf16() {
+            out.extend_from_slice(&unit.to_be_bytes());
+        }
+        out
+    }
+
+    /// Build a minimal leaf-node catalog record: key + data for a
+    /// single folder record. Returns the record bytes (no padding
+    /// around it) so tests can place it inside a node.
+    fn encode_folder_record(parent_cnid: u32, name: &str, cnid: u32) -> Vec<u8> {
+        let name_units: Vec<u16> = name.encode_utf16().collect();
+        // key = parentID u32 + nameLength u16 + name UTF-16BE
+        let key_payload_len = 4 + 2 + name_units.len() * 2;
+        let key_length = key_payload_len as u16; // does NOT include itself
+        let mut rec: Vec<u8> = Vec::new();
+        rec.extend_from_slice(&key_length.to_be_bytes());
+        rec.extend_from_slice(&parent_cnid.to_be_bytes());
+        rec.extend_from_slice(&(name_units.len() as u16).to_be_bytes());
+        rec.extend_from_slice(&encode_utf16be(name));
+        // Pad to even length if needed (alignment).
+        if rec.len() % 2 != 0 {
+            rec.push(0);
+        }
+        // Data: folder record, 88 bytes total. We only need the
+        // first 12 for the parser's current fields (recordType +
+        // flags + valence + folderID); the rest stays zeroed.
+        let mut data = vec![0u8; 88];
+        data[0..2].copy_from_slice(&REC_TYPE_FOLDER.to_be_bytes());
+        data[8..12].copy_from_slice(&cnid.to_be_bytes());
+        rec.extend_from_slice(&data);
+        rec
+    }
+
+    fn encode_file_record(parent_cnid: u32, name: &str, cnid: u32) -> Vec<u8> {
+        let name_units: Vec<u16> = name.encode_utf16().collect();
+        let key_payload_len = 4 + 2 + name_units.len() * 2;
+        let key_length = key_payload_len as u16;
+        let mut rec: Vec<u8> = Vec::new();
+        rec.extend_from_slice(&key_length.to_be_bytes());
+        rec.extend_from_slice(&parent_cnid.to_be_bytes());
+        rec.extend_from_slice(&(name_units.len() as u16).to_be_bytes());
+        rec.extend_from_slice(&encode_utf16be(name));
+        if rec.len() % 2 != 0 {
+            rec.push(0);
+        }
+        let mut data = vec![0u8; 248];
+        data[0..2].copy_from_slice(&REC_TYPE_FILE.to_be_bytes());
+        data[8..12].copy_from_slice(&cnid.to_be_bytes());
+        rec.extend_from_slice(&data);
+        rec
+    }
+
+    fn encode_thread_record(parent_cnid: u32, name: &str, is_folder: bool) -> Vec<u8> {
+        let name_units: Vec<u16> = name.encode_utf16().collect();
+        let key_payload_len = 4 + 2 + name_units.len() * 2;
+        let key_length = key_payload_len as u16;
+        let mut rec: Vec<u8> = Vec::new();
+        rec.extend_from_slice(&key_length.to_be_bytes());
+        rec.extend_from_slice(&parent_cnid.to_be_bytes());
+        rec.extend_from_slice(&(name_units.len() as u16).to_be_bytes());
+        rec.extend_from_slice(&encode_utf16be(name));
+        if rec.len() % 2 != 0 {
+            rec.push(0);
+        }
+        let rt = if is_folder {
+            REC_TYPE_FOLDER_THREAD
+        } else {
+            REC_TYPE_FILE_THREAD
+        };
+        let mut data = vec![0u8; 16];
+        data[0..2].copy_from_slice(&rt.to_be_bytes());
+        rec.extend_from_slice(&data);
+        rec
+    }
+
+    #[test]
+    fn parse_catalog_record_decodes_folder() {
+        let bytes = encode_folder_record(1, "MyFolder", 42);
+        let entry = parse_catalog_record(&bytes).expect("parse").expect("some");
+        assert_eq!(entry.parent_cnid, 1);
+        assert_eq!(entry.cnid, 42);
+        assert_eq!(entry.name, "MyFolder");
+        assert!(matches!(entry.entry_type, HfsPlusEntryType::Directory));
+        assert!(matches!(entry.record_type, HfsPlusRecordType::CatalogFolder));
+    }
+
+    #[test]
+    fn parse_catalog_record_decodes_file() {
+        let bytes = encode_file_record(42, "report.txt", 100);
+        let entry = parse_catalog_record(&bytes).expect("parse").expect("some");
+        assert_eq!(entry.parent_cnid, 42);
+        assert_eq!(entry.cnid, 100);
+        assert_eq!(entry.name, "report.txt");
+        assert!(matches!(entry.entry_type, HfsPlusEntryType::File));
+    }
+
+    #[test]
+    fn parse_catalog_record_skips_folder_thread() {
+        let bytes = encode_thread_record(2, "root", true);
+        let result = parse_catalog_record(&bytes).expect("parse");
+        assert!(
+            result.is_none(),
+            "folder-thread records must be skipped for flat enumeration"
+        );
+    }
+
+    #[test]
+    fn parse_catalog_record_skips_file_thread() {
+        let bytes = encode_thread_record(2, "x", false);
+        assert!(parse_catalog_record(&bytes).expect("parse").is_none());
+    }
+
+    #[test]
+    fn decode_utf16be_name_preserves_unicode() {
+        // "héllo" in UTF-16BE — mixed ASCII + combining accent.
+        // HFS+ stores NFC on disk; we must NOT re-normalize.
+        let s = "héllo";
+        let be_bytes = encode_utf16be(s);
+        let decoded = decode_utf16be_name(&be_bytes).expect("decode");
+        assert_eq!(decoded, s);
+    }
+
+    #[test]
+    fn decode_utf16be_name_rejects_odd_length() {
+        assert!(decode_utf16be_name(&[0x00, 0x41, 0xFF]).is_err());
+    }
+
+    // ── End-to-end: synthesize a minimal leaf node + run
+    // `read_catalog` against a crafted HFS+ volume ─────────────────
+
+    /// Build a minimal valid HFS+ volume where the catalog B-tree
+    /// has one header node + one leaf node at node_idx 1. Leaf
+    /// contains one folder record and one file record. Used to
+    /// validate the whole iteration pipeline end-to-end.
+    fn synth_hfsplus_volume_with_catalog() -> Vec<u8> {
+        // Layout:
+        //  block_size = 512, node_size = 512
+        //  Catalog file first extent at block 8 (byte 4096)
+        //    node 0 (bytes 4096..4608) = B-tree header
+        //    node 1 (bytes 4608..5120) = leaf node
+        //
+        // Volume-header block size 512 means we need the catalog
+        // fork extent to carry at least 2 nodes = 1024 bytes = 2
+        // blocks. First extent startBlock=8, blockCount=2.
+        let block_size: u32 = 512;
+        let node_size: u16 = 512;
+        let num_blocks_total: u32 = 16; // 16 * 512 = 8192 bytes
+
+        // Backing buffer
+        let total_bytes = (num_blocks_total as usize) * (block_size as usize);
+        let mut v = vec![0u8; total_bytes];
+
+        // Volume header at byte 1024.
+        // signature "H+"
+        v[1024] = 0x48;
+        v[1025] = 0x2B;
+        // blocksize u32 BE at offset 1024 + 40
+        v[1024 + 40..1024 + 44].copy_from_slice(&block_size.to_be_bytes());
+        // total_blocks u32 BE at offset 1024 + 44
+        v[1024 + 44..1024 + 48].copy_from_slice(&num_blocks_total.to_be_bytes());
+        // Catalog fork data at volume-header offset 288.
+        // logicalSize u64 BE: 1024 (two nodes of 512 bytes each)
+        let cat_logical: u64 = 1024;
+        v[1024 + 288..1024 + 296].copy_from_slice(&cat_logical.to_be_bytes());
+        // clumpSize u32 BE: 0 (don't care)
+        // totalBlocks u32 BE at offset 12: 2
+        v[1024 + 288 + 12..1024 + 288 + 16].copy_from_slice(&2u32.to_be_bytes());
+        // First extent { startBlock 8, blockCount 2 } at offset 16
+        v[1024 + 288 + 16..1024 + 288 + 20].copy_from_slice(&8u32.to_be_bytes());
+        v[1024 + 288 + 20..1024 + 288 + 24].copy_from_slice(&2u32.to_be_bytes());
+
+        // B-tree HEADER node at byte 4096 (block 8):
+        //   Descriptor: kind = 1 (header), numRecords = 3
+        let hdr_node_off = 4096;
+        v[hdr_node_off + 8] = 1; // kind = header
+        v[hdr_node_off + 10..hdr_node_off + 12].copy_from_slice(&3u16.to_be_bytes());
+        // B-tree header RECORD follows the 14-byte descriptor
+        // (starts at hdr_node_off + 14). Fields we care about:
+        //   nodeSize at record offset 8 (u16 BE)
+        //   rootNode at record offset 16 (u32 BE)
+        //   firstLeafNode at record offset 24 (u32 BE)
+        //   lastLeafNode at record offset 28 (u32 BE)
+        let rec_off = hdr_node_off + 14;
+        v[rec_off + 8..rec_off + 10].copy_from_slice(&node_size.to_be_bytes());
+        v[rec_off + 16..rec_off + 20].copy_from_slice(&1u32.to_be_bytes()); // root = node 1
+        v[rec_off + 24..rec_off + 28].copy_from_slice(&1u32.to_be_bytes()); // first_leaf
+        v[rec_off + 28..rec_off + 32].copy_from_slice(&1u32.to_be_bytes()); // last_leaf
+
+        // LEAF node at byte 4608 (block 9):
+        //   Descriptor: fLink = 0, bLink = 0, kind = -1, height = 1,
+        //   numRecords = 2
+        let leaf_off = 4608;
+        v[leaf_off + 8] = 0xFF; // kind = leaf (-1 as u8)
+        v[leaf_off + 9] = 1; // height
+        v[leaf_off + 10..leaf_off + 12].copy_from_slice(&2u16.to_be_bytes());
+
+        // Build two records: folder "docs" (cnid 16) and file
+        // "report.txt" (cnid 17), both with parent_cnid = 2 (root).
+        let folder_rec = encode_folder_record(2, "docs", 16);
+        let file_rec = encode_file_record(2, "report.txt", 17);
+        // Place record 0 right after the descriptor.
+        let rec0_start = 14;
+        let rec0_end = rec0_start + folder_rec.len();
+        v[leaf_off + rec0_start..leaf_off + rec0_end].copy_from_slice(&folder_rec);
+        // Place record 1 immediately after record 0.
+        let rec1_start = rec0_end;
+        let rec1_end = rec1_start + file_rec.len();
+        v[leaf_off + rec1_start..leaf_off + rec1_end].copy_from_slice(&file_rec);
+
+        // Offset table at the tail of the leaf:
+        //   bytes leaf+510..512  → offset of record 0
+        //   bytes leaf+508..510  → offset of record 1
+        //   bytes leaf+506..508  → free-space sentinel
+        v[leaf_off + 510..leaf_off + 512]
+            .copy_from_slice(&(rec0_start as u16).to_be_bytes());
+        v[leaf_off + 508..leaf_off + 510]
+            .copy_from_slice(&(rec1_start as u16).to_be_bytes());
+        v[leaf_off + 506..leaf_off + 508]
+            .copy_from_slice(&(rec1_end as u16).to_be_bytes());
+
+        v
+    }
+
+    #[test]
+    fn read_catalog_returns_real_entries_on_synthesized_volume() {
+        let bytes = synth_hfsplus_volume_with_catalog();
+        let cursor = Cursor::new(bytes);
+        let mut fs = HfsPlusFilesystem::open_reader(cursor).expect("open");
+        let entries = fs.read_catalog().expect("read_catalog");
+
+        assert_eq!(
+            entries.len(),
+            2,
+            "expected two catalog records (folder + file), got {}",
+            entries.len()
+        );
+
+        let folder = entries
+            .iter()
+            .find(|e| matches!(e.entry_type, HfsPlusEntryType::Directory))
+            .expect("folder present");
+        assert_eq!(folder.name, "docs");
+        assert_eq!(folder.cnid, 16);
+        assert_eq!(folder.parent_cnid, 2);
+
+        let file = entries
+            .iter()
+            .find(|e| matches!(e.entry_type, HfsPlusEntryType::File))
+            .expect("file present");
+        assert_eq!(file.name, "report.txt");
+        assert_eq!(file.cnid, 17);
+        assert_eq!(file.parent_cnid, 2);
+    }
+
+    #[test]
+    fn read_catalog_ignores_thread_records_mixed_in_leaf() {
+        // Rebuild the synth volume but add a thread record alongside
+        // the folder + file. The thread must NOT appear in the
+        // walker's enumeration output.
+        let bytes = {
+            let block_size: u32 = 512;
+            let node_size: u16 = 512;
+            let num_blocks_total: u32 = 16;
+            let total_bytes = (num_blocks_total as usize) * (block_size as usize);
+            let mut v = vec![0u8; total_bytes];
+            v[1024] = 0x48;
+            v[1025] = 0x2B;
+            v[1024 + 40..1024 + 44].copy_from_slice(&block_size.to_be_bytes());
+            v[1024 + 44..1024 + 48].copy_from_slice(&num_blocks_total.to_be_bytes());
+            let cat_logical: u64 = 1024;
+            v[1024 + 288..1024 + 296].copy_from_slice(&cat_logical.to_be_bytes());
+            v[1024 + 288 + 12..1024 + 288 + 16].copy_from_slice(&2u32.to_be_bytes());
+            v[1024 + 288 + 16..1024 + 288 + 20].copy_from_slice(&8u32.to_be_bytes());
+            v[1024 + 288 + 20..1024 + 288 + 24].copy_from_slice(&2u32.to_be_bytes());
+
+            let hdr_node_off = 4096;
+            v[hdr_node_off + 8] = 1;
+            v[hdr_node_off + 10..hdr_node_off + 12]
+                .copy_from_slice(&3u16.to_be_bytes());
+            let rec_off = hdr_node_off + 14;
+            v[rec_off + 8..rec_off + 10].copy_from_slice(&node_size.to_be_bytes());
+            v[rec_off + 16..rec_off + 20].copy_from_slice(&1u32.to_be_bytes());
+            v[rec_off + 24..rec_off + 28].copy_from_slice(&1u32.to_be_bytes());
+            v[rec_off + 28..rec_off + 32].copy_from_slice(&1u32.to_be_bytes());
+
+            let leaf_off = 4608;
+            v[leaf_off + 8] = 0xFF;
+            v[leaf_off + 9] = 1;
+            v[leaf_off + 10..leaf_off + 12].copy_from_slice(&3u16.to_be_bytes());
+
+            let folder_rec = encode_folder_record(2, "docs", 16);
+            let thread_rec = encode_thread_record(2, "root", true);
+            let file_rec = encode_file_record(2, "x", 17);
+            let r0 = 14usize;
+            let r1 = r0 + folder_rec.len();
+            let r2 = r1 + thread_rec.len();
+            let r3 = r2 + file_rec.len();
+            v[leaf_off + r0..leaf_off + r1].copy_from_slice(&folder_rec);
+            v[leaf_off + r1..leaf_off + r2].copy_from_slice(&thread_rec);
+            v[leaf_off + r2..leaf_off + r3].copy_from_slice(&file_rec);
+
+            v[leaf_off + 510..leaf_off + 512]
+                .copy_from_slice(&(r0 as u16).to_be_bytes());
+            v[leaf_off + 508..leaf_off + 510]
+                .copy_from_slice(&(r1 as u16).to_be_bytes());
+            v[leaf_off + 506..leaf_off + 508]
+                .copy_from_slice(&(r2 as u16).to_be_bytes());
+            v[leaf_off + 504..leaf_off + 506]
+                .copy_from_slice(&(r3 as u16).to_be_bytes());
+            v
+        };
+        let cursor = Cursor::new(bytes);
+        let mut fs = HfsPlusFilesystem::open_reader(cursor).expect("open");
+        let entries = fs.read_catalog().expect("read_catalog");
+        assert_eq!(
+            entries.len(),
+            2,
+            "only folder + file should enumerate; thread record skipped"
+        );
+        assert!(entries.iter().all(|e| !e.name.is_empty()));
     }
 }
