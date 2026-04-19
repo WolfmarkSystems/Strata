@@ -33,7 +33,9 @@
 //! Zero `.unwrap()`, zero `unsafe {}`, zero `println!` per
 //! CLAUDE.md.
 
+pub mod multi;
 pub mod single;
+pub use multi::ApfsMultiWalker;
 pub use single::ApfsSingleWalker;
 
 use std::io::{Read, Seek};
