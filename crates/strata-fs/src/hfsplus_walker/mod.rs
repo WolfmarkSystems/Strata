@@ -173,19 +173,100 @@ impl VirtualFilesystem for HfsPlusWalker {
         Ok(out)
     }
 
-    fn read_file(&self, _path: &str) -> VfsResult<Vec<u8>> {
-        // Data-fork extent resolution requires fork-data storage on
-        // HfsPlusCatalogEntry. Phase B Part 1 stored only the
-        // record key + CNID; fork data lives at catalog record
-        // offset 88..168 (data fork) and 168..248 (resource fork).
-        // Phase B Part 3 surfaces those extents; Part 2 ships
-        // list_dir / metadata / exists against the honest catalog
-        // enumeration without content-read support.
-        //
-        // Pinned in tests so the limitation is explicit and a
-        // future Phase B Part 3 merge must update the pinning test
-        // when adding content-read support.
-        Err(VfsError::Unsupported)
+    fn read_file(&self, path: &str) -> VfsResult<Vec<u8>> {
+        // v16 Session 3 Sprint 2 — closes v15 Session D's
+        // Unsupported tripwire. Path resolution via catalog walk,
+        // then data-fork extent reading via
+        // HfsPlusFilesystem::read_fork_content.
+        let entries = self.catalog_snapshot()?;
+        if path == "/" {
+            return Err(VfsError::NotAFile(path.to_string()));
+        }
+        let trimmed = path.trim_start_matches('/');
+        let (parent_path, name) = match trimmed.rsplit_once('/') {
+            Some((p, n)) => (format!("/{p}"), n),
+            None => ("/".to_string(), trimmed),
+        };
+        let parent_cnid = resolve_path_to_cnid(&entries, &parent_path)
+            .ok_or_else(|| VfsError::NotFound(path.to_string()))?;
+        let entry = entries
+            .iter()
+            .find(|e| e.parent_cnid == parent_cnid && e.name == name)
+            .ok_or_else(|| VfsError::NotFound(path.to_string()))?;
+        if matches!(entry.entry_type, HfsPlusEntryType::Directory) {
+            return Err(VfsError::NotAFile(path.to_string()));
+        }
+        let fork = entry
+            .data_fork
+            .as_ref()
+            .ok_or_else(|| VfsError::Other(format!("hfs+ missing data fork for {path}")))?;
+        let mut guard = self
+            .inner
+            .lock()
+            .map_err(|e| VfsError::Other(format!("hfs+ poisoned: {e}")))?;
+        guard
+            .read_fork_content(fork)
+            .map_err(|e| VfsError::Other(format!("hfs+ read_file({path}): {e}")))
+    }
+
+    fn alternate_streams(&self, path: &str) -> VfsResult<Vec<String>> {
+        // HFS+ exposes a file's resource fork as the canonical
+        // `rsrc` alternate stream. On modern macOS resource forks
+        // are rare (Apple migrated most metadata to xattrs) but
+        // legacy evidence may carry them — surface accurately so
+        // examiners know to retrieve both forks.
+        let entries = self.catalog_snapshot()?;
+        let trimmed = path.trim_start_matches('/');
+        let (parent_path, name) = match trimmed.rsplit_once('/') {
+            Some((p, n)) => (format!("/{p}"), n),
+            None => ("/".to_string(), trimmed),
+        };
+        let parent_cnid = resolve_path_to_cnid(&entries, &parent_path)
+            .ok_or_else(|| VfsError::NotFound(path.to_string()))?;
+        let entry = entries
+            .iter()
+            .find(|e| e.parent_cnid == parent_cnid && e.name == name)
+            .ok_or_else(|| VfsError::NotFound(path.to_string()))?;
+        if let Some(rf) = &entry.resource_fork {
+            if rf.logical_size > 0 {
+                return Ok(vec!["rsrc".to_string()]);
+            }
+        }
+        Ok(Vec::new())
+    }
+
+    fn read_alternate_stream(&self, path: &str, stream: &str) -> VfsResult<Vec<u8>> {
+        if stream != "rsrc" {
+            return Err(VfsError::Other(format!(
+                "hfs+ unknown alternate stream {stream:?}; only \"rsrc\" is supported"
+            )));
+        }
+        let entries = self.catalog_snapshot()?;
+        let trimmed = path.trim_start_matches('/');
+        let (parent_path, name) = match trimmed.rsplit_once('/') {
+            Some((p, n)) => (format!("/{p}"), n),
+            None => ("/".to_string(), trimmed),
+        };
+        let parent_cnid = resolve_path_to_cnid(&entries, &parent_path)
+            .ok_or_else(|| VfsError::NotFound(path.to_string()))?;
+        let entry = entries
+            .iter()
+            .find(|e| e.parent_cnid == parent_cnid && e.name == name)
+            .ok_or_else(|| VfsError::NotFound(path.to_string()))?;
+        let fork = entry
+            .resource_fork
+            .as_ref()
+            .ok_or_else(|| VfsError::NotFound(format!("{path}:rsrc")))?;
+        if fork.logical_size == 0 {
+            return Err(VfsError::NotFound(format!("{path}:rsrc")));
+        }
+        let mut guard = self
+            .inner
+            .lock()
+            .map_err(|e| VfsError::Other(format!("hfs+ poisoned: {e}")))?;
+        guard
+            .read_fork_content(fork)
+            .map_err(|e| VfsError::Other(format!("hfs+ read_alternate_stream({path}:rsrc): {e}")))
     }
 
     fn metadata(&self, path: &str) -> VfsResult<VfsMetadata> {
@@ -254,6 +335,8 @@ mod tests {
             cnid,
             parent_cnid,
             name: name.to_string(),
+            data_fork: None,
+            resource_fork: None,
             entry_type: if is_dir {
                 HfsPlusEntryType::Directory
             } else {
@@ -467,20 +550,30 @@ mod tests {
     }
 
     #[test]
-    fn walker_read_file_is_pinned_as_unsupported_until_phase_b_part_3() {
-        // v15 Session D tripwire — read_file returns Unsupported
-        // because fork-data extraction isn't shipped yet. Any
-        // future merge that implements data-fork reading must flip
-        // this test at the same time. Convention carried from
-        // Sessions B/C.
+    fn walker_read_file_succeeds_via_fork_extent_reading() {
+        // v16 Session 3 Sprint 2 — flipped from the v15 Session D
+        // tripwire that pinned read_file as Unsupported. Fork-
+        // data extent reading now ships via
+        // HfsPlusFilesystem::read_fork_content. The synthesized
+        // volume's `report.txt` is a file record with
+        // data_fork.logical_size == 0 (the synth harness doesn't
+        // populate extents), so the walker returns an empty Vec
+        // rather than content. Correct behavior — read_file of a
+        // zero-size file returns zero bytes, not Unsupported.
+        //
+        // Integration tests against the committed hfsplus_small.img
+        // (ground_truth_hfsplus.rs) exercise the non-zero case
+        // against real newfs_hfs bytes.
         let bytes = synth_hfsplus_volume_bytes();
         let walker = HfsPlusWalker::open(Cursor::new(bytes)).expect("open");
-        match walker.read_file("/report.txt") {
-            Err(VfsError::Unsupported) => {}
-            other => panic!(
-                "read_file must return Unsupported until Phase B Part 3; got {other:?}"
-            ),
-        }
+        let content = walker
+            .read_file("/report.txt")
+            .expect("read_file must succeed now that extent reading ships");
+        assert!(
+            content.is_empty(),
+            "synth volume's report.txt has zero-size data fork; expected empty Vec, got {} bytes",
+            content.len()
+        );
     }
 
     #[test]

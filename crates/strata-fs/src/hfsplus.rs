@@ -287,6 +287,75 @@ impl HfsPlusFilesystem {
         Ok(buf)
     }
 
+    /// Read a fork's content by walking its inline extent
+    /// descriptors. v16 Session 3 Sprint 2 — closes the v15
+    /// Session D `read_file` Unsupported tripwire.
+    ///
+    /// Scope:
+    ///   - Handles the 8 inline extents present in the
+    ///     HFSPlusForkData struct (covers every file in the
+    ///     committed hfsplus_small.img fixture).
+    ///   - Truncates the assembled content at `logical_size` so
+    ///     the tail of the last block isn't included.
+    ///   - Extent-overflow B-tree traversal is deferred — files
+    ///     larger than 8 inline extents error cleanly rather
+    ///     than silently truncating. Session 4+ follow-on.
+    ///   - Sparse files (extent start_block == 0 with
+    ///     block_count > 0) fill zeros per TN1150's sparse-
+    ///     holes semantics.
+    pub fn read_fork_content(&mut self, fork: &HfsPlusForkData) -> Result<Vec<u8>, ForensicError> {
+        if fork.logical_size == 0 {
+            return Ok(Vec::new());
+        }
+        let blocksize = self.volume_header.blocksize as u64;
+        let logical = fork.logical_size;
+        let mut out = Vec::with_capacity(
+            usize::try_from(logical).unwrap_or(usize::MAX),
+        );
+        let mut remaining = logical;
+        let mut used_extents = 0u32;
+        for ext in &fork.extents {
+            if remaining == 0 {
+                break;
+            }
+            if ext.block_count == 0 {
+                continue;
+            }
+            used_extents += ext.block_count;
+            for block_idx in 0..ext.block_count as u64 {
+                if remaining == 0 {
+                    break;
+                }
+                if ext.start_block == 0 {
+                    // Sparse hole — fill with zeros without
+                    // reading.
+                    let take = blocksize.min(remaining) as usize;
+                    out.extend(std::iter::repeat_n(0u8, take));
+                    remaining = remaining.saturating_sub(take as u64);
+                    continue;
+                }
+                let block_num = ext.start_block as u64 + block_idx;
+                let data = self.read_block(block_num)?;
+                let take = (data.len() as u64).min(remaining) as usize;
+                out.extend_from_slice(&data[..take]);
+                remaining = remaining.saturating_sub(take as u64);
+            }
+        }
+        if remaining > 0 {
+            // More content needed but the 8 inline extents ran
+            // out. File spills into the extents-overflow B-tree —
+            // not implemented in Session 3; return a MalformedData
+            // error so examiners know the read was incomplete
+            // rather than getting silently-truncated bytes.
+            return Err(ForensicError::MalformedData(format!(
+                "hfs+ file size {} exceeds 8 inline extents ({} blocks used, {} bytes remaining); \
+                 extents-overflow B-tree traversal not yet implemented",
+                logical, used_extents, remaining
+            )));
+        }
+        Ok(out)
+    }
+
     /// Walk the Catalog B-tree leaf-node chain and return every
     /// catalog record as an `HfsPlusCatalogEntry`.
     ///
@@ -559,6 +628,8 @@ fn parse_catalog_record(record: &[u8]) -> Result<Option<HfsPlusCatalogEntry>, Fo
                 parent_cnid,
                 name,
                 entry_type: HfsPlusEntryType::Directory,
+                data_fork: None,
+                resource_fork: None,
             }))
         }
         REC_TYPE_FILE => {
@@ -571,12 +642,32 @@ fn parse_catalog_record(record: &[u8]) -> Result<Option<HfsPlusCatalogEntry>, Fo
                     .try_into()
                     .map_err(|_| ForensicError::InvalidImageFormat)?,
             );
+            // HFSPlusCatalogFile layout per TN1150:
+            //   dataFork at data offsets 88..168 (80 bytes)
+            //   resourceFork at data offsets 168..248 (80 bytes)
+            // If the record is truncated below 248 bytes, the
+            // fork data is missing and we leave forks as None —
+            // matches old behaviour so existing tests continue
+            // to pass, while new fixture tests against real HFS+
+            // volumes get populated forks.
+            let data_fork = if data.len() >= 168 {
+                parse_fork_data(&data[88..168]).ok()
+            } else {
+                None
+            };
+            let resource_fork = if data.len() >= 248 {
+                parse_fork_data(&data[168..248]).ok()
+            } else {
+                None
+            };
             Ok(Some(HfsPlusCatalogEntry {
                 record_type: HfsPlusRecordType::CatalogFile,
                 cnid,
                 parent_cnid,
                 name,
                 entry_type: HfsPlusEntryType::File,
+                data_fork,
+                resource_fork,
             }))
         }
         REC_TYPE_FOLDER_THREAD | REC_TYPE_FILE_THREAD => {
@@ -591,6 +682,42 @@ fn parse_catalog_record(record: &[u8]) -> Result<Option<HfsPlusCatalogEntry>, Fo
             Ok(None)
         }
     }
+}
+
+/// Decode an 80-byte HFSPlusForkData structure per TN1150:
+///   bytes 0..8   logicalSize (u64 BE)
+///   bytes 8..12  clumpSize (u32 BE, ignored for walker)
+///   bytes 12..16 totalBlocks (u32 BE, ignored — we use the
+///                extent blockCount sums instead)
+///   bytes 16..80 extents[8] — each 8 bytes: startBlock (u32 BE) +
+///                blockCount (u32 BE)
+fn parse_fork_data(buf: &[u8]) -> Result<HfsPlusForkData, ForensicError> {
+    if buf.len() < 80 {
+        return Err(ForensicError::InvalidImageFormat);
+    }
+    let logical_size = u64::from_be_bytes(
+        buf[0..8]
+            .try_into()
+            .map_err(|_| ForensicError::InvalidImageFormat)?,
+    );
+    let mut extents: [HfsPlusExtentDescriptor; 8] = Default::default();
+    for (i, slot) in extents.iter_mut().enumerate() {
+        let off = 16 + i * 8;
+        slot.start_block = u32::from_be_bytes(
+            buf[off..off + 4]
+                .try_into()
+                .map_err(|_| ForensicError::InvalidImageFormat)?,
+        );
+        slot.block_count = u32::from_be_bytes(
+            buf[off + 4..off + 8]
+                .try_into()
+                .map_err(|_| ForensicError::InvalidImageFormat)?,
+        );
+    }
+    Ok(HfsPlusForkData {
+        logical_size,
+        extents,
+    })
 }
 
 /// Decode a UTF-16BE byte sequence into a `String` preserving the
@@ -678,7 +805,7 @@ pub struct HfsPlusCatalogFile {
     pub last_leaf_node: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct HfsPlusExtentDescriptor {
     pub start_block: u32,
     pub block_count: u32,
@@ -691,7 +818,36 @@ pub struct HfsPlusCatalogEntry {
     pub parent_cnid: u32,
     pub name: String,
     pub entry_type: HfsPlusEntryType,
+    /// Data fork — populated for file records, None for folders
+    /// and threads. Added v16 Session 3 Sprint 2 to close the v15
+    /// Session D `read_file` Unsupported tripwire.
+    pub data_fork: Option<HfsPlusForkData>,
+    /// Resource fork — populated for file records. `logical_size
+    /// == 0` is the on-disk marker that a file has no resource
+    /// fork (the HFSPlusForkData struct is always present in the
+    /// catalog record for files, just zeroed out when absent).
+    pub resource_fork: Option<HfsPlusForkData>,
 }
+
+/// HFS+ fork descriptor per Apple TN1150 (HFSPlusForkData, 80
+/// bytes in the on-disk catalog record). Holds the logical file
+/// size + the first 8 extent descriptors inline. Files whose
+/// extents exceed 8 runs overflow into the extents-overflow
+/// B-tree — documented as v16 follow-on; walker fixture coverage
+/// doesn't exercise this path in Session 3.
+#[derive(Debug, Clone, Default)]
+pub struct HfsPlusForkData {
+    /// Logical file size in bytes. Used to truncate the last
+    /// block's read to the actual file size.
+    pub logical_size: u64,
+    /// Fixed-size array of 8 inline extent descriptors. Zero-
+    /// `block_count` entries are unused slots.
+    pub extents: [HfsPlusExtentDescriptor; 8],
+}
+
+// Default is `#[derive]`d on HfsPlusExtentDescriptor above — the
+// manual impl was retired in v16 Session 3 Sprint 2 (clippy prefers
+// the derive since every field has a Default).
 
 #[derive(Debug, Clone)]
 pub enum HfsPlusRecordType {
