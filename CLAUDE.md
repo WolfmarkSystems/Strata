@@ -4,9 +4,9 @@ Strata is a Rust/Tauri digital forensics platform for court-ready evidence analy
 
 ---
 
-## Key numbers (v0.16.0, 2026-04-19)
+## Key numbers (post-v0.16 Sessions A–D, 2026-04-20)
 
-- **Test count:** 3,836 passing across `cargo test --workspace`
+- **Test count:** 3,845 passing across `cargo test --workspace` (3,836 v0.16.0 baseline + 9 new Session C tripwires — 4 FileVault + 2 DETECT-1 + 2 materialize + 1 retargeted)
 - **Filesystem walkers live through the dispatcher:**
   - NTFS (since v11, `strata-fs::ntfs_walker`)
   - ext2/ext3/ext4 (v15 Session B, wraps `ext4-view = 0.9`)
@@ -14,6 +14,8 @@ Strata is a Rust/Tauri digital forensics platform for court-ready evidence analy
   - FAT12/FAT16/FAT32 (v15 Session E, in-tree walker)
   - APFS single-volume (v16 Session 4, wraps `apfs = 0.2`)
   - APFS multi-volume (v16 Session 5, CompositeVfs with `/vol{N}:/path` scoping; dispatcher auto-detects via `fs_oids` count)
+- **Dispatcher short-circuits with structured pickup signal:**
+  - FileVault-encrypted DMGs (`encrcdsa` header at byte 0) — returns `"FileVault-encrypted DMG detected. Decryption is out of scope for Strata. Recommend offline key recovery via macOS keychain, institutional recovery key, or forensic decryption tooling."` (post-v16 Session C, commit `b28b64e`)
 - **Dispatcher deferrals with explicit pickup signals:**
   - exFAT — `"exFAT walker deferred — see roadmap"` (v17 candidate)
 - **Explicit out-of-scope deferrals (tripwired):**
