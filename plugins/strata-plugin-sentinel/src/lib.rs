@@ -298,9 +298,21 @@ impl StrataPlugin for SentinelPlugin {
             let category = ArtifactCategory::SystemActivity;
             category_set.insert(category.as_str().to_string());
 
+            // Thread event_id (already parsed and stashed at
+            // a.add_field("event_id", ...) in run()) into the
+            // subcategory so Sigma rules keying on
+            // `subcategory == "EVTX-<id>"` can fire. Without this
+            // every record flattened to "Windows Event" and the
+            // entire Hayabusa rule family (15 rules: 13–27 + 30
+            // per docs/RESEARCH_POST_V16_SIGMA_INVENTORY.md §2)
+            // was silently unreachable regardless of evidence
+            // content. Missing / unparseable event_id falls back
+            // to the legacy flat string so records don't vanish.
+            let subcategory = evtx_subcategory_for(a.data.get("event_id"));
+
             records.push(ArtifactRecord {
                 category,
-                subcategory: "Windows Event".to_string(),
+                subcategory,
                 timestamp: a.timestamp.map(|t| t as i64),
                 title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
@@ -358,6 +370,24 @@ fn walk_dir(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
         }
     }
     Ok(paths)
+}
+
+/// Thread the parsed EVTX event ID into the Sigma subcategory
+/// contract. Input is the raw string value previously stashed at
+/// `Artifact.data["event_id"]` by `run()`. Returns `"EVTX-<id>"`
+/// when parseable, `"Windows Event"` otherwise.
+///
+/// The legacy flat string fallback exists so records with missing
+/// or malformed event_id still surface in the case output (less
+/// useful than a typed record, but materially better than
+/// dropping them). Sigma rules keying on `EVTX-<id>` naturally
+/// skip the fallback records — which is the intended behaviour
+/// when an event_id couldn't be determined.
+fn evtx_subcategory_for(event_id_field: Option<&String>) -> String {
+    match event_id_field.and_then(|v| v.parse::<u32>().ok()) {
+        Some(id) => format!("EVTX-{id}"),
+        None => "Windows Event".to_string(),
+    }
 }
 
 #[no_mangle]
@@ -438,6 +468,83 @@ mod tests {
             "/nonexistent/path/that/does/not/exist.evtx",
         ));
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn sentinel_emits_evtx_typed_subcategory_for_windows_events() {
+        // post-v16 Sprint 2 Fix 1 tripwire. Closes
+        // docs/RESEARCH_POST_V16_SIGMA_INVENTORY.md §1.1 defect
+        // (every Sentinel record flattened to subcategory =
+        // "Windows Event" regardless of event ID, silently gating
+        // out 15 Sigma rules keyed on "EVTX-<id>"). This test
+        // pins the new threading behaviour: event IDs 4624, 4688,
+        // 7045, 1102, 104 — the five Sigma rules reference most
+        // heavily — must each map to their typed subcategory.
+        //
+        // When the `.evt` legacy parser ships (separate sprint),
+        // its emitted records should follow the same contract.
+        // If this test fails with "Windows Event" records, the
+        // Sigma alignment regressed to the pre-Sprint-2 state.
+        for id in [4624u32, 4688, 7045, 1102, 104, 4625, 4740, 4698] {
+            let field = Some(id.to_string());
+            let sub = evtx_subcategory_for(field.as_ref());
+            assert_eq!(
+                sub,
+                format!("EVTX-{id}"),
+                "event_id {id} must map to EVTX-{id}, got {sub}"
+            );
+        }
+    }
+
+    #[test]
+    fn sentinel_subcategory_falls_back_on_missing_event_id() {
+        // Records without a parseable event_id fall back to the
+        // legacy "Windows Event" string. This preserves the case-
+        // output contract (a record without event_id shouldn't
+        // vanish) while ensuring Sigma rules keyed on EVTX-<id>
+        // naturally skip it.
+        assert_eq!(evtx_subcategory_for(None), "Windows Event");
+        let bad = Some("not-a-number".to_string());
+        assert_eq!(evtx_subcategory_for(bad.as_ref()), "Windows Event");
+        let empty = Some(String::new());
+        assert_eq!(evtx_subcategory_for(empty.as_ref()), "Windows Event");
+    }
+
+    #[test]
+    fn sentinel_evt_extension_skipped_pending_evt_parser() {
+        // Tripwire pinning the current `.evt` (legacy BinXML)
+        // behaviour: the extension filter in run() skips non-evtx
+        // files, so a `.evt` log that carries valid Windows Event
+        // data is currently unreachable. Charlie + Jo both contain
+        // `.evt` files (2009-era XP/Win7 evidence); the Sigma
+        // inventory doc §1 documents this as a deliberate
+        // out-of-scope gap for Sprint 2.
+        //
+        // When `.evt` parser support ships, this test must be
+        // intentionally changed or deleted with a commit message
+        // explicitly noting "legacy .evt parser shipped in
+        // [commit]." The `_pending_evt_parser` suffix makes the
+        // deferral discoverable.
+        let tmp = tempfile::tempdir().expect("tempdir");
+        // Synthetic .evt file that's decidedly not parseable as
+        // EVTX — the point is just to confirm the extension
+        // filter skips it before any parser attempt.
+        let evt_path = tmp.path().join("System.evt");
+        std::fs::write(&evt_path, b"\x30\x00\x00\x00LfLe synthetic legacy").expect("write");
+        let p = SentinelPlugin::new();
+        let ctx = PluginContext {
+            root_path: tmp.path().to_string_lossy().to_string(),
+            vfs: None,
+            config: std::collections::HashMap::new(),
+            prior_results: Vec::new(),
+        };
+        let artifacts = p.run(ctx).expect("run must succeed");
+        assert!(
+            artifacts.is_empty(),
+            "Sentinel must currently skip .evt files (pending .evt parser sprint); \
+             got {} artifacts",
+            artifacts.len()
+        );
     }
 
     #[test]
