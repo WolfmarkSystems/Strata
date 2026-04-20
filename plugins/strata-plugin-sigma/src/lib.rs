@@ -294,6 +294,118 @@ impl StrataPlugin for SigmaPlugin {
             results.push(a);
         }
 
+        // ── Windows persistence rules (post-v16 Sprint 2 Fix 2) ──
+        //
+        // Six rules pattern-matched on the existing "New Account
+        // + Persistence Installed" rule above. Each keys on the
+        // subcategory string Phantom actually emits (verified
+        // against Charlie + Jo SQLite in
+        // docs/RESEARCH_POST_V16_SIGMA_INVENTORY.md §1 — 120
+        // combined persistence records across the six techniques).
+        //
+        // MITRE ATT&CK sub-techniques:
+        //   Active Setup        → T1547.014
+        //   Winlogon Helper DLL → T1547.004
+        //   Browser Helper Object → T1176 (Browser Extensions;
+        //                           BHO is a Windows-specific
+        //                           instance with no dedicated
+        //                           sub-technique)
+        //   IFEO Debugger       → T1546.012 (Image File Execution
+        //                         Options Injection)
+        //   Boot Execute        → T1547.001 (Registry Run Keys /
+        //                         Startup Folder — closest
+        //                         defensible mapping; the raw
+        //                         BootExecute key is
+        //                         HKLM\SYSTEM\CurrentControlSet\
+        //                         Control\Session Manager\
+        //                         BootExecute)
+        //   Shell Execute Hook  → T1546.015 (COM Hijacking —
+        //                         Shell Execute Hooks are
+        //                         implemented as COM objects)
+        //
+        // Each rule is unconditional on subcategory presence —
+        // Phantom either emitted the record or it didn't. No
+        // co-occurrence gating (unlike Rule 4) because these
+        // registry locations have no legitimate userland reason
+        // to carry non-default values.
+        if all_records.iter().any(|r| r.subcategory == "Active Setup") {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: Active Setup Persistence");
+            a.add_field(
+                "detail",
+                "Phantom detected Active Setup persistence entries in the SOFTWARE hive. Active Setup runs installed components at every user logon and is a documented MITRE ATT&CK T1547.014 persistence technique. Investigate StubPath values for attacker-controlled commands.",
+            );
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("mitre", "T1547.014");
+            a.add_field("suspicious", "true");
+            results.push(a);
+        }
+
+        if all_records.iter().any(|r| r.subcategory == "Winlogon Persistence") {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: Winlogon Helper DLL Persistence");
+            a.add_field(
+                "detail",
+                "Phantom detected Winlogon Helper DLL persistence entries (Shell, Userinit, Notify subkeys under HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon). MITRE ATT&CK T1547.004 — attacker DLLs loaded at every logon. Investigate every value that deviates from the Windows-default DLL path.",
+            );
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("mitre", "T1547.004");
+            a.add_field("suspicious", "true");
+            results.push(a);
+        }
+
+        if all_records.iter().any(|r| r.subcategory == "Browser Helper Object") {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: Browser Helper Object Persistence");
+            a.add_field(
+                "detail",
+                "Phantom detected Browser Helper Object (BHO) entries in the SOFTWARE hive. BHOs are COM objects loaded by Internet Explorer at startup; malicious BHOs inject into the browser process for credential capture, clickjacking, and man-in-the-browser attacks. MITRE ATT&CK T1176 (Browser Extensions / legacy BHO subclass). Investigate every CLSID that isn't installed by a known vendor.",
+            );
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("mitre", "T1176");
+            a.add_field("suspicious", "true");
+            results.push(a);
+        }
+
+        if all_records.iter().any(|r| r.subcategory == "IFEO Debugger") {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: IFEO Debugger Persistence");
+            a.add_field(
+                "detail",
+                "Phantom detected Image File Execution Options (IFEO) Debugger entries. IFEO is a legitimate Windows feature for redirecting process launches to a debugger, commonly abused to replace utilities like sethc.exe / utilman.exe with cmd.exe (sticky-keys attack) or to persistently hijack other executables. MITRE ATT&CK T1546.012 — any IFEO Debugger value pointing at a non-debugger executable is high-severity.",
+            );
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("mitre", "T1546.012");
+            a.add_field("suspicious", "true");
+            results.push(a);
+        }
+
+        if all_records.iter().any(|r| r.subcategory == "Boot Execute") {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: Boot Execute Persistence");
+            a.add_field(
+                "detail",
+                "Phantom detected BootExecute registry entries (HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\BootExecute). BootExecute commands run under SMSS at system boot, before most services start — an ideal position for rootkits. MITRE ATT&CK T1547.001 (registry-driven autostart). The default value is `autocheck autochk *`; any addition beyond that is investigative.",
+            );
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("mitre", "T1547.001");
+            a.add_field("suspicious", "true");
+            results.push(a);
+        }
+
+        if all_records.iter().any(|r| r.subcategory == "Shell Execute Hook") {
+            let mut a = Artifact::new("Sigma Rule", "sigma");
+            a.add_field("title", "RULE FIRED: Shell Execute Hook Persistence");
+            a.add_field(
+                "detail",
+                "Phantom detected Shell Execute Hook entries (HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ShellExecuteHooks). Shell Execute Hooks are COM objects Explorer loads on every ShellExecute call, giving attacker-registered CLSIDs execution on nearly every GUI launch. MITRE ATT&CK T1546.015 (COM Hijacking). Each non-default CLSID is investigative.",
+            );
+            a.add_field("file_type", "Sigma Rule");
+            a.add_field("mitre", "T1546.015");
+            a.add_field("suspicious", "true");
+            results.push(a);
+        }
+
         // RULE: Log Clearing
         //   Remnant or Phantom found a security/system log clear event (1102/104).
         let log_cleared = all_records
@@ -1540,5 +1652,151 @@ mod tests {
             .count();
         assert_eq!(r28_count, 1, "Rule 28 should fire exactly once aggregating multi hits");
         assert_eq!(r29_count, 1, "Rule 29 should fire exactly once aggregating multi hits");
+    }
+
+    // ── Sprint 2 Fix 2 — six Windows persistence rules ─────────────
+
+    /// Build a synthetic Phantom record with the given subcategory
+    /// so the rule predicates (which key on `r.subcategory ==
+    /// "Active Setup"` etc.) can be exercised without a real
+    /// Charlie SQLite round-trip.
+    fn phantom_persistence_record(subcategory: &str) -> ArtifactRecord {
+        ArtifactRecord {
+            category: ArtifactCategory::SystemActivity,
+            subcategory: subcategory.to_string(),
+            timestamp: Some(0),
+            title: format!("{subcategory} — synthetic"),
+            detail: format!("registry value at HKLM\\\\... (synthetic for rule test, not real {subcategory} data)"),
+            source_path: "/case/extracted/C_/Windows/System32/config/SOFTWARE".to_string(),
+            forensic_value: ForensicValue::High,
+            mitre_technique: None,
+            is_suspicious: false,
+            raw_data: None,
+            confidence: 0,
+        }
+    }
+
+    fn synthetic_phantom_output(records: Vec<ArtifactRecord>) -> PluginOutput {
+        let total = records.len();
+        PluginOutput {
+            plugin_name: "Strata Phantom".to_string(),
+            plugin_version: "1.0.0".to_string(),
+            executed_at: String::new(),
+            duration_ms: 0,
+            artifacts: records,
+            summary: PluginSummary {
+                total_artifacts: total,
+                suspicious_count: 0,
+                categories_populated: vec!["SystemActivity".to_string()],
+                headline: format!("Phantom: {} synthetic", total),
+            },
+            warnings: vec![],
+        }
+    }
+
+    /// Run Sigma and return every artifact's title, including
+    /// the two meta-records (Kill Chain Coverage and Sigma Threat
+    /// Assessment) which `run_sigma()` filters out because it
+    /// keys on `file_type == "Sigma Rule"`. The ≥8 tripwire below
+    /// counts production-output cardinality (rule fires + meta
+    /// records), which is what `strata ingest run` produces on a
+    /// real Charlie case.
+    fn run_sigma_all_titles(prior: Vec<PluginOutput>) -> Vec<String> {
+        let plugin = SigmaPlugin::new();
+        let ctx = PluginContext {
+            root_path: "/tmp".to_string(),
+            vfs: None,
+            config: HashMap::new(),
+            prior_results: prior,
+        };
+        let artifacts = plugin.run(ctx).expect("sigma run");
+        artifacts
+            .into_iter()
+            .filter_map(|a| a.data.get("title").cloned())
+            .collect()
+    }
+
+    #[test]
+    fn sigma_rule_firings_on_charlie_gte_8() {
+        // Sprint 2 Fix 2 top-line acceptance tripwire per
+        // docs/RESEARCH_POST_V16_SIGMA_INVENTORY.md §5. The fixture
+        // synthesizes one Phantom record per Sprint 2 target
+        // subcategory (Active Setup, Winlogon Persistence, Browser
+        // Helper Object, IFEO Debugger, Boot Execute, Shell
+        // Execute Hook) — matching the shape of what Phantom emits
+        // on Charlie + Jo — then counts Sigma artifact titles.
+        // Must include the six new persistence rules PLUS the two
+        // always-emitted meta-records ("Kill Chain Coverage",
+        // "Sigma Threat Assessment"). Total ≥ 8.
+        //
+        // The "Charlie" in the name refers to the Sigma inventory
+        // target image class. This is a unit test against synthetic
+        // records because unit tests are the ship criterion per the
+        // Sprint 2 prompt — the real-Charlie re-run validates
+        // end-to-end at Session D-style post-sprint audit time.
+        let records: Vec<ArtifactRecord> = [
+            "Active Setup",
+            "Winlogon Persistence",
+            "Browser Helper Object",
+            "IFEO Debugger",
+            "Boot Execute",
+            "Shell Execute Hook",
+        ]
+        .iter()
+        .map(|s| phantom_persistence_record(s))
+        .collect();
+        let all_titles =
+            run_sigma_all_titles(vec![synthetic_phantom_output(records)]);
+        let rule_fires = all_titles
+            .iter()
+            .filter(|t| t.starts_with("RULE FIRED:"))
+            .count();
+        assert_eq!(
+            rule_fires, 6,
+            "expected exactly 6 RULE FIRED titles across the six new \
+             persistence rules, got {rule_fires}. Titles: {all_titles:?}"
+        );
+        for expected_title in [
+            "RULE FIRED: Active Setup Persistence",
+            "RULE FIRED: Winlogon Helper DLL Persistence",
+            "RULE FIRED: Browser Helper Object Persistence",
+            "RULE FIRED: IFEO Debugger Persistence",
+            "RULE FIRED: Boot Execute Persistence",
+            "RULE FIRED: Shell Execute Hook Persistence",
+        ] {
+            assert!(
+                all_titles.iter().any(|t| t == expected_title),
+                "expected {expected_title} in titles, got: {all_titles:?}"
+            );
+        }
+        // Including the two always-emitted meta-records:
+        let total = all_titles.len();
+        assert!(
+            total >= 8,
+            "expected Sigma output to contain ≥8 records (6 persistence rules + \
+             2 meta-records), got {total}: {all_titles:?}"
+        );
+    }
+
+    #[test]
+    fn sigma_persistence_rules_do_not_fire_on_empty_input() {
+        // Anti-tripwire. With no Phantom records, none of the six
+        // new persistence rules should fire. Protects against a
+        // future regression that accidentally makes them
+        // unconditional.
+        let titles = run_sigma(vec![]);
+        for absent in [
+            "RULE FIRED: Active Setup Persistence",
+            "RULE FIRED: Winlogon Helper DLL Persistence",
+            "RULE FIRED: Browser Helper Object Persistence",
+            "RULE FIRED: IFEO Debugger Persistence",
+            "RULE FIRED: Boot Execute Persistence",
+            "RULE FIRED: Shell Execute Hook Persistence",
+        ] {
+            assert!(
+                !titles.iter().any(|t| t == absent),
+                "{absent} must NOT fire on empty input; got: {titles:?}"
+            );
+        }
     }
 }
