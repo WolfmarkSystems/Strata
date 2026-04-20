@@ -32,6 +32,12 @@ pub enum FsType {
     Fat16,
     Fat32,
     ExFat,
+    /// FileVault-encrypted DMG (Apple `encrcdsa` container wrapper).
+    /// Not a filesystem per se — an opaque crypto container that wraps
+    /// an APFS or HFS+ volume. Detection fires at byte 0; decryption is
+    /// out of scope. Dispatcher returns a structured pickup-signal
+    /// error pointing examiners at offline key recovery.
+    EncryptedDmgFileVault,
     Unknown,
 }
 
@@ -48,6 +54,7 @@ impl FsType {
             Self::Fat16 => "FAT16",
             Self::Fat32 => "FAT32",
             Self::ExFat => "exFAT",
+            Self::EncryptedDmgFileVault => "FileVault-encrypted DMG",
             Self::Unknown => "Unknown",
         }
     }
@@ -64,6 +71,18 @@ pub fn detect_filesystem(
         .map_err(|e| VfsError::Other(format!("evidence read: {e}")))?;
     if n < 64 {
         return Ok(FsType::Unknown);
+    }
+    // FileVault-encrypted DMG: "encrcdsa" magic at byte 0. Detected
+    // BEFORE filesystem magics so that an examiner sees the explicit
+    // crypto-container pickup signal rather than a generic "unknown
+    // filesystem." The encrcdsa wrapper carries an APFS or HFS+
+    // volume that Strata cannot reach without a key; field validation
+    // (v0.16.0 ENCRYPTED.dmg) confirmed the 8-byte literal appears at
+    // offset 0 on Apple-format encrypted DMGs. Caller (`open_filesystem`)
+    // returns a structured error naming the wrapper and recommending
+    // offline key recovery.
+    if boot.len() >= 8 && &boot[0..8] == b"encrcdsa" {
+        return Ok(FsType::EncryptedDmgFileVault);
     }
     // NTFS: "NTFS    " at offset 3 of boot sector.
     if boot.len() >= 11 && &boot[3..11] == b"NTFS    " {
@@ -182,6 +201,13 @@ pub fn open_filesystem(
         FsType::ExFat => Err(VfsError::Other(
             "exFAT walker deferred — see roadmap".into(),
         )),
+        FsType::EncryptedDmgFileVault => Err(VfsError::Other(
+            "FileVault-encrypted DMG detected. Decryption is out of \
+             scope for Strata. Recommend offline key recovery via \
+             macOS keychain, institutional recovery key, or forensic \
+             decryption tooling."
+                .into(),
+        )),
         FsType::Apfs => {
             open_apfs(image, partition_offset, partition_size)
         }
@@ -292,6 +318,92 @@ mod tests {
     fn detects_ntfs() {
         let img = image_with_boot_sector_text(3, b"NTFS    ");
         assert_eq!(detect_filesystem(&img, 0).expect("d"), FsType::Ntfs);
+    }
+
+    #[test]
+    fn detects_filevault_encrcdsa_at_byte_zero() {
+        // FileVault-encrypted DMGs start with "encrcdsa" at byte 0
+        // (Apple-format crypto container wrapper). Detection MUST
+        // fire before any filesystem magic is checked — the inner
+        // APFS/HFS+ bytes are unreadable without a key, so a
+        // generic "unknown filesystem" would lose the pickup signal.
+        // Validated against the v0.16.0 ENCRYPTED.dmg field image;
+        // the 8-byte literal is the documented Apple DMG encryption
+        // header.
+        let img = image_with_boot_sector_text(0, b"encrcdsa");
+        assert_eq!(
+            detect_filesystem(&img, 0).expect("d"),
+            FsType::EncryptedDmgFileVault
+        );
+    }
+
+    #[test]
+    fn filevault_detection_takes_precedence_over_inner_magic() {
+        // Defensive: even if the encrypted container's inner bytes
+        // happen to match a filesystem signature further into the
+        // first 1024 bytes (ciphertext can produce false positives),
+        // the encrcdsa magic at byte 0 MUST still route the image
+        // to the FileVault arm. Pattern: encrcdsa + garbage filler
+        // that includes a fake NXSB at offset 32.
+        let mut bytes = vec![0u8; 2048];
+        bytes[0..8].copy_from_slice(b"encrcdsa");
+        bytes[32..36].copy_from_slice(b"NXSB");
+        let img = MemImage { bytes };
+        assert_eq!(
+            detect_filesystem(&img, 0).expect("d"),
+            FsType::EncryptedDmgFileVault,
+            "encrcdsa at byte 0 must short-circuit before APFS magic"
+        );
+    }
+
+    #[test]
+    fn filevault_fs_type_str_is_stable() {
+        assert_eq!(
+            FsType::EncryptedDmgFileVault.as_str(),
+            "FileVault-encrypted DMG"
+        );
+    }
+
+    #[test]
+    fn dispatch_filevault_returns_structured_pickup_signal() {
+        // v0.16.0 real-image validation gap G3: examiners handed an
+        // encrcdsa DMG currently see only "unknown filesystem" with
+        // no indication that offline key recovery is the next step.
+        // This test pins the structured pickup signal:
+        //   - mentions "FileVault"
+        //   - states decryption is "out of scope"
+        //   - names the recommended remediation (offline key recovery)
+        //
+        // When a future release ships in-tree decryption, this test
+        // must be intentionally changed or deleted with a commit
+        // message explicitly noting "FileVault decryption shipped
+        // in [commit]."
+        let mut bytes = vec![0u8; 2048];
+        bytes[0..8].copy_from_slice(b"encrcdsa");
+        let res = dispatch_from_mem(bytes);
+        match res {
+            Err(VfsError::Unsupported) => {
+                panic!("FileVault arm must return Other(pickup-signal), not Unsupported");
+            }
+            Err(VfsError::Other(msg)) => {
+                assert!(
+                    msg.contains("FileVault"),
+                    "error must name the crypto wrapper; got: {msg}"
+                );
+                assert!(
+                    msg.to_ascii_lowercase().contains("out of scope")
+                        || msg.to_ascii_lowercase().contains("decryption"),
+                    "error must state decryption is out of scope; got: {msg}"
+                );
+                assert!(
+                    msg.to_ascii_lowercase().contains("offline key recovery")
+                        || msg.to_ascii_lowercase().contains("recovery key"),
+                    "error must name the recommended remediation; got: {msg}"
+                );
+            }
+            Err(e) => panic!("expected Other(pickup-signal), got {e:?}"),
+            Ok(_) => panic!("FileVault arm must return an error, not a live walker"),
+        }
     }
 
     #[test]
