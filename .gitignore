@@ -45,3 +45,9 @@ apps/shield/evidence/
 crates/strata-core/exports/
 crates/strata-shield-cli/exports/
 logs/
+
+# Validation run outputs are audit-trail artifacts kept
+# locally (per-image case-dirs include raw evidence outputs
+# that can exceed 100MB). Not committed; the per-run report
+# lives in docs/FIELD_VALIDATION_REAL_IMAGES_*.md.
+/test-output/
