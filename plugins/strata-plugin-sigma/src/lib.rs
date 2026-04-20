@@ -407,10 +407,25 @@ impl StrataPlugin for SigmaPlugin {
         }
 
         // RULE: Log Clearing
-        //   Remnant or Phantom found a security/system log clear event (1102/104).
+        //   Sentinel emitted a security log clear (EVTX-1102) or a
+        //   system log service-state event (EVTX-104).
+        //
+        // Post-Sprint-2: predicate realigned from
+        // `r.title.contains("1102") || r.title.contains("104")` to
+        // subcategory equality. The previous title-substring match
+        // was the false-positive documented in
+        // docs/FIELD_VALIDATION_REAL_IMAGES_v0.16.0_AMENDMENT.md §5
+        // — on Charlie the predicate fired on a Recon email
+        // artifact titled "Email Address Found:
+        // 200104061723.jab03225@zinfandel.lacita.com" because the
+        // timestamp prefix contained "104". The fix depends on
+        // Sprint 2 Fix 1 (Sentinel emitting subcategory =
+        // "EVTX-<id>"); before that fix this predicate would never
+        // have matched, silently regressing to zero firings. With
+        // Fix 1 landed first, the ordering is safe.
         let log_cleared = all_records
             .iter()
-            .any(|r| r.title.contains("1102") || r.title.contains("104"));
+            .any(|r| r.subcategory == "EVTX-1102" || r.subcategory == "EVTX-104");
         if log_cleared {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: Anti-Forensics — Log Cleared");
@@ -1775,6 +1790,119 @@ mod tests {
             total >= 8,
             "expected Sigma output to contain ≥8 records (6 persistence rules + \
              2 meta-records), got {total}: {all_titles:?}"
+        );
+    }
+
+    #[test]
+    fn sigma_rule_7_does_not_fire_on_recon_email_false_positive() {
+        // Sprint 2 Fix 3 anti-tripwire. Closes Defect 3 from
+        // docs/RESEARCH_POST_V16_SIGMA_INVENTORY.md §4 (Tier 3).
+        //
+        // The exact false-positive firing documented in
+        // docs/FIELD_VALIDATION_REAL_IMAGES_v0.16.0_AMENDMENT.md §5:
+        //   - Recon emits an Email Address artifact with title
+        //     "Email Address Found:
+        //     200104061723.jab03225@zinfandel.lacita.com"
+        //   - The title contains the substring "104"
+        //   - Pre-Sprint-2 Rule 7 predicate was
+        //     `r.title.contains("1102") || r.title.contains("104")`
+        //     which matched that timestamp-prefixed email address
+        //   - "RULE FIRED: Anti-Forensics — Log Cleared" fired
+        //     spuriously
+        //
+        // Post-Sprint-2 the predicate is
+        // `r.subcategory == "EVTX-1102" || r.subcategory == "EVTX-104"`.
+        // Recon's subcategory on this record is "Email Address
+        // Found", not EVTX-anything, so the rule must NOT fire.
+        //
+        // Fix 3 depends on Fix 1 having landed first — before
+        // Sentinel emits EVTX-<id> subcategories, the realigned
+        // predicate silently never fires anywhere and this test
+        // passes for the wrong reason. With Fix 1 in place, the
+        // anti-tripwire only protects against regression, not
+        // initial correctness.
+        let recon_email_record = ArtifactRecord {
+            category: ArtifactCategory::NetworkArtifacts,
+            subcategory: "Email Address Found".to_string(),
+            timestamp: Some(0),
+            title:
+                "Email Address Found: 200104061723.jab03225@zinfandel.lacita.com"
+                    .to_string(),
+            detail: "extracted from /case/extracted/... content".to_string(),
+            source_path: "/case/extracted/Charlie/file.txt".to_string(),
+            forensic_value: ForensicValue::Medium,
+            mitre_technique: None,
+            is_suspicious: false,
+            raw_data: None,
+            confidence: 0,
+        };
+        let recon_output = PluginOutput {
+            plugin_name: "Strata Recon".to_string(),
+            plugin_version: "1.0.0".to_string(),
+            executed_at: String::new(),
+            duration_ms: 0,
+            artifacts: vec![recon_email_record],
+            summary: PluginSummary {
+                total_artifacts: 1,
+                suspicious_count: 0,
+                categories_populated: vec!["NetworkArtifacts".to_string()],
+                headline: "Recon: 1 artifact (synthetic)".to_string(),
+            },
+            warnings: vec![],
+        };
+        let all_titles = run_sigma_all_titles(vec![recon_output]);
+        assert!(
+            !all_titles
+                .iter()
+                .any(|t| t == "RULE FIRED: Anti-Forensics — Log Cleared"),
+            "Rule 7 must NOT fire on a Recon email-address artifact whose title \
+             contains '104' as part of a timestamp prefix. If this assertion \
+             fails, the predicate has regressed to the pre-Sprint-2 title-\
+             substring match that produced the false positive documented in \
+             FIELD_VALIDATION_REAL_IMAGES_v0.16.0_AMENDMENT.md §5. Titles: {all_titles:?}"
+        );
+    }
+
+    #[test]
+    fn sigma_rule_7_fires_on_typed_evtx_1102_record() {
+        // Positive-side tripwire for the realigned predicate. A
+        // synthetic Sentinel-style record carrying subcategory =
+        // "EVTX-1102" (the security audit log clear event) must
+        // fire Rule 7. This proves the predicate responds to the
+        // new typed subcategories Sentinel emits after Fix 1.
+        let sentinel_1102 = ArtifactRecord {
+            category: ArtifactCategory::SystemActivity,
+            subcategory: "EVTX-1102".to_string(),
+            timestamp: Some(0),
+            title: "Security Log Cleared (EventID 1102)".to_string(),
+            detail: "operator-initiated Security.evtx clear".to_string(),
+            source_path: "/C/Windows/System32/winevt/Logs/Security.evtx".to_string(),
+            forensic_value: ForensicValue::Critical,
+            mitre_technique: Some("T1070.001".to_string()),
+            is_suspicious: true,
+            raw_data: None,
+            confidence: 0,
+        };
+        let sentinel_output = PluginOutput {
+            plugin_name: "Strata Sentinel".to_string(),
+            plugin_version: "1.0.0".to_string(),
+            executed_at: String::new(),
+            duration_ms: 0,
+            artifacts: vec![sentinel_1102],
+            summary: PluginSummary {
+                total_artifacts: 1,
+                suspicious_count: 1,
+                categories_populated: vec!["SystemActivity".to_string()],
+                headline: "Sentinel: 1 EVTX-1102 (synthetic)".to_string(),
+            },
+            warnings: vec![],
+        };
+        let all_titles = run_sigma_all_titles(vec![sentinel_output]);
+        assert!(
+            all_titles
+                .iter()
+                .any(|t| t == "RULE FIRED: Anti-Forensics — Log Cleared"),
+            "Rule 7 must fire on a typed EVTX-1102 subcategory record; got: {all_titles:?}"
         );
     }
 
