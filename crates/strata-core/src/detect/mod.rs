@@ -216,10 +216,25 @@ const MARKERS: &[Marker] = &[
     Marker { needle: "/etc/shadow", is_file: Some(true), weight: 0.3, kind: ImageKind::Linux, note: "/etc/shadow" },
     Marker { needle: "/var/log/syslog", is_file: Some(true), weight: 0.4, kind: ImageKind::Linux, note: "syslog" },
     Marker { needle: "/home/", is_file: Some(false), weight: 0.3, kind: ImageKind::Linux, note: "/home" },
-    // ChromeOS
+    // ChromeOS — multiple markers for recovery-image shape tolerance.
+    // v0.16.0 validation caught a Chromebook tar misclassified as
+    // Windows; root cause was the path-prefix pollution in absolute-
+    // path matching (fixed in tally_markers_for) PLUS the
+    // `/home/chronos/` (trailing-slash) marker not firing on recovery
+    // images where chronos is empty and the `/etc/cros-machine-id`
+    // file isn't present in the extracted tree. These three markers
+    // give DETECT-1 three different paths to ChromeOS certainty.
     Marker { needle: "/opt/google/chrome/", is_file: None, weight: 0.5, kind: ImageKind::ChromeOS, note: "Chrome install root" },
     Marker { needle: "/etc/cros-machine-id", is_file: Some(true), weight: 0.9, kind: ImageKind::ChromeOS, note: "CrOS machine-id" },
-    Marker { needle: "/home/chronos/", is_file: None, weight: 0.9, kind: ImageKind::ChromeOS, note: "CrOS chronos" },
+    Marker { needle: "/home/chronos/", is_file: None, weight: 0.9, kind: ImageKind::ChromeOS, note: "CrOS chronos (with children)" },
+    // Bare `chronos` directory entry — fires when chronos is empty
+    // (common on recovery images post-logout) so ChromeOS isn't lost
+    // just because there are no child files to scan.
+    Marker { needle: "/home/chronos", is_file: Some(false), weight: 0.9, kind: ImageKind::ChromeOS, note: "CrOS chronos dir" },
+    // `.shadow` cryptohome — ChromeOS-unique layout under /home
+    // (cryptohome vaults per-user, distinct from regular Linux). Fires
+    // on both the directory entry and its hash-dir children.
+    Marker { needle: "/home/.shadow", is_file: None, weight: 0.8, kind: ImageKind::ChromeOS, note: "CrOS cryptohome .shadow" },
     // Cellebrite UFED / UFDR (treated as a container; plugins still run)
     Marker { needle: "extraction_ffs.zip", is_file: Some(true), weight: 0.9, kind: ImageKind::CellebriteReport, note: "Cellebrite EXTRACTION_FFS" },
     Marker { needle: ".ufdx", is_file: Some(true), weight: 0.9, kind: ImageKind::CellebriteReport, note: "UFDX metadata" },
@@ -249,11 +264,18 @@ pub fn classify(root: &Path) -> ImageClassification {
     let mut total_weight = 0f64;
 
     if root.is_file() {
-        scan_single(root, &mut scores, &mut evidence, &mut total_weight);
+        // For a single-file input, strip the parent so the match sees
+        // `/capture.mem` not empty. Without this, stripping root==file
+        // yields "" → evidence_relative_path returns "/" which matches
+        // nothing. The parent suffices because single-file markers key
+        // on filename/extension (e.g. `.mem`, `.pcap`).
+        let parent = root.parent().unwrap_or(root);
+        scan_single(root, parent, &mut scores, &mut evidence, &mut total_weight);
     } else if root.is_dir() {
         let mut ctx = ScanCtx {
             max_depth: 3,
             budget: 2000,
+            scan_root: root,
             scores: &mut scores,
             evidence: &mut evidence,
             total: &mut total_weight,
@@ -292,11 +314,12 @@ pub fn classify(root: &Path) -> ImageClassification {
 
 fn scan_single(
     path: &Path,
+    scan_root: &Path,
     scores: &mut std::collections::HashMap<ImageKind, f64>,
     evidence: &mut Vec<ClassificationEvidence>,
     total: &mut f64,
 ) {
-    tally_markers_for(path, true, scores, evidence, total);
+    tally_markers_for(path, scan_root, true, scores, evidence, total);
 }
 
 fn scan_dir(
@@ -317,7 +340,14 @@ fn scan_dir(
         }
         let path = entry.path();
         let is_file = entry.file_type().map(|t| t.is_file()).unwrap_or(false);
-        tally_markers_for(&path, is_file, ctx.scores, ctx.evidence, ctx.total);
+        tally_markers_for(
+            &path,
+            ctx.scan_root,
+            is_file,
+            ctx.scores,
+            ctx.evidence,
+            ctx.total,
+        );
         let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
         if is_dir {
             scan_dir(&path, depth + 1, ctx);
@@ -331,19 +361,47 @@ fn scan_dir(
 struct ScanCtx<'a> {
     max_depth: u32,
     budget: usize,
+    /// Absolute path of the scan root. Every marker match compares
+    /// against the tail relative to this root — prevents examiner-
+    /// workstation path components (e.g. a macOS analyst running
+    /// Strata out of `/Users/<examiner>/...`) from tripping Windows
+    /// `/users/` marker matches that have nothing to do with the
+    /// evidence content. Validated on the v0.16.0 Chromebook CTF
+    /// tar: scans used to accumulate 0.91-confidence "Windows
+    /// Workstation" on evidence that contains zero Windows artifacts,
+    /// purely because the examiner's home dir was in the absolute
+    /// path.
+    scan_root: &'a Path,
     scores: &'a mut std::collections::HashMap<ImageKind, f64>,
     evidence: &'a mut Vec<ClassificationEvidence>,
     total: &'a mut f64,
 }
 
+/// Return the path normalized to a forward-slash lowercase string,
+/// starting with `/` and stripped of everything up to and including
+/// the scan root. For scan_root `/Users/alice/case/unpacked` and path
+/// `/Users/alice/case/unpacked/layer_0/home/chronos`, returns
+/// `/layer_0/home/chronos`. Falls back to the absolute path with a
+/// leading `/` if stripping fails so classification still works on
+/// unusual inputs — but that's the pre-fix behaviour and the one
+/// that exposed the examiner-home pollution.
+fn evidence_relative_path(path: &Path, scan_root: &Path) -> String {
+    let rel = path.strip_prefix(scan_root).unwrap_or(path);
+    let mut s = String::with_capacity(rel.as_os_str().len() + 1);
+    s.push('/');
+    s.push_str(&rel.to_string_lossy());
+    s.replace('\\', "/").to_ascii_lowercase()
+}
+
 fn tally_markers_for(
     path: &Path,
+    scan_root: &Path,
     is_file: bool,
     scores: &mut std::collections::HashMap<ImageKind, f64>,
     evidence: &mut Vec<ClassificationEvidence>,
     total: &mut f64,
 ) {
-    let norm = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let norm = evidence_relative_path(path, scan_root);
     for m in MARKERS {
         if !norm.contains(m.needle) {
             continue;
@@ -817,6 +875,71 @@ mod tests {
         let c = classify(d.path());
         assert!(matches!(c.primary_type, ImageType::Linux { .. }));
         assert!(c.recommended_plugins.iter().any(|p| p == "Strata Arbor"));
+    }
+
+    #[test]
+    fn chromebook_recovery_tree_is_classified_as_chromeos() {
+        // v0.16.0 real-image validation gap G7 regression: the
+        // Chromebook CTF tar misclassified as Windows Workstation
+        // (0.91 confidence). Two defects combined:
+        //
+        //   (1) tally_markers_for lowercased the ABSOLUTE path, so
+        //       running Strata from /Users/<examiner>/... on macOS
+        //       tripped the Windows `/users/` marker on every
+        //       evidence path regardless of content.
+        //   (2) The `/home/chronos/` (trailing-slash) marker needed
+        //       child entries to fire — on recovery images chronos
+        //       is empty post-logout so ChromeOS never scored.
+        //
+        // This fixture reproduces the exact shape of the validation
+        // Chromebook: empty chronos, `.shadow` cryptohome dir, user
+        // and root hash dirs. Classification MUST be ChromeOS (or
+        // at least NOT Windows Workstation) and must not depend on
+        // the tempdir's absolute path containing "/Users/".
+        let d = tmp();
+        fs::create_dir_all(d.path().join("home/chronos")).expect("ok");
+        fs::create_dir_all(d.path().join("home/.shadow/abc123hash")).expect("ok");
+        fs::create_dir_all(d.path().join("home/user/abc123hash")).expect("ok");
+        fs::create_dir_all(d.path().join("home/root/abc123hash")).expect("ok");
+        let c = classify(d.path());
+        assert_eq!(
+            c.primary_type,
+            ImageType::ChromeOS,
+            "Chromebook recovery tree must classify as ChromeOS; \
+             got {:?} with confidence {:.2}. If this fails with \
+             WindowsWorkstation, the examiner-home path-prefix \
+             pollution regression has returned — tally_markers_for \
+             must compare against paths relative to the scan root.",
+            c.primary_type,
+            c.confidence,
+        );
+    }
+
+    #[test]
+    fn examiner_home_on_macos_does_not_trip_windows_users_marker() {
+        // Tripwire for the exact pollution mode that caused the
+        // Chromebook misclassification: a tempdir on macOS has an
+        // absolute path like /var/folders/.../T/.tmpXYZ or
+        // /Users/alice/... — the classifier must not count those
+        // ambient components against the evidence content.
+        //
+        // Build a pure-Linux tree (no Windows markers at all) and
+        // confirm classification does NOT pick WindowsWorkstation
+        // merely because the tempdir lives under /Users/.
+        let d = tmp();
+        fs::create_dir_all(d.path().join("etc")).expect("ok");
+        fs::write(d.path().join("etc/os-release"), b"ID=ubuntu").expect("ok");
+        fs::create_dir_all(d.path().join("home/alice")).expect("ok");
+        fs::create_dir_all(d.path().join("var/log")).expect("ok");
+        fs::write(d.path().join("var/log/syslog"), b"").expect("ok");
+        let c = classify(d.path());
+        assert!(
+            !matches!(c.primary_type, ImageType::WindowsWorkstation { .. }),
+            "pure-Linux evidence must not be classified as Windows; \
+             got {:?} — the scan root's absolute path must not leak \
+             into marker matching",
+            c.primary_type,
+        );
     }
 
     #[test]
