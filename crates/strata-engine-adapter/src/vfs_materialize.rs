@@ -97,6 +97,28 @@ const TARGET_PATTERNS: &[&str] = &[
     ".log",
     "pagefile.sys",
     "hiberfil.sys",
+    // --- v0.16.0 real-image validation gap G10: materialize-filter
+    // was Windows/browser-heavy, missed realistic Mac/iOS/examiner
+    // content. Extensions below cover the "plain file" content
+    // examiners expect to see in a case output: text notes,
+    // structured logs, images, video, screenshots, PDFs. Each is
+    // extension-suffix only (no directory assumption). The 512 MB
+    // per-file cap (MAX_MATERIALIZE_BYTES) and 16 GB total cap
+    // (MAX_TOTAL_BYTES) still protect against runaway materialization
+    // — an APFS volume full of .mov files stops copying at the cap
+    // with `hit_cap = true` surfaced in the report.
+    ".txt",    // plain-text notes, credentials, key material
+    ".pdf",    // scanned documents, printed evidence
+    ".jpg",    // photos (Apex EXIF relies on this)
+    ".jpeg",
+    ".png",    // screenshots, iOS photo roll
+    ".heic",   // Apple photo default since iOS 11
+    ".mov",    // QuickTime video (iOS/macOS default)
+    ".mp4",    // mobile video
+    ".eml",    // email exports
+    ".mbox",   // Mail.app mailbox archives
+    ".ipa",    // iOS app packages
+    ".apk",    // Android app packages (paired with /data/app/)
 ];
 
 /// Maximum file size to materialize (guards against accidentally
@@ -229,8 +251,64 @@ mod tests {
 
     #[test]
     fn target_patterns_ignore_irrelevant_files() {
-        assert!(!is_target("/Program Files/app/random.bin"));
-        assert!(!is_target("/some/path/image.jpg"));
+        // Irrelevant examples — no extension in TARGET_PATTERNS and
+        // no matching substring. `.bin`, `.exe`, `.dll`, `.o` are
+        // deliberately excluded (materializing them wholesale would
+        // balloon case size with no forensic win vs. inspecting in
+        // place). Avoid picking paths that overlap Windows-hive or
+        // Linux pattern substrings — the substring match is
+        // intentionally broad (e.g., `/system` catches both
+        // `Windows\System32\config\SYSTEM` and `/etc/systemd/`).
+        assert!(!is_target("/App/random.bin"));
+        assert!(!is_target("/tmp/image.gif"));
+        assert!(!is_target("/tmp/font.ttf"));
+        assert!(!is_target("/opt/thing.so"));
+    }
+
+    #[test]
+    fn target_patterns_match_apfs_examiner_content_gap_g10() {
+        // v0.16.0 real-image validation gap G10 tripwire: the
+        // materialize filter must pick up the "plain file" content
+        // examiners expect on Mac / iOS evidence — text notes,
+        // plists, SQLite, PDFs, photos, video. UNENCRYPTED.dmg
+        // produced zero materialized files in the v0.16.0 run
+        // because its content was three .txt files that no existing
+        // pattern matched.
+        //
+        // If a future change narrows this list (e.g., removing
+        // `.txt` because "binary content clobbers case size"), the
+        // change must also re-examine the Mac casework gap this
+        // test was written to close.
+        assert!(is_target("/Volumes/Evidence/note.txt"));
+        assert!(is_target("/Users/alice/Desktop/scan.pdf"));
+        assert!(is_target("/DCIM/100APPLE/IMG_0123.jpg"));
+        assert!(is_target("/screenshots/capture.png"));
+        assert!(is_target("/Photos/apple.heic"));
+        assert!(is_target("/DCIM/clip.mov"));
+        assert!(is_target("/videos/share.mp4"));
+        assert!(is_target("/Mail/inbox.eml"));
+        assert!(is_target("/Library/Mail/archive.mbox"));
+        assert!(is_target("/Downloads/app.ipa"));
+        assert!(is_target("/data/local/app.apk"));
+    }
+
+    #[test]
+    fn target_patterns_preserve_pre_v16_matches() {
+        // Regression guard: every pattern that was in
+        // TARGET_PATTERNS before the G10 extension must still match
+        // its representative path. Protects against accidental
+        // deletion of Windows / browser / Linux / Android targets
+        // during future additions.
+        assert!(is_target("/Windows/System32/config/SYSTEM"));
+        assert!(is_target("/Windows/System32/winevt/Logs/Security.evtx"));
+        assert!(is_target("/Windows/Prefetch/CMD.EXE-ABCD1234.pf"));
+        assert!(is_target("/Users/A/Recent/thing.lnk"));
+        assert!(is_target("/Users/A/Chrome/History"));
+        assert!(is_target("/db/places.sqlite"));
+        assert!(is_target("/etc/passwd"));
+        assert!(is_target("/var/log/auth.log"));
+        assert!(is_target("/data/data/com.example.app"));
+        assert!(is_target("/app/dump.json"));
     }
 
     #[test]
