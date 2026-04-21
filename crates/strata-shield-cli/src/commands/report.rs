@@ -431,9 +431,7 @@ fn render_finding_entry(
         "- **Severity:** {}\n",
         rule.forensic_value
     ));
-    out.push_str(&format!(
-        "- **Source:** Strata Sigma correlation engine\n"
-    ));
+    out.push_str("- **Source:** Strata Sigma correlation engine\n");
     if !rule.detail.is_empty() {
         out.push_str(&format!("\n{}\n\n", rule.detail));
     }
@@ -448,8 +446,7 @@ fn render_finding_entry(
         .iter()
         .filter(|a| a.plugin_name != "Strata Sigma")
         .filter(|a| {
-            hint.as_deref()
-                .map(|h| a.subcategory.eq_ignore_ascii_case(h))
+            hint.map(|h| a.subcategory.eq_ignore_ascii_case(h))
                 .unwrap_or(false)
                 || (rule.mitre_technique.is_some()
                     && a.mitre_technique == rule.mitre_technique)
@@ -502,7 +499,7 @@ fn finding_subcategory_hint(title: &str) -> Option<&'static str> {
 fn md_truncate(s: &str, max: usize) -> String {
     let mut owned: String = s.chars().take(max).collect();
     if s.chars().count() > max {
-        owned.push_str("…");
+        owned.push('…');
     }
     owned.replace('|', "\\|")
 }
@@ -664,8 +661,8 @@ fn render_examiner_certification(
         now.to_rfc3339(),
     ));
     out.push_str("---\n\n");
-    out.push_str(&format!("Examiner signature: _______________________\n\n"));
-    out.push_str(&format!("Date: _______________________\n\n"));
+    out.push_str("Examiner signature: _______________________\n\n");
+    out.push_str("Date: _______________________\n\n");
 }
 
 fn render_limitations(out: &mut String) {
