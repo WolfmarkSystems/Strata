@@ -36,6 +36,7 @@ pub mod registry_core_user_hives;
 pub mod registry_persistence;
 pub mod replay;
 pub mod replay_verify;
+pub mod report;
 pub mod report_skeleton;
 pub mod restore_shadow_copies;
 pub mod scheduled_tasks_artifacts;

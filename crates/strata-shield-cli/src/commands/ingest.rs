@@ -560,6 +560,15 @@ pub fn run_ingest(args: IngestRunArgs) -> i32 {
         write_summary_json(path, &summary);
     }
 
+    // Post-v16 Sprint 6.5 — always write case-metadata.json next
+    // to artifacts.sqlite. The new `strata report` command reads
+    // this file for examiner / case / source / timestamp context
+    // that's absent from artifacts.sqlite. Keeps the report self-
+    // contained vs. the prior report-skeleton disconnect that
+    // queried a separate strata-core case-store database the
+    // plugin ingest path never wrote to.
+    write_summary_json(&args.case_dir.join("case-metadata.json"), &summary);
+
     let is_json = args.output_format.eq_ignore_ascii_case("json");
     if is_json {
         println!(

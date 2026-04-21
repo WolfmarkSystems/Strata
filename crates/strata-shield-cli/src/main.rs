@@ -2113,6 +2113,11 @@ enum Commands {
     Unallocated(commands::unallocated::UnallocatedArgs),
     Filetable(commands::filetable::FiletableArgs),
     Worker(commands::worker::WorkerArgs),
+    /// Generate a court-ready examiner report from a Strata
+    /// case directory (post-v16 Sprint 6.5 replacement for
+    /// `report-skeleton`). Reads `<case-dir>/artifacts.sqlite`
+    /// + `<case-dir>/case-metadata.json` directly.
+    Report(commands::report::ReportArgs),
     ReportSkeleton(commands::report_skeleton::ReportSkeletonArgs),
     Score(commands::score::ScoreArgs),
     SmokeTest(commands::smoke_test::SmokeTestArgs),
@@ -2230,6 +2235,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Unallocated(args) => commands::unallocated::execute(args),
         Commands::Filetable(args) => commands::filetable::execute(args),
         Commands::Worker(args) => commands::worker::execute(args),
+        Commands::Report(args) => {
+            std::process::exit(commands::report::execute(args));
+        }
         Commands::ReportSkeleton(args) => commands::report_skeleton::execute(args),
         Commands::Score(args) => commands::score::execute(args),
         Commands::SmokeTest(args) => commands::smoke_test::execute(args, original_args),
