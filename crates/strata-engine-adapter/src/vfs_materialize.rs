@@ -119,6 +119,24 @@ const TARGET_PATTERNS: &[&str] = &[
     ".mbox",   // Mail.app mailbox archives
     ".ipa",    // iOS app packages
     ".apk",    // Android app packages (paired with /data/app/)
+    // --- post-v16 Sprint 3 — close the loop on Trace + Chronicle
+    // wiring against real Charlie. Sprint 3 wired BITS deep-parse
+    // (qmgr0.dat / qmgr1.dat / qmgr.db) and XP recycler records
+    // (INFO2). Without these patterns the walkers materialize those
+    // files as empty and the submodule parsers never see real
+    // evidence — the wires pass unit tests but silent-no-op on
+    // real cases.
+    "info2",         // XP recycler record blob (C:\RECYCLER\<SID>\INFO2)
+    "qmgr0.dat",     // BITS job queue (Win7–10 primary)
+    "qmgr1.dat",     // BITS job queue (Win7–10 rotation)
+    "qmgr.db",       // BITS job queue (Win11 SQLite replacement)
+    "pcaapplaunchdic.txt", // PCA launch dictionary (Win11 22H2+)
+    "pcageneraldb2.txt",   // PCA general database (Win11 22H2+)
+    "capabilityaccessmanager.db", // Win11 23H2+ CAM privacy audit
+    "/recycler/",    // XP recycler directory — ensures INFO2 path
+                     //   components are reached by the walker tree
+                     //   descent (Session-C $recycle.bin entry
+                     //   covered Vista+ only)
 ];
 
 /// Maximum file size to materialize (guards against accidentally
@@ -263,6 +281,20 @@ mod tests {
         assert!(!is_target("/tmp/image.gif"));
         assert!(!is_target("/tmp/font.ttf"));
         assert!(!is_target("/opt/thing.so"));
+    }
+
+    #[test]
+    fn target_patterns_match_sprint3_wire_targets() {
+        // Sprint 3 materialize extension closes the loop with
+        // Trace + Chronicle submodule wiring. Without these
+        // patterns the wires silent-no-op on Charlie/Jo because
+        // the target files are filtered out upstream.
+        assert!(is_target("/C/RECYCLER/S-1-5-21-xxxx/INFO2"));
+        assert!(is_target("/Users/alice/AppData/Roaming/.../qmgr0.dat"));
+        assert!(is_target("/Users/alice/AppData/Roaming/.../qmgr1.dat"));
+        assert!(is_target("/Windows/appcompat/pca/PcaAppLaunchDic.txt"));
+        assert!(is_target("/Windows/appcompat/pca/PcaGeneralDb2.txt"));
+        assert!(is_target("/ProgramData/Microsoft/Windows/CapabilityAccessManager/CapabilityAccessManager.db"));
     }
 
     #[test]
