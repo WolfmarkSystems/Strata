@@ -81,7 +81,23 @@ impl StrataPlugin for GuardianPlugin {
         };
 
         for path in files {
-            let lc_path = path.to_string_lossy().to_lowercase();
+            // Normalize every path separator to forward slashes
+            // before the lowercase + substring matches below. Prior
+            // to this normalization, Guardian's path predicates used
+            // literal `\\` separators — correct for Windows hosts
+            // but silently mismatched against macOS-extracted
+            // evidence (where materialize produces `/` paths). Per
+            // docs/RESEARCH_POST_V16_PLUGIN_AUDIT.md §4 Scenario D,
+            // this is a latent bug that would miss every Defender /
+            // Avast / MalwareBytes artifact on Win8+ evidence
+            // extracted on a non-Windows examiner workstation. The
+            // forward-slash normalization is the minimum-surface
+            // fix: one normalized lc_path variable used by every
+            // predicate; all needles flipped from `\\` to `/`.
+            let lc_path = path
+                .to_string_lossy()
+                .replace('\\', "/")
+                .to_lowercase();
             let name = path
                 .file_name()
                 .and_then(|n| n.to_str())
@@ -89,7 +105,7 @@ impl StrataPlugin for GuardianPlugin {
                 .to_lowercase();
 
             // ── Windows Defender event log ──────────────────────────────
-            if name == "mpeventlog.evtx" || lc_path.contains("\\windows defender\\support\\")
+            if name == "mpeventlog.evtx" || lc_path.contains("/windows defender/support/")
             {
                 let mut a = Artifact::new("Defender Log", &path.to_string_lossy());
                 a.add_field("title", "Windows Defender event log present");
@@ -105,9 +121,9 @@ impl StrataPlugin for GuardianPlugin {
             }
 
             // ── Defender quarantine directory ──────────────────────────
-            if lc_path.contains("\\windows defender\\quarantine\\")
-                && (lc_path.contains("\\entries\\")
-                    || lc_path.contains("\\resourcedata\\"))
+            if lc_path.contains("/windows defender/quarantine/")
+                && (lc_path.contains("/entries/")
+                    || lc_path.contains("/resourcedata/"))
             {
                 let mut a = Artifact::new("Defender Quarantine", &path.to_string_lossy());
                 a.add_field("title", "Defender quarantined item");
@@ -125,7 +141,7 @@ impl StrataPlugin for GuardianPlugin {
 
             // ── Avast log ──────────────────────────────────────────────
             if name.starts_with("aswar") && name.ends_with(".log")
-                || lc_path.contains("\\avast software\\avast\\log\\")
+                || lc_path.contains("/avast software/avast/log/")
             {
                 // Stream line-by-line — enterprise AV logs can be 100+ MB.
                 if let Ok(f) = std::fs::File::open(&path) {
@@ -156,7 +172,7 @@ impl StrataPlugin for GuardianPlugin {
             }
 
             // ── MalwareBytes log ───────────────────────────────────────
-            if lc_path.contains("\\malwarebytes\\mbamservice\\logs\\") {
+            if lc_path.contains("/malwarebytes/mbamservice/logs/") {
                 let mut a = Artifact::new("MalwareBytes Log", &path.to_string_lossy());
                 a.add_field("title", "MalwareBytes log present");
                 a.add_field(
@@ -186,8 +202,9 @@ impl StrataPlugin for GuardianPlugin {
                         }
                     }
                     let lower_path = app_path.to_lowercase();
-                    let suspicious = lower_path.contains("\\temp\\")
-                        || lower_path.contains("\\appdata\\local\\temp")
+                    let lower_path_norm = lower_path.replace('\\', "/");
+                    let suspicious = lower_path_norm.contains("/temp/")
+                        || lower_path_norm.contains("/appdata/local/temp")
                         || event_name.to_lowercase().contains("appcrash");
                     let mut a = Artifact::new("WER Crash", &path.to_string_lossy());
                     a.add_field(
@@ -297,6 +314,208 @@ fn walk_dir(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
         }
     }
     Ok(paths)
+}
+
+// ── post-v16 Sprint 4 tripwires — path-separator normalization ──
+
+#[cfg(test)]
+mod sprint4_path_sep_tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    fn run_guardian(root: &Path) -> Vec<Artifact> {
+        let p = GuardianPlugin::new();
+        let ctx = PluginContext {
+            root_path: root.to_string_lossy().to_string(),
+            vfs: None,
+            config: std::collections::HashMap::new(),
+            prior_results: Vec::new(),
+        };
+        p.run(ctx).expect("guardian run")
+    }
+
+    #[test]
+    fn guardian_detects_defender_log_on_posix_extracted_path() {
+        // Sprint 4 Fix 1 tripwire. Closes Scenario D latent bug per
+        // docs/RESEARCH_POST_V16_PLUGIN_AUDIT.md §4: pre-fix
+        // Guardian used literal `\\windows defender\\support\\` path
+        // predicates that silently never matched when Windows
+        // evidence was extracted on a macOS or Linux examiner
+        // workstation (materialize produces `/`-separated paths).
+        //
+        // Fixture builds the Win8+ Defender support-log layout
+        // using forward slashes — the exact shape the materialize
+        // pipeline produces.
+        let dir = tempdir().expect("tempdir");
+        let defender_dir = dir
+            .path()
+            .join("ProgramData/Microsoft/Windows Defender/Support");
+        fs::create_dir_all(&defender_dir).expect("mk");
+        let log = defender_dir.join("MPLog-20240101.log");
+        fs::write(&log, b"Defender log content").expect("w");
+
+        let arts = run_guardian(dir.path());
+        let defender_records: Vec<&Artifact> = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "Defender Log")
+                    .unwrap_or(false)
+            })
+            .collect();
+        assert!(
+            !defender_records.is_empty(),
+            "Guardian must detect Defender log on forward-slash extracted path; \
+             got {} artifacts total. Path: {}",
+            arts.len(),
+            log.display()
+        );
+    }
+
+    #[test]
+    fn guardian_detects_defender_quarantine_on_posix_extracted_path() {
+        // Same Scenario D fix applied to Defender quarantine
+        // detection. Prior to the fix `lc_path.contains(
+        // "\\windows defender\\quarantine\\")` would miss the
+        // `/`-separated extracted path; the new normalization
+        // handles both separators.
+        let dir = tempdir().expect("tempdir");
+        let quarantine = dir
+            .path()
+            .join("ProgramData/Microsoft/Windows Defender/Quarantine/Entries");
+        fs::create_dir_all(&quarantine).expect("mk");
+        fs::write(quarantine.join("{abc-123}"), b"q entry").expect("w");
+
+        let arts = run_guardian(dir.path());
+        let quarantine_records = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "Defender Quarantine")
+                    .unwrap_or(false)
+            })
+            .count();
+        assert!(
+            quarantine_records >= 1,
+            "Guardian must detect Defender quarantine entry on POSIX-extracted path; \
+             got {quarantine_records}"
+        );
+    }
+
+    #[test]
+    fn guardian_detects_avast_log_on_posix_extracted_path() {
+        // Same Scenario D fix applied to Avast. Prior check used
+        // `\\avast software\\avast\\log\\` literal which missed
+        // extracted paths. Normalization handles both.
+        let dir = tempdir().expect("tempdir");
+        let avast_dir = dir.path().join("ProgramData/Avast Software/Avast/log");
+        fs::create_dir_all(&avast_dir).expect("mk");
+        // Avast log needs suspicion-triggering keywords to emit a
+        // record; write one line with "infection" in it so the
+        // line-level matcher fires.
+        fs::write(
+            avast_dir.join("aswArPot.log"),
+            b"2024-01-01 12:00:00 infection detected: eicar.com.txt\n",
+        )
+        .expect("w");
+
+        let arts = run_guardian(dir.path());
+        let avast_records = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "Avast Log")
+                    .unwrap_or(false)
+            })
+            .count();
+        assert!(
+            avast_records >= 1,
+            "Guardian must detect Avast log on POSIX-extracted path; got {avast_records}"
+        );
+    }
+
+    #[test]
+    fn guardian_detects_malwarebytes_log_on_posix_extracted_path() {
+        // Same Scenario D fix applied to MalwareBytes. Prior
+        // `\\malwarebytes\\mbamservice\\logs\\` needle missed
+        // extracted paths. Normalization handles both.
+        let dir = tempdir().expect("tempdir");
+        let mb_dir = dir
+            .path()
+            .join("ProgramData/Malwarebytes/MBAMService/logs");
+        fs::create_dir_all(&mb_dir).expect("mk");
+        fs::write(mb_dir.join("mbamservice.log"), b"log content").expect("w");
+
+        let arts = run_guardian(dir.path());
+        let mb_records = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "MalwareBytes Log")
+                    .unwrap_or(false)
+            })
+            .count();
+        assert!(
+            mb_records >= 1,
+            "Guardian must detect MalwareBytes log on POSIX-extracted path; got {mb_records}"
+        );
+    }
+
+    #[test]
+    fn guardian_wer_crash_flags_temp_path_on_posix_extracted() {
+        // The WER suspicion check also uses backslash literals
+        // (`\\temp\\`, `\\appdata\\local\\temp`). Post-fix it
+        // normalizes before matching. Build a .wer file that
+        // declares AppPath with forward slashes (the shape the
+        // .wer text might carry on a non-Windows extracted file,
+        // or after caller-side normalization) and confirm the
+        // record is flagged suspicious.
+        //
+        // Note: real .wer files carry Windows-style paths as
+        // their AppPath value strings. The predicate still
+        // works on those because Windows-style paths become
+        // normalized via replace('\\', "/") before matching.
+        let dir = tempdir().expect("tempdir");
+        let wer = dir.path().join("foo.wer");
+        fs::write(
+            &wer,
+            "AppName=evil.exe\n\
+             AppPath=C:\\Users\\alice\\AppData\\Local\\Temp\\evil.exe\n\
+             EventName=APPCRASH\n",
+        )
+        .expect("w");
+        let arts = run_guardian(dir.path());
+        let wer_records: Vec<&Artifact> = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "WER Crash")
+                    .unwrap_or(false)
+            })
+            .collect();
+        assert_eq!(
+            wer_records.len(),
+            1,
+            "expected 1 WER Crash record on the fixture; got {}",
+            wer_records.len()
+        );
+        let sus = wer_records[0]
+            .data
+            .get("suspicious")
+            .map(|s| s == "true")
+            .unwrap_or(false);
+        assert!(
+            sus,
+            "WER record with AppPath in AppData\\Local\\Temp must be flagged \
+             suspicious via the separator-normalized predicate"
+        );
+    }
 }
 
 #[no_mangle]
