@@ -471,6 +471,49 @@ mod tests {
     }
 
     #[test]
+    fn sentinel_lateral_movement_detector_pending_evtx_record_extraction() {
+        // Sprint 5 Sentinel audit finding. `lateral_movement.rs`
+        // (393 LOC) exposes `LateralMovementDetector::detect(&[EventRecord])`
+        // returning `Vec<LateralMovement>` — a stateful correlator
+        // across parsed EVTX event records. Wiring it into Sentinel's
+        // run() would require refactoring `parse_one_evtx` to emit
+        // both `Artifact`s AND typed `EventRecord`s, then running
+        // the detector over the accumulated records and emitting a
+        // new "Lateral Movement Indicator" subcategory.
+        //
+        // Current Charlie / Jo corpus has `.evt` (legacy) not
+        // `.evtx` — Sentinel's extension gate skips them, so even
+        // with full wiring the detector would produce zero
+        // indicators on these images. Zero ROI on the canonical
+        // test corpus blocks meaningful validation.
+        //
+        // Deferred to a future sprint that pairs:
+        //   (1) Sentinel parse_one_evtx refactor to surface
+        //       EventRecord objects alongside Artifact records, and
+        //   (2) Win8+ evidence in the test corpus with actual
+        //       EVTX 4624/4625/4648/4672 logon events
+        //
+        // The `_pending_evtx_record_extraction` suffix makes the
+        // deferral discoverable. This tripwire pins the current
+        // un-wired state by confirming production code does not
+        // reference the detector.
+        let src = include_str!("lib.rs");
+        let production = src.split("#[cfg(test)]").next().expect("has production");
+        let needle = format!("{}::detect", "LateralMovementDetector");
+        assert!(
+            !production.contains(&needle),
+            "LateralMovementDetector wiring requires parse_one_evtx refactor + \
+             Win8+ EVTX test corpus. When both land, update this tripwire. \
+             Current production code must not invoke the detector."
+        );
+        // Confirm the detector itself still compiles + is publicly
+        // reachable so future wiring has a target — if the module
+        // got deleted, the wiring plan changes.
+        let _: fn(i64) -> crate::lateral_movement::LateralMovementDetector =
+            crate::lateral_movement::LateralMovementDetector::new;
+    }
+
+    #[test]
     fn sentinel_emits_evtx_typed_subcategory_for_windows_events() {
         // post-v16 Sprint 2 Fix 1 tripwire. Closes
         // docs/RESEARCH_POST_V16_SIGMA_INVENTORY.md §1.1 defect
