@@ -1212,6 +1212,100 @@ fn walk_dir(dir: &Path) -> Result<Vec<std::path::PathBuf>, std::io::Error> {
     Ok(paths)
 }
 
+// ── post-v16 Sprint 4 Cipher audit confirmation ────────────────
+
+#[cfg(test)]
+mod sprint4_cipher_audit_tests {
+    /// Post-v16 Sprint 4 Cipher audit confirmation. The prompt's
+    /// Tier C scope expected Cipher to need submodule wiring per
+    /// docs/RESEARCH_POST_V16_PLUGIN_AUDIT.md. Source inspection
+    /// revealed:
+    ///
+    ///   - Cipher is a single-file plugin (lib.rs 1,220 LOC). No
+    ///     `src/*.rs` submodules exist — there's nothing to wire.
+    ///   - Cipher emits 9 distinct subcategories (Windows
+    ///     Credential, WiFi Network Profile, FTP Saved Credential,
+    ///     TeamViewer Session, TeamViewer Log, AnyDesk Connection,
+    ///     OneDrive Sync Activity, Google Drive Activity, Dropbox
+    ///     Sync Activity) plus Encrypted Container. Charlie
+    ///     emits 12 "Encrypted Container" records (correct for
+    ///     XP-era evidence without WiFi profiles / TeamViewer /
+    ///     cloud sync DBs). Scenario A working correctly.
+    ///   - Zero backslash-literal path predicates. Path matching
+    ///     uses `lower_name` (filename-level) or a single case-
+    ///     insensitive substring check (`path_lower.contains(
+    ///     "anydesk")`). Platform-independent.
+    ///
+    /// This module holds the audit-confirmation tripwires. If
+    /// Cipher later grows submodule files, the single-file-plugin
+    /// assertion will fire loudly and the audit finding will
+    /// need to be re-examined.
+
+    #[test]
+    fn cipher_has_no_submodules_audit_confirmation() {
+        // include_str! would fail to compile if the path didn't
+        // exist; we use cfg!(test) + file-read at test time to
+        // avoid baking a false-positive assumption into the
+        // binary. Just enumerate the src/ directory.
+        let src_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src");
+        let entries: Vec<_> = std::fs::read_dir(&src_dir)
+            .expect("cipher src dir")
+            .flatten()
+            .filter_map(|e| {
+                let p = e.path();
+                if p.extension().and_then(|x| x.to_str()) == Some("rs") {
+                    p.file_name().and_then(|n| n.to_str().map(str::to_string))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(
+            entries, vec!["lib.rs"],
+            "Cipher must remain a single-file plugin per the Sprint 4 audit. \
+             If submodules have been added (got {entries:?}), re-audit for \
+             Scenario B / C wiring gaps and update this tripwire."
+        );
+    }
+
+    #[test]
+    fn cipher_uses_no_backslash_path_predicates() {
+        // Cipher audit finding: unlike Guardian pre-Sprint-4,
+        // Cipher's path predicates are all platform-independent.
+        // If a future change introduces `contains("\\...\\")`
+        // path matching, it would silently miss evidence on
+        // macOS/Linux examiner workstations — exactly the
+        // Scenario D bug Guardian had. This tripwire catches
+        // the regression before it ships.
+        //
+        // We allow `\\` inside string content that's emitted as
+        // display text (e.g. formatting a Windows path for human
+        // readers) but forbid it inside `contains("...")` needles.
+        let src = include_str!("lib.rs");
+        let mut violations = Vec::new();
+        for (i, line) in src.lines().enumerate() {
+            // Skip comments and string content that isn't a contains() needle.
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("//") || trimmed.starts_with("///") {
+                continue;
+            }
+            // The specific pattern that broke Guardian:
+            //   `.contains("\\...")`
+            if line.contains(".contains(\"\\\\") {
+                violations.push((i + 1, line.trim().to_string()));
+            }
+        }
+        assert!(
+            violations.is_empty(),
+            "Cipher must not use `\\\\`-separated path literals in .contains() — \
+             that's the Scenario D bug that hid Guardian's Defender detection on \
+             non-Windows examiner hosts. Found {} occurrences: {:#?}",
+            violations.len(),
+            violations,
+        );
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn create_plugin_cipher() -> *mut std::ffi::c_void {
     let plugin: Box<dyn StrataPlugin> = Box::new(CipherPlugin::new());

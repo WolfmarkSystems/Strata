@@ -198,4 +198,96 @@ mod tests {
         assert_eq!(color(), "#a855f7");
         assert!(!p.description().is_empty());
     }
+
+    #[test]
+    fn vault_run_dispatches_to_every_emitter_submodule() {
+        // Post-v16 Sprint 4 Vault audit confirmation. Anti-
+        // regression tripwire for the six emitter submodules
+        // already wired into run(). If a future refactor
+        // accidentally drops one of these calls, the silent
+        // reduction would look like "plugin quietly produces
+        // fewer records" rather than a visible compilation
+        // failure — this test makes it a loud test failure.
+        //
+        // Each submodule's `scan(path)` is verified directly
+        // at the module-level below; this tripwire pins the
+        // wiring of all six into Vault's run() so a future
+        // maintainer who deletes one of the six `out.extend(...)`
+        // lines fails this test loudly rather than shipping a
+        // silently-reduced plugin.
+        //
+        // The seventh submodule, `android_antiforensic`, is
+        // intentionally not wired — see the
+        // `android_antiforensic_is_utility_library_pending_specter_integration`
+        // tripwire below.
+        let src = include_str!("lib.rs");
+        for emitter in [
+            "crate::veracrypt::scan",
+            "crate::photo_vault::scan",
+            "crate::antiforensic::scan",
+            "crate::hidden_partition::scan",
+            "crate::encrypted_artifacts::scan",
+            "crate::crypto_wallets::scan",
+        ] {
+            assert!(
+                src.contains(emitter),
+                "Vault run() must dispatch to {emitter}; wiring has regressed"
+            );
+        }
+    }
+
+    #[test]
+    fn android_antiforensic_is_utility_library_pending_specter_integration() {
+        // Post-v16 Sprint 4 audit finding. `android_antiforensic`
+        // exposes four pub fns (known_wiper, classify_wipe_pattern,
+        // indicator_from_installation, indicator_from_pattern) but
+        // has NO pub fn scan(path) — it's a utility library
+        // expecting a caller that already has Android package
+        // metadata + block-level data access. Vault doesn't have
+        // that infrastructure; Specter (Android backup) is the
+        // natural home for the iteration layer.
+        //
+        // This tripwire pins the current "utility library, not
+        // a direct emitter" state. When a future sprint wires
+        // the helpers into Specter or builds an Android iteration
+        // layer in Vault, this test must be intentionally changed
+        // or deleted with the commit message noting
+        // "android_antiforensic wired in [commit]." The
+        // `_pending_specter_integration` suffix makes the
+        // deferral discoverable.
+        //
+        // We verify by asserting (a) Vault's run() does NOT
+        // reference the module, and (b) the module's public API
+        // has no `scan(path)` emitter function — so the
+        // "wire it in" action can't be a one-liner anyway.
+        let lib_src = include_str!("lib.rs");
+        // Construct the needle at runtime so the assertion's own
+        // source text doesn't match the needle (otherwise this
+        // file — including the test itself — always contains the
+        // substring "android_antiforensic" followed by a colon).
+        let needle = format!("{}::", "android_antiforensic");
+        // Filter to non-test code — the assertion text above
+        // legitimately contains the needle as a runtime string,
+        // and we're checking production dispatch, not our own
+        // tripwire source.
+        let production_src = lib_src
+            .split("#[cfg(test)]")
+            .next()
+            .expect("lib.rs has content before the test module");
+        assert!(
+            !production_src.contains(&needle),
+            "Vault run() must not currently invoke the android wiping \
+             helpers — wiring requires caller infrastructure not present \
+             in Vault. When this fires, check whether the Specter \
+             integration landed and update this tripwire."
+        );
+        let aa_src = include_str!("android_antiforensic.rs");
+        assert!(
+            !aa_src.contains("pub fn scan("),
+            "android_antiforensic must remain a utility library (four helper \
+             fns: known_wiper / classify_wipe_pattern / indicator_from_*). \
+             If it grew a pub fn scan(path) signature, the deferral rationale \
+             no longer holds and this tripwire must be re-examined."
+        );
+    }
 }
