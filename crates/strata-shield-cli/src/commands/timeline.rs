@@ -7,6 +7,9 @@ use clap::Parser;
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
+#[command(
+    about = "Query the case timeline — chronological artifact listing with optional filters."
+)]
 pub struct TimelineArgs {
     #[arg(short, long)]
     pub case: Option<String>,

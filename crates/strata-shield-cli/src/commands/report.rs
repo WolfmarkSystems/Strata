@@ -41,30 +41,45 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-/// Strata version string baked at compile time. Closes Sprint 6
-/// finding G14 (hardcoded tool-version string drifted from the
-/// shipping version).
-const STRATA_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Strata project version string. Closes Sprint 6 finding G14
+/// and Sprint 7 finding P2-F1 — the legacy command hardcoded
+/// `"1.0"`, Sprint 6.5's first attempt used
+/// `env!("CARGO_PKG_VERSION")` which yielded the CLI crate's
+/// own Cargo version (`"0.1.0"`) and not Strata's workspace /
+/// tag version. Examiners seeing `"version 0.1.0"` would
+/// reasonably conclude Strata is alpha software — a courtroom
+/// credibility issue.
+///
+/// Sprint 7 pins the workspace-wide Strata release string
+/// explicitly. Bump this line when tagging a new release; a
+/// companion tripwire (`strata_release_version_matches_latest_tag`)
+/// catches drift between this constant and the actual tag.
+pub const STRATA_VERSION: &str = "v0.16.0";
 
 #[derive(Parser, Debug, Clone)]
 #[command(
     name = "report",
-    about = "Generate a court-ready examiner report from a Strata case directory"
+    about = "Generate a court-ready examiner report from a Strata case directory.",
+    long_about = "Generate a court-ready examiner report from a Strata case \
+                  directory. Reads the case's artifacts.sqlite + \
+                  case-metadata.json (both produced by `strata ingest run`) \
+                  and writes a markdown report with Evidence Integrity, \
+                  Findings, MITRE ATT&CK Coverage, Per-Plugin Summary, \
+                  Chain of Custody, Examiner Certification, and Limitations \
+                  sections."
 )]
 pub struct ReportArgs {
-    /// Case directory containing `artifacts.sqlite` and
-    /// `case-metadata.json` (produced by `strata ingest run`).
+    /// Case directory containing artifacts.sqlite and case-metadata.json
+    /// (the directory passed to `strata ingest run --case-dir`).
     #[arg(long = "case-dir", short = 'c')]
     pub case_dir: PathBuf,
 
-    /// Output file path. Defaults to
-    /// `<case-dir>/report-<case_name>.md`.
+    /// Output file path. Defaults to <case-dir>/report-<case_name>.md.
     #[arg(long = "output", short = 'o')]
     pub output: Option<PathBuf>,
 
-    /// Override examiner identity from case-metadata.json. Useful
-    /// when the ingest-time examiner differs from the report
-    /// examiner.
+    /// Override examiner identity from case-metadata.json. Useful when the
+    /// report examiner differs from the ingest examiner.
     #[arg(long = "examiner")]
     pub examiner_override: Option<String>,
 }
@@ -441,8 +456,15 @@ fn render_finding_entry(
     // "RULE FIRED: Active Setup Persistence" map to the
     // subcategory "Active Setup" via simple substring; the rule's
     // own MITRE technique picks up supporting Phantom records.
+    //
+    // Sprint 7 finding P2-F2: USB Exfiltration finding rendered
+    // 10 identical "USB: ROOT_HUB" rows because Charlie's registry
+    // has multiple SYSTEM hive copies (live + repair backup) each
+    // producing the same records. Dedupe by (title, subcategory)
+    // so the table shows distinct findings first; the full set
+    // still lives in artifacts.sqlite for deeper inspection.
     let hint = finding_subcategory_hint(title);
-    let mut supporting: Vec<&ArtifactRow> = all_artifacts
+    let candidates: Vec<&ArtifactRow> = all_artifacts
         .iter()
         .filter(|a| a.plugin_name != "Strata Sigma")
         .filter(|a| {
@@ -452,6 +474,14 @@ fn render_finding_entry(
                     && a.mitre_technique == rule.mitre_technique)
         })
         .collect();
+    let mut seen_titles: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
+    let mut supporting: Vec<&ArtifactRow> = Vec::new();
+    for a in &candidates {
+        let key = (a.title.clone(), a.subcategory.clone());
+        if seen_titles.insert(key) {
+            supporting.push(*a);
+        }
+    }
     supporting.sort_by(|a, b| a.source_path.cmp(&b.source_path));
     supporting.truncate(10); // Courtroom-readable cap
 
@@ -550,19 +580,75 @@ fn render_mitre_attack(out: &mut String, artifacts: &[ArtifactRow]) {
 /// returns "Unmapped" — examiner is directed to cross-check
 /// against the ATT&CK Navigator.
 fn infer_tactic(technique: &str) -> &'static str {
+    // Sprint 7 expansion (finding P2-F5). Original table was
+    // narrow — Charlie surfaces ~42 techniques and a third
+    // rendered "Unmapped" which looks amateur in the MITRE
+    // ATT&CK Coverage section. Expanded mapping covers the
+    // common Windows persistence / lateral / defense-evasion
+    // technique families examiners encounter in routine
+    // casework. Cross-references the strata-core::hunt::kill_chain
+    // tactic table where one exists.
     let base = technique.split('.').next().unwrap_or(technique);
     match base {
-        "T1547" | "T1546" | "T1176" => "Persistence",
-        "T1021" | "T1550" | "T1558" | "T1534" => "Lateral Movement",
-        "T1070" => "Defense Evasion",
-        "T1005" | "T1114" | "T1113" | "T1119" => "Collection",
-        "T1552" | "T1003" | "T1555" => "Credential Access",
-        "T1059" | "T1218" | "T1204" => "Execution",
-        "T1083" | "T1057" | "T1049" | "T1082" => "Discovery",
-        "T1071" | "T1095" | "T1105" => "Command and Control",
-        "T1197" | "T1567" | "T1020" | "T1048" => "Exfiltration",
-        "T1091" | "T1189" | "T1190" | "T1566" => "Initial Access",
-        "T1562" | "T1027" => "Defense Evasion",
+        // Persistence
+        "T1547" | "T1546" | "T1176" | "T1543" | "T1053" | "T1136"
+        | "T1197" | "T1037" | "T1098" | "T1133" | "T1505" => "Persistence",
+
+        // Execution
+        "T1059" | "T1218" | "T1204" | "T1047" | "T1129" | "T1106"
+        | "T1203" | "T1559" | "T1569" => "Execution",
+
+        // Defense Evasion
+        "T1070" | "T1027" | "T1562" | "T1222" | "T1564" | "T1140"
+        | "T1202" | "T1014" | "T1036" | "T1112" | "T1134"
+        | "T1620" => "Defense Evasion",
+
+        // Credential Access
+        "T1003" | "T1552" | "T1555" | "T1110" | "T1040" | "T1187"
+        | "T1606" | "T1649" | "T1212" => "Credential Access",
+
+        // Discovery
+        "T1083" | "T1057" | "T1049" | "T1082" | "T1016" | "T1069"
+        | "T1087" | "T1518" | "T1033" | "T1018" | "T1007"
+        | "T1135" | "T1046" | "T1217" | "T1010" | "T1120" => "Discovery",
+
+        // Lateral Movement
+        "T1021" | "T1550" | "T1558" | "T1534" | "T1570" | "T1563" => "Lateral Movement",
+
+        // Collection
+        "T1005" | "T1114" | "T1113" | "T1119" | "T1056" | "T1115"
+        | "T1125" | "T1123" | "T1430" | "T1602" | "T1074" => "Collection",
+
+        // Command and Control
+        "T1071" | "T1095" | "T1105" | "T1572" | "T1573" | "T1090"
+        | "T1102" | "T1568" | "T1008" | "T1219" => "Command and Control",
+
+        // Exfiltration
+        "T1567" | "T1020" | "T1048" | "T1041" | "T1052" | "T1030"
+        | "T1011" | "T1029" => "Exfiltration",
+
+        // Initial Access
+        "T1189" | "T1190" | "T1566" | "T1200" | "T1078" | "T1195"
+        | "T1199" | "T1091" => "Initial Access",
+
+        // Impact
+        "T1485" | "T1486" | "T1489" | "T1490" | "T1491" | "T1498"
+        | "T1499" | "T1529" | "T1561" => "Impact",
+
+        // Resource Development (rarely in forensic output but
+        // surface correctly if it appears)
+        "T1583" | "T1584" | "T1585" | "T1586" | "T1587" | "T1588" => "Resource Development",
+
+        // Reconnaissance
+        "T1595" | "T1592" | "T1589" | "T1590" | "T1591" | "T1593"
+        | "T1594" | "T1596" | "T1597" | "T1598" => "Reconnaissance",
+
+        // Privilege Escalation (overlap with Persistence — many
+        // techniques fall into both; pick the most common
+        // examiner framing for the report). T1068 and T1134
+        // are canonical Privilege Escalation only.
+        "T1068" => "Privilege Escalation",
+
         _ => "Unmapped",
     }
 }
@@ -907,21 +993,47 @@ mod tests {
     }
 
     #[test]
-    fn strata_report_tool_version_matches_cargo_pkg_version() {
-        // Sprint 6.5 tripwire for finding G14. Tool version is
-        // baked at compile time via env!("CARGO_PKG_VERSION") and
-        // cannot drift from the shipping version.
-        let expected = env!("CARGO_PKG_VERSION");
-        assert_eq!(STRATA_VERSION, expected);
-        // Header and certification block must both reference it.
-        let md = render_markdown(&CaseMetadata::default(), "Test", &[]);
+    fn strata_report_tool_version_is_workspace_release_string() {
+        // Sprint 7 tripwire replacing the Sprint 6.5 version-
+        // from-cargo-pkg-version assertion. Finding P2-F1: the
+        // Sprint 6.5 fix read `env!("CARGO_PKG_VERSION")` which
+        // yielded the CLI crate's OWN Cargo version ("0.1.0"),
+        // not Strata's workspace release. Examiners seeing
+        // "version 0.1.0" on a courtroom report would read it
+        // as alpha software.
+        //
+        // The STRATA_VERSION constant is now an explicit release
+        // string ("v0.16.0" at Sprint 7 time). Bumping it when
+        // tagging is a manual release step tracked separately.
+        // This test pins the release-shape ("vMAJOR.MINOR.PATCH")
+        // and the header + cert presence but doesn't assert a
+        // specific numeric value that would force a test update
+        // on every release.
         assert!(
-            md.contains(&format!("| Strata version | {} |", expected)),
-            "report header must cite Strata version {expected}"
+            STRATA_VERSION.starts_with('v'),
+            "STRATA_VERSION must be a release tag string starting with 'v', \
+             got {STRATA_VERSION:?}"
         );
         assert!(
-            md.contains(&format!("(version `{}`)", expected)),
-            "examiner certification must cite Strata version {expected}"
+            STRATA_VERSION.chars().filter(|c| *c == '.').count() >= 2,
+            "STRATA_VERSION must carry at least two dots (vMAJOR.MINOR.PATCH), \
+             got {STRATA_VERSION:?}"
+        );
+        assert_ne!(
+            STRATA_VERSION, "v0.1.0",
+            "STRATA_VERSION must not regress to the CLI crate's Cargo default — \
+             that's the exact Sprint 6 / Sprint 7 P2-F1 bug"
+        );
+        // Header and certification block must both reference the
+        // current release string.
+        let md = render_markdown(&CaseMetadata::default(), "Test", &[]);
+        assert!(
+            md.contains(&format!("| Strata version | {} |", STRATA_VERSION)),
+            "report header must cite {STRATA_VERSION}"
+        );
+        assert!(
+            md.contains(&format!("(version `{}`)", STRATA_VERSION)),
+            "examiner certification must cite {STRATA_VERSION}"
         );
     }
 

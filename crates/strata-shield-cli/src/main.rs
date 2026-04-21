@@ -2113,10 +2113,7 @@ enum Commands {
     Unallocated(commands::unallocated::UnallocatedArgs),
     Filetable(commands::filetable::FiletableArgs),
     Worker(commands::worker::WorkerArgs),
-    /// Generate a court-ready examiner report from a Strata
-    /// case directory (post-v16 Sprint 6.5 replacement for
-    /// `report-skeleton`). Reads `<case-dir>/artifacts.sqlite`
-    /// + `<case-dir>/case-metadata.json` directly.
+    /// Generate a court-ready examiner report from a Strata case directory.
     Report(commands::report::ReportArgs),
     ReportSkeleton(commands::report_skeleton::ReportSkeletonArgs),
     Score(commands::score::ScoreArgs),

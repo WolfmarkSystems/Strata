@@ -197,6 +197,11 @@ impl StrataPlugin for SigmaPlugin {
                 "Phantom found a new USB device, Chronicle found recent file access activity, and Remnant found file deletion. This is a classic USB-based data exfiltration sequence.",
             );
             a.add_field("file_type", "Sigma Rule");
+            // Sprint 7 finding P2-F4: rule had no mitre attr so the
+            // report's Finding 1 rendered no MITRE line while
+            // persistence rules 36-41 did. T1052.001 (Exfiltration
+            // Over Physical Medium: USB) is the canonical technique.
+            a.add_field("mitre", "T1052.001");
             a.add_field("suspicious", "true");
             results.push(a);
         }
@@ -1223,6 +1228,18 @@ impl StrataPlugin for SigmaPlugin {
                 "Kill Chain Coverage" => ForensicValue::High,
                 "Sigma Notice" => ForensicValue::Informational,
                 "Sigma Error" => ForensicValue::Low,
+                // Sprint 7 finding P2-F3: Sigma rule firings
+                // rendered "Severity: Medium" in the report.
+                // `RULE FIRED:` records are cross-artifact
+                // correlations that bubbled an artifact past
+                // multiple plugins' thresholds — they are
+                // categorically more severe than plain plugin
+                // records. Upgrade every rule firing to Critical
+                // so the downstream report surfaces them with
+                // appropriate weight. Rules set suspicious=true
+                // unconditionally; this just aligns the
+                // forensic_value to match.
+                "Sigma Rule" => ForensicValue::Critical,
                 _ => ForensicValue::Medium,
             };
 
@@ -1242,7 +1259,16 @@ impl StrataPlugin for SigmaPlugin {
                     .unwrap_or_default(),
                 source_path: artifact.source.clone(),
                 forensic_value,
-                mitre_technique: None,
+                // Sprint 7 finding P2-F4 (part 2): Sigma rule
+                // firings set `a.add_field("mitre", "T1547.014")`
+                // and similar on individual rules, but execute()
+                // hardcoded mitre_technique: None — so the report
+                // Findings section rendered every MITRE line as
+                // absent. Thread the field through so downstream
+                // consumers (report generator, hunt/kill_chain
+                // cross-reference) can correlate findings to the
+                // ATT&CK coverage section.
+                mitre_technique: artifact.data.get("mitre").cloned(),
                 is_suspicious,
                 raw_data: None,
                 confidence: 0,
