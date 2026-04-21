@@ -1326,7 +1326,23 @@ impl StrataPlugin for RemnantPlugin {
 
             records.push(ArtifactRecord {
                 category,
-                subcategory: format!("Carved {}", file_type),
+                // Sprint 5 Fix 3: trim trailing space when file_type is
+                // empty. Prior emissions were the literal string
+                // "Carved " (with trailing space) when the carver
+                // couldn't classify the signature — which broke
+                // downstream Sigma rule 1 keying on `subcategory
+                // .contains("Recycle")/"USN"` because "Carved " didn't
+                // match either and the trailing space was invisible in
+                // reports. Now emits "Carved" (no trailing space) when
+                // file_type is empty, "Carved <file_type>" otherwise.
+                // Sigma rule 1 's predicate is widened in a companion
+                // change to also match "Carved" substring, so deletion-
+                // via-carving signals reach the USB Exfil rule.
+                subcategory: if file_type.is_empty() {
+                    "Carved".to_string()
+                } else {
+                    format!("Carved {}", file_type)
+                },
                 timestamp: artifact.timestamp.map(|t| t as i64),
                 title: artifact
                     .data
@@ -1370,6 +1386,117 @@ impl StrataPlugin for RemnantPlugin {
             },
             warnings: vec![],
         })
+    }
+}
+
+// ── post-v16 Sprint 5 tripwires — Carved subcategory fix ──
+
+#[cfg(test)]
+mod sprint5_remnant_tests {
+    /// Local helper mirroring the production subcategory formatter.
+    /// If the production expression in lib.rs changes, this helper
+    /// must be updated in lockstep; the two tests below verify the
+    /// helper produces the expected output on both branches and the
+    /// `remnant_subcategory_format_matches_production` test source-
+    /// inspects lib.rs to ensure the production expression hasn't
+    /// drifted.
+    fn carved_subcategory(file_type: &str) -> String {
+        if file_type.is_empty() {
+            "Carved".to_string()
+        } else {
+            format!("Carved {}", file_type)
+        }
+    }
+
+    #[test]
+    fn remnant_emits_carved_without_trailing_space_on_empty_file_type() {
+        // Sprint 5 Fix 3 tripwire. Pre-Sprint-5 Remnant's subcategory
+        // was `format!("Carved {}", file_type)` which produced the
+        // literal string "Carved " (with trailing space) when
+        // file_type was empty. The Sprint 1 inventory documented
+        // this twice on Charlie + Jo. Post-Sprint-5 empty file_type
+        // produces "Carved" without trailing space.
+        //
+        // Sigma rule 1 (USB Exfiltration) keys on
+        // `subcategory.contains("Recycle")/"USN"/"Carved"` — the
+        // "Carved" substring match was added in a companion Sigma
+        // change so deletion-via-carving signals reach the rule.
+        // The trailing space silently defeated substring matching
+        // in ad-hoc examiner searches too.
+        assert_eq!(carved_subcategory(""), "Carved");
+        assert_ne!(
+            carved_subcategory(""), "Carved ",
+            "Remnant must not emit trailing-space 'Carved ' subcategory — \
+             the Sprint 5 trim fix has regressed."
+        );
+    }
+
+    #[test]
+    fn remnant_preserves_carved_with_file_type_suffix() {
+        // Regression guard on the non-empty branch. When file_type
+        // is populated (e.g., "JPEG", "PDF") subcategory must
+        // remain "Carved <file_type>" — the trim only affects the
+        // empty-file_type path.
+        assert_eq!(carved_subcategory("JPEG"), "Carved JPEG");
+        assert_eq!(carved_subcategory("PDF"), "Carved PDF");
+        assert_eq!(carved_subcategory("Microsoft Office Document"), "Carved Microsoft Office Document");
+    }
+
+    #[test]
+    fn remnant_subcategory_format_matches_production() {
+        // Pin production lib.rs source to match the helper above.
+        // If someone reverts to `format!("Carved {}", file_type)`
+        // without the empty-string branch, this test fails loudly.
+        let src = include_str!("lib.rs");
+        // Must NOT contain the bare `format!("Carved {}", file_type),`
+        // pattern without a preceding is_empty() guard.
+        let production = src.split("#[cfg(test)]").next().expect("has production");
+        assert!(
+            production.contains("if file_type.is_empty()"),
+            "Remnant production code must use the is_empty() guard when emitting \
+             the Carved subcategory. Without it, empty file_type regresses to \
+             the 'Carved ' trailing-space form."
+        );
+        assert!(
+            production.contains("\"Carved\".to_string()"),
+            "Remnant production code must produce the bare 'Carved' string on \
+             the empty-file_type branch"
+        );
+    }
+
+    #[test]
+    fn remnant_utility_submodules_remain_unused_pending_carver_refactor() {
+        // Remnant audit: `regions.rs` (coalesce_regions /
+        // offset_regions / RegionSet / RegionSummary) and
+        // `signatures.rs` (get_default_signatures / find_signature
+        // / CarveSignature / CarvedHit) are utility libraries the
+        // current in-lib.rs carver doesn't consume. They compile
+        // and pass their own unit tests.
+        //
+        // The lib.rs carver was written before these submodules
+        // stabilized; wiring them is a refactor (replace the
+        // inline signature table with signatures::get_default_signatures()
+        // + coalesce hit offsets via regions::coalesce_regions) not
+        // a new feature. Multi-session scope.
+        //
+        // This tripwire pins the current unused state. When the
+        // carver refactor lands, update the test with a commit
+        // message noting "remnant regions/signatures consumed in
+        // [commit]." The `_pending_carver_refactor` suffix flags
+        // the deferral.
+        let src = include_str!("lib.rs");
+        let production = src.split("#[cfg(test)]").next().expect("has production");
+        for (module, needle) in [
+            ("regions", "crate::regions::"),
+            ("signatures", "crate::signatures::"),
+        ] {
+            assert!(
+                !production.contains(needle),
+                "{module} is a utility library awaiting a carver refactor; production \
+                 code must not currently invoke it. If wiring landed, update this \
+                 tripwire."
+            );
+        }
     }
 }
 

@@ -173,9 +173,22 @@ impl StrataPlugin for SigmaPlugin {
         let chron_recent = all_records
             .iter()
             .any(|r| r.subcategory == "Recent Files" || r.subcategory == "OpenSavePidlMRU");
-        let remnant_delete = all_records
-            .iter()
-            .any(|r| r.subcategory.contains("Recycle") || r.subcategory.contains("USN"));
+        // Sprint 5 Fix 3 widening. Remnant's primary deletion-
+        // evidence subcategory is "Carved" / "Carved <file_type>"
+        // (file-signature carving of recovered deleted content),
+        // alongside the less-frequent Recycle-bin and USN-Journal
+        // subcategories. Pre-Sprint-5 the predicate matched only
+        // Recycle + USN; the carver records — which dominate
+        // Remnant's emission on real evidence — silently missed
+        // the USB Exfiltration rule and the AV Evasion rule.
+        // Widening to match "Carved" as a third substring closes
+        // the gap without risking false positives: "Carved" only
+        // appears in Remnant-emitted deletion subcategories.
+        let remnant_delete = all_records.iter().any(|r| {
+            r.subcategory.contains("Recycle")
+                || r.subcategory.contains("USN")
+                || r.subcategory.contains("Carved")
+        });
         if phantom_usb && chron_recent && remnant_delete {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: USB Exfiltration Sequence");
@@ -1903,6 +1916,81 @@ mod tests {
                 .iter()
                 .any(|t| t == "RULE FIRED: Anti-Forensics — Log Cleared"),
             "Rule 7 must fire on a typed EVTX-1102 subcategory record; got: {all_titles:?}"
+        );
+    }
+
+    #[test]
+    fn sigma_rule_1_matches_carved_subcategory_post_sprint5_widening() {
+        // Sprint 5 Fix 3 companion tripwire. Rule 1 (USB
+        // Exfiltration) and Rule 3 (AV Evasion) both consume
+        // `remnant_delete`, which Sprint 5 widened to include the
+        // "Carved" substring so Remnant's carver-emitted
+        // subcategories reach the predicate.
+        //
+        // Fixture: build the three inputs Rule 1 needs — USB
+        // Device (Phantom), Recent Files (Chronicle), and a
+        // Remnant record with subcategory "Carved PDF". Rule 1
+        // must fire.
+        let usb = ArtifactRecord {
+            category: ArtifactCategory::NetworkArtifacts,
+            subcategory: "USB Device".to_string(),
+            timestamp: Some(0),
+            title: "USB Device: Kingston DataTraveler".to_string(),
+            detail: "VID_0951&PID_1666".to_string(),
+            source_path: "HKLM\\SYSTEM\\ControlSet001\\Enum\\USBSTOR".to_string(),
+            forensic_value: ForensicValue::High,
+            mitre_technique: Some("T1091".to_string()),
+            is_suspicious: false,
+            raw_data: None,
+            confidence: 0,
+        };
+        let recent = ArtifactRecord {
+            category: ArtifactCategory::UserActivity,
+            subcategory: "Recent Files".to_string(),
+            timestamp: Some(0),
+            title: "secrets.xlsx".to_string(),
+            detail: "/Users/alice/Recent/secrets.xlsx.lnk".to_string(),
+            source_path: "Chronicle synthetic".to_string(),
+            forensic_value: ForensicValue::Medium,
+            mitre_technique: None,
+            is_suspicious: false,
+            raw_data: None,
+            confidence: 0,
+        };
+        let carved = ArtifactRecord {
+            category: ArtifactCategory::SystemActivity,
+            subcategory: "Carved PDF".to_string(),
+            timestamp: Some(0),
+            title: "Carved PDF at 0x1000".to_string(),
+            detail: "PDF magic header carved from unallocated space".to_string(),
+            source_path: "Remnant synthetic".to_string(),
+            forensic_value: ForensicValue::Critical,
+            mitre_technique: Some("T1070.004".to_string()),
+            is_suspicious: true,
+            raw_data: None,
+            confidence: 0,
+        };
+        let output = PluginOutput {
+            plugin_name: "Synthetic".to_string(),
+            plugin_version: "1.0.0".to_string(),
+            executed_at: String::new(),
+            duration_ms: 0,
+            artifacts: vec![usb, recent, carved],
+            summary: PluginSummary {
+                total_artifacts: 3,
+                suspicious_count: 1,
+                categories_populated: vec!["SystemActivity".to_string()],
+                headline: "synthetic".to_string(),
+            },
+            warnings: vec![],
+        };
+        let titles = run_sigma_all_titles(vec![output]);
+        assert!(
+            titles
+                .iter()
+                .any(|t| t == "RULE FIRED: USB Exfiltration Sequence"),
+            "Rule 1 must fire on USB + Recent + Carved — Sprint 5 widened the \
+             predicate to include 'Carved' substring. Titles: {titles:?}"
         );
     }
 
