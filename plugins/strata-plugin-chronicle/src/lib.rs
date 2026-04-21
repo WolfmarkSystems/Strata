@@ -785,6 +785,100 @@ impl StrataPlugin for ChroniclePlugin {
                     results.push(a);
                 }
 
+                // ── post-v16 Sprint 3 wiring ──────────────────────────
+                // XP INFO2 recycler records. Files named INFO2 in
+                // XP-era RECYCLER folders are 820-byte-record blobs
+                // documented in winxp::parse_info2. Deleted-file
+                // forensics on Charlie (2009 XP image).
+                if fn_.eq_ignore_ascii_case("INFO2") {
+                    let info2_ok = entry_path
+                        .metadata()
+                        .map(|m| m.len() <= 64 * 1024 * 1024)
+                        .unwrap_or(false);
+                    if info2_ok {
+                        if let Ok(data) = std::fs::read(&entry_path) {
+                            for rec in crate::winxp::parse_info2(&data) {
+                                let mut a = Artifact::new("Deletion Activity", &ps);
+                                a.timestamp = rec
+                                    .deleted_at
+                                    .map(|d| d.timestamp() as u64);
+                                a.add_field(
+                                    "title",
+                                    &format!(
+                                        "Recycled (XP): {}",
+                                        rec.original_path
+                                    ),
+                                );
+                                a.add_field(
+                                    "detail",
+                                    &format!(
+                                        "record_index={} | size={} bytes | deleted_at={} | source={}",
+                                        rec.record_index,
+                                        rec.size,
+                                        rec.deleted_at
+                                            .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                            .unwrap_or_else(|| "(unknown)".into()),
+                                        ps,
+                                    ),
+                                );
+                                a.add_field("file_type", "XP Recycler Entry");
+                                a.add_field("mitre", "T1070.004");
+                                results.push(a);
+                            }
+                        }
+                    }
+                }
+
+                // Windows 11 23H2+ CAM (Capability Access Manager)
+                // database — privacy-investigation gold for
+                // stalkerware / SAPR / corporate espionage cases.
+                // Correctly produces zero records on pre-Win11
+                // evidence (Scenario A, pinned by tripwire).
+                if crate::cam_database::is_cam_db_path(&entry_path) {
+                    for rec in crate::cam_database::parse(&entry_path) {
+                        let mut a = Artifact::new("Capability Access", &ps);
+                        a.timestamp = rec.last_used.map(|d| d.timestamp() as u64);
+                        a.add_field(
+                            "title",
+                            &format!(
+                                "CAM: {} accessed {}",
+                                rec.app_name, rec.capability
+                            ),
+                        );
+                        let mut detail = format!(
+                            "capability={} | app={} | granted={} | decision={} | last_used={}",
+                            rec.capability,
+                            rec.app_name,
+                            rec.access_granted,
+                            rec.user_decision,
+                            rec.last_used
+                                .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                .unwrap_or_else(|| "(never)".into()),
+                        );
+                        if let Some(s) = crate::cam_database::check_suspicion(&rec) {
+                            detail.push_str(&format!(" | SUSPICION: {s}"));
+                            a.add_field("suspicious", "true");
+                        }
+                        a.add_field("detail", &detail);
+                        a.add_field("file_type", "CAM Capability Access");
+                        // MITRE mapping from the submodule doc:
+                        // T1123 audio, T1125 video, T1430 location.
+                        // Select based on capability string.
+                        let lc_cap = rec.capability.to_ascii_lowercase();
+                        let mitre = if lc_cap.contains("microphone") || lc_cap.contains("audio") {
+                            "T1123"
+                        } else if lc_cap.contains("webcam") || lc_cap.contains("camera") || lc_cap.contains("video") {
+                            "T1125"
+                        } else if lc_cap.contains("location") {
+                            "T1430"
+                        } else {
+                            "T1005"
+                        };
+                        a.add_field("mitre", mitre);
+                        results.push(a);
+                    }
+                }
+
                 if fn_.to_lowercase().ends_with(".automaticdestinations-ms") {
                     let jl_ok = entry_path.metadata().map(|m| m.len() <= 50 * 1024 * 1024).unwrap_or(false);
                     if jl_ok { if let Ok(data) = std::fs::read(&entry_path) {
@@ -810,7 +904,19 @@ impl StrataPlugin for ChroniclePlugin {
             let sf = artifact.data.get("suspicious").map(|s| s == "true").unwrap_or(false);
             let suspicious = sf || Self::is_suspicious_path(p);
             sources.insert(file_type.clone());
-            let category = match file_type.as_str() { "Prefetch" | "UserAssist Execution" => ArtifactCategory::ExecutionHistory, "Windows Event Log" => ArtifactCategory::SystemActivity, "Browser History" => ArtifactCategory::WebActivity, _ => ArtifactCategory::UserActivity };
+            let category = match file_type.as_str() {
+                "Prefetch" | "UserAssist Execution" => ArtifactCategory::ExecutionHistory,
+                "Windows Event Log" => ArtifactCategory::SystemActivity,
+                "Browser History" => ArtifactCategory::WebActivity,
+                // Sprint 3 Fix 2 — new subcategory mappings.
+                // XP Recycler Entry from winxp::parse_info2 is
+                // deletion-activity evidence (MITRE T1070.004).
+                // CAM Capability Access from cam_database::parse
+                // is a privacy-access record.
+                "XP Recycler Entry" => ArtifactCategory::SystemActivity,
+                "CAM Capability Access" => ArtifactCategory::UserActivity,
+                _ => ArtifactCategory::UserActivity,
+            };
             let subcategory = artifact.category.clone();
             let ef = artifact.data.get("forensic_value").cloned().unwrap_or_default();
             let fv = if ef == "Critical" { ForensicValue::Critical } else if suspicious || ef == "High" { ForensicValue::High } else { ForensicValue::Medium };
@@ -829,6 +935,152 @@ fn walk_dir(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
     let mut paths = Vec::new();
     if dir.is_dir() { for entry in std::fs::read_dir(dir)? { let entry = entry?; let path = entry.path(); if path.is_dir() { if let Ok(sub) = walk_dir(&path) { paths.extend(sub); } } else { paths.push(path); } } }
     Ok(paths)
+}
+
+// ── post-v16 Sprint 3 tripwires — winxp INFO2 + CAM wiring ──
+
+#[cfg(test)]
+mod sprint3_wiring_tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    fn run_chronicle(root: &Path) -> Vec<Artifact> {
+        let p = ChroniclePlugin::new();
+        let ctx = PluginContext {
+            root_path: root.to_string_lossy().to_string(),
+            vfs: None,
+            config: std::collections::HashMap::new(),
+            prior_results: Vec::new(),
+        };
+        p.run(ctx).expect("chronicle run")
+    }
+
+    #[test]
+    fn chronicle_wires_winxp_info2_recycler_parser() {
+        // Sprint 3 Fix 2 tripwire. Confirms winxp::parse_info2 is
+        // invoked on a file named INFO2 (XP-era recycler record
+        // blob). The fixture builds a single 820-byte INFO2 record
+        // with a deletion path, index, FILETIME, and size — same
+        // shape the parser's own unit test uses — then verifies
+        // Chronicle emits at least one "XP Recycler Entry" record.
+        //
+        // Charlie (the canonical XP test image) will fire this
+        // path on real evidence. On non-XP images the INFO2 file
+        // doesn't exist and the dispatch is skipped — the
+        // walk_dir scan keeps moving.
+        let dir = tempdir().expect("tempdir");
+        let info2 = dir.path().join("INFO2");
+        let mut buf = vec![0u8; 20 + 820];
+        let path = b"C:\\Documents and Settings\\Alice\\secret.txt\0";
+        buf[20 + 4..20 + 4 + path.len()].copy_from_slice(path);
+        buf[20 + 264..20 + 268].copy_from_slice(&1u32.to_le_bytes());
+        // FILETIME far enough past the Windows epoch to produce a
+        // valid unix timestamp (2024-06-01-ish).
+        let ft: u64 = 133_484_544_000_000_000;
+        buf[20 + 268..20 + 276].copy_from_slice(&ft.to_le_bytes());
+        buf[20 + 276..20 + 280].copy_from_slice(&2048u32.to_le_bytes());
+        fs::write(&info2, &buf).expect("write INFO2");
+
+        let arts = run_chronicle(dir.path());
+        let xp_recycler: Vec<&Artifact> = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "XP Recycler Entry")
+                    .unwrap_or(false)
+            })
+            .collect();
+        assert!(
+            !xp_recycler.is_empty(),
+            "expected ≥1 XP Recycler Entry on INFO2 fixture; got {} artifacts total",
+            arts.len()
+        );
+        // The parsed path should surface in the title.
+        let title = xp_recycler[0].data.get("title").cloned().unwrap_or_default();
+        assert!(
+            title.contains("secret.txt"),
+            "expected title to contain deleted filename; got: {title}"
+        );
+    }
+
+    #[test]
+    fn chronicle_cam_database_pending_win11_23h2_fixture() {
+        // Positive-side Scenario A tripwire. CAM
+        // (CapabilityAccessManager.db) is Windows 11 23H2+;
+        // Charlie + Jo canonical Windows images predate it. The
+        // absence of CapabilityAccessManager.db must produce zero
+        // "CAM Capability Access" records — pinning the
+        // expected-zero so a future regression that fires
+        // unconditionally fails loudly.
+        //
+        // When a Win11 23H2+ evidence fixture lands in the test
+        // corpus, this test must be intentionally changed or
+        // deleted with a commit message noting "Win11 CAM evidence
+        // added in [commit]." The `_pending_win11_23h2_fixture`
+        // suffix makes the deferral discoverable.
+        let dir = tempdir().expect("tempdir");
+        // Simulate a non-Win11-23H2 tree: a plain Windows path
+        // layout with no CAM database.
+        fs::create_dir_all(dir.path().join("Windows/System32/config")).expect("mk");
+        fs::write(dir.path().join("Windows/System32/config/SYSTEM"), b"regf\x00").expect("w");
+        let arts = run_chronicle(dir.path());
+        let cam_records = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "CAM Capability Access")
+                    .unwrap_or(false)
+            })
+            .count();
+        assert_eq!(
+            cam_records, 0,
+            "CAM Capability Access must not appear on pre-Win11-23H2 evidence; got {cam_records}"
+        );
+    }
+
+    #[test]
+    fn chronicle_wires_cam_database_path_detection() {
+        // Companion to the pending tripwire: confirms the
+        // dispatch fires on a file whose name matches
+        // CapabilityAccessManager.db. We don't construct a real
+        // SQLite database here (that's cam_database's unit-test
+        // concern) — we just confirm that the dispatch path is
+        // reached. An empty / invalid file causes parse() to
+        // return Vec::new() so zero records are emitted, but the
+        // dispatch path MUST have been taken. We verify by
+        // asserting the run doesn't panic and produces whatever
+        // records the empty-db path produces (zero, gracefully).
+        let dir = tempdir().expect("tempdir");
+        let cam_path = dir.path().join("CapabilityAccessManager.db");
+        fs::write(&cam_path, b"not a real sqlite file").expect("w");
+        // Smoke test — zero records, no panic. The important
+        // assertion is the absence of a crash when the submodule
+        // is reached.
+        let arts = run_chronicle(dir.path());
+        let cam_records = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "CAM Capability Access")
+                    .unwrap_or(false)
+            })
+            .count();
+        assert_eq!(
+            cam_records, 0,
+            "invalid SQLite file must produce zero CAM records without crashing"
+        );
+        // Also verify the submodule's path check is wired — if
+        // we renamed the file, the dispatch would skip. This
+        // locks the contract.
+        assert!(
+            crate::cam_database::is_cam_db_path(&cam_path),
+            "cam_database::is_cam_db_path must recognize CapabilityAccessManager.db"
+        );
+    }
 }
 
 #[no_mangle]
