@@ -4078,7 +4078,9 @@ fn walk_dir(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
 
 #[cfg(test)]
 mod sprint5_wiring_tests {
-    use super::*;
+    // Tests below all source-inspect via include_str! rather than
+    // exercising types from super::*. Any future test that needs
+    // the parent module's types should re-add `use super::*;`.
 
     /// Source-inspection tripwires pinning the seven Sprint 5
     /// dispatch call sites. Each verifies Phantom's run() still

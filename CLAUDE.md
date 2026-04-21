@@ -4,9 +4,11 @@ Strata is a Rust/Tauri digital forensics platform for court-ready evidence analy
 
 ---
 
-## Key numbers (post-v0.16 Sessions A–D, 2026-04-20)
+## Key numbers (post-v0.16 Sprint 7 demo rehearsal, 2026-04-21)
 
-- **Test count:** 3,845 passing across `cargo test --workspace` (3,836 v0.16.0 baseline + 9 new Session C tripwires — 4 FileVault + 2 DETECT-1 + 2 materialize + 1 retargeted)
+- **Test count:** 3,896 passing across `cargo test --workspace` (3,836 v0.16.0 baseline + 60 tripwires across Sessions A–D + Sprints 1–7)
+- **Charlie end-to-end demo output:** 3,756 artifacts extracted, 7 Sigma findings fire (USB Exfiltration + 6 persistence techniques — Active Setup / Winlogon / BHO / IFEO / Boot Execute / Shell Execute Hook), 42 distinct MITRE ATT&CK techniques surface with tactic mapping.
+- **Examiner-facing report command:** `strata report --case-dir <path>` — consumes plugin SQLite + case metadata directly, renders 7 sections (Evidence Integrity, Findings, MITRE ATT&CK Coverage, Per-Plugin Summary, Chain of Custody, Examiner Certification, Limitations). Replaced legacy `report-skeleton` (retired in Sprint 6.5 after producing all-zero reports against the wrong database schema).
 - **Filesystem walkers live through the dispatcher:**
   - NTFS (since v11, `strata-fs::ntfs_walker`)
   - ext2/ext3/ext4 (v15 Session B, wraps `ext4-view = 0.9`)
