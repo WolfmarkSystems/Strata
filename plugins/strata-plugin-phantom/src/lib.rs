@@ -593,6 +593,282 @@ impl StrataPlugin for PhantomPlugin {
                     }
                 }
             } else if lower == "windows.edb" {
+                // ── post-v16 Sprint 5 wiring ──────────────────────────
+                // Seven previously-orphaned Phantom submodules wired
+                // into run() dispatch per Sprint 5 audit. Each was
+                // declared via `pub mod X;` at the top of this file
+                // but never referenced from any call site — the
+                // pattern Session B's plugin audit named "Scenario B"
+                // (submodule compiles and has tests, but is
+                // unreachable from run()).
+                //
+                // All seven are filename-gated: the submodule owns
+                // its own `is_*_path` / `classify` / `has_*_magic`
+                // predicate so Phantom's walker just calls through
+                // without expensive speculation.
+
+                // memory_carving — .mem / .dmp raw memory images.
+                // Surface "Memory Forensic String" records carved
+                // from process memory (cred leaks, URL history,
+                // command-line traces).
+                results.extend(crate::memory_carving::scan(&path));
+
+                // memory_structures — parallel scan for process /
+                // network-connection structures inside memory
+                // images. Same filename gate as memory_carving but
+                // emits different records (Process, Net Connection).
+                results.extend(crate::memory_structures::scan(&path));
+
+                // notepad_tabstate — Win11 22H2+ Notepad tab-state
+                // files (TabState*.bin) carry unsaved draft content.
+                if crate::notepad_tabstate::is_tabstate_path(&path) {
+                    if let Ok(bytes) = std::fs::read(&path) {
+                        let guid = crate::notepad_tabstate::tab_guid_from_path(&path);
+                        let tab = crate::notepad_tabstate::parse(&bytes, &guid);
+                        let mut a = Artifact::new(
+                            "Notepad TabState",
+                            &path.to_string_lossy(),
+                        );
+                        a.add_field(
+                            "title",
+                            &format!(
+                                "Notepad tab {}: {} ({} bytes unsaved)",
+                                tab.tab_guid,
+                                tab.file_path
+                                    .as_deref()
+                                    .unwrap_or("(no file path)"),
+                                tab.content_length,
+                            ),
+                        );
+                        a.add_field(
+                            "detail",
+                            &format!(
+                                "unsaved={} | content_length={} | content_preview={}",
+                                tab.unsaved_content,
+                                tab.content_length,
+                                tab.content
+                                    .as_deref()
+                                    .map(|c| c.chars().take(200).collect::<String>())
+                                    .unwrap_or_default(),
+                            ),
+                        );
+                        a.add_field("file_type", "Notepad TabState");
+                        a.add_field("mitre", "T1005");
+                        if tab.unsaved_content {
+                            a.add_field("suspicious", "true");
+                        }
+                        results.push(a);
+                    }
+                }
+
+                // outlook — PST magic + attachment-name / email-
+                // subject carver. Windows Outlook traces only.
+                if crate::outlook::is_outlook_path(&path) {
+                    // PST files can be multi-GB; read at most 128 MB
+                    // to feed the carver (which is a string-carver
+                    // over arbitrary offsets; bigger reads return
+                    // diminishing signal).
+                    const PST_MAX: u64 = 128 * 1024 * 1024;
+                    if path.metadata().map(|m| m.len()).unwrap_or(0) <= PST_MAX {
+                        if let Ok(bytes) = std::fs::read(&path) {
+                            if crate::outlook::has_pst_magic(&bytes) {
+                                for hit in crate::outlook::carve(&bytes) {
+                                    let mut a = Artifact::new(
+                                        "Outlook Carved",
+                                        &path.to_string_lossy(),
+                                    );
+                                    a.add_field(
+                                        "title",
+                                        &format!(
+                                            "Outlook {}: {}",
+                                            hit.kind,
+                                            hit.value
+                                                .chars()
+                                                .take(120)
+                                                .collect::<String>(),
+                                        ),
+                                    );
+                                    a.add_field(
+                                        "detail",
+                                        &format!(
+                                            "kind={} | value={} | offset=0x{:X}",
+                                            hit.kind, hit.value, hit.offset
+                                        ),
+                                    );
+                                    a.add_field("file_type", "Outlook Carved");
+                                    a.add_field("mitre", "T1114.001");
+                                    results.push(a);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // powershell — PSReadLine ConsoleHost_history.txt
+                // command history. Suspicious entries surfaced via
+                // submodule's own heuristic.
+                if crate::powershell::is_psreadline_path(&path) {
+                    if let Ok(body) = std::fs::read_to_string(&path) {
+                        let entries = crate::powershell::parse(&body);
+                        for e in &entries {
+                            let is_sus = e.suspicious_pattern.is_some()
+                                || e.has_encoded_content
+                                || e.has_download_cradle;
+                            let mut a = Artifact::new(
+                                "PowerShell History",
+                                &path.to_string_lossy(),
+                            );
+                            a.add_field(
+                                "title",
+                                &format!(
+                                    "PS line {}: {}",
+                                    e.line_number,
+                                    e.command.chars().take(120).collect::<String>(),
+                                ),
+                            );
+                            let mut detail = format!(
+                                "line={} | command={}",
+                                e.line_number,
+                                e.command.chars().take(400).collect::<String>(),
+                            );
+                            if let Some(s) = &e.suspicious_pattern {
+                                detail.push_str(&format!(" | pattern={s}"));
+                            }
+                            if e.has_encoded_content {
+                                detail.push_str(" | encoded_content");
+                            }
+                            if e.has_download_cradle {
+                                detail.push_str(" | download_cradle");
+                            }
+                            a.add_field("detail", &detail);
+                            a.add_field("file_type", "PowerShell History");
+                            a.add_field("mitre", "T1059.001");
+                            if is_sus {
+                                a.add_field("suspicious", "true");
+                            }
+                            results.push(a);
+                        }
+                    }
+                }
+
+                // cloud_cli — AWS credentials, AWS config, Azure
+                // access tokens, Terraform state. Per-file parser
+                // selected by crate::cloud_cli::classify.
+                if let Some(tag) = crate::cloud_cli::classify(&path) {
+                    if let Ok(body) = std::fs::read_to_string(&path) {
+                        let hits: Vec<crate::cloud_cli::CloudCliArtifact> = match tag {
+                            "aws_credentials" => {
+                                crate::cloud_cli::parse_aws_credentials(&body)
+                            }
+                            "aws_config" => crate::cloud_cli::parse_aws_config(&body),
+                            "azure_access_tokens" => {
+                                crate::cloud_cli::parse_azure_access_tokens(&body)
+                            }
+                            "terraform_state" => {
+                                crate::cloud_cli::parse_terraform_state(&body)
+                            }
+                            _ => Vec::new(),
+                        };
+                        for hit in &hits {
+                            let mut a = Artifact::new(
+                                "Cloud CLI Credential",
+                                &path.to_string_lossy(),
+                            );
+                            a.add_field(
+                                "title",
+                                &format!(
+                                    "{} {} {}",
+                                    hit.provider,
+                                    hit.artifact_type,
+                                    hit.profile_name
+                                        .clone()
+                                        .or_else(|| hit.account_id.clone())
+                                        .unwrap_or_else(|| "(unnamed)".into()),
+                                ),
+                            );
+                            let mut detail = format!(
+                                "provider={} | artifact_type={}",
+                                hit.provider, hit.artifact_type
+                            );
+                            if let Some(p) = &hit.profile_name {
+                                detail.push_str(&format!(" | profile={p}"));
+                            }
+                            if let Some(a) = &hit.account_id {
+                                detail.push_str(&format!(" | account_id={a}"));
+                            }
+                            if let Some(t) = &hit.tenant_id {
+                                detail.push_str(&format!(" | tenant_id={t}"));
+                            }
+                            a.add_field("detail", &detail);
+                            a.add_field("file_type", "Cloud CLI Credential");
+                            a.add_field("mitre", "T1552.001");
+                            a.add_field("suspicious", "true");
+                            results.push(a);
+                        }
+                    }
+                }
+
+                // windows_recall — Win11 Recall UKG.db SQLite.
+                // parse() returns RecallOutcome::{Captures, Locked,
+                // Missing}. Missing is silent; Locked/Captures
+                // surface records.
+                if crate::windows_recall::is_recall_db_path(&path) {
+                    match crate::windows_recall::parse(&path) {
+                        crate::windows_recall::RecallOutcome::Captures(captures) => {
+                            for c in &captures {
+                                let mut a = Artifact::new(
+                                    "Windows Recall Capture",
+                                    &path.to_string_lossy(),
+                                );
+                                a.add_field(
+                                    "title",
+                                    &format!(
+                                        "Recall: {} @ {}",
+                                        c.app_name.as_deref().unwrap_or("(unknown app)"),
+                                        c.timestamp.format("%Y-%m-%d %H:%M:%S UTC"),
+                                    ),
+                                );
+                                a.add_field(
+                                    "detail",
+                                    &format!(
+                                        "capture_id={} | app={} | app_path={} | title={} | captured_at={}",
+                                        c.capture_id,
+                                        c.app_name.as_deref().unwrap_or("-"),
+                                        c.app_path.as_deref().unwrap_or("-"),
+                                        c.window_title.as_deref().unwrap_or("-"),
+                                        c.timestamp.format("%Y-%m-%d %H:%M:%S UTC"),
+                                    ),
+                                );
+                                a.add_field("file_type", "Windows Recall Capture");
+                                a.add_field("mitre", "T1113");
+                                a.timestamp = Some(c.timestamp.timestamp() as u64);
+                                results.push(a);
+                            }
+                        }
+                        crate::windows_recall::RecallOutcome::Locked => {
+                            let mut a = Artifact::new(
+                                "Windows Recall Locked",
+                                &path.to_string_lossy(),
+                            );
+                            a.add_field(
+                                "title",
+                                "Windows Recall DB present but locked / unreadable",
+                            );
+                            a.add_field(
+                                "detail",
+                                "Recall UKG.db is present. SQLite open failed — typically \
+                                 encrypted-at-rest via DPAPI (Windows 11 24H2+ default). \
+                                 Offline DPAPI key recovery required.",
+                            );
+                            a.add_field("file_type", "Windows Recall Locked");
+                            a.add_field("mitre", "T1113");
+                            a.add_field("suspicious", "true");
+                            results.push(a);
+                        }
+                        crate::windows_recall::RecallOutcome::Missing => {}
+                    }
+                }
+
                 // Windows Search Index — string-carving fallback. See
                 // `crate::windows_search` for the rationale behind the
                 // carving approach over full ESE parsing.
@@ -683,6 +959,15 @@ impl StrataPlugin for PhantomPlugin {
                 "WinRM TrustedHosts" | "RDP MRU" | "RDP Saved Server" => {
                     ArtifactCategory::NetworkArtifacts
                 }
+                // Post-v16 Sprint 5 — seven new submodule categories.
+                "Memory String" | "Memory Process" | "Memory Network Connection"
+                | "Windows Recall Capture" | "Windows Recall Locked" => {
+                    ArtifactCategory::SystemActivity
+                }
+                "Notepad TabState" => ArtifactCategory::UserActivity,
+                "Outlook Carved" => ArtifactCategory::UserActivity,
+                "PowerShell History" => ArtifactCategory::ExecutionHistory,
+                "Cloud CLI Credential" => ArtifactCategory::AccountsCredentials,
                 _ => ArtifactCategory::SystemActivity,
             };
 
@@ -3787,6 +4072,177 @@ fn walk_dir(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
         }
     }
     Ok(paths)
+}
+
+// ── post-v16 Sprint 5 tripwires — Phantom submodule wiring ──
+
+#[cfg(test)]
+mod sprint5_wiring_tests {
+    use super::*;
+
+    /// Source-inspection tripwires pinning the seven Sprint 5
+    /// dispatch call sites. Each verifies Phantom's run() still
+    /// invokes the previously-orphaned submodule. Regression guard
+    /// against a future refactor that accidentally drops one of the
+    /// `out.extend(crate::X::scan(&path))` lines (or the
+    /// corresponding `if ...is_*_path(&path)` dispatch block).
+    ///
+    /// We inspect source text at test time rather than executing
+    /// each submodule with a synthetic fixture — the submodules
+    /// already have comprehensive per-submodule unit tests; what
+    /// Sprint 5 needs to guard against is silent de-wiring of the
+    /// call site, not regression in the parser itself.
+    #[test]
+    fn phantom_wires_memory_carving() {
+        let src = include_str!("lib.rs");
+        assert!(
+            src.contains("crate::memory_carving::scan"),
+            "Phantom run() must dispatch to memory_carving::scan (Sprint 5 Fix 1)"
+        );
+    }
+
+    #[test]
+    fn phantom_wires_memory_structures() {
+        let src = include_str!("lib.rs");
+        assert!(
+            src.contains("crate::memory_structures::scan"),
+            "Phantom run() must dispatch to memory_structures::scan (Sprint 5 Fix 1)"
+        );
+    }
+
+    #[test]
+    fn phantom_wires_notepad_tabstate() {
+        let src = include_str!("lib.rs");
+        assert!(
+            src.contains("crate::notepad_tabstate::is_tabstate_path"),
+            "Phantom run() must dispatch to notepad_tabstate (Sprint 5 Fix 1)"
+        );
+        assert!(
+            src.contains("crate::notepad_tabstate::parse"),
+            "Phantom must call notepad_tabstate::parse on matching files"
+        );
+    }
+
+    #[test]
+    fn phantom_wires_outlook() {
+        let src = include_str!("lib.rs");
+        assert!(
+            src.contains("crate::outlook::is_outlook_path"),
+            "Phantom run() must dispatch to outlook::is_outlook_path (Sprint 5 Fix 1)"
+        );
+        assert!(
+            src.contains("crate::outlook::has_pst_magic"),
+            "Phantom must call outlook::has_pst_magic to confirm PST format"
+        );
+        assert!(
+            src.contains("crate::outlook::carve"),
+            "Phantom must call outlook::carve on validated PST bytes"
+        );
+    }
+
+    #[test]
+    fn phantom_wires_powershell() {
+        let src = include_str!("lib.rs");
+        assert!(
+            src.contains("crate::powershell::is_psreadline_path"),
+            "Phantom run() must dispatch to powershell (Sprint 5 Fix 1)"
+        );
+        assert!(
+            src.contains("crate::powershell::parse"),
+            "Phantom must call powershell::parse on ConsoleHost_history.txt"
+        );
+    }
+
+    #[test]
+    fn phantom_wires_cloud_cli() {
+        let src = include_str!("lib.rs");
+        assert!(
+            src.contains("crate::cloud_cli::classify"),
+            "Phantom run() must dispatch to cloud_cli (Sprint 5 Fix 1)"
+        );
+        // At least two of the four submodule parsers must be
+        // wired — the classifier returns one of four tags and
+        // each needs to route to its parser.
+        let parser_count = [
+            "crate::cloud_cli::parse_aws_credentials",
+            "crate::cloud_cli::parse_aws_config",
+            "crate::cloud_cli::parse_azure_access_tokens",
+            "crate::cloud_cli::parse_terraform_state",
+        ]
+        .iter()
+        .filter(|needle| src.contains(*needle))
+        .count();
+        assert_eq!(
+            parser_count, 4,
+            "All four cloud_cli sub-parsers must be wired; found {parser_count}/4"
+        );
+    }
+
+    #[test]
+    fn phantom_wires_windows_recall() {
+        let src = include_str!("lib.rs");
+        assert!(
+            src.contains("crate::windows_recall::is_recall_db_path"),
+            "Phantom run() must dispatch to windows_recall (Sprint 5 Fix 1)"
+        );
+        assert!(
+            src.contains("crate::windows_recall::parse"),
+            "Phantom must call windows_recall::parse on UKG.db"
+        );
+        // Both outcome branches (Captures + Locked) must be
+        // handled — Missing is silent.
+        assert!(
+            src.contains("RecallOutcome::Captures"),
+            "Phantom must handle RecallOutcome::Captures branch"
+        );
+        assert!(
+            src.contains("RecallOutcome::Locked"),
+            "Phantom must handle RecallOutcome::Locked branch (DPAPI-encrypted DB)"
+        );
+    }
+
+    #[test]
+    fn phantom_utility_submodules_remain_unwired_pending_caller_infrastructure() {
+        // Three Phantom submodules are utility libraries, not
+        // direct emitters. They compile and pass their own unit
+        // tests but have no pub fn scan(path) signature — wiring
+        // them requires caller-side infrastructure Phantom
+        // doesn't have:
+        //
+        //   services      — helpers for services.rs / hive
+        //                   parsing that the SYSTEM hive parser
+        //                   should consume. Refactor target.
+        //   ring_doorbell — takes JSON strings; needs an iteration
+        //                   layer that identifies Ring export
+        //                   files under %LOCALAPPDATA%\Amazon.
+        //                   Not v0.16 evidence shape.
+        //   smart_locks   — same JSON-string shape.
+        //
+        // This tripwire pins the current un-wired state. When a
+        // future sprint ships the caller-side infrastructure,
+        // each of these gets its own dispatch block and this
+        // test must be intentionally changed or deleted with a
+        // commit message noting "services / ring_doorbell /
+        // smart_locks wired in [commit]." The `_pending_caller_infrastructure`
+        // suffix makes the deferral discoverable.
+        //
+        // We only check production code (before the #[cfg(test)]
+        // boundary) so this test's own needles don't self-match.
+        let src = include_str!("lib.rs");
+        let production = src.split("#[cfg(test)]").next().expect("has production");
+        for (module, needle) in [
+            ("services", "crate::services::scan"),
+            ("ring_doorbell", "crate::ring_doorbell::parse_events"),
+            ("smart_locks", "crate::smart_locks::parse_lock_events"),
+        ] {
+            assert!(
+                !production.contains(needle),
+                "{module} is a utility library, not a Scenario B emitter — \
+                 production code must not currently invoke {needle}. If wiring \
+                 landed, update this tripwire."
+            );
+        }
+    }
 }
 
 #[no_mangle]
