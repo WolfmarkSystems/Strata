@@ -646,8 +646,94 @@ impl StrataPlugin for TracePlugin {
                 // Registry Run key persistence
                 results.extend(Self::detect_run_keys(&entry_path, file_name));
 
-                // BITS job databases
+                // BITS job databases (surface-level + deep-parse).
+                // The surface-level detect_bits_jobs emits a single
+                // status record per qmgr file; the deep-parse path
+                // (post-v16 Sprint 3 wiring) walks the blob via
+                // crate::bits::parse_qmgr_binary and emits one
+                // BITS Transfer record per carved URL/destination/
+                // GUID tuple. Suspicion is surfaced via
+                // bits::check_suspicion (non-Microsoft source URLs,
+                // NotifyUrl present, user-writable destinations).
                 results.extend(Self::detect_bits_jobs(&entry_path, file_name));
+                if crate::bits::is_bits_path(&entry_path) {
+                    if let Ok(bytes) = std::fs::read(&entry_path) {
+                        for job in crate::bits::parse_qmgr_binary(&bytes) {
+                            let mut a = Artifact::new(
+                                "Execution",
+                                &entry_path.to_string_lossy(),
+                            );
+                            a.add_field("file_type", "BITS Transfer");
+                            a.add_field("category", "BITS Transfer");
+                            a.add_field(
+                                "title",
+                                &format!(
+                                    "BITS transfer: {} → {}",
+                                    job.source_url.as_deref().unwrap_or("(unknown url)"),
+                                    job.destination_path.as_deref().unwrap_or("(unknown dest)"),
+                                ),
+                            );
+                            let mut detail = format!("job_id={}", job.job_id);
+                            if let Some(u) = &job.source_url {
+                                detail.push_str(&format!(" | source_url={u}"));
+                            }
+                            if let Some(d) = &job.destination_path {
+                                detail.push_str(&format!(" | destination={d}"));
+                            }
+                            if let Some(s) = crate::bits::check_suspicion(&job) {
+                                detail.push_str(&format!(" | SUSPICION: {s}"));
+                                a.add_field("suspicious", "true");
+                            }
+                            a.add_field("detail", &detail);
+                            a.add_field("mitre", "T1197");
+                            results.push(a);
+                        }
+                    }
+                }
+
+                // PCA (Program Compatibility Assistant) execution
+                // log parser. Windows 11 22H2+ records executables
+                // that triggered compat shims in
+                // `C:\Windows\appcompat\pca\PcaAppLaunchDic.txt`
+                // and `PcaGeneralDb2.txt`. Charlie + Jo are XP/Win7
+                // — correctly produce zero records on these images
+                // (Scenario A, pinned by tripwire).
+                if crate::pca::is_pca_path(&entry_path) {
+                    if let Ok(body) = std::fs::read_to_string(&entry_path) {
+                        let name_lc = file_name.to_ascii_lowercase();
+                        let entries = if name_lc == "pcaapplaunchdic.txt" {
+                            crate::pca::parse_launch_dic(&body, file_name)
+                        } else {
+                            crate::pca::parse_general_db(&body, file_name)
+                        };
+                        for entry in entries {
+                            let mut a = Artifact::new(
+                                "Execution",
+                                &entry_path.to_string_lossy(),
+                            );
+                            a.add_field("file_type", "PCA Execution");
+                            a.add_field("category", "PCA Execution");
+                            a.add_field(
+                                "title",
+                                &format!("PCA: {}", entry.exe_name),
+                            );
+                            let mut detail = format!(
+                                "exe_path={} | last_executed={} | source={}",
+                                entry.exe_path,
+                                entry.last_executed.format("%Y-%m-%d %H:%M:%S UTC"),
+                                entry.source_file,
+                            );
+                            if let Some(s) = crate::pca::check_suspicion(&entry) {
+                                detail.push_str(&format!(" | SUSPICION: {s}"));
+                                a.add_field("suspicious", "true");
+                            }
+                            a.add_field("detail", &detail);
+                            a.add_field("mitre", "T1059");
+                            a.timestamp = Some(entry.last_executed.timestamp() as u64);
+                            results.push(a);
+                        }
+                    }
+                }
 
                 // SRUM database detection
                 let path_str_srum = entry_path.to_string_lossy().to_string();
@@ -717,6 +803,15 @@ impl StrataPlugin for TracePlugin {
                 "BAM/DAM Entry" => (ArtifactCategory::ExecutionHistory, ForensicValue::Critical),
                 "Autorun Entry" => (ArtifactCategory::SystemActivity, ForensicValue::Critical),
                 "BITS Job" => (ArtifactCategory::SystemActivity, ForensicValue::Critical),
+                "BITS Transfer" => (ArtifactCategory::SystemActivity, ForensicValue::Critical),
+                "PCA Execution" => (
+                    ArtifactCategory::ExecutionHistory,
+                    if is_suspicious {
+                        ForensicValue::Critical
+                    } else {
+                        ForensicValue::High
+                    },
+                ),
                 "SRUM Database" => (ArtifactCategory::SystemActivity, ForensicValue::Critical),
                 "SRUM Provider" => (ArtifactCategory::SystemActivity, ForensicValue::High),
                 "SRUM User" => (ArtifactCategory::SystemActivity, ForensicValue::High),
@@ -795,6 +890,164 @@ fn walk_dir(dir: &Path) -> Result<Vec<std::path::PathBuf>, std::io::Error> {
         }
     }
     Ok(paths)
+}
+
+// ── post-v16 Sprint 3 tripwires — BITS deep-parse + PCA wiring ──
+
+#[cfg(test)]
+mod sprint3_wiring_tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    fn run_trace(root: &Path) -> Vec<Artifact> {
+        let p = TracePlugin::new();
+        let ctx = PluginContext {
+            root_path: root.to_string_lossy().to_string(),
+            vfs: None,
+            config: std::collections::HashMap::new(),
+            prior_results: Vec::new(),
+        };
+        p.run(ctx).expect("trace run")
+    }
+
+    #[test]
+    fn trace_wires_bits_deep_parse_via_bits_submodule() {
+        // Sprint 3 Fix 1 tripwire. Confirms the bits submodule's
+        // parse_qmgr_binary is invoked when a qmgr0.dat / qmgr1.dat
+        // file is encountered (beyond the surface-level
+        // detect_bits_jobs status record). The synthetic blob
+        // carries one HTTP URL + one Windows path + one GUID so
+        // parse_qmgr_binary emits exactly one BITS Transfer record.
+        //
+        // If this test fails with zero BITS Transfer records, the
+        // wiring regressed to the pre-Sprint-3 state where the
+        // deep parser sat unreached.
+        let dir = tempdir().expect("tempdir");
+        let qmgr_path = dir.path().join("qmgr0.dat");
+        // Ascii runs: URL + destination path + GUID. is_bits_path()
+        // keys on the filename so magic bytes are irrelevant.
+        let mut blob = Vec::new();
+        blob.extend_from_slice(b"\x00\x00\x00\x00");
+        blob.extend_from_slice(b"https://evil.example.com/payload.exe");
+        blob.extend_from_slice(b"\x00\x00");
+        blob.extend_from_slice(b"C:\\Users\\alice\\AppData\\Local\\Temp\\payload.exe");
+        blob.extend_from_slice(b"\x00\x00");
+        blob.extend_from_slice(b"{12345678-1234-1234-1234-123456789012}");
+        blob.extend_from_slice(b"\x00\x00");
+        fs::write(&qmgr_path, &blob).expect("write qmgr");
+
+        let arts = run_trace(dir.path());
+        let bits_transfers: Vec<&Artifact> = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "BITS Transfer")
+                    .unwrap_or(false)
+            })
+            .collect();
+        assert!(
+            !bits_transfers.is_empty(),
+            "expected ≥1 BITS Transfer record on qmgr0.dat fixture; got {} total artifacts",
+            arts.len()
+        );
+        // The synthetic source URL is evil.example.com, not a
+        // MS CDN — check_suspicion must flag it.
+        let any_suspicious = bits_transfers
+            .iter()
+            .any(|a| a.data.get("suspicious").map(|v| v == "true").unwrap_or(false));
+        assert!(
+            any_suspicious,
+            "BITS Transfer with non-MS source URL must be suspicious"
+        );
+    }
+
+    #[test]
+    fn trace_wires_pca_launch_dic_parse() {
+        // Sprint 3 Fix 1 tripwire. Confirms pca submodule's
+        // parse_launch_dic is invoked for PcaAppLaunchDic.txt.
+        let dir = tempdir().expect("tempdir");
+        let pca_path = dir.path().join("PcaAppLaunchDic.txt");
+        fs::write(
+            &pca_path,
+            "C:\\Users\\alice\\AppData\\Local\\Temp\\evil.exe|2024-06-01 12:00:00.000\n\
+             C:\\Program Files\\App\\app.exe|2024-06-01 13:00:00\n",
+        )
+        .expect("write pca");
+        let arts = run_trace(dir.path());
+        let pca_entries: Vec<&Artifact> = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "PCA Execution")
+                    .unwrap_or(false)
+            })
+            .collect();
+        assert_eq!(
+            pca_entries.len(),
+            2,
+            "expected exactly 2 PCA Execution records on the fixture, got {}. Titles: {:?}",
+            pca_entries.len(),
+            pca_entries
+                .iter()
+                .map(|a| a.data.get("title").cloned().unwrap_or_default())
+                .collect::<Vec<_>>()
+        );
+        // The evil.exe lives in AppData\Local\Temp — suspicious
+        // per pca::check_suspicion.
+        let evil_record = pca_entries
+            .iter()
+            .find(|a| {
+                a.data
+                    .get("title")
+                    .map(|t| t.contains("evil.exe"))
+                    .unwrap_or(false)
+            })
+            .expect("evil.exe record must exist");
+        assert_eq!(
+            evil_record.data.get("suspicious").map(|s| s.as_str()),
+            Some("true"),
+            "evil.exe in Temp path must be flagged suspicious"
+        );
+    }
+
+    #[test]
+    fn trace_pca_produces_zero_on_xp_or_win7_evidence_pending_win11_fixture() {
+        // Positive-side tripwire pinning Scenario A: PCA is
+        // Windows 11 22H2+. On XP / Win7 evidence (Charlie / Jo
+        // canonical Windows test images), no PcaAppLaunchDic.txt
+        // or PcaGeneralDb2.txt exists. The absence must produce
+        // zero PCA Execution records — pinning the expected-zero
+        // so a future change that accidentally starts emitting
+        // PCA records on non-Win11 evidence fails loudly.
+        //
+        // When Win11 22H2+ evidence is added to the test corpus,
+        // this test must be intentionally changed or deleted with
+        // the commit message noting "Win11 PCA evidence added in
+        // [commit]." The `_pending_win11_fixture` suffix makes the
+        // deferral discoverable.
+        let dir = tempdir().expect("tempdir");
+        // Simulate Charlie-shape content: a SYSTEM hive fragment
+        // with no PCA files in the tree.
+        fs::create_dir_all(dir.path().join("Windows/System32/config")).expect("mk");
+        fs::write(dir.path().join("Windows/System32/config/SYSTEM"), b"regf\x00").expect("w");
+        let arts = run_trace(dir.path());
+        let pca_count = arts
+            .iter()
+            .filter(|a| {
+                a.data
+                    .get("file_type")
+                    .map(|v| v == "PCA Execution")
+                    .unwrap_or(false)
+            })
+            .count();
+        assert_eq!(
+            pca_count, 0,
+            "PCA Execution records must not appear on non-Win11 evidence; got {pca_count}"
+        );
+    }
 }
 
 #[no_mangle]
