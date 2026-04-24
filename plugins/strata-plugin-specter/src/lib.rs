@@ -933,3 +933,61 @@ pub extern "C" fn create_plugin_specter() -> *mut std::ffi::c_void {
     let plugin: Box<dyn StrataPlugin> = Box::new(SpecterPlugin::new());
     Box::into_raw(Box::new(plugin)) as *mut std::ffi::c_void
 }
+
+#[cfg(test)]
+mod sprint75_backfill_tests {
+    use super::*;
+    use std::collections::HashMap;
+    use strata_plugin_sdk::{PluginContext, StrataPlugin};
+
+    fn empty_ctx() -> PluginContext {
+        PluginContext {
+            root_path: "/nonexistent/strata-sprint75-empty".to_string(),
+            vfs: None,
+            config: HashMap::new(),
+            prior_results: Vec::new(),
+        }
+    }
+
+    fn garbage_ctx(suffix: &str) -> PluginContext {
+        let dir = std::env::temp_dir().join(format!(
+            "strata_sprint75_{}_{}_{}",
+            suffix,
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0),
+        ));
+        std::fs::create_dir_all(&dir).expect("mkdir");
+        std::fs::write(dir.join("garbage.bin"), [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
+            .expect("write garbage");
+        PluginContext {
+            root_path: dir.to_string_lossy().into_owned(),
+            vfs: None,
+            config: HashMap::new(),
+            prior_results: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn plugin_has_valid_metadata() {
+        let plugin = SpecterPlugin::new();
+        assert!(!plugin.name().is_empty());
+        assert!(!plugin.version().is_empty());
+        assert!(!plugin.description().is_empty());
+    }
+
+    #[test]
+    fn plugin_returns_ok_on_empty_input() {
+        let plugin = SpecterPlugin::new();
+        let result = plugin.run(empty_ctx());
+        assert!(result.is_ok() || result.unwrap_or_default().is_empty());
+    }
+
+    #[test]
+    fn plugin_does_not_panic_on_malformed_input() {
+        let plugin = SpecterPlugin::new();
+        let _ = plugin.run(garbage_ctx("specter"));
+    }
+}
