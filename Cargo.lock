@@ -8144,6 +8144,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strata-plugin-sdk",
+ "tempfile",
 ]
 
 [[package]]
@@ -8314,6 +8315,7 @@ dependencies = [
  "strata-core",
  "strata-insight",
  "strata-plugin-sdk",
+ "tempfile",
 ]
 
 [[package]]
@@ -8356,7 +8358,7 @@ dependencies = [
 
 [[package]]
 name = "strata-shield-cli"
-version = "0.1.0"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "chrono",
