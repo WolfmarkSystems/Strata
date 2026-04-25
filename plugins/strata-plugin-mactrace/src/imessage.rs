@@ -84,6 +84,14 @@ pub struct MessageRecord {
     /// `"SMS"`. Empty string when missing; the conversation view
     /// uses this to badge each row.
     pub service: String,
+    /// Sprint-11 follow-up — `chat.chat_identifier` resolved via
+    /// `chat_message_join`. The authoritative thread identifier
+    /// for both 1:1 and group conversations: a message with
+    /// `is_from_me=1` and `handle_id=NULL` (the examiner's reply
+    /// in their own thread) joins back to its chat through this
+    /// path even though the `handle` column is empty. Falls back
+    /// to `None` when the message has no chat-membership row.
+    pub chat_identifier: Option<String>,
 }
 
 /// One row from the `attachment` table, joined to a message.
@@ -193,6 +201,7 @@ fn query_messages(conn: &Connection) -> rusqlite::Result<Vec<MessageRecord>> {
         let attributed_text =
             attr_body.as_deref().and_then(extract_attributed_string);
         let attachments = load_attachments(conn, rowid).unwrap_or_default();
+        let chat_identifier = load_chat_identifier(conn, rowid);
         out.push(MessageRecord {
             rowid,
             date,
@@ -206,9 +215,34 @@ fn query_messages(conn: &Connection) -> rusqlite::Result<Vec<MessageRecord>> {
             attachments,
             is_from_me: is_from_me.unwrap_or(0) != 0,
             service: service.unwrap_or_default(),
+            chat_identifier,
         });
     }
     Ok(out)
+}
+
+/// Sprint-11 follow-up — resolve a message's chat membership.
+///
+/// Joins `chat_message_join` → `chat` to recover the
+/// `chat_identifier` (typically the peer phone / handle for 1:1
+/// chats, or a synthesized GUID for group chats). This is the
+/// authoritative thread key: a message can have `handle_id=NULL`
+/// (e.g. the examiner replying in a thread their own account
+/// owns) and still resolve to the right thread through this join.
+///
+/// Returns `None` when:
+///   * the join tables are missing (stripped fixtures), or
+///   * the message has no chat-membership row.
+///
+/// In either case the caller falls back to handle / thread_originator_guid.
+fn load_chat_identifier(conn: &Connection, message_rowid: i64) -> Option<String> {
+    let sql = "SELECT c.chat_identifier \
+               FROM chat_message_join cmj \
+               JOIN chat c ON cmj.chat_id = c.ROWID \
+               WHERE cmj.message_id = ?1 \
+               LIMIT 1";
+    let mut stmt = conn.prepare(sql).ok()?;
+    stmt.query_row([message_rowid], |row| row.get::<_, String>(0)).ok()
 }
 
 fn load_attachments(conn: &Connection, message_rowid: i64) -> rusqlite::Result<Vec<AttachmentRecord>> {
@@ -339,6 +373,12 @@ mod tests {
              ); \
              CREATE TABLE message_attachment_join ( \
                  message_id INTEGER, attachment_id INTEGER \
+             ); \
+             CREATE TABLE chat ( \
+                 ROWID INTEGER PRIMARY KEY, chat_identifier TEXT \
+             ); \
+             CREATE TABLE chat_message_join ( \
+                 chat_id INTEGER, message_id INTEGER \
              );",
         )
         .expect("create schema");
@@ -381,6 +421,19 @@ mod tests {
             [],
         )
         .expect("join");
+        // Sprint-11 follow-up — both messages live in the same
+        // chat with chat_identifier "+15551234567". Mirrors the
+        // MacBookPro Mint Mobile (6700) thread on the CTF image.
+        conn.execute(
+            "INSERT INTO chat (ROWID, chat_identifier) VALUES (1, '+15551234567')",
+            [],
+        )
+        .expect("chat");
+        conn.execute(
+            "INSERT INTO chat_message_join (chat_id, message_id) VALUES (1, 1), (1, 2)",
+            [],
+        )
+        .expect("chat_message_join");
         drop(conn);
         dir
     }
@@ -425,6 +478,73 @@ mod tests {
         assert_eq!(m2.attachments[0].transfer_name.as_deref(), Some("photo.jpg"));
         assert_eq!(m2.attachments[0].mime_type.as_deref(), Some("image/jpeg"));
         assert_eq!(m2.attachments[0].total_bytes, 1_048_576);
+
+        // Sprint-11 follow-up — chat_identifier resolves through
+        // chat_message_join for both messages, including the one
+        // that would otherwise have been an orphan.
+        assert_eq!(m1.chat_identifier.as_deref(), Some("+15551234567"));
+        assert_eq!(m2.chat_identifier.as_deref(), Some("+15551234567"));
+    }
+
+    #[test]
+    fn sprint11_followup_chat_identifier_recovers_thread_for_null_handle() {
+        // Mirror the MacBookPro Mint Mobile (handle="6700") shape:
+        // 4 messages with handle="6700" + 1 outbound STOP with
+        // handle_id=NULL. All must share the same chat_identifier
+        // so the conversation view groups them into one thread.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("chat.db");
+        let conn = Connection::open(&path).expect("open");
+        conn.execute_batch(
+            "CREATE TABLE handle (ROWID INTEGER PRIMARY KEY, id TEXT); \
+             CREATE TABLE message ( \
+                 ROWID INTEGER PRIMARY KEY, date INTEGER, handle_id INTEGER, \
+                 text TEXT, attributedBody BLOB, \
+                 thread_originator_guid TEXT, associated_message_guid TEXT, \
+                 expressive_send_style_id TEXT, was_downgraded INTEGER, \
+                 is_from_me INTEGER, service TEXT \
+             ); \
+             CREATE TABLE chat (ROWID INTEGER PRIMARY KEY, chat_identifier TEXT); \
+             CREATE TABLE chat_message_join (chat_id INTEGER, message_id INTEGER);",
+        )
+        .expect("schema");
+        conn.execute("INSERT INTO handle (ROWID, id) VALUES (1, '6700')", [])
+            .expect("handle");
+        // Outbound STOP — handle_id NULL.
+        conn.execute(
+            "INSERT INTO message (ROWID, date, handle_id, text, was_downgraded, is_from_me, service) \
+             VALUES (1, 738936000, NULL, 'STOP', 0, 1, 'SMS')",
+            [],
+        )
+        .expect("msg1");
+        // Inbound from 6700.
+        conn.execute(
+            "INSERT INTO message (ROWID, date, handle_id, text, was_downgraded, is_from_me, service) \
+             VALUES (2, 738936060, 1, 'Nice! Your phone is setup', 0, 0, 'SMS')",
+            [],
+        )
+        .expect("msg2");
+        conn.execute("INSERT INTO chat (ROWID, chat_identifier) VALUES (1, '6700')", [])
+            .expect("chat");
+        conn.execute(
+            "INSERT INTO chat_message_join (chat_id, message_id) VALUES (1, 1), (1, 2)",
+            [],
+        )
+        .expect("cmj");
+        drop(conn);
+
+        let records = parse(&path);
+        assert_eq!(records.len(), 2);
+        let m1 = records.iter().find(|r| r.rowid == 1).expect("STOP row");
+        assert!(m1.handle.is_none(), "STOP row must reproduce NULL handle");
+        assert!(m1.is_from_me);
+        assert_eq!(
+            m1.chat_identifier.as_deref(),
+            Some("6700"),
+            "chat_message_join must recover the thread for handle-NULL outbound messages"
+        );
+        let m2 = records.iter().find(|r| r.rowid == 2).expect("inbound row");
+        assert_eq!(m2.chat_identifier.as_deref(), Some("6700"));
     }
 
     #[test]

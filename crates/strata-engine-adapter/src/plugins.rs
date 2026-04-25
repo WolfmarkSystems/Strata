@@ -386,11 +386,38 @@ pub fn get_artifacts_by_thread(
         }
     }
 
-    // Sort messages within each thread by timestamp ascending. Empty
-    // timestamps sort first so they don't get scattered through the
-    // middle of a real conversation.
+    // Sprint-11 follow-up — per-thread message dedup. The category-
+    // level `deduplicate_artifacts` keys on `(source_path, name,
+    // value, timestamp)` and misses macOS's APFS data-partition
+    // mirror: the same chat.db lives at both `/Users/.../chat.db`
+    // and `/System/Volumes/Data/Users/.../chat.db`, so each row is
+    // emitted twice with different `source_path`. Inside a thread,
+    // two messages with the same (timestamp, body, direction) are
+    // unambiguously the same forensic event — collapse them so the
+    // examiner doesn't see "Nice! Your phone is setup..." twice at
+    // 17:19:08.
     let mut threads: Vec<crate::types::MessageThread> = grouped.into_values().collect();
     for t in &mut threads {
+        let mut seen: std::collections::HashSet<(String, String, String)> =
+            std::collections::HashSet::with_capacity(t.messages.len());
+        let original = t.messages.len();
+        t.messages.retain(|m| {
+            let key = (
+                m.timestamp.clone().unwrap_or_default(),
+                m.body.clone(),
+                m.direction.clone(),
+            );
+            seen.insert(key)
+        });
+        if t.messages.len() < original {
+            log::debug!(
+                "thread {} dedup: {} → {} ({} mirror duplicates collapsed)",
+                t.thread_id,
+                original,
+                t.messages.len(),
+                original - t.messages.len()
+            );
+        }
         t.messages.sort_by(|a, b| {
             a.timestamp
                 .as_deref()
@@ -1223,6 +1250,61 @@ mod sprint11_p1_thread_grouping_tests {
         assert_eq!(t2.messages[1].direction, "outbound");
         assert_eq!(t2.participant, "alice@x");
         assert_eq!(t2.service, "iMessage");
+        cleanup(eid);
+    }
+
+    #[test]
+    fn sprint11_followup_thread_collapses_apfs_mirror_duplicates() {
+        // Reproduce the macOS APFS data-partition mirror: the same
+        // chat row is emitted twice with different `source_path`
+        // (`/Users/.../chat.db` and
+        // `/System/Volumes/Data/Users/.../chat.db`). The category-
+        // level dedup keys on source_path so it misses these; the
+        // per-thread dedup must collapse them.
+        let eid = "test-thread-mirror";
+        cleanup(eid);
+        // Two artifacts with the same thread_id, timestamp, and
+        // body but different source paths — exactly the APFS
+        // mirror shape.
+        let mut data = serde_json::Map::new();
+        data.insert("thread_id".into(), serde_json::Value::String("6700".into()));
+        data.insert("participant".into(), serde_json::Value::String("6700".into()));
+        data.insert("direction".into(), serde_json::Value::String("inbound".into()));
+        data.insert("service".into(), serde_json::Value::String("SMS".into()));
+        data.insert("body".into(), serde_json::Value::String("Nice! Your phone is setup".into()));
+        let raw = serde_json::Value::Object(data).to_string();
+        for (id, src) in [
+            ("m-a", "/Users/x/Library/Messages/chat.db"),
+            ("m-b", "/System/Volumes/Data/Users/x/Library/Messages/chat.db"),
+        ] {
+            let art = PluginArtifact {
+                id: id.into(),
+                category: "Communications".into(),
+                name: "iMessage".into(),
+                value: "Nice! Your phone is setup".into(),
+                timestamp: Some("1717243200".into()),
+                source_file: src.into(),
+                source_path: src.into(),
+                forensic_value: "medium".into(),
+                mitre_technique: None,
+                mitre_name: None,
+                plugin: "MacTrace".into(),
+                raw_data: Some(raw.clone()),
+            };
+            let mut cache = ARTIFACT_CACHE.lock().expect("cache");
+            cache
+                .entry((eid.to_string(), "MacTrace".to_string()))
+                .or_default()
+                .push(art);
+        }
+        let threads = get_artifacts_by_thread(eid, "Communications").expect("ok");
+        let real: Vec<_> = threads.iter().filter(|t| t.thread_id == "6700").collect();
+        assert_eq!(real.len(), 1);
+        assert_eq!(
+            real[0].messages.len(),
+            1,
+            "APFS mirror duplicates must collapse inside the thread, even though source_path differs",
+        );
         cleanup(eid);
     }
 

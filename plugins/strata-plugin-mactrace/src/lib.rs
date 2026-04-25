@@ -669,17 +669,36 @@ impl StrataPlugin for MacTracePlugin {
                     } else {
                         a.add_field("service", "iMessage");
                     }
-                    // `thread_id` keys the conversation view's left-
-                    // pane thread list. Prefer the explicit
-                    // thread_originator_guid; fall back to the peer
-                    // handle so 1:1 chats still group correctly.
-                    if let Some(t) = &r.thread_originator_guid {
+                    // `thread_id` keys the conversation view's
+                    // thread grouping. Priority order (most-to-least
+                    // authoritative):
+                    //   1. `chat.chat_identifier` from the
+                    //      `chat_message_join` join — recovers the
+                    //      thread for outbound messages whose
+                    //      `handle_id` is NULL (the examiner's
+                    //      reply in their own thread).
+                    //   2. `message.thread_originator_guid` — set
+                    //      on iOS 14+ thread-mode replies.
+                    //   3. The peer `handle` — works for 1:1
+                    //      chats with non-NULL handle_id.
+                    // Sprint 11 follow-up: order matters — without
+                    // (1), MacBookPro's Mint Mobile thread loses
+                    // the "STOP" reply because it has handle=NULL.
+                    if let Some(c) = &r.chat_identifier {
+                        a.add_field("thread_id", c);
+                    } else if let Some(t) = &r.thread_originator_guid {
                         a.add_field("thread_id", t);
                     } else if let Some(h) = &r.handle {
                         a.add_field("thread_id", h);
                     }
+                    // Participant defaults to the peer handle; for
+                    // outbound messages with NULL handle, fall back
+                    // to chat_identifier so the conversation-view
+                    // header still has something readable.
                     if let Some(h) = &r.handle {
                         a.add_field("participant", h);
+                    } else if let Some(c) = &r.chat_identifier {
+                        a.add_field("participant", c);
                     }
                     for att in &r.attachments {
                         if let Some(n) = &att.transfer_name {
