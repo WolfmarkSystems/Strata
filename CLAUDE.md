@@ -243,6 +243,40 @@ This is the canonical assignment. When adding or moving a parser, put it in the 
 - macOS system artifacts → **MacTrace**
 - Do not mix OS-specific logic across plugins
 
+### Source file ownership
+
+Each evidence source file has exactly one owning plugin. When two
+plugins both parse the same file, every artifact appears twice in the
+examiner's view — Sprint 11 P4 added query-layer deduplication as a
+safety net, but the *right* fix is single ownership.
+
+**MacTrace owns:**
+- `chat.db` (iMessage / SMS — macOS Messages.app and the iOS backup mirror)
+- `sms.db` (iOS SMS database)
+- `KnowledgeC.db` (Apple usage telemetry)
+- `interactionC.db` (Contacts / call interaction graph)
+- CoreDuet databases
+- LaunchAgents / LaunchDaemons plists
+- WhatsApp on macOS / iOS (`ChatStorage.sqlite`)
+- PowerLog (`CurrentPowerlog.PLSQL`)
+- macOS / iOS system-layer databases generally (TCC, FSEvents, Unified Log,
+  Biome, locationd, AddressBook, CallHistory)
+
+**Pulse owns:** third-party user-installed app databases —
+- Signal, Telegram, Snapchat, Instagram, TikTok, Facebook
+- Third-party browsers
+- WhatsApp **only** on platforms where MacTrace doesn't already claim it
+  (i.e. Android `msgstore.db` — not the iOS `ChatStorage.sqlite` which
+  belongs to MacTrace)
+
+**Rule when adding a new parser:** before writing the file matcher,
+grep the existing plugins for the filename. If another plugin already
+claims it, either route through that plugin or coordinate the
+ownership change explicitly — do **not** silently duplicate. The
+query-layer dedup will hide the symptom; the underlying double-parse
+still costs ingest time and memory and may diverge over time as the
+two parsers evolve independently.
+
 ### ArtifactRecord Requirements
 
 Every record produced by a parser must set:
