@@ -25,6 +25,7 @@ pub mod biome;
 pub mod biome_versions;
 pub mod clipboard_history;
 pub mod fsevents;
+pub mod identity;
 pub mod imessage;
 pub mod ios_biome;
 pub mod ios_knowledgec;
@@ -295,10 +296,7 @@ fn render_modern_macos(
             // Flag when a process transferred more than 500 MB — the
             // UI can then review for exfil patterns.
             let suspicious = total > 500 * 1024 * 1024;
-            let title = format!(
-                "NetworkUsage: {} ({} bytes)",
-                e.process_name, total
-            );
+            let title = format!("NetworkUsage: {} ({} bytes)", e.process_name, total);
             let detail = format!(
                 "Process: {} | WiFi In/Out: {}/{} | Wired In/Out: {}/{} | Timestamp: {}",
                 e.process_name,
@@ -364,6 +362,87 @@ impl StrataPlugin for MacTracePlugin {
                 .and_then(|n| n.to_str())
                 .unwrap_or("")
                 .to_ascii_lowercase();
+            if let Some(account) = crate::identity::parse_user_account(&path) {
+                let path_str = path.to_string_lossy().to_string();
+                let mut a = Artifact::new("macOS User Account", &path_str);
+                let detail = format!(
+                    "User: {} | real name: {} | uid: {} | gid: {} | home: {} | shell: {}",
+                    account.username,
+                    account.real_name.as_deref().unwrap_or("-"),
+                    account.uid.as_deref().unwrap_or("-"),
+                    account.gid.as_deref().unwrap_or("-"),
+                    account.home.as_deref().unwrap_or("-"),
+                    account.shell.as_deref().unwrap_or("-"),
+                );
+                a.add_field(
+                    "title",
+                    &format!("macOS user account: {}", account.username),
+                );
+                a.add_field("detail", &detail);
+                a.add_field("file_type", "macOS User Account");
+                a.add_field("username", &account.username);
+                if let Some(v) = &account.real_name {
+                    a.add_field("real_name", v);
+                }
+                if let Some(v) = &account.uid {
+                    a.add_field("uid", v);
+                }
+                if let Some(v) = &account.gid {
+                    a.add_field("gid", v);
+                }
+                if let Some(v) = &account.home {
+                    a.add_field("home", v);
+                }
+                if let Some(v) = &account.shell {
+                    a.add_field("shell", v);
+                }
+                if let Some(v) = &account.generated_uid {
+                    a.add_field("generated_uid", v);
+                }
+                a.add_field("mitre", "T1087.001");
+                a.add_field("forensic_value", "High");
+                out.push(a);
+                continue;
+            }
+            if let Some(keychain) = crate::identity::detect_keychain(&path) {
+                let path_str = path.to_string_lossy().to_string();
+                let mut a = Artifact::new("macOS Keychain Metadata", &path_str);
+                let modified = keychain
+                    .modified_utc
+                    .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                    .unwrap_or_else(|| "-".to_string());
+                let size = keychain
+                    .size
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "-".to_string());
+                let detail = format!(
+                    "Type: {} | owner hint: {} | size: {} bytes | modified: {}",
+                    keychain.keychain_type,
+                    keychain.owner_hint.as_deref().unwrap_or("-"),
+                    size,
+                    modified,
+                );
+                if let Some(dt) = keychain.modified_utc {
+                    a.timestamp = Some(dt.timestamp() as u64);
+                }
+                a.add_field(
+                    "title",
+                    &format!("macOS keychain present: {}", keychain.keychain_type),
+                );
+                a.add_field("detail", &detail);
+                a.add_field("file_type", "macOS Keychain Metadata");
+                a.add_field("keychain_type", keychain.keychain_type);
+                if let Some(v) = &keychain.owner_hint {
+                    a.add_field("owner_hint", v);
+                }
+                if let Some(v) = keychain.size {
+                    a.add_field("size_bytes", &v.to_string());
+                }
+                a.add_field("mitre", "T1555.001");
+                a.add_field("forensic_value", "High");
+                out.push(a);
+                continue;
+            }
             if lower_name == "tcc.db" {
                 let path_str = path.to_string_lossy().to_string();
                 let entries = crate::tcc::parse(&path);
@@ -526,10 +605,7 @@ impl StrataPlugin for MacTracePlugin {
                         a.add_field(k, v);
                     }
                     if let Some(dt) = r.timestamp() {
-                        a.add_field(
-                            "timestamp",
-                            &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
-                        );
+                        a.add_field("timestamp", &dt.format("%Y-%m-%d %H:%M:%S UTC").to_string());
                     }
                     a.add_field("mitre", kind.mitre());
                     let severity = if suspicious {
@@ -1498,8 +1574,8 @@ impl StrataPlugin for MacTracePlugin {
                 suspicious += 1;
             }
             let category = match ft.as_str() {
-                "SMS/iMessage" | "iMessage" | "WhatsApp iOS" | "WhatsApp Android"
-                | "Signal" | "Telegram" | "CallHistory" => ArtifactCategory::Communications,
+                "SMS/iMessage" | "iMessage" | "WhatsApp iOS" | "WhatsApp Android" | "Signal"
+                | "Telegram" | "CallHistory" => ArtifactCategory::Communications,
                 "Safari History" => ArtifactCategory::WebActivity,
                 "AddressBook" => ArtifactCategory::AccountsCredentials,
                 "Biome Record"
@@ -1510,6 +1586,9 @@ impl StrataPlugin for MacTracePlugin {
                 | "Modern macOS Artifact" => ArtifactCategory::UserActivity,
                 "FSEvent" | "Unified Log Entry" => ArtifactCategory::SystemActivity,
                 "TCC Permission" => ArtifactCategory::AccountsCredentials,
+                "macOS User Account" | "macOS Keychain Metadata" => {
+                    ArtifactCategory::AccountsCredentials
+                }
                 _ => ArtifactCategory::SystemActivity,
             };
             cats.insert(category.as_str().to_string());
@@ -1630,8 +1709,11 @@ mod sprint75_backfill_tests {
                 .unwrap_or(0),
         ));
         std::fs::create_dir_all(&dir).expect("mkdir");
-        std::fs::write(dir.join("garbage.bin"), [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
-            .expect("write garbage");
+        std::fs::write(
+            dir.join("garbage.bin"),
+            [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF],
+        )
+        .expect("write garbage");
         PluginContext {
             root_path: dir.to_string_lossy().into_owned(),
             vfs: None,

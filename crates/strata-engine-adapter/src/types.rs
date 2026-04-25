@@ -23,6 +23,8 @@ pub struct TreeNode {
     pub name: String,
     pub node_type: String,
     pub count: u64,
+    pub file_count: u64,
+    pub folder_count: u64,
     pub has_children: bool,
     pub parent_id: Option<String>,
     pub depth: u32,

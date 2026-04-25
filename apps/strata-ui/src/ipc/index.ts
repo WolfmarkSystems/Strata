@@ -5,6 +5,20 @@ import type { TreeNode, FileEntry, FileMetadata } from '../types'
 // Browser preview detection — Tauri injects __TAURI_INTERNALS__ at runtime
 const IN_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
+export interface IpcFailure {
+  command: string
+  message: string
+}
+
+function reportIpcError(command: string, error: unknown): IpcFailure {
+  const failure = { command, message: String(error) }
+  console.error(`[ipc] ${command} failed:`, error)
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent<IpcFailure>('strata-ipc-error', { detail: failure }))
+  }
+  return failure
+}
+
 export interface EvidenceLoadResult {
   success: boolean
   evidence_id: string
@@ -120,7 +134,8 @@ export interface SearchResult {
 export async function getAppVersion(): Promise<string> {
   try {
     return await invoke('get_app_version')
-  } catch {
+  } catch (e) {
+    reportIpcError('get_app_version', e)
     return '0.3.0'
   }
 }
@@ -170,7 +185,8 @@ export async function checkLicense(): Promise<LicenseResult> {
   }
   try {
     return await invoke('check_license')
-  } catch {
+  } catch (e) {
+    reportIpcError('check_license', e)
     return {
       valid: false,
       tier: 'none',
@@ -206,7 +222,8 @@ export async function activateLicense(key: string): Promise<LicenseResult> {
   }
   try {
     return await invoke('activate_license', { key })
-  } catch {
+  } catch (e) {
+    reportIpcError('activate_license', e)
     return {
       valid: false,
       tier: 'none',
@@ -232,7 +249,8 @@ export async function startTrial(): Promise<LicenseResult> {
   }
   try {
     return await invoke('start_trial')
-  } catch {
+  } catch (e) {
+    reportIpcError('start_trial', e)
     return {
       valid: true,
       tier: 'trial',
@@ -250,7 +268,8 @@ export async function getExaminerProfile(): Promise<ExaminerProfile> {
   }
   try {
     return await invoke('get_examiner_profile')
-  } catch {
+  } catch (e) {
+    reportIpcError('get_examiner_profile', e)
     return { name: '', agency: '', badge: '', email: '' }
   }
 }
@@ -260,7 +279,7 @@ export async function saveExaminerProfile(profile: ExaminerProfile): Promise<voi
   try {
     await invoke('save_examiner_profile', { profile })
   } catch (e) {
-    console.error('Save failed:', e)
+    reportIpcError('save_examiner_profile', e)
   }
 }
 
@@ -290,7 +309,8 @@ export async function listDrives(): Promise<DriveInfo[]> {
   }
   try {
     return await invoke('list_drives')
-  } catch {
+  } catch (e) {
+    reportIpcError('list_drives', e)
     return []
   }
 }
@@ -301,7 +321,8 @@ export async function selectEvidenceDrive(driveId: string): Promise<string> {
   }
   try {
     return await invoke('select_evidence_drive', { driveId })
-  } catch {
+  } catch (e) {
+    reportIpcError('select_evidence_drive', e)
     return '/mock/evidence/path'
   }
 }
@@ -310,7 +331,8 @@ export async function openEvidenceDialog(): Promise<string | null> {
   if (!IN_TAURI) return '/mock/evidence/jo-2009-11-16.E01'
   try {
     return await invoke('open_evidence_dialog')
-  } catch {
+  } catch (e) {
+    reportIpcError('open_evidence_dialog', e)
     return null
   }
 }
@@ -319,7 +341,8 @@ export async function openFolderDialog(): Promise<string | null> {
   if (!IN_TAURI) return '/mock/evidence/folder'
   try {
     return await invoke('open_folder_dialog')
-  } catch {
+  } catch (e) {
+    reportIpcError('open_folder_dialog', e)
     return null
   }
 }
@@ -337,6 +360,7 @@ export async function loadEvidence(path: string): Promise<EvidenceLoadResult> {
   try {
     return await invoke('load_evidence', { path })
   } catch (e) {
+    reportIpcError('load_evidence', e)
     return {
       success: false,
       evidence_id: '',
@@ -356,6 +380,8 @@ export async function getTreeRoot(evidenceId: string): Promise<TreeNode[]> {
         name: `${evidenceId} \u2014 Parsing...`,
         node_type: 'evidence',
         count: 0,
+        file_count: 0,
+        folder_count: 0,
         is_deleted: false,
         is_flagged: false,
         is_suspicious: false,
@@ -367,7 +393,8 @@ export async function getTreeRoot(evidenceId: string): Promise<TreeNode[]> {
   }
   try {
     return await invoke('get_tree_root', { evidenceId })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_tree_root', e)
     return []
   }
 }
@@ -376,7 +403,8 @@ export async function getTreeChildren(nodeId: string): Promise<TreeNode[]> {
   if (!IN_TAURI) return []
   try {
     return await invoke('get_tree_children', { nodeId })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_tree_children', e)
     return []
   }
 }
@@ -390,7 +418,8 @@ export async function getFiles(
   if (!IN_TAURI) return []
   try {
     return await invoke('get_files', { nodeId, filter, sortCol, sortAsc })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_files', e)
     return []
   }
 }
@@ -399,7 +428,8 @@ export async function getFileMetadata(fileId: string): Promise<FileMetadata | nu
   if (!IN_TAURI) return null
   try {
     return await invoke('get_file_metadata', { fileId })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_file_metadata', e)
     return null
   }
 }
@@ -412,7 +442,8 @@ export async function getFileHex(
   if (!IN_TAURI) return mockHexData(offset)
   try {
     return await invoke('get_file_hex', { fileId, offset, length })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_file_hex', e)
     return { lines: [], total_size: 0, offset: 0 }
   }
 }
@@ -421,7 +452,8 @@ export async function getFileText(fileId: string, offset: number = 0): Promise<s
   if (!IN_TAURI) return mockTextContent(fileId)
   try {
     return await invoke('get_file_text', { fileId, offset })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_file_text', e)
     return '[Error loading text content]'
   }
 }
@@ -433,7 +465,8 @@ export async function searchFiles(
   if (!IN_TAURI) return mockSearch(query)
   try {
     return await invoke('search_files', { query, evidenceId })
-  } catch {
+  } catch (e) {
+    reportIpcError('search_files', e)
     return []
   }
 }
@@ -497,7 +530,8 @@ export async function getTagSummaries(): Promise<TagSummary[]> {
   }
   try {
     return await invoke('get_tag_summaries')
-  } catch {
+  } catch (e) {
+    reportIpcError('get_tag_summaries', e)
     return TAG_DEFS.map(([name, color]) => ({ name, color, count: 0 }))
   }
 }
@@ -508,7 +542,8 @@ export async function getTaggedFiles(tag: string): Promise<TaggedFile[]> {
   }
   try {
     return await invoke('get_tagged_files', { tag })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_tagged_files', e)
     return []
   }
 }
@@ -544,7 +579,7 @@ export async function tagFile(
       fileId, fileName, extension, sizeDisplay, modified, fullPath, tag, tagColor, note,
     })
   } catch (e) {
-    console.error('Tag failed:', e)
+    reportIpcError('tag_file', e)
   }
 }
 
@@ -556,7 +591,7 @@ export async function untagFile(fileId: string): Promise<void> {
   try {
     await invoke('untag_file', { fileId })
   } catch (e) {
-    console.error('Untag failed:', e)
+    reportIpcError('untag_file', e)
   }
 }
 
@@ -570,7 +605,8 @@ export async function getArtifactCategories(
   if (!IN_TAURI) return MOCK_ARTIFACT_CATEGORIES
   try {
     return await invoke('get_artifact_categories', { evidenceId })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_artifact_categories', e)
     return []
   }
 }
@@ -584,7 +620,8 @@ export async function getArtifacts(
   }
   try {
     return await invoke<ArtifactsResponse>('get_artifacts', { evidenceId, category })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_artifacts', e)
     return { artifacts: [], plugins_not_run: false }
   }
 }
@@ -606,7 +643,7 @@ export async function navigateToPath(
   try {
     return await invoke<NavigationTarget>('navigate_to_path', { evidenceId, filePath })
   } catch (e) {
-    console.warn('navigate_to_path failed:', e)
+    reportIpcError('navigate_to_path', e)
     return null
   }
 }
@@ -635,7 +672,8 @@ export async function getArtifactsByThread(
   if (!IN_TAURI) return []
   try {
     return await invoke<MessageThread[]>('get_artifacts_by_thread', { evidenceId, category })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_artifacts_by_thread', e)
     return []
   }
 }
@@ -736,7 +774,8 @@ export async function getPluginStatuses(): Promise<PluginStatus[]> {
   }
   try {
     return await invoke('get_plugin_statuses')
-  } catch {
+  } catch (e) {
+    reportIpcError('get_plugin_statuses', e)
     return []
   }
 }
@@ -776,6 +815,7 @@ export async function runPlugin(
   try {
     return await invoke('run_plugin', { pluginName, evidenceId })
   } catch (e) {
+    reportIpcError('run_plugin', e)
     return {
       plugin_name: pluginName,
       success: false,
@@ -797,7 +837,7 @@ export async function runAllPlugins(evidenceId: string): Promise<void> {
   try {
     await invoke('run_all_plugins', { evidenceId })
   } catch (e) {
-    console.error('Run all failed:', e)
+    reportIpcError('run_all_plugins', e)
   }
 }
 
@@ -838,7 +878,7 @@ export async function hashFile(
   try {
     return await invoke<HashResult>('hash_file_cmd', { evidenceId, fileId })
   } catch (e) {
-    console.error('hash_file_cmd failed:', e)
+    reportIpcError('hash_file_cmd', e)
     return null
   }
 }
@@ -848,7 +888,7 @@ export async function hashAllFiles(evidenceId: string): Promise<number> {
   try {
     return await invoke<number>('hash_all_files_cmd', { evidenceId })
   } catch (e) {
-    console.error('hash_all_files_cmd failed:', e)
+    reportIpcError('hash_all_files_cmd', e)
     return 0
   }
 }
@@ -864,13 +904,214 @@ export function onHashProgress(
   })
 }
 
+// ── CSAM workflow ────────────────────────────────────────────────────────────
+
+export interface HashSetImportResult {
+  name: string
+  format: string
+  entry_count: number
+}
+
+export interface CsamHitInfo {
+  hit_id: string
+  file_path: string
+  file_size: number
+  md5: string
+  sha1: string
+  sha256: string
+  match_type: string
+  match_source: string
+  perceptual_hash: string | null
+  perceptual_distance: number | null
+  confidence: string
+  timestamp_utc: string
+  examiner_reviewed: boolean
+  examiner_confirmed: boolean
+  examiner_notes: string
+}
+
+export interface CsamScanOptions {
+  run_exact_hash: boolean
+  run_perceptual: boolean
+  perceptual_threshold: number
+  scan_all_files: boolean
+  image_extensions: string[]
+}
+
+export interface CsamScanSummary {
+  files_scanned: number
+  hits_found: number
+  status: string
+}
+
+export interface CsamSessionSummary {
+  examiner: string
+  case_number: string
+  hash_set_count: number
+  hit_count: number
+  confirmed_count: number
+  audit_entry_count: number
+}
+
+export async function csamCreateSession(
+  evidenceId: string,
+  examiner: string,
+  caseNumber: string,
+): Promise<boolean> {
+  if (!IN_TAURI) return true
+  try {
+    await invoke('csam_create_session', { evidenceId, examiner, caseNumber })
+    return true
+  } catch (e) {
+    reportIpcError('csam_create_session', e)
+    return false
+  }
+}
+
+export async function csamDropSession(evidenceId: string): Promise<boolean> {
+  if (!IN_TAURI) return true
+  try {
+    return await invoke<boolean>('csam_drop_session', { evidenceId })
+  } catch (e) {
+    reportIpcError('csam_drop_session', e)
+    return false
+  }
+}
+
+export async function csamImportHashSet(
+  evidenceId: string,
+  path: string,
+  name: string,
+  examiner: string,
+  caseNumber: string,
+): Promise<HashSetImportResult | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<HashSetImportResult>('csam_import_hash_set', {
+      evidenceId,
+      path,
+      name,
+      examiner,
+      caseNumber,
+    })
+  } catch (e) {
+    reportIpcError('csam_import_hash_set', e)
+    return null
+  }
+}
+
+export async function csamRunScan(
+  evidenceId: string,
+  options: CsamScanOptions,
+): Promise<CsamScanSummary | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<CsamScanSummary>('csam_run_scan', { evidenceId, options })
+  } catch (e) {
+    reportIpcError('csam_run_scan', e)
+    return null
+  }
+}
+
+export async function csamListHits(evidenceId: string): Promise<CsamHitInfo[]> {
+  if (!IN_TAURI) return []
+  try {
+    return await invoke<CsamHitInfo[]>('csam_list_hits', { evidenceId })
+  } catch (e) {
+    reportIpcError('csam_list_hits', e)
+    return []
+  }
+}
+
+export async function csamReviewHit(evidenceId: string, hitId: string): Promise<boolean> {
+  if (!IN_TAURI) return true
+  try {
+    await invoke('csam_review_hit', { evidenceId, hitId })
+    return true
+  } catch (e) {
+    reportIpcError('csam_review_hit', e)
+    return false
+  }
+}
+
+export async function csamConfirmHit(
+  evidenceId: string,
+  hitId: string,
+  notes: string,
+): Promise<boolean> {
+  if (!IN_TAURI) return true
+  try {
+    await invoke('csam_confirm_hit', { evidenceId, hitId, notes })
+    return true
+  } catch (e) {
+    reportIpcError('csam_confirm_hit', e)
+    return false
+  }
+}
+
+export async function csamDismissHit(
+  evidenceId: string,
+  hitId: string,
+  reason: string,
+): Promise<boolean> {
+  if (!IN_TAURI) return true
+  try {
+    await invoke('csam_dismiss_hit', { evidenceId, hitId, reason })
+    return true
+  } catch (e) {
+    reportIpcError('csam_dismiss_hit', e)
+    return false
+  }
+}
+
+export async function csamGenerateReport(
+  evidenceId: string,
+  outputPdfPath: string,
+): Promise<boolean> {
+  if (!IN_TAURI) return true
+  try {
+    await invoke('csam_generate_report', { evidenceId, outputPdfPath })
+    return true
+  } catch (e) {
+    reportIpcError('csam_generate_report', e)
+    return false
+  }
+}
+
+export async function csamExportAuditLog(
+  evidenceId: string,
+  outputPath: string,
+): Promise<boolean> {
+  if (!IN_TAURI) return true
+  try {
+    await invoke('csam_export_audit_log', { evidenceId, outputPath })
+    return true
+  } catch (e) {
+    reportIpcError('csam_export_audit_log', e)
+    return false
+  }
+}
+
+export async function csamSessionSummary(
+  evidenceId: string,
+): Promise<CsamSessionSummary | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<CsamSessionSummary>('csam_session_summary', { evidenceId })
+  } catch (e) {
+    reportIpcError('csam_session_summary', e)
+    return null
+  }
+}
+
 export async function getStats(evidenceId: string): Promise<StatsResult> {
   if (!IN_TAURI) {
     return { files: 26235, suspicious: 8993, flagged: 12, carved: 0, hashed: 0, artifacts: 0 }
   }
   try {
     return await invoke('get_stats', { evidenceId })
-  } catch {
+  } catch (e) {
+    reportIpcError('get_stats', e)
     return { files: 0, suspicious: 0, flagged: 0, carved: 0, hashed: 0, artifacts: 0 }
   }
 }
@@ -1039,7 +1280,12 @@ export async function generateReport(options: ReportOptions): Promise<ReportResu
       path: null,
     }
   }
-  return invoke<ReportResult>('generate_report', { options })
+  try {
+    return await invoke<ReportResult>('generate_report', { options })
+  } catch (e) {
+    reportIpcError('generate_report', e)
+    return { html: '', path: null }
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1121,7 +1367,7 @@ export async function newCase(
       basePath,
     })
   } catch (e) {
-    console.error('new_case failed:', e)
+    reportIpcError('new_case', e)
     return null
   }
 }
@@ -1132,7 +1378,7 @@ export async function saveCase(caseFile: CaseFile, path: string): Promise<boolea
     await invoke('save_case', { case: caseFile, path })
     return true
   } catch (e) {
-    console.error('save_case failed:', e)
+    reportIpcError('save_case', e)
     return false
   }
 }
@@ -1142,7 +1388,7 @@ export async function openCase(): Promise<OpenCaseResult | null> {
   try {
     return await invoke<OpenCaseResult | null>('open_case')
   } catch (e) {
-    console.error('open_case failed:', e)
+    reportIpcError('open_case', e)
     return null
   }
 }
@@ -1152,7 +1398,7 @@ export async function openCaseAtPath(path: string): Promise<OpenCaseResult | nul
   try {
     return await invoke<OpenCaseResult | null>('open_case_at_path', { path })
   } catch (e) {
-    console.error('open_case_at_path failed:', e)
+    reportIpcError('open_case_at_path', e)
     return null
   }
 }
@@ -1162,7 +1408,7 @@ export async function getRecentCases(): Promise<string[]> {
   try {
     return await invoke<string[]>('get_recent_cases')
   } catch (e) {
-    console.error('get_recent_cases failed:', e)
+    reportIpcError('get_recent_cases', e)
     return []
   }
 }
@@ -1174,7 +1420,7 @@ export async function getMachineId(): Promise<string> {
   try {
     return await invoke<string>('get_machine_id')
   } catch (e) {
-    console.error('get_machine_id failed:', e)
+    reportIpcError('get_machine_id', e)
     return 'unknown'
   }
 }
@@ -1184,7 +1430,7 @@ export async function getLicensePath(): Promise<string | null> {
   try {
     return await invoke<string | null>('get_license_path')
   } catch (e) {
-    console.error('get_license_path failed:', e)
+    reportIpcError('get_license_path', e)
     return null
   }
 }
@@ -1194,7 +1440,7 @@ export async function deactivateLicense(): Promise<boolean> {
   try {
     return await invoke<boolean>('deactivate_license')
   } catch (e) {
-    console.error('deactivate_license failed:', e)
+    reportIpcError('deactivate_license', e)
     return false
   }
 }
@@ -1240,7 +1486,7 @@ export async function getSqliteTables(filePath: string): Promise<SqliteTable[]> 
   try {
     return await invoke<SqliteTable[]>('get_sqlite_tables', { filePath })
   } catch (e) {
-    console.error('get_sqlite_tables failed:', e)
+    reportIpcError('get_sqlite_tables', e)
     return []
   }
 }
@@ -1260,7 +1506,7 @@ export async function getSqliteTableData(
       pageSize,
     })
   } catch (e) {
-    console.error('get_sqlite_table_data failed:', e)
+    reportIpcError('get_sqlite_table_data', e)
     return null
   }
 }
@@ -1270,7 +1516,7 @@ export async function saveReport(html: string, casePath: string): Promise<string
   try {
     return await invoke<string>('save_report', { html, casePath })
   } catch (e) {
-    console.error('save_report failed:', e)
+    reportIpcError('save_report', e)
     return null
   }
 }

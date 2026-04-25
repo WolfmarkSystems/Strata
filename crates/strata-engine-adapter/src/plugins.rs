@@ -3,9 +3,9 @@
 //! result type that the desktop UI can consume.
 
 use crate::store::get_evidence;
-use crate::types::*;
 #[allow(unused_imports)]
 use crate::types::ArtifactCategoryInfo;
+use crate::types::*;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -52,6 +52,127 @@ fn walk_host_dir(root: &Path) -> Vec<PathBuf> {
         }
     }
     out
+}
+
+struct PreparedPluginRoot {
+    root_path: String,
+    vfs: Option<Arc<dyn strata_fs::vfs::VirtualFilesystem>>,
+}
+
+fn populate_cached_files_from_host_dir(evidence_id: &str, root: &Path) -> AdapterResult<()> {
+    if !root.exists() {
+        return Ok(());
+    }
+
+    let arc = get_evidence(evidence_id)?;
+    let mut guard = arc.lock().expect("evidence lock poisoned");
+    if !guard.files.is_empty() {
+        return Ok(());
+    }
+
+    for entry in walk_host_dir(root) {
+        let id = format!(
+            "file-{}",
+            crate::evidence::short_hash(&entry.to_string_lossy())
+        );
+        let name = entry
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let extension = entry
+            .extension()
+            .map(|e| e.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let size = std::fs::metadata(&entry).map(|m| m.len()).unwrap_or(0);
+        guard.files.insert(
+            id.clone(),
+            crate::store::CachedFile {
+                id,
+                vfs_path: entry.clone(),
+                name,
+                extension,
+                size,
+                modified: String::new(),
+                created: String::new(),
+                accessed: String::new(),
+                is_dir: false,
+                parent_node_id: String::new(),
+                mft_entry: None,
+                inode: None,
+            },
+        );
+    }
+
+    Ok(())
+}
+
+fn prepare_plugin_root<F>(evidence_id: &str, mut on_event: F) -> AdapterResult<PreparedPluginRoot>
+where
+    F: FnMut(&str, &str, u64, Option<&str>),
+{
+    let source_path: PathBuf = {
+        let arc = get_evidence(evidence_id)?;
+        let guard = arc.lock().expect("evidence lock poisoned");
+        guard.source.path.clone()
+    };
+
+    let scratch = ui_scratch_dir(evidence_id);
+    let mut materialized_vfs: Option<Arc<dyn strata_fs::vfs::VirtualFilesystem>> = None;
+    let mut materialized_files: u64 = 0;
+
+    if source_path.is_file() {
+        on_event(MATERIALIZE_EVENT_NAME, "running", 0, None);
+        match mount_partitions_composite_for_ui(&source_path) {
+            Ok(Some(vfs)) => {
+                if !scratch.exists() {
+                    if let Err(e) = std::fs::create_dir_all(&scratch) {
+                        on_event(
+                            MATERIALIZE_EVENT_NAME,
+                            "error",
+                            0,
+                            Some(&format!("create_dir_all {scratch:?}: {e}")),
+                        );
+                        return Err(AdapterError::EngineError(format!("ui scratch create: {e}")));
+                    }
+                }
+                match crate::vfs_materialize::materialize_targets(&vfs, &scratch) {
+                    Ok(report) => {
+                        materialized_files = report.files_written;
+                        on_event(MATERIALIZE_EVENT_NAME, "complete", materialized_files, None);
+                    }
+                    Err(e) => {
+                        let msg = format!("{e}");
+                        on_event(MATERIALIZE_EVENT_NAME, "error", 0, Some(&msg));
+                    }
+                }
+                materialized_vfs = Some(vfs);
+            }
+            Ok(None) => {
+                on_event(MATERIALIZE_EVENT_NAME, "complete", 0, None);
+            }
+            Err(e) => {
+                let msg = format!("{e}");
+                on_event(MATERIALIZE_EVENT_NAME, "error", 0, Some(&msg));
+            }
+        }
+    }
+
+    if source_path.is_dir() {
+        populate_cached_files_from_host_dir(evidence_id, &source_path)?;
+    } else if materialized_files > 0 {
+        populate_cached_files_from_host_dir(evidence_id, &scratch)?;
+    }
+
+    let plugin_root = if scratch.exists() {
+        scratch
+    } else {
+        source_path
+    };
+
+    Ok(PreparedPluginRoot {
+        root_path: plugin_root.to_string_lossy().into_owned(),
+        vfs: materialized_vfs,
+    })
 }
 
 /// Mount the supplied evidence-image file as a CompositeVfs the same
@@ -105,11 +226,9 @@ fn mount_partitions_composite_for_ui(
         if size == 0 {
             continue;
         }
-        if let Ok(walker) = strata_fs::fs_dispatch::open_filesystem(
-            Arc::clone(&image),
-            offset,
-            size,
-        ) {
+        if let Ok(walker) =
+            strata_fs::fs_dispatch::open_filesystem(Arc::clone(&image), offset, size)
+        {
             composite.mount(&name, Arc::from(walker));
             mounted_count += 1;
         }
@@ -190,7 +309,10 @@ type ArtifactCacheMap = HashMap<ArtifactCacheKey, Vec<PluginArtifact>>;
 static ARTIFACT_CACHE: Lazy<Mutex<ArtifactCacheMap>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub fn list_plugins() -> Vec<String> {
-    build_plugins().iter().map(|p| p.name().to_string()).collect()
+    build_plugins()
+        .iter()
+        .map(|p| p.name().to_string())
+        .collect()
 }
 
 /// Total number of artifacts cached across all plugins for a given evidence.
@@ -368,14 +490,15 @@ pub fn get_artifacts_by_thread(
 
             match thread_id {
                 Some(tid) if !tid.is_empty() => {
-                    let entry = grouped.entry(tid.clone()).or_insert_with(|| {
-                        crate::types::MessageThread {
-                            thread_id: tid.clone(),
-                            participant: participant.clone(),
-                            service: service.clone(),
-                            messages: Vec::new(),
-                        }
-                    });
+                    let entry =
+                        grouped
+                            .entry(tid.clone())
+                            .or_insert_with(|| crate::types::MessageThread {
+                                thread_id: tid.clone(),
+                                participant: participant.clone(),
+                                service: service.clone(),
+                                messages: Vec::new(),
+                            });
                     if entry.participant.is_empty() && !participant.is_empty() {
                         entry.participant = participant;
                     }
@@ -466,9 +589,7 @@ fn execute_plugin_safely(
     context: PluginContext,
 ) -> Result<PluginOutput, PluginError> {
     let plugin_name = plugin.name().to_string();
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        plugin.execute(context)
-    }));
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| plugin.execute(context)));
     match result {
         Ok(real) => real,
         Err(payload) => {
@@ -531,31 +652,41 @@ fn synthesize_panic_artifact(plugin_name: &str, msg: &str) -> ArtifactRecord {
 /// Run a single named plugin against the loaded evidence.
 pub fn run_plugin(evidence_id: &str, plugin_name: &str) -> AdapterResult<Vec<PluginArtifact>> {
     let plugins = build_plugins();
-    let plugin = plugins
+    let target_index = plugins
         .iter()
-        .find(|p| p.name() == plugin_name)
+        .position(|p| plugin_name_matches(p.name(), plugin_name))
         .ok_or_else(|| AdapterError::EngineError(format!("plugin not found: {plugin_name}")))?;
+    let plugin = plugins[target_index].as_ref();
 
-    // Build a PluginContext rooted at the evidence's underlying VFS root.
-    let root_path = {
-        let arc = get_evidence(evidence_id)?;
-        let guard = arc.lock().expect("evidence lock poisoned");
-        guard
-            .source
-            .vfs
-            .as_ref()
-            .map(|v| v.root().to_string_lossy().into_owned())
-            .unwrap_or_else(|| guard.source.path.to_string_lossy().into_owned())
-    };
+    let prepared = prepare_plugin_root(evidence_id, |_, _, _, _| {})?;
+    let mut prior: Vec<PluginOutput> = Vec::new();
+
+    for prior_plugin in plugins.iter().take(target_index) {
+        let context = PluginContext {
+            root_path: prepared.root_path.clone(),
+            vfs: prepared.vfs.as_ref().map(Arc::clone),
+            config: HashMap::new(),
+            prior_results: prior.clone(),
+        };
+        if let Ok(output) = execute_plugin_safely(prior_plugin.as_ref(), context) {
+            let artifacts = convert_output(&output, prior_plugin.name());
+            let mut cache = ARTIFACT_CACHE.lock().expect("artifact cache poisoned");
+            cache.insert(
+                (evidence_id.to_string(), prior_plugin.name().to_string()),
+                artifacts,
+            );
+            prior.push(output);
+        }
+    }
 
     let context = PluginContext {
-        root_path,
-        vfs: None,
+        root_path: prepared.root_path,
+        vfs: prepared.vfs,
         config: HashMap::new(),
-        prior_results: Vec::new(),
+        prior_results: prior,
     };
 
-    let output = execute_plugin_safely(plugin.as_ref(), context)
+    let output = execute_plugin_safely(plugin, context)
         .map_err(|e: PluginError| AdapterError::EngineError(format!("plugin execute: {e}")))?;
 
     let artifacts = convert_output(&output, plugin_name);
@@ -567,6 +698,14 @@ pub fn run_plugin(evidence_id: &str, plugin_name: &str) -> AdapterResult<Vec<Plu
     );
 
     Ok(artifacts)
+}
+
+fn plugin_name_matches(backend_name: &str, requested_name: &str) -> bool {
+    backend_name == requested_name
+        || backend_name
+            .strip_prefix("Strata ")
+            .map(|short| short == requested_name)
+            .unwrap_or(false)
 }
 
 /// UI-path counterpart to `run_all_on_path`. Resolves the evidence
@@ -595,129 +734,11 @@ pub fn run_plugin(evidence_id: &str, plugin_name: &str) -> AdapterResult<Vec<Plu
 /// follow-up VFS-bridge fix (KR diagnosis 2026-04-24: UI plugins
 /// were running against a virtual `vfs.root()` path with `vfs:
 /// None`, so `walk_dir` saw nothing).
-pub fn run_all_on_evidence<F>(
-    evidence_id: &str,
-    mut on_event: F,
-) -> AdapterResult<()>
+pub fn run_all_on_evidence<F>(evidence_id: &str, mut on_event: F) -> AdapterResult<()>
 where
     F: FnMut(&str, &str, u64, Option<&str>),
 {
-    // ── Resolve evidence-source path ──────────────────────────────────
-    // We need the underlying file/dir path for `strata_evidence::open_evidence`.
-    // The image-side EvidenceSource lives on `OpenEvidence.source`; we
-    // only need its `path` field, so clone it and drop the lock before
-    // the long-running materialize/plugin work.
-    let source_path: PathBuf = {
-        let arc = get_evidence(evidence_id)?;
-        let guard = arc.lock().expect("evidence lock poisoned");
-        guard.source.path.clone()
-    };
-
-    // ── Mount + materialize when the source is a forensic image ──────
-    let scratch = ui_scratch_dir(evidence_id);
-    let mut materialized_vfs: Option<Arc<dyn strata_fs::vfs::VirtualFilesystem>> = None;
-    let mut materialized_files: u64 = 0;
-
-    if source_path.is_file() {
-        on_event(MATERIALIZE_EVENT_NAME, "running", 0, None);
-        match mount_partitions_composite_for_ui(&source_path) {
-            Ok(Some(vfs)) => {
-                if !scratch.exists() {
-                    if let Err(e) = std::fs::create_dir_all(&scratch) {
-                        on_event(
-                            MATERIALIZE_EVENT_NAME,
-                            "error",
-                            0,
-                            Some(&format!("create_dir_all {scratch:?}: {e}")),
-                        );
-                        return Err(AdapterError::EngineError(format!(
-                            "ui scratch create: {e}"
-                        )));
-                    }
-                }
-                match crate::vfs_materialize::materialize_targets(&vfs, &scratch) {
-                    Ok(report) => {
-                        materialized_files = report.files_written;
-                        on_event(
-                            MATERIALIZE_EVENT_NAME,
-                            "complete",
-                            materialized_files,
-                            None,
-                        );
-                    }
-                    Err(e) => {
-                        let msg = format!("{e}");
-                        on_event(MATERIALIZE_EVENT_NAME, "error", 0, Some(&msg));
-                        // Continue with whatever scratch state exists —
-                        // partial materialize is still useful.
-                    }
-                }
-                materialized_vfs = Some(vfs);
-            }
-            Ok(None) => {
-                // Image opened but no partitions mounted (e.g. unsupported
-                // FS layout). Run plugins against the source path; they'll
-                // mostly produce zero, but the UI gets a real status.
-                on_event(MATERIALIZE_EVENT_NAME, "complete", 0, None);
-            }
-            Err(e) => {
-                let msg = format!("{e}");
-                on_event(MATERIALIZE_EVENT_NAME, "error", 0, Some(&msg));
-            }
-        }
-    }
-
-    // Populate `OpenEvidence.files` so `stats.files` reflects the
-    // materialized scratch immediately (per KR's "option a" in the
-    // diagnosis). Stub entries — the UI's tree-walk lazy fill still
-    // populates the rich CachedFile shape on demand.
-    if materialized_files > 0 {
-        let arc = get_evidence(evidence_id)?;
-        let mut guard = arc.lock().expect("evidence lock poisoned");
-        if guard.files.is_empty() {
-            // Walk the scratch tree and record one stub per regular file.
-            for entry in walk_host_dir(&scratch) {
-                let id = format!("matf-{}", guard.files.len());
-                let name = entry
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_default();
-                let extension = entry
-                    .extension()
-                    .map(|e| e.to_string_lossy().into_owned())
-                    .unwrap_or_default();
-                let size = std::fs::metadata(&entry).map(|m| m.len()).unwrap_or(0);
-                guard.files.insert(
-                    id.clone(),
-                    crate::store::CachedFile {
-                        id,
-                        vfs_path: entry.clone(),
-                        name,
-                        extension,
-                        size,
-                        modified: String::new(),
-                        created: String::new(),
-                        accessed: String::new(),
-                        is_dir: false,
-                        parent_node_id: String::new(),
-                        mft_entry: None,
-                        inode: None,
-                    },
-                );
-            }
-        }
-    }
-
-    // ── Pick plugin root + VFS surface ───────────────────────────────
-    // Prefer the materialized scratch dir (real host fs path that
-    // walk_dir-based plugins can traverse). Fall back to source_path
-    // for the directory-input case.
-    let plugin_root = if scratch.exists() {
-        scratch.clone()
-    } else {
-        source_path.clone()
-    };
-    let plugin_root_str = plugin_root.to_string_lossy().into_owned();
+    let prepared = prepare_plugin_root(evidence_id, &mut on_event)?;
 
     let plugins = build_plugins();
     let mut prior: Vec<PluginOutput> = Vec::new();
@@ -727,8 +748,8 @@ where
         on_event(&name, "running", 0, None);
 
         let context = PluginContext {
-            root_path: plugin_root_str.clone(),
-            vfs: materialized_vfs.as_ref().map(Arc::clone),
+            root_path: prepared.root_path.clone(),
+            vfs: prepared.vfs.as_ref().map(Arc::clone),
             config: HashMap::new(),
             prior_results: prior.clone(),
         };
@@ -748,12 +769,8 @@ where
                 let artifacts = convert_output(&output, &name);
                 let count = artifacts.len() as u64;
                 {
-                    let mut cache =
-                        ARTIFACT_CACHE.lock().expect("artifact cache poisoned");
-                    cache.insert(
-                        (evidence_id.to_string(), name.clone()),
-                        artifacts,
-                    );
+                    let mut cache = ARTIFACT_CACHE.lock().expect("artifact cache poisoned");
+                    cache.insert((evidence_id.to_string(), name.clone()), artifacts);
                 }
                 prior.push(output);
                 if let Some(msg) = panic_msg {
@@ -787,7 +804,8 @@ pub fn run_all_on_path(
     let plugins = build_plugins();
     let root_str = root_path.to_string_lossy().into_owned();
     let mut prior: Vec<PluginOutput> = Vec::new();
-    let mut results: Vec<(String, Result<PluginOutput, String>)> = Vec::with_capacity(plugins.len());
+    let mut results: Vec<(String, Result<PluginOutput, String>)> =
+        Vec::with_capacity(plugins.len());
     for plugin in plugins.iter() {
         let name = plugin.name().to_string();
         if let Some(filter) = plugin_filter {
@@ -867,16 +885,13 @@ pub fn run_all_with_persistence_vfs(
     plugin_filter: Option<&[String]>,
 ) -> Vec<(String, Result<PluginOutput, String>)> {
     let results = run_all_on_vfs(root_path, vfs, plugin_filter);
-    let mut db =
-        match strata_core::artifacts::ArtifactDatabase::open_or_create(case_dir, case_id) {
-            Ok(d) => d,
-            Err(e) => {
-                tracing::warn!(
-                    "artifact database open failed: {e}; persistence skipped"
-                );
-                return results;
-            }
-        };
+    let mut db = match strata_core::artifacts::ArtifactDatabase::open_or_create(case_dir, case_id) {
+        Ok(d) => d,
+        Err(e) => {
+            tracing::warn!("artifact database open failed: {e}; persistence skipped");
+            return results;
+        }
+    };
     for (plugin_name, outcome) in &results {
         if let Ok(output) = outcome {
             if output.artifacts.is_empty() {
@@ -901,8 +916,7 @@ pub fn run_all_with_persistence(
     plugin_filter: Option<&[String]>,
 ) -> Vec<(String, Result<PluginOutput, String>)> {
     let results = run_all_on_path(root_path, plugin_filter);
-    let mut db = match strata_core::artifacts::ArtifactDatabase::open_or_create(case_dir, case_id)
-    {
+    let mut db = match strata_core::artifacts::ArtifactDatabase::open_or_create(case_dir, case_id) {
         Ok(d) => d,
         Err(e) => {
             tracing::warn!("artifact database open failed: {e}; persistence skipped");
@@ -1011,10 +1025,8 @@ mod sprint8_run_all_on_evidence_tests {
         // walk_dir-based plugin emits a real artifact rather than a
         // stub. The exact set isn't load-bearing for the test —
         // we only assert that *some* plugin succeeded and cached.
-        std::fs::write(tmp.path().join("rasphone.pbk"), b"FAKE PBK")
-            .expect("write rasphone");
-        std::fs::write(tmp.path().join("hosts"), b"127.0.0.1 localhost\n")
-            .expect("write hosts");
+        std::fs::write(tmp.path().join("rasphone.pbk"), b"FAKE PBK").expect("write rasphone");
+        std::fs::write(tmp.path().join("hosts"), b"127.0.0.1 localhost\n").expect("write hosts");
 
         // Unique evidence id to avoid colliding with parallel test
         // crates that may also touch the global store.
@@ -1045,7 +1057,10 @@ mod sprint8_run_all_on_evidence_tests {
                 completed_plugins.push(name.to_string());
             }
         });
-        assert!(result.is_ok(), "run_all_on_evidence should not error: {result:?}");
+        assert!(
+            result.is_ok(),
+            "run_all_on_evidence should not error: {result:?}"
+        );
 
         // Source path was a directory, not a file — no materialize
         // event should have fired. Tripwires the file-vs-dir branch.
@@ -1095,6 +1110,60 @@ mod sprint8_run_all_on_evidence_tests {
 
         cleanup_evidence(&evidence_id);
     }
+
+    #[test]
+    fn run_plugin_uses_shared_root_and_builds_prior_outputs() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        std::fs::write(tmp.path().join("hosts"), b"127.0.0.1 localhost\n").expect("write hosts");
+
+        static COUNTER: AtomicU32 = AtomicU32::new(0);
+        let evidence_id = format!(
+            "test-run-one-{}-{}",
+            std::process::id(),
+            COUNTER.fetch_add(1, Ordering::Relaxed),
+        );
+        synthesise_evidence_from_dir(tmp.path(), &evidence_id);
+
+        let result = run_plugin(&evidence_id, "Trace");
+        assert!(
+            result.is_ok(),
+            "single-plugin run should succeed: {result:?}"
+        );
+
+        let cache = ARTIFACT_CACHE.lock().expect("cache");
+        assert!(
+            cache.contains_key(&(evidence_id.clone(), "Strata Remnant".to_string())),
+            "single-plugin run must execute and cache earlier plugins for prior_results"
+        );
+        assert!(
+            cache.contains_key(&(evidence_id.clone(), "Trace".to_string())),
+            "single-plugin target should cache using the UI-requested plugin name"
+        );
+        drop(cache);
+
+        cleanup_evidence(&evidence_id);
+    }
+
+    #[test]
+    fn files_counter_populates_for_directory_ingestion() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        std::fs::write(tmp.path().join("one.txt"), b"one").expect("write one");
+        std::fs::create_dir(tmp.path().join("nested")).expect("mkdir nested");
+        std::fs::write(tmp.path().join("nested").join("two.log"), b"two").expect("write two");
+
+        let info = crate::evidence::parse_evidence(tmp.path().to_str().expect("path"))
+            .expect("parse directory evidence");
+        prepare_plugin_root(&info.id, |_name, _status, _count, _err| {})
+            .expect("prepare directory plugin root");
+
+        let stats = crate::evidence::get_stats(&info.id).expect("stats");
+        assert_eq!(
+            stats.files, 2,
+            "directory-backed evidence must populate FILES before lazy tree expansion"
+        );
+
+        cleanup_evidence(&info.id);
+    }
 }
 
 #[cfg(test)]
@@ -1126,7 +1195,12 @@ mod sprint11_p4_dedup_tests {
     fn deduplication_removes_exact_duplicates() {
         // Two plugins producing the same chat row.
         let dupes = vec![
-            art("MacTrace", "iMessage row 1", "hello world", Some("1717243200")),
+            art(
+                "MacTrace",
+                "iMessage row 1",
+                "hello world",
+                Some("1717243200"),
+            ),
             art("Pulse", "iMessage row 1", "hello world", Some("1717243200")),
         ];
         let out = deduplicate_artifacts(dupes);
@@ -1141,7 +1215,11 @@ mod sprint11_p4_dedup_tests {
             art("Pulse", "iMessage row 1", "hello", Some("1")), // dup
         ];
         let out = deduplicate_artifacts(mixed);
-        assert_eq!(out.len(), 2, "distinct artifacts (different value or ts) must stay");
+        assert_eq!(
+            out.len(),
+            2,
+            "distinct artifacts (different value or ts) must stay"
+        );
         assert!(out.iter().any(|a| a.value == "hello"));
         assert!(out.iter().any(|a| a.value == "world"));
     }
@@ -1186,9 +1264,18 @@ mod sprint11_p1_thread_grouping_tests {
         if let Some(t) = thread_id {
             data.insert("thread_id".into(), serde_json::Value::String(t.into()));
         }
-        data.insert("participant".into(), serde_json::Value::String(participant.into()));
-        data.insert("direction".into(), serde_json::Value::String(direction.into()));
-        data.insert("service".into(), serde_json::Value::String("iMessage".into()));
+        data.insert(
+            "participant".into(),
+            serde_json::Value::String(participant.into()),
+        );
+        data.insert(
+            "direction".into(),
+            serde_json::Value::String(direction.into()),
+        );
+        data.insert(
+            "service".into(),
+            serde_json::Value::String("iMessage".into()),
+        );
         data.insert("body".into(), serde_json::Value::String(body.into()));
         let raw = serde_json::Value::Object(data).to_string();
         let art = PluginArtifact {
@@ -1224,12 +1311,43 @@ mod sprint11_p1_thread_grouping_tests {
         let eid = "test-thread-sort";
         cleanup(eid);
         // Insert out of order: t=3, t=1, t=2. Output must be 1,2,3.
-        artifact(eid, "MacTrace", "m-3", "3", Some("T1"), "+15551", "outbound", "third");
-        artifact(eid, "MacTrace", "m-1", "1", Some("T1"), "+15551", "inbound", "first");
-        artifact(eid, "MacTrace", "m-2", "2", Some("T1"), "+15551", "outbound", "second");
+        artifact(
+            eid,
+            "MacTrace",
+            "m-3",
+            "3",
+            Some("T1"),
+            "+15551",
+            "outbound",
+            "third",
+        );
+        artifact(
+            eid,
+            "MacTrace",
+            "m-1",
+            "1",
+            Some("T1"),
+            "+15551",
+            "inbound",
+            "first",
+        );
+        artifact(
+            eid,
+            "MacTrace",
+            "m-2",
+            "2",
+            Some("T1"),
+            "+15551",
+            "outbound",
+            "second",
+        );
         let threads = get_artifacts_by_thread(eid, "Communications").expect("ok");
         let real: Vec<_> = threads.iter().filter(|t| t.thread_id == "T1").collect();
-        assert_eq!(real.len(), 1, "all three messages should land in one thread");
+        assert_eq!(
+            real.len(),
+            1,
+            "all three messages should land in one thread"
+        );
         let bodies: Vec<&str> = real[0].messages.iter().map(|m| m.body.as_str()).collect();
         assert_eq!(bodies, vec!["first", "second", "third"]);
         cleanup(eid);
@@ -1239,8 +1357,26 @@ mod sprint11_p1_thread_grouping_tests {
     fn inbound_outbound_direction_is_preserved() {
         let eid = "test-thread-direction";
         cleanup(eid);
-        artifact(eid, "MacTrace", "m-in", "1", Some("T2"), "alice@x", "inbound", "hi");
-        artifact(eid, "MacTrace", "m-out", "2", Some("T2"), "alice@x", "outbound", "hello back");
+        artifact(
+            eid,
+            "MacTrace",
+            "m-in",
+            "1",
+            Some("T2"),
+            "alice@x",
+            "inbound",
+            "hi",
+        );
+        artifact(
+            eid,
+            "MacTrace",
+            "m-out",
+            "2",
+            Some("T2"),
+            "alice@x",
+            "outbound",
+            "hello back",
+        );
         let threads = get_artifacts_by_thread(eid, "Communications").expect("ok");
         let t2 = threads
             .iter()
@@ -1268,14 +1404,26 @@ mod sprint11_p1_thread_grouping_tests {
         // mirror shape.
         let mut data = serde_json::Map::new();
         data.insert("thread_id".into(), serde_json::Value::String("6700".into()));
-        data.insert("participant".into(), serde_json::Value::String("6700".into()));
-        data.insert("direction".into(), serde_json::Value::String("inbound".into()));
+        data.insert(
+            "participant".into(),
+            serde_json::Value::String("6700".into()),
+        );
+        data.insert(
+            "direction".into(),
+            serde_json::Value::String("inbound".into()),
+        );
         data.insert("service".into(), serde_json::Value::String("SMS".into()));
-        data.insert("body".into(), serde_json::Value::String("Nice! Your phone is setup".into()));
+        data.insert(
+            "body".into(),
+            serde_json::Value::String("Nice! Your phone is setup".into()),
+        );
         let raw = serde_json::Value::Object(data).to_string();
         for (id, src) in [
             ("m-a", "/Users/x/Library/Messages/chat.db"),
-            ("m-b", "/System/Volumes/Data/Users/x/Library/Messages/chat.db"),
+            (
+                "m-b",
+                "/System/Volumes/Data/Users/x/Library/Messages/chat.db",
+            ),
         ] {
             let art = PluginArtifact {
                 id: id.into(),
@@ -1313,9 +1461,20 @@ mod sprint11_p1_thread_grouping_tests {
         let eid = "test-thread-fallback";
         cleanup(eid);
         // No thread_id — must land in the __ungrouped__ bucket.
-        artifact(eid, "MacTrace", "m-orphan", "1", None, "", "unknown", "orphaned");
+        artifact(
+            eid, "MacTrace", "m-orphan", "1", None, "", "unknown", "orphaned",
+        );
         // Plus one real thread to prove both coexist.
-        artifact(eid, "MacTrace", "m-real", "2", Some("T3"), "bob@x", "inbound", "real");
+        artifact(
+            eid,
+            "MacTrace",
+            "m-real",
+            "2",
+            Some("T3"),
+            "bob@x",
+            "inbound",
+            "real",
+        );
         let threads = get_artifacts_by_thread(eid, "Communications").expect("ok");
         let ungrouped = threads
             .iter()
@@ -1508,5 +1667,12 @@ mod sprint10_panic_sandbox_tests {
             "single-plugin re-run on a panic produces exactly one plugin_error row"
         );
         assert_eq!(converted[0].name, "Plugin 'TestPanicker' panicked");
+    }
+
+    #[test]
+    fn plugin_name_match_accepts_backend_and_ui_names() {
+        assert!(plugin_name_matches("Strata Remnant", "Strata Remnant"));
+        assert!(plugin_name_matches("Strata Remnant", "Remnant"));
+        assert!(!plugin_name_matches("Strata Remnant", "Trace"));
     }
 }

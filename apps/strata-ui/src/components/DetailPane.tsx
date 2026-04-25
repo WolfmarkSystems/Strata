@@ -5,7 +5,7 @@ import HexViewer from './HexViewer'
 import TextViewer from './TextViewer'
 import SqliteViewer from './SqliteViewer'
 import TimestampConverter from './TimestampConverter'
-import { lookupKnowledge, type KnowledgeEntry } from '../data/knowledgeBank'
+import { lookupKnowledge, type KnowledgeLookupResult } from '../data/knowledgeBank'
 
 interface Props {
   fileId: string | null
@@ -362,15 +362,17 @@ function MetaContent({ meta, loading }: { meta: FileMetadata | null; loading: bo
   )
 }
 
-function KnowledgeBankSection({ entry }: { entry: KnowledgeEntry | null }) {
+function KnowledgeBankSection({ entry }: { entry: KnowledgeLookupResult | null }) {
   if (!entry) return null
 
+  const knowledge = entry.entry
+
   const titleColor =
-    entry.forensic_value === 'critical'
+    knowledge.forensic_value === 'critical'
       ? 'var(--flag)'
-      : entry.forensic_value === 'high'
+      : knowledge.forensic_value === 'high'
         ? 'var(--sus)'
-        : entry.forensic_value === 'medium'
+        : knowledge.forensic_value === 'medium'
           ? 'var(--text-2)'
           : 'var(--text-muted)'
 
@@ -415,8 +417,21 @@ function KnowledgeBankSection({ entry }: { entry: KnowledgeEntry | null }) {
             marginBottom: 6,
           }}
         >
-          {entry.title}
+          {knowledge.title}
         </div>
+
+        {entry.matchType === 'extension' && entry.extension && (
+          <div
+            style={{
+              fontSize: 10,
+              color: 'var(--text-muted)',
+              fontStyle: 'italic',
+              marginBottom: 8,
+            }}
+          >
+            Generic match — applies to all .{entry.extension} files
+          </div>
+        )}
 
         <div
           style={{
@@ -426,14 +441,14 @@ function KnowledgeBankSection({ entry }: { entry: KnowledgeEntry | null }) {
             marginBottom: 10,
           }}
         >
-          {entry.summary}
+          {knowledge.summary}
         </div>
 
-        {entry.artifact_types.length > 0 && (
+        {knowledge.artifact_types.length > 0 && (
           <>
             <KbLabel>ARTIFACTS</KbLabel>
             <div style={{ marginBottom: 4 }}>
-              {entry.artifact_types.map((t) => (
+              {knowledge.artifact_types.map((t) => (
                 <div
                   key={t}
                   style={{
@@ -450,11 +465,11 @@ function KnowledgeBankSection({ entry }: { entry: KnowledgeEntry | null }) {
           </>
         )}
 
-        {entry.mitre_techniques.length > 0 && (
+        {knowledge.mitre_techniques.length > 0 && (
           <>
             <KbLabel style={{ marginTop: 8 }}>MITRE</KbLabel>
             <div style={{ marginBottom: 4 }}>
-              {entry.mitre_techniques.map((m) => (
+              {knowledge.mitre_techniques.map((m) => (
                 <span
                   key={m}
                   style={{
@@ -476,7 +491,7 @@ function KnowledgeBankSection({ entry }: { entry: KnowledgeEntry | null }) {
           </>
         )}
 
-        {entry.threat_indicators && entry.threat_indicators.length > 0 && (
+        {knowledge.threat_indicators && knowledge.threat_indicators.length > 0 && (
           <>
             <div
               style={{
@@ -490,7 +505,7 @@ function KnowledgeBankSection({ entry }: { entry: KnowledgeEntry | null }) {
             >
               THREAT INDICATORS
             </div>
-            {entry.threat_indicators.map((ti) => (
+            {knowledge.threat_indicators.map((ti) => (
               <div
                 key={ti}
                 style={{
@@ -516,7 +531,7 @@ function KnowledgeBankSection({ entry }: { entry: KnowledgeEntry | null }) {
             marginTop: 2,
           }}
         >
-          {entry.examiner_notes}
+          {knowledge.examiner_notes}
         </div>
       </div>
     </>

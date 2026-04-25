@@ -9,6 +9,12 @@ export interface KnowledgeEntry {
   threat_indicators?: string[]
 }
 
+export interface KnowledgeLookupResult {
+  entry: KnowledgeEntry
+  matchType: 'filename' | 'extension'
+  extension: string
+}
+
 // Keyed by lowercase exact filename OR lowercase extension (no dot).
 // Exact filename match takes priority over extension match.
 export const KNOWLEDGE_BANK: Record<string, KnowledgeEntry> = {
@@ -2042,15 +2048,23 @@ export const KNOWLEDGE_BANK: Record<string, KnowledgeEntry> = {
 export function lookupKnowledge(
   fileName: string,
   extension: string,
-): KnowledgeEntry | null {
+): KnowledgeLookupResult | null {
   const nameLower = (fileName || '').toLowerCase()
   const extLower = (extension || '').toLowerCase().replace('.', '')
 
   if (nameLower && KNOWLEDGE_BANK[nameLower]) {
-    return KNOWLEDGE_BANK[nameLower]
+    return {
+      entry: KNOWLEDGE_BANK[nameLower],
+      matchType: 'filename',
+      extension: extLower,
+    }
   }
   if (extLower && KNOWLEDGE_BANK[extLower]) {
-    return KNOWLEDGE_BANK[extLower]
+    return {
+      entry: KNOWLEDGE_BANK[extLower],
+      matchType: 'extension',
+      extension: extLower,
+    }
   }
   return null
 }

@@ -41,6 +41,8 @@ export interface TreeNode {
   name: string
   node_type: 'evidence' | 'volume' | 'folder' | 'file' | string
   count: number
+  file_count: number
+  folder_count: number
   is_deleted: boolean
   is_flagged: boolean
   is_suspicious: boolean
@@ -101,6 +103,7 @@ export interface PluginInfo {
   status: 'idle' | 'running' | 'complete' | 'error'
   artifact_count: number
   progress: number
+  generic_run_disabled?: boolean
 }
 
 export interface ChangelogEntry {
@@ -351,6 +354,7 @@ export const PLUGIN_DATA: PluginInfo[] = [
     changelog: [{ version: 'v0.1.0', changes: ['Initial registration alongside strata-csam engine'] }],
     accent_color: '#802040',
     status: 'idle', artifact_count: 0, progress: 0,
+    generic_run_disabled: true,
   },
   {
     name: 'Apex',

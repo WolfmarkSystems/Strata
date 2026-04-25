@@ -30,8 +30,7 @@ pub fn parse_evidence(path: &str) -> AdapterResult<EvidenceInfo> {
     // Build root nodes (evidence + each volume) up front so the UI tree opens
     // immediately.
     let mut root_node_ids = Vec::new();
-    let mut nodes: std::collections::HashMap<String, CachedNode> =
-        std::collections::HashMap::new();
+    let mut nodes: std::collections::HashMap<String, CachedNode> = std::collections::HashMap::new();
 
     // Top "evidence" node
     let evidence_node_id = "node-root".to_string();
@@ -172,7 +171,7 @@ pub fn get_tree_root(evidence_id: &str) -> AdapterResult<Vec<TreeNode>> {
     let mut out = Vec::new();
     for id in &guard.root_node_ids {
         if let Some(node) = guard.nodes.get(id) {
-            out.push(to_tree_node(node));
+            out.push(to_tree_node(node, &guard));
         }
     }
     Ok(out)
@@ -192,10 +191,7 @@ pub fn get_tree_root(evidence_id: &str) -> AdapterResult<Vec<TreeNode>> {
 /// Returns `Err(AdapterError::NotFound)` rather than panicking when
 /// the path isn't part of the evidence — examiners then see a clear
 /// "source not found in evidence tree" toast.
-pub fn navigate_to_path(
-    evidence_id: &str,
-    file_path: &str,
-) -> AdapterResult<NavigationTarget> {
+pub fn navigate_to_path(evidence_id: &str, file_path: &str) -> AdapterResult<NavigationTarget> {
     use std::path::PathBuf;
 
     let target_path = PathBuf::from(file_path);
@@ -259,11 +255,7 @@ pub fn navigate_to_path(
     )))
 }
 
-fn walk_to_path(
-    evidence_id: &str,
-    start: &str,
-    target: &Path,
-) -> AdapterResult<NavigationTarget> {
+fn walk_to_path(evidence_id: &str, start: &str, target: &Path) -> AdapterResult<NavigationTarget> {
     let mut current = start.to_string();
     for _ in 0..MAX_TREE_DEPTH {
         // Force-expand the current node.
@@ -348,11 +340,7 @@ fn paths_match_node(target: &Path, node: &CachedNode, open: &OpenEvidence) -> bo
     absolute_node_path(node, open) == target
 }
 
-fn paths_match_file(
-    target: &Path,
-    file: &crate::store::CachedFile,
-    open: &OpenEvidence,
-) -> bool {
+fn paths_match_file(target: &Path, file: &crate::store::CachedFile, open: &OpenEvidence) -> bool {
     if file.vfs_path == target {
         return true;
     }
@@ -375,10 +363,7 @@ fn build_breadcrumb(open: &OpenEvidence, leaf: &str) -> Vec<String> {
     let mut cursor = Some(leaf.to_string());
     while let Some(id) = cursor {
         chain.push(id.clone());
-        cursor = open
-            .nodes
-            .get(&id)
-            .and_then(|n| n.parent_id.clone());
+        cursor = open.nodes.get(&id).and_then(|n| n.parent_id.clone());
     }
     chain.reverse();
     chain
@@ -416,7 +401,7 @@ pub fn get_tree_children(evidence_id: &str, node_id: &str) -> AdapterResult<Vec<
                 return Ok(node
                     .child_ids
                     .iter()
-                    .filter_map(|cid| guard.nodes.get(cid).map(to_tree_node))
+                    .filter_map(|cid| guard.nodes.get(cid).map(|n| to_tree_node(n, &guard)))
                     .collect());
             }
         } else {
@@ -534,7 +519,7 @@ pub fn get_tree_children(evidence_id: &str, node_id: &str) -> AdapterResult<Vec<
         .map(|n| n.child_ids.clone())
         .unwrap_or_default()
         .iter()
-        .filter_map(|cid| guard.nodes.get(cid).map(to_tree_node))
+        .filter_map(|cid| guard.nodes.get(cid).map(|n| to_tree_node(n, &guard)))
         .collect();
     Ok(result)
 }
@@ -592,7 +577,10 @@ fn walk_directory(
 
 fn volume_label(v: &VolumeInfo) -> String {
     let fs = v.filesystem.as_str();
-    let label = v.label.clone().unwrap_or_else(|| format!("Volume {}", v.volume_index));
+    let label = v
+        .label
+        .clone()
+        .unwrap_or_else(|| format!("Volume {}", v.volume_index));
     format!("[{} {}]", fs, label)
 }
 
@@ -602,12 +590,20 @@ fn estimate_volume_files(_v: &VolumeInfo) -> u64 {
     0
 }
 
-fn to_tree_node(n: &CachedNode) -> TreeNode {
+fn to_tree_node(n: &CachedNode, open: &OpenEvidence) -> TreeNode {
+    let folder_count = n.child_ids.len() as u64;
+    let file_count = open
+        .files
+        .values()
+        .filter(|f| f.parent_node_id == n.id)
+        .count() as u64;
     TreeNode {
         id: n.id.clone(),
         name: n.name.clone(),
         node_type: n.node_type.clone(),
-        count: n.child_ids.len() as u64,
+        count: file_count + folder_count,
+        file_count,
+        folder_count,
         has_children: !n.child_ids.is_empty() || !n.children_loaded,
         parent_id: n.parent_id.clone(),
         depth: n.depth,
@@ -700,8 +696,7 @@ mod sprint11_p2_navigate_to_path_tests {
 
     fn seed_evidence_with_dir(dir: &Path) -> String {
         let evidence_id = unique_id();
-        let source = strata_fs::container::EvidenceSource::open(dir)
-            .expect("EvidenceSource::open");
+        let source = strata_fs::container::EvidenceSource::open(dir).expect("EvidenceSource::open");
         let arc = insert_evidence(evidence_id.clone(), source);
         // Seed root + volume nodes so navigate_to_path has somewhere
         // to start. Mirrors the layout `parse_evidence` builds.
@@ -751,8 +746,8 @@ mod sprint11_p2_navigate_to_path_tests {
         let eid = seed_evidence_with_dir(dir.path());
 
         // Navigate to the subdirectory itself — must return a node.
-        let target = navigate_to_path(&eid, sub.to_str().expect("path"))
-            .expect("subdir must resolve");
+        let target =
+            navigate_to_path(&eid, sub.to_str().expect("path")).expect("subdir must resolve");
         assert!(!target.node_id.is_empty());
         assert!(
             target.breadcrumb.contains(&"node-root".to_string()),
@@ -765,8 +760,40 @@ mod sprint11_p2_navigate_to_path_tests {
         let file_path = sub.join("evidence.txt");
         let target =
             navigate_to_path(&eid, file_path.to_str().expect("path")).expect("file resolves");
-        assert!(target.file_id.is_some(), "file navigation must return file_id");
+        assert!(
+            target.file_id.is_some(),
+            "file navigation must return file_id"
+        );
         cleanup(&eid);
+    }
+
+    #[test]
+    fn tree_node_badge_shows_files_and_subdirs() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(dir.path().join("alpha.txt"), b"a").expect("write alpha");
+        std::fs::write(dir.path().join("beta.log"), b"b").expect("write beta");
+        std::fs::create_dir(dir.path().join("folder")).expect("mkdir folder");
+
+        let info = parse_evidence(dir.path().to_str().expect("path")).expect("parse evidence");
+        let _children = get_tree_children(&info.id, "node-root-vol-0").expect("load volume");
+
+        let arc = get_evidence(&info.id).expect("evidence");
+        let guard = arc.lock().expect("lock");
+        let volume = guard.nodes.get("node-root-vol-0").expect("volume node");
+        let tree_node = to_tree_node(volume, &guard);
+
+        assert_eq!(tree_node.file_count, 2, "badge must include direct files");
+        assert_eq!(
+            tree_node.folder_count, 1,
+            "badge must include direct subdirectories"
+        );
+        assert_eq!(
+            tree_node.count, 3,
+            "legacy count remains total direct children"
+        );
+
+        drop(guard);
+        cleanup(&info.id);
     }
 
     #[test]
@@ -876,7 +903,10 @@ mod sprint10_p4_tree_recursion_guard_tests {
             node.children_loaded,
             "guard must mark the node loaded so it is not re-walked"
         );
-        assert!(node.child_ids.is_empty(), "guard must clear stale child ids");
+        assert!(
+            node.child_ids.is_empty(),
+            "guard must clear stale child ids"
+        );
         drop(guard);
         cleanup(&evidence_id);
     }

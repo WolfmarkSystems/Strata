@@ -247,7 +247,7 @@ function TreeNodeRow({
           flexShrink: 0,
         }}
       >
-        {node.count.toLocaleString()}
+        {node.file_count.toLocaleString()} files &middot; {node.folder_count.toLocaleString()} folders
       </span>
     </div>
   )
