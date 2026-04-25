@@ -262,17 +262,29 @@ impl StrataPlugin for GuardianPlugin {
                 }
             };
 
+            // Sprint-11 P3 — propagate timestamp + raw_data from the
+            // legacy Artifact, mirroring the SDK default execute().
+            let raw_data = if a.data.is_empty() {
+                None
+            } else {
+                let json: serde_json::Map<String, serde_json::Value> = a
+                    .data
+                    .iter()
+                    .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                    .collect();
+                Some(serde_json::Value::Object(json))
+            };
             records.push(ArtifactRecord {
                 category,
                 subcategory: file_type,
-                timestamp: None,
+                timestamp: a.timestamp.map(|t| t as i64),
                 title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
                 source_path: a.source.clone(),
                 forensic_value,
                 mitre_technique: a.data.get("mitre").cloned(),
                 is_suspicious: suspicious,
-                raw_data: None,
+                raw_data,
                 confidence: 0,
             });
         }

@@ -90,6 +90,37 @@ pub struct PluginArtifact {
     pub raw_data: Option<String>,
 }
 
+/// Sprint-11 P1 — one row inside a `MessageThread`. A flattened, IPC-
+/// friendly shape designed for the conversation view: timestamp +
+/// direction + body + service, plus a back-pointer to the original
+/// `PluginArtifact.id` so the UI can still drill into raw fields.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ThreadMessage {
+    pub artifact_id: String,
+    pub timestamp: Option<String>,
+    /// `"inbound"` / `"outbound"` / `"unknown"`.
+    pub direction: String,
+    /// `"iMessage"`, `"SMS"`, `"WhatsApp"`, …
+    pub service: String,
+    /// Plain-text body when available — pulled from the artifact's
+    /// `body` field with `value` as the fallback.
+    pub body: String,
+    pub source_path: String,
+}
+
+/// Sprint-11 P1 — one conversation: a participant + the messages
+/// exchanged with them, sorted chronologically. Returned by
+/// `get_artifacts_by_thread`. Threads with `participant.is_empty()`
+/// represent ungrouped artifacts and are emitted last so the UI can
+/// fall back to the flat list for non-message data.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MessageThread {
+    pub thread_id: String,
+    pub participant: String,
+    pub service: String,
+    pub messages: Vec<ThreadMessage>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EngineStats {
     pub files: u64,
@@ -123,6 +154,13 @@ pub enum AdapterError {
     IoError(#[from] std::io::Error),
     #[error("Engine error: {0}")]
     EngineError(String),
+    /// Sprint-11 P2 — generic not-found used by `navigate_to_path`
+    /// when the supplied source path is not part of the evidence
+    /// tree. Distinct from `FileNotFound` (which means a file the
+    /// caller already pointed at could not be read) — `NotFound` is
+    /// the lookup-failed-cleanly case the UI surfaces as a toast.
+    #[error("Not found: {0}")]
+    NotFound(String),
 }
 
 /// Format raw byte counts for display ("9.8 GB", "44 MB", "2.4 KB", "812 B").

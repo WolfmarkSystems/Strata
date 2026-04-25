@@ -178,6 +178,222 @@ pub fn get_tree_root(evidence_id: &str) -> AdapterResult<Vec<TreeNode>> {
     Ok(out)
 }
 
+/// Sprint-11 P2 — return the node + breadcrumb chain that leads to a
+/// source path so the UI can expand the evidence tree to that file.
+///
+/// Lookup strategy:
+///   1. If a tree node already exists with `vfs_path == path`,
+///      return it + its parent chain (cheap fast-path; common when
+///      the user has already browsed near the target).
+///   2. Otherwise, walk from each root volume node, eagerly expanding
+///      `get_tree_children` along the path components until either
+///      the target node is realised or a component is missing.
+///
+/// Returns `Err(AdapterError::NotFound)` rather than panicking when
+/// the path isn't part of the evidence — examiners then see a clear
+/// "source not found in evidence tree" toast.
+pub fn navigate_to_path(
+    evidence_id: &str,
+    file_path: &str,
+) -> AdapterResult<NavigationTarget> {
+    use std::path::PathBuf;
+
+    let target_path = PathBuf::from(file_path);
+
+    // Fast path: check the cache directly. Tree nodes store paths in
+    // a mix of forms — volume nodes carry the absolute VFS root,
+    // child nodes hold the path relative to that root (FsVfs strips
+    // the prefix when emitting VfsEntries). We accept both shapes.
+    {
+        let arc = get_evidence(evidence_id)?;
+        let guard = arc.lock().expect("evidence lock poisoned");
+        if let Some((id, _)) = guard
+            .nodes
+            .iter()
+            .find(|(_, n)| paths_match_node(&target_path, n, &guard))
+        {
+            let breadcrumb = build_breadcrumb(&guard, id);
+            return Ok(NavigationTarget {
+                node_id: id.clone(),
+                breadcrumb,
+                file_id: None,
+            });
+        }
+        if let Some((fid, _)) = guard
+            .files
+            .iter()
+            .find(|(_, f)| paths_match_file(&target_path, f, &guard))
+        {
+            let parent = guard
+                .files
+                .get(fid)
+                .and_then(|f| guard.nodes.get(&f.parent_node_id))
+                .map(|n| n.id.clone());
+            if let Some(parent_id) = parent {
+                let breadcrumb = build_breadcrumb(&guard, &parent_id);
+                return Ok(NavigationTarget {
+                    node_id: parent_id,
+                    breadcrumb,
+                    file_id: Some(fid.clone()),
+                });
+            }
+        }
+    }
+
+    // Slow path: walk from each root and force expansion until we
+    // realise the target. Bail at MAX_TREE_DEPTH so a corrupt path
+    // can't loop us.
+    let root_ids: Vec<String> = {
+        let arc = get_evidence(evidence_id)?;
+        let guard = arc.lock().expect("evidence lock poisoned");
+        guard.root_node_ids.clone()
+    };
+    for root in root_ids {
+        // Force expansion of root → volume → ... using get_tree_children.
+        if let Ok(target) = walk_to_path(evidence_id, &root, &target_path) {
+            return Ok(target);
+        }
+    }
+    Err(AdapterError::NotFound(format!(
+        "source path not found in evidence tree: {file_path}"
+    )))
+}
+
+fn walk_to_path(
+    evidence_id: &str,
+    start: &str,
+    target: &Path,
+) -> AdapterResult<NavigationTarget> {
+    let mut current = start.to_string();
+    for _ in 0..MAX_TREE_DEPTH {
+        // Force-expand the current node.
+        let _ = get_tree_children(evidence_id, &current)?;
+        // Re-check the cache after expansion.
+        let arc = get_evidence(evidence_id)?;
+        let guard = arc.lock().expect("evidence lock poisoned");
+        if let Some((id, _)) = guard
+            .nodes
+            .iter()
+            .find(|(_, n)| paths_match_node(target, n, &guard))
+        {
+            let breadcrumb = build_breadcrumb(&guard, id);
+            return Ok(NavigationTarget {
+                node_id: id.clone(),
+                breadcrumb,
+                file_id: None,
+            });
+        }
+        if let Some((fid, _)) = guard
+            .files
+            .iter()
+            .find(|(_, f)| paths_match_file(target, f, &guard))
+        {
+            let parent = guard
+                .files
+                .get(fid)
+                .and_then(|f| guard.nodes.get(&f.parent_node_id))
+                .map(|n| n.id.clone());
+            if let Some(parent_id) = parent {
+                let breadcrumb = build_breadcrumb(&guard, &parent_id);
+                return Ok(NavigationTarget {
+                    node_id: parent_id,
+                    breadcrumb,
+                    file_id: Some(fid.clone()),
+                });
+            }
+        }
+        // Not found yet — pick the child node whose vfs_path is a
+        // prefix of the target and recurse into it. If none match the
+        // target isn't beneath this subtree.
+        let next = guard
+            .nodes
+            .get(&current)
+            .map(|n| n.child_ids.clone())
+            .unwrap_or_default()
+            .into_iter()
+            .find(|cid| {
+                guard
+                    .nodes
+                    .get(cid)
+                    .map(|c| node_is_ancestor_of(target, c, &guard))
+                    .unwrap_or(false)
+            });
+        match next {
+            Some(c) => current = c,
+            None => break,
+        }
+    }
+    Err(AdapterError::NotFound(format!(
+        "source path not found beneath {start}: {target:?}"
+    )))
+}
+
+/// Resolve a tree node's `vfs_path` to an absolute filesystem path
+/// for comparison. Volume nodes already hold an absolute root; child
+/// nodes hold a path relative to that root and need it prefixed.
+fn absolute_node_path(node: &CachedNode, open: &OpenEvidence) -> PathBuf {
+    if node.vfs_path.is_absolute() {
+        return node.vfs_path.clone();
+    }
+    if let Some(vfs) = open.source.vfs.as_ref() {
+        return vfs.root().join(&node.vfs_path);
+    }
+    node.vfs_path.clone()
+}
+
+fn paths_match_node(target: &Path, node: &CachedNode, open: &OpenEvidence) -> bool {
+    if node.vfs_path == target {
+        return true;
+    }
+    absolute_node_path(node, open) == target
+}
+
+fn paths_match_file(
+    target: &Path,
+    file: &crate::store::CachedFile,
+    open: &OpenEvidence,
+) -> bool {
+    if file.vfs_path == target {
+        return true;
+    }
+    if file.vfs_path.is_absolute() {
+        return false;
+    }
+    if let Some(vfs) = open.source.vfs.as_ref() {
+        return vfs.root().join(&file.vfs_path) == target;
+    }
+    false
+}
+
+fn node_is_ancestor_of(target: &Path, node: &CachedNode, open: &OpenEvidence) -> bool {
+    let abs = absolute_node_path(node, open);
+    target.starts_with(&abs)
+}
+
+fn build_breadcrumb(open: &OpenEvidence, leaf: &str) -> Vec<String> {
+    let mut chain = Vec::new();
+    let mut cursor = Some(leaf.to_string());
+    while let Some(id) = cursor {
+        chain.push(id.clone());
+        cursor = open
+            .nodes
+            .get(&id)
+            .and_then(|n| n.parent_id.clone());
+    }
+    chain.reverse();
+    chain
+}
+
+/// Sprint-11 P2 — return shape for `navigate_to_path`. The frontend
+/// expands each id in `breadcrumb` (root → leaf), selects `node_id`,
+/// and additionally highlights `file_id` when set.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct NavigationTarget {
+    pub node_id: String,
+    pub breadcrumb: Vec<String>,
+    pub file_id: Option<String>,
+}
+
 /// Sprint-10 P4 — defense-in-depth recursion guard.
 ///
 /// 50 levels is far deeper than any real forensic image hierarchy
@@ -455,6 +671,121 @@ fn sanitize(name: &str) -> String {
         .chars()
         .take(32)
         .collect()
+}
+
+#[cfg(test)]
+mod sprint11_p2_navigate_to_path_tests {
+    //! Sprint-11 P2 — `navigate_to_path` resolves a source path to a
+    //! tree node + breadcrumb, force-expanding lazy nodes along the
+    //! way. Errors cleanly (no panic) when the path isn't present.
+
+    use super::*;
+    use crate::store::{insert_evidence, EVIDENCE_STORE};
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    static COUNTER: AtomicU32 = AtomicU32::new(0);
+
+    fn unique_id() -> String {
+        format!(
+            "test-nav-{}-{}",
+            std::process::id(),
+            COUNTER.fetch_add(1, Ordering::Relaxed),
+        )
+    }
+
+    fn cleanup(id: &str) {
+        let mut store = EVIDENCE_STORE.lock().expect("store");
+        store.remove(id);
+    }
+
+    fn seed_evidence_with_dir(dir: &Path) -> String {
+        let evidence_id = unique_id();
+        let source = strata_fs::container::EvidenceSource::open(dir)
+            .expect("EvidenceSource::open");
+        let arc = insert_evidence(evidence_id.clone(), source);
+        // Seed root + volume nodes so navigate_to_path has somewhere
+        // to start. Mirrors the layout `parse_evidence` builds.
+        {
+            let mut guard = arc.lock().expect("lock");
+            let root_id = "node-root".to_string();
+            let vol_id = "node-root-vol-0".to_string();
+            guard.nodes.insert(
+                root_id.clone(),
+                CachedNode {
+                    id: root_id.clone(),
+                    name: "evidence".into(),
+                    node_type: "evidence".into(),
+                    vfs_path: PathBuf::from("/"),
+                    volume_index: None,
+                    parent_id: None,
+                    depth: 0,
+                    child_ids: vec![vol_id.clone()],
+                    children_loaded: true,
+                },
+            );
+            guard.nodes.insert(
+                vol_id.clone(),
+                CachedNode {
+                    id: vol_id,
+                    name: "vol".into(),
+                    node_type: "volume".into(),
+                    vfs_path: dir.to_path_buf(),
+                    volume_index: None,
+                    parent_id: Some(root_id.clone()),
+                    depth: 1,
+                    child_ids: Vec::new(),
+                    children_loaded: false,
+                },
+            );
+            guard.root_node_ids = vec![root_id];
+        }
+        evidence_id
+    }
+
+    #[test]
+    fn navigate_to_path_resolves_existing_path() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let sub = dir.path().join("sub");
+        std::fs::create_dir(&sub).expect("mkdir sub");
+        std::fs::write(sub.join("evidence.txt"), b"x").expect("write");
+        let eid = seed_evidence_with_dir(dir.path());
+
+        // Navigate to the subdirectory itself — must return a node.
+        let target = navigate_to_path(&eid, sub.to_str().expect("path"))
+            .expect("subdir must resolve");
+        assert!(!target.node_id.is_empty());
+        assert!(
+            target.breadcrumb.contains(&"node-root".to_string()),
+            "breadcrumb must trace back to the root: {:?}",
+            target.breadcrumb
+        );
+
+        // Navigate to a file — must return the parent dir's node id +
+        // the file_id.
+        let file_path = sub.join("evidence.txt");
+        let target =
+            navigate_to_path(&eid, file_path.to_str().expect("path")).expect("file resolves");
+        assert!(target.file_id.is_some(), "file navigation must return file_id");
+        cleanup(&eid);
+    }
+
+    #[test]
+    fn navigate_to_path_returns_error_for_nonexistent_path() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let eid = seed_evidence_with_dir(dir.path());
+        let bogus = "/nope/this/is/not/in/the/evidence";
+        let result = navigate_to_path(&eid, bogus);
+        match result {
+            Err(AdapterError::NotFound(msg)) => {
+                assert!(
+                    msg.contains(bogus) || msg.contains("source path not found"),
+                    "error message must mention the missing path: {msg}"
+                );
+            }
+            other => panic!("expected NotFound, got {other:?}"),
+        }
+        cleanup(&eid);
+    }
 }
 
 #[cfg(test)]

@@ -1349,6 +1349,47 @@ async fn get_artifacts(
     })
 }
 
+/// Sprint-11 P2 — resolve an artifact's source path to a tree node id
+/// + breadcrumb so the frontend can switch to the Evidence Tree view
+/// and expand to that file. Returns Err with a clear message when
+/// the path isn't part of the loaded evidence.
+#[tauri::command]
+async fn navigate_to_path(
+    evidence_id: String,
+    file_path: String,
+) -> Result<engine::NavigationTarget, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    tokio::task::spawn_blocking(move || engine::navigate_to_path(&eid, &file_path))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+/// Sprint-11 P1 — return Communications artifacts grouped by thread
+/// for the conversation view. Falls back to a single `__ungrouped__`
+/// thread when artifacts lack `raw_data.thread_id`, so non-message
+/// categories (or plugins that haven't been ported to set thread
+/// metadata) keep working unchanged.
+#[tauri::command]
+async fn get_artifacts_by_thread(
+    evidence_id: String,
+    category: String,
+) -> Result<Vec<engine::MessageThread>, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    tokio::task::spawn_blocking(move || engine::get_artifacts_by_thread(&eid, &category))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 async fn get_plugin_statuses() -> Result<Vec<PluginStatus>, String> {
     let store = get_plugin_status_store();
@@ -2248,6 +2289,8 @@ pub fn run() {
             run_all_plugins,
             get_artifact_categories,
             get_artifacts,
+            get_artifacts_by_thread,
+            navigate_to_path,
             get_tag_summaries,
             get_tagged_files,
             tag_file,

@@ -76,6 +76,14 @@ pub struct MessageRecord {
     pub was_downgraded: bool,
     /// Attachments attached to this message.
     pub attachments: Vec<AttachmentRecord>,
+    /// Sprint-11 P1 — `message.is_from_me`. `true` = the examiner's
+    /// account sent it, `false` = inbound from the peer. Drives the
+    /// conversation-view direction indicator.
+    pub is_from_me: bool,
+    /// Sprint-11 P1 — `message.service`. Typically `"iMessage"` or
+    /// `"SMS"`. Empty string when missing; the conversation view
+    /// uses this to badge each row.
+    pub service: String,
 }
 
 /// One row from the `attachment` table, joined to a message.
@@ -118,9 +126,11 @@ fn query_messages(conn: &Connection) -> rusqlite::Result<Vec<MessageRecord>> {
     let has_style = has_column("message", "expressive_send_style_id");
     let has_downgraded = has_column("message", "was_downgraded");
     let has_attrbody = has_column("message", "attributedBody");
+    let has_isfromme = has_column("message", "is_from_me");
+    let has_service = has_column("message", "service");
     let sql = format!(
         "SELECT m.ROWID, m.date, h.id, m.text, \
-                {attr}, {thread}, {assoc}, {style}, {down} \
+                {attr}, {thread}, {assoc}, {style}, {down}, {ifm}, {svc} \
          FROM message m \
          LEFT JOIN handle h ON m.handle_id = h.ROWID \
          ORDER BY m.date ASC",
@@ -129,6 +139,8 @@ fn query_messages(conn: &Connection) -> rusqlite::Result<Vec<MessageRecord>> {
         assoc = if has_assoc { "m.associated_message_guid" } else { "NULL" },
         style = if has_style { "m.expressive_send_style_id" } else { "NULL" },
         down = if has_downgraded { "m.was_downgraded" } else { "0" },
+        ifm = if has_isfromme { "m.is_from_me" } else { "0" },
+        svc = if has_service { "m.service" } else { "NULL" },
     );
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map([], |row| {
@@ -141,6 +153,8 @@ fn query_messages(conn: &Connection) -> rusqlite::Result<Vec<MessageRecord>> {
         let associated_message_guid: Option<String> = row.get(6)?;
         let expressive_send_style_id: Option<String> = row.get(7)?;
         let was_downgraded: Option<i64> = row.get(8)?;
+        let is_from_me: Option<i64> = row.get(9)?;
+        let service: Option<String> = row.get(10)?;
         Ok((
             rowid,
             date,
@@ -151,6 +165,8 @@ fn query_messages(conn: &Connection) -> rusqlite::Result<Vec<MessageRecord>> {
             associated_message_guid,
             expressive_send_style_id,
             was_downgraded,
+            is_from_me,
+            service,
         ))
     })?;
     let mut out = Vec::new();
@@ -165,6 +181,8 @@ fn query_messages(conn: &Connection) -> rusqlite::Result<Vec<MessageRecord>> {
             associated_message_guid,
             expressive_send_style_id,
             was_downgraded,
+            is_from_me,
+            service,
         )) = row
         else {
             continue;
@@ -186,6 +204,8 @@ fn query_messages(conn: &Connection) -> rusqlite::Result<Vec<MessageRecord>> {
             expressive_send_style_id,
             was_downgraded: was_downgraded.unwrap_or(0) != 0,
             attachments,
+            is_from_me: is_from_me.unwrap_or(0) != 0,
+            service: service.unwrap_or_default(),
         });
     }
     Ok(out)
@@ -310,7 +330,8 @@ mod tests {
                  ROWID INTEGER PRIMARY KEY, date INTEGER, handle_id INTEGER, \
                  text TEXT, attributedBody BLOB, \
                  thread_originator_guid TEXT, associated_message_guid TEXT, \
-                 expressive_send_style_id TEXT, was_downgraded INTEGER \
+                 expressive_send_style_id TEXT, was_downgraded INTEGER, \
+                 is_from_me INTEGER, service TEXT \
              ); \
              CREATE TABLE attachment ( \
                  ROWID INTEGER PRIMARY KEY, transfer_name TEXT, \
@@ -326,23 +347,26 @@ mod tests {
             [],
         )
         .expect("handle");
-        // Message 1: has text, date in CoreData seconds (legacy schema).
+        // Message 1: inbound iMessage with text, date in CoreData seconds.
         conn.execute(
-            "INSERT INTO message (ROWID, date, handle_id, text, was_downgraded) \
-             VALUES (1, 738936000, 1, 'hello world', 0)",
+            "INSERT INTO message (ROWID, date, handle_id, text, was_downgraded, \
+                                  is_from_me, service) \
+             VALUES (1, 738936000, 1, 'hello world', 0, 0, 'iMessage')",
             [],
         )
         .expect("msg1");
-        // Message 2: NULL text, attributedBody containing 'secret payload'.
+        // Message 2: outbound SMS-fallback (was_downgraded), NULL text +
+        // attributedBody containing 'secret payload'.
         let mut attr = Vec::new();
         attr.extend_from_slice(b"\x00\x00NSString\x01\x0e");
         attr.extend_from_slice(b"secret payload");
         conn.execute(
             "INSERT INTO message (ROWID, date, handle_id, text, attributedBody, \
                                   thread_originator_guid, associated_message_guid, \
-                                  expressive_send_style_id, was_downgraded) \
+                                  expressive_send_style_id, was_downgraded, \
+                                  is_from_me, service) \
              VALUES (2, 738936060000000000, 1, NULL, ?1, 'THREAD-1', 'TAP-1', \
-                     'com.apple.messages.effect.CKSlamEffect', 1)",
+                     'com.apple.messages.effect.CKSlamEffect', 1, 1, 'SMS')",
             [rusqlite::types::Value::Blob(attr)],
         )
         .expect("msg2");
@@ -379,6 +403,8 @@ mod tests {
         assert_eq!(m1.text.as_deref(), Some("hello world"));
         assert_eq!(m1.date.timestamp(), 1_717_243_200);
         assert!(m1.attachments.is_empty());
+        assert!(!m1.is_from_me);
+        assert_eq!(m1.service, "iMessage");
 
         let m2 = records
             .iter()
@@ -393,6 +419,8 @@ mod tests {
             Some("com.apple.messages.effect.CKSlamEffect")
         );
         assert!(m2.was_downgraded);
+        assert!(m2.is_from_me);
+        assert_eq!(m2.service, "SMS");
         assert_eq!(m2.attachments.len(), 1);
         assert_eq!(m2.attachments[0].transfer_name.as_deref(), Some("photo.jpg"));
         assert_eq!(m2.attachments[0].mime_type.as_deref(), Some("image/jpeg"));
@@ -419,6 +447,36 @@ mod tests {
         // Nanoseconds-form (macOS 11+ / iOS 14+).
         let d2 = decode_message_date(738_936_000_000_000_000).expect("nanos");
         assert_eq!(d2.timestamp(), 1_717_243_200);
+    }
+
+    #[test]
+    fn sprint11_p3_apple_timestamp_converts_correctly() {
+        // Apple epoch 0 = 2001-01-01 00:00:00 UTC = unix 978_307_200.
+        let dt = decode_message_date(0).expect("apple_epoch_0");
+        assert_eq!(dt.timestamp(), 978_307_200);
+        // 1762276748 (decimal) — a real CoreData seconds value from
+        // 2025-11-04 ~17:39 UTC. Apple epoch + 1762276748 seconds.
+        let dt = decode_message_date(1_762_276_748).expect("ref");
+        assert_eq!(dt.timestamp(), 1_762_276_748 + 978_307_200);
+    }
+
+    #[test]
+    fn sprint11_p3_imessage_nanosecond_timestamp_converts_correctly() {
+        // 738_936_000_000_000_000 ns since 2001-01-01 = 738_936_000 s.
+        // Adding the Apple → Unix offset gives 1_717_243_200 (a known
+        // 2024-06-01 12:00:00 UTC fixture used elsewhere in this
+        // module).
+        let dt = decode_message_date(738_936_000_000_000_000).expect("nanos");
+        assert_eq!(dt.timestamp(), 1_717_243_200);
+        // Heuristic boundary: anything below 1e12 must be treated
+        // as seconds (not nanoseconds).
+        let dt = decode_message_date(999_999_999_999).expect("boundary");
+        // The threshold is `>= 1_000_000_000_000`, so this stays as
+        // seconds: apple-epoch 999_999_999_999 + offset.
+        assert_eq!(
+            dt.timestamp(),
+            999_999_999_999_i64.saturating_add(978_307_200)
+        );
     }
 
     #[test]

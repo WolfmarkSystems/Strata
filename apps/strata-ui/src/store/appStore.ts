@@ -69,6 +69,9 @@ interface AppStore extends AppState {
   setEvidenceLoaded: (v: boolean) => void
   setSelectedNode: (id: string | null) => void
   toggleTreeNode: (id: string) => void
+  /// Sprint-11 P2 — expand a chain of tree nodes (the breadcrumb
+  /// from `navigate_to_path`) so the leaf becomes visible. Idempotent.
+  expandTreeNodes: (ids: string[]) => void
 }
 
 // Apply the default theme immediately so CSS variables match the active theme
@@ -227,6 +230,12 @@ export const useAppStore = create<AppStore>((set) => ({
       const next = new Set(s.treeExpanded)
       if (next.has(id)) next.delete(id)
       else next.add(id)
+      return { treeExpanded: next }
+    }),
+  expandTreeNodes: (ids) =>
+    set((s) => {
+      const next = new Set(s.treeExpanded)
+      for (const id of ids) next.add(id)
       return { treeExpanded: next }
     }),
 }))

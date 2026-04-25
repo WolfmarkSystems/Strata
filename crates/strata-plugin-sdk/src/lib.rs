@@ -635,6 +635,24 @@ pub trait StrataPlugin: Send + Sync {
 
         let mut records = Vec::new();
         for artifact in &artifacts {
+            // Sprint-11 P1 — propagate the legacy `data` map into
+            // `raw_data` so downstream consumers (engine adapter
+            // grouping, conversation view) can read message
+            // metadata (handle, thread_originator_guid, was_downgraded,
+            // is_from_me, service, …) without every plugin needing to
+            // be ported off the legacy Artifact shape. Backwards-
+            // compatible: any plugin that doesn't add fields keeps
+            // `raw_data: None` because the map is empty.
+            let raw_data = if artifact.data.is_empty() {
+                None
+            } else {
+                let json: serde_json::Map<String, serde_json::Value> = artifact
+                    .data
+                    .iter()
+                    .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                    .collect();
+                Some(serde_json::Value::Object(json))
+            };
             records.push(ArtifactRecord {
                 category: ArtifactCategory::UserActivity,
                 subcategory: artifact.category.clone(),
@@ -657,7 +675,7 @@ pub trait StrataPlugin: Send + Sync {
                     .get("suspicious")
                     .map(|v| v == "true")
                     .unwrap_or(false),
-                raw_data: None,
+                raw_data,
                 confidence: 0,
             });
         }

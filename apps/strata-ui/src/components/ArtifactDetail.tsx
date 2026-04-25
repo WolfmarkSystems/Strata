@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { Artifact } from '../ipc'
+import { navigateToPath } from '../ipc'
+import { useAppStore } from '../store/appStore'
 
 interface Props {
   artifact: Artifact | null
@@ -7,6 +9,26 @@ interface Props {
 
 export default function ArtifactDetail({ artifact }: Props) {
   const [rawExpanded, setRawExpanded] = useState(false)
+  const evidenceId = useAppStore((s) => s.evidenceId)
+  const setView = useAppStore((s) => s.setView)
+  const setSelectedNode = useAppStore((s) => s.setSelectedNode)
+  const expandTreeNodes = useAppStore((s) => s.expandTreeNodes)
+  const [navStatus, setNavStatus] = useState<string | null>(null)
+
+  const handleGoToSource = async () => {
+    if (!artifact || !evidenceId) return
+    setNavStatus('Locating...')
+    const target = await navigateToPath(evidenceId, artifact.source_path)
+    if (!target) {
+      setNavStatus('Source not found in evidence tree')
+      setTimeout(() => setNavStatus(null), 3000)
+      return
+    }
+    expandTreeNodes(target.breadcrumb)
+    setSelectedNode(target.node_id)
+    setView('files')
+    setNavStatus(null)
+  }
 
   return (
     <div
@@ -77,7 +99,9 @@ export default function ArtifactDetail({ artifact }: Props) {
 
           {/* Field rows */}
           <Row k="Value" v={artifact.value} />
-          {artifact.timestamp && <Row k="Timestamp" v={artifact.timestamp} mono />}
+          {artifact.timestamp && (
+            <Row k="Timestamp" v={formatTimestamp(artifact.timestamp)} mono />
+          )}
           <Row k="Source File" v={artifact.source_file} mono />
 
           <div
@@ -103,6 +127,43 @@ export default function ArtifactDetail({ artifact }: Props) {
           >
             {artifact.source_path}
           </div>
+
+          {/* Sprint-11 P2 — Go to Source button. Switches to the
+              Evidence Tree view, expands the breadcrumb chain, and
+              selects the file's containing folder so the examiner
+              can see the raw data underlying the artifact. */}
+          <button
+            onClick={handleGoToSource}
+            disabled={!evidenceId || !artifact.source_path}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '4px 10px',
+              fontSize: 11,
+              fontFamily: 'monospace',
+              color: 'var(--carved)',
+              background: 'rgba(74,120,144,0.1)',
+              border: '1px solid rgba(74,120,144,0.3)',
+              borderRadius: 4,
+              cursor: evidenceId && artifact.source_path ? 'pointer' : 'not-allowed',
+              marginBottom: 6,
+            }}
+            title="Switch to Evidence Tree and select this file"
+          >
+            {'→'} Go to Source
+          </button>
+          {navStatus && (
+            <div
+              style={{
+                fontSize: 10,
+                color: 'var(--sus)',
+                marginBottom: 6,
+              }}
+            >
+              {navStatus}
+            </div>
+          )}
 
           {artifact.mitre_technique && (
             <>
@@ -271,6 +332,14 @@ function Row({ k, v, mono = false }: { k: string; v: string; mono?: boolean }) {
       </span>
     </div>
   )
+}
+
+function formatTimestamp(ts: string): string {
+  const n = Number(ts)
+  if (!Number.isFinite(n) || n <= 0) return ts
+  const d = new Date(n * 1000)
+  if (Number.isNaN(d.getTime())) return ts
+  return d.toISOString().replace('T', ' ').replace(/\..*$/, ' UTC')
 }
 
 function Sep() {

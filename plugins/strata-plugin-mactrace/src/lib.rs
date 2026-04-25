@@ -655,6 +655,32 @@ impl StrataPlugin for MacTracePlugin {
                     if r.was_downgraded {
                         a.add_field("was_downgraded", "true");
                     }
+                    // Sprint-11 P1 — conversation-view metadata. The
+                    // engine adapter's grouping query reads these to
+                    // build threads and direction indicators.
+                    a.add_field(
+                        "direction",
+                        if r.is_from_me { "outbound" } else { "inbound" },
+                    );
+                    if !r.service.is_empty() {
+                        a.add_field("service", &r.service);
+                    } else if r.was_downgraded {
+                        a.add_field("service", "SMS");
+                    } else {
+                        a.add_field("service", "iMessage");
+                    }
+                    // `thread_id` keys the conversation view's left-
+                    // pane thread list. Prefer the explicit
+                    // thread_originator_guid; fall back to the peer
+                    // handle so 1:1 chats still group correctly.
+                    if let Some(t) = &r.thread_originator_guid {
+                        a.add_field("thread_id", t);
+                    } else if let Some(h) = &r.handle {
+                        a.add_field("thread_id", h);
+                    }
+                    if let Some(h) = &r.handle {
+                        a.add_field("participant", h);
+                    }
                     for att in &r.attachments {
                         if let Some(n) = &att.transfer_name {
                             a.add_field("attachment_name", n);
@@ -1473,10 +1499,33 @@ impl StrataPlugin for MacTracePlugin {
                 Some("High") => ForensicValue::High,
                 _ => ForensicValue::Medium,
             };
+            // Sprint-11 P3 — propagate the timestamp that `run()`
+            // already populated on the Artifact (iMessage `r.date`,
+            // FSEvent `e.last_modified`, etc.). The pre-Sprint-11
+            // mapping silently dropped these by setting `None`,
+            // which is why the TIMESTAMP column showed `—` for most
+            // macOS artifacts even though the underlying parsers
+            // had already decoded the right Apple-epoch / FILETIME
+            // values.
+            //
+            // raw_data captures the legacy `data` HashMap as a JSON
+            // object so the engine adapter's grouping query
+            // (`get_artifacts_by_thread`) can read thread_id /
+            // direction / participant — see Sprint 11 P1.
+            let raw_data = if a.data.is_empty() {
+                None
+            } else {
+                let json: serde_json::Map<String, serde_json::Value> = a
+                    .data
+                    .iter()
+                    .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                    .collect();
+                Some(serde_json::Value::Object(json))
+            };
             records.push(ArtifactRecord {
                 category,
                 subcategory: ft,
-                timestamp: None,
+                timestamp: a.timestamp.map(|t| t as i64),
                 title: a
                     .data
                     .get("title")
@@ -1487,7 +1536,7 @@ impl StrataPlugin for MacTracePlugin {
                 forensic_value: fv,
                 mitre_technique: a.data.get("mitre").cloned(),
                 is_suspicious: is_sus,
-                raw_data: None,
+                raw_data,
                 confidence: 0,
             });
         }

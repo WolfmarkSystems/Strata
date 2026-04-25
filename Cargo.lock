@@ -7835,6 +7835,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "hex",
+ "log",
  "md-5",
  "once_cell",
  "rayon",

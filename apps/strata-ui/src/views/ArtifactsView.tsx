@@ -4,6 +4,7 @@ import { useAppStore } from '../store/appStore'
 import ArtifactCategories from '../components/ArtifactCategories'
 import ArtifactResults from '../components/ArtifactResults'
 import ArtifactDetail from '../components/ArtifactDetail'
+import ConversationView from '../components/ConversationView'
 import EmptyState from '../components/EmptyState'
 import { getArtifactCategories, getArtifacts } from '../ipc'
 import type { ArtifactCategory, Artifact } from '../ipc'
@@ -75,14 +76,31 @@ export default function ArtifactsView() {
       </Panel>
       <PanelResizeHandle className="resize-handle" />
       <Panel defaultSize={52} minSize={25}>
-        <ArtifactResults
-          category={selectedCategory}
-          artifacts={artifacts}
-          pluginsNotRun={pluginsNotRun}
-          selectedId={selectedArtifactId}
-          onSelect={(a) => setSelectedArtifactId(a.id)}
-          loading={loading}
-        />
+        {selectedArtifactCat === 'Communications' && evidenceId ? (
+          <ConversationView
+            evidenceId={evidenceId}
+            category={selectedArtifactCat}
+            flatFallback={
+              <ArtifactResults
+                category={selectedCategory}
+                artifacts={artifacts}
+                pluginsNotRun={pluginsNotRun}
+                selectedId={selectedArtifactId}
+                onSelect={(a) => setSelectedArtifactId(a.id)}
+                loading={loading}
+              />
+            }
+          />
+        ) : (
+          <ArtifactResults
+            category={selectedCategory}
+            artifacts={artifacts}
+            pluginsNotRun={pluginsNotRun}
+            selectedId={selectedArtifactId}
+            onSelect={(a) => setSelectedArtifactId(a.id)}
+            loading={loading}
+          />
+        )}
       </Panel>
       <PanelResizeHandle className="resize-handle" />
       <Panel defaultSize={30} minSize={18} maxSize={55}>

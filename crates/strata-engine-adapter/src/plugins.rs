@@ -265,7 +265,159 @@ pub fn get_artifacts_by_category(
             }
         }
     }
-    Ok(out)
+    Ok(deduplicate_artifacts(out))
+}
+
+/// Sprint-11 P4 — collapse exact-duplicate artifacts that cross
+/// plugin boundaries. Keys on `(source_path, name, value, timestamp)`
+/// — deliberately ignoring `plugin` so the same chat.db row surfaced
+/// once by MacTrace and once by Pulse appears once for the examiner.
+/// First occurrence wins; subsequent matches are dropped. Logs the
+/// removed count at `debug` level so a regression is visible in
+/// RUST_LOG=debug runs without spamming production logs.
+pub fn deduplicate_artifacts(artifacts: Vec<PluginArtifact>) -> Vec<PluginArtifact> {
+    let original = artifacts.len();
+    let mut seen: std::collections::HashSet<(String, String, String, String)> =
+        std::collections::HashSet::with_capacity(artifacts.len());
+    let mut out = Vec::with_capacity(artifacts.len());
+    for a in artifacts {
+        let key = (
+            a.source_path.clone(),
+            a.name.clone(),
+            a.value.clone(),
+            a.timestamp.clone().unwrap_or_default(),
+        );
+        if seen.insert(key) {
+            out.push(a);
+        }
+    }
+    let removed = original - out.len();
+    if removed > 0 {
+        log::debug!(
+            "deduplicate_artifacts: removed {} exact duplicates ({} → {})",
+            removed,
+            original,
+            out.len()
+        );
+    }
+    out
+}
+
+/// Sprint-11 P1 — group artifacts in `category` by their `thread_id`
+/// raw_data field, sorting messages chronologically within each
+/// thread. Threads with no `thread_id` (ordinary non-message
+/// artifacts) are returned in a single fallback group with an empty
+/// `participant` so the UI knows to show the flat-list view instead.
+///
+/// Reads `raw_data` JSON for the `thread_id`, `participant`,
+/// `direction`, `service`, and `body` fields populated by the
+/// MacTrace iMessage parser (and, in the future, any other message
+/// plugin that follows the same convention). Plugins that don't
+/// emit `thread_id` end up in the fallback group, preserving the
+/// existing flat-list behavior.
+pub fn get_artifacts_by_thread(
+    evidence_id: &str,
+    category: &str,
+) -> AdapterResult<Vec<crate::types::MessageThread>> {
+    // Sprint-11 P4 — dedup before grouping so the conversation
+    // view does not show the same chat.db message twice when both
+    // MacTrace and Pulse parse it.
+    let merged: Vec<PluginArtifact> = {
+        let cache = ARTIFACT_CACHE.lock().expect("artifact cache poisoned");
+        cache
+            .iter()
+            .filter(|((eid, _), _)| eid == evidence_id)
+            .flat_map(|(_, arts)| arts.iter().filter(|a| a.category == category).cloned())
+            .collect()
+    };
+    let merged = deduplicate_artifacts(merged);
+
+    let mut grouped: HashMap<String, crate::types::MessageThread> = HashMap::new();
+    let mut ungrouped: Vec<crate::types::ThreadMessage> = Vec::new();
+
+    for a in merged.iter() {
+        {
+            // Mirror the original block-scope structure so the rest
+            // of the function below this point continues to compile
+            // unchanged — we just iterate `merged` instead of the
+            // raw cache.
+            let raw = a
+                .raw_data
+                .as_ref()
+                .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok());
+            let field = |key: &str| -> Option<String> {
+                raw.as_ref()
+                    .and_then(|v| v.get(key))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+            };
+            let thread_id = field("thread_id");
+            let body = field("body").unwrap_or_else(|| a.value.clone());
+            let direction = field("direction").unwrap_or_else(|| "unknown".to_string());
+            let service = field("service").unwrap_or_default();
+            let participant = field("participant").unwrap_or_default();
+
+            let msg = crate::types::ThreadMessage {
+                artifact_id: a.id.clone(),
+                timestamp: a.timestamp.clone(),
+                direction,
+                service: service.clone(),
+                body,
+                source_path: a.source_path.clone(),
+            };
+
+            match thread_id {
+                Some(tid) if !tid.is_empty() => {
+                    let entry = grouped.entry(tid.clone()).or_insert_with(|| {
+                        crate::types::MessageThread {
+                            thread_id: tid.clone(),
+                            participant: participant.clone(),
+                            service: service.clone(),
+                            messages: Vec::new(),
+                        }
+                    });
+                    if entry.participant.is_empty() && !participant.is_empty() {
+                        entry.participant = participant;
+                    }
+                    entry.messages.push(msg);
+                }
+                _ => ungrouped.push(msg),
+            }
+        }
+    }
+
+    // Sort messages within each thread by timestamp ascending. Empty
+    // timestamps sort first so they don't get scattered through the
+    // middle of a real conversation.
+    let mut threads: Vec<crate::types::MessageThread> = grouped.into_values().collect();
+    for t in &mut threads {
+        t.messages.sort_by(|a, b| {
+            a.timestamp
+                .as_deref()
+                .unwrap_or("")
+                .cmp(b.timestamp.as_deref().unwrap_or(""))
+        });
+    }
+    // Sort threads by most-recent message descending (most active
+    // conversation first — examiner convention).
+    threads.sort_by(|a, b| {
+        let last = |t: &crate::types::MessageThread| {
+            t.messages
+                .last()
+                .and_then(|m| m.timestamp.clone())
+                .unwrap_or_default()
+        };
+        last(b).cmp(&last(a))
+    });
+    if !ungrouped.is_empty() {
+        threads.push(crate::types::MessageThread {
+            thread_id: "__ungrouped__".to_string(),
+            participant: String::new(),
+            service: String::new(),
+            messages: ungrouped,
+        });
+    }
+    Ok(threads)
 }
 
 /// Sprint-10 P1 — panic sandbox.
@@ -915,6 +1067,185 @@ mod sprint8_run_all_on_evidence_tests {
         drop(cache);
 
         cleanup_evidence(&evidence_id);
+    }
+}
+
+#[cfg(test)]
+mod sprint11_p4_dedup_tests {
+    //! Sprint-11 P4 — verify `deduplicate_artifacts` collapses
+    //! cross-plugin duplicates (same chat.db row from MacTrace and
+    //! Pulse) without dropping legitimately-distinct artifacts.
+
+    use super::*;
+
+    fn art(plugin: &str, name: &str, value: &str, ts: Option<&str>) -> PluginArtifact {
+        PluginArtifact {
+            id: format!("{plugin}-{name}"),
+            category: "Communications".into(),
+            name: name.into(),
+            value: value.into(),
+            timestamp: ts.map(String::from),
+            source_file: "/x/chat.db".into(),
+            source_path: "/x/chat.db".into(),
+            forensic_value: "medium".into(),
+            mitre_technique: None,
+            mitre_name: None,
+            plugin: plugin.into(),
+            raw_data: None,
+        }
+    }
+
+    #[test]
+    fn deduplication_removes_exact_duplicates() {
+        // Two plugins producing the same chat row.
+        let dupes = vec![
+            art("MacTrace", "iMessage row 1", "hello world", Some("1717243200")),
+            art("Pulse", "iMessage row 1", "hello world", Some("1717243200")),
+        ];
+        let out = deduplicate_artifacts(dupes);
+        assert_eq!(out.len(), 1, "exact duplicates must collapse");
+    }
+
+    #[test]
+    fn deduplication_preserves_distinct_artifacts() {
+        let mixed = vec![
+            art("MacTrace", "iMessage row 1", "hello", Some("1")),
+            art("MacTrace", "iMessage row 2", "world", Some("2")),
+            art("Pulse", "iMessage row 1", "hello", Some("1")), // dup
+        ];
+        let out = deduplicate_artifacts(mixed);
+        assert_eq!(out.len(), 2, "distinct artifacts (different value or ts) must stay");
+        assert!(out.iter().any(|a| a.value == "hello"));
+        assert!(out.iter().any(|a| a.value == "world"));
+    }
+
+    #[test]
+    fn deduplication_logs_removed_count() {
+        // Just exercising the log-emit branch — no log capture here,
+        // but the test ensures the >0 path runs (the `if removed > 0`
+        // branch in deduplicate_artifacts) without panic and that
+        // the function still returns the deduped vec.
+        let dupes = vec![
+            art("A", "row", "x", None),
+            art("A", "row", "x", None),
+            art("A", "row", "x", None),
+        ];
+        let out = deduplicate_artifacts(dupes);
+        assert_eq!(out.len(), 1, "three identical artifacts collapse to one");
+    }
+}
+
+#[cfg(test)]
+mod sprint11_p1_thread_grouping_tests {
+    //! Sprint-11 P1 — verify `get_artifacts_by_thread` groups
+    //! Communications artifacts by `raw_data.thread_id`, sorts
+    //! messages chronologically, preserves direction/service, and
+    //! falls back to an `__ungrouped__` bucket for artifacts with
+    //! no thread_id.
+
+    use super::*;
+
+    fn artifact(
+        evidence_id: &str,
+        plugin: &str,
+        artifact_id: &str,
+        ts: &str,
+        thread_id: Option<&str>,
+        participant: &str,
+        direction: &str,
+        body: &str,
+    ) -> PluginArtifact {
+        let mut data = serde_json::Map::new();
+        if let Some(t) = thread_id {
+            data.insert("thread_id".into(), serde_json::Value::String(t.into()));
+        }
+        data.insert("participant".into(), serde_json::Value::String(participant.into()));
+        data.insert("direction".into(), serde_json::Value::String(direction.into()));
+        data.insert("service".into(), serde_json::Value::String("iMessage".into()));
+        data.insert("body".into(), serde_json::Value::String(body.into()));
+        let raw = serde_json::Value::Object(data).to_string();
+        let art = PluginArtifact {
+            id: artifact_id.into(),
+            category: "Communications".into(),
+            name: "msg".into(),
+            value: body.into(),
+            timestamp: Some(ts.into()),
+            source_file: "/x/chat.db".into(),
+            source_path: "/x/chat.db".into(),
+            forensic_value: "medium".into(),
+            mitre_technique: None,
+            mitre_name: None,
+            plugin: plugin.into(),
+            raw_data: Some(raw),
+        };
+        // Inject directly into ARTIFACT_CACHE so the grouping query sees it.
+        let mut cache = ARTIFACT_CACHE.lock().expect("cache");
+        cache
+            .entry((evidence_id.to_string(), plugin.to_string()))
+            .or_default()
+            .push(art.clone());
+        art
+    }
+
+    fn cleanup(evidence_id: &str) {
+        let mut cache = ARTIFACT_CACHE.lock().expect("cache");
+        cache.retain(|(eid, _), _| eid != evidence_id);
+    }
+
+    #[test]
+    fn thread_grouping_sorts_messages_chronologically() {
+        let eid = "test-thread-sort";
+        cleanup(eid);
+        // Insert out of order: t=3, t=1, t=2. Output must be 1,2,3.
+        artifact(eid, "MacTrace", "m-3", "3", Some("T1"), "+15551", "outbound", "third");
+        artifact(eid, "MacTrace", "m-1", "1", Some("T1"), "+15551", "inbound", "first");
+        artifact(eid, "MacTrace", "m-2", "2", Some("T1"), "+15551", "outbound", "second");
+        let threads = get_artifacts_by_thread(eid, "Communications").expect("ok");
+        let real: Vec<_> = threads.iter().filter(|t| t.thread_id == "T1").collect();
+        assert_eq!(real.len(), 1, "all three messages should land in one thread");
+        let bodies: Vec<&str> = real[0].messages.iter().map(|m| m.body.as_str()).collect();
+        assert_eq!(bodies, vec!["first", "second", "third"]);
+        cleanup(eid);
+    }
+
+    #[test]
+    fn inbound_outbound_direction_is_preserved() {
+        let eid = "test-thread-direction";
+        cleanup(eid);
+        artifact(eid, "MacTrace", "m-in", "1", Some("T2"), "alice@x", "inbound", "hi");
+        artifact(eid, "MacTrace", "m-out", "2", Some("T2"), "alice@x", "outbound", "hello back");
+        let threads = get_artifacts_by_thread(eid, "Communications").expect("ok");
+        let t2 = threads
+            .iter()
+            .find(|t| t.thread_id == "T2")
+            .expect("T2 thread");
+        assert_eq!(t2.messages[0].direction, "inbound");
+        assert_eq!(t2.messages[1].direction, "outbound");
+        assert_eq!(t2.participant, "alice@x");
+        assert_eq!(t2.service, "iMessage");
+        cleanup(eid);
+    }
+
+    #[test]
+    fn artifacts_without_thread_context_render_as_flat_list() {
+        let eid = "test-thread-fallback";
+        cleanup(eid);
+        // No thread_id — must land in the __ungrouped__ bucket.
+        artifact(eid, "MacTrace", "m-orphan", "1", None, "", "unknown", "orphaned");
+        // Plus one real thread to prove both coexist.
+        artifact(eid, "MacTrace", "m-real", "2", Some("T3"), "bob@x", "inbound", "real");
+        let threads = get_artifacts_by_thread(eid, "Communications").expect("ok");
+        let ungrouped = threads
+            .iter()
+            .find(|t| t.thread_id == "__ungrouped__")
+            .expect("ungrouped bucket present");
+        assert_eq!(ungrouped.messages.len(), 1);
+        assert_eq!(ungrouped.messages[0].artifact_id, "m-orphan");
+        assert!(
+            threads.iter().any(|t| t.thread_id == "T3"),
+            "real thread T3 must still group correctly when ungrouped artifacts exist"
+        );
+        cleanup(eid);
     }
 }
 

@@ -589,6 +589,57 @@ export async function getArtifacts(
   }
 }
 
+// Sprint-11 P2 — Jump to Source (artifact → evidence tree node).
+export interface NavigationTarget {
+  node_id: string
+  breadcrumb: string[]
+  file_id: string | null
+}
+
+export async function navigateToPath(
+  evidenceId: string,
+  filePath: string,
+): Promise<NavigationTarget | null> {
+  if (!IN_TAURI) {
+    return { node_id: 'mock-node', breadcrumb: ['mock-root'], file_id: null }
+  }
+  try {
+    return await invoke<NavigationTarget>('navigate_to_path', { evidenceId, filePath })
+  } catch (e) {
+    console.warn('navigate_to_path failed:', e)
+    return null
+  }
+}
+
+// Sprint-11 P1 — conversation view for Communications artifacts.
+export interface ThreadMessage {
+  artifact_id: string
+  timestamp: string | null
+  direction: string
+  service: string
+  body: string
+  source_path: string
+}
+
+export interface MessageThread {
+  thread_id: string
+  participant: string
+  service: string
+  messages: ThreadMessage[]
+}
+
+export async function getArtifactsByThread(
+  evidenceId: string,
+  category: string,
+): Promise<MessageThread[]> {
+  if (!IN_TAURI) return []
+  try {
+    return await invoke<MessageThread[]>('get_artifacts_by_thread', { evidenceId, category })
+  } catch {
+    return []
+  }
+}
+
 const MOCK_ARTIFACT_CATEGORIES: ArtifactCategory[] = [
   { name: 'User Activity',       icon: '\u{1F464}', count: 183, color: '#c8a040' },
   { name: 'Execution History',   icon: '\u{25B6}',  count: 89,  color: '#4a70c0' },

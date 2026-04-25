@@ -22,11 +22,13 @@ pub mod vfs_materialize;
 
 pub use types::{
     format_size, AdapterError, AdapterResult, ArtifactCategoryInfo, EngineStats, EvidenceInfo,
-    FileEntry, HashResult, HexData, HexLine, PluginArtifact, TreeNode,
+    FileEntry, HashResult, HexData, HexLine, MessageThread, PluginArtifact, ThreadMessage,
+    TreeNode,
 };
 
 pub use evidence::{
-    close_evidence, get_files, get_stats, get_tree_children, get_tree_root, parse_evidence,
+    close_evidence, get_files, get_stats, get_tree_children, get_tree_root, navigate_to_path,
+    parse_evidence, NavigationTarget,
 };
 
 pub use files::{get_file_hex, get_file_metadata, get_file_text};
@@ -34,9 +36,9 @@ pub use files::{get_file_hex, get_file_metadata, get_file_text};
 pub use hashing::{hash_all_files, hash_file, hashed_count};
 
 pub use plugins::{
-    get_artifact_categories, get_artifacts_by_category, get_plugin_artifacts, list_plugins,
-    run_all_on_evidence, run_all_on_path, run_all_on_vfs, run_all_with_persistence,
-    run_all_with_persistence_vfs, run_plugin,
+    get_artifact_categories, get_artifacts_by_category, get_artifacts_by_thread,
+    get_plugin_artifacts, list_plugins, run_all_on_evidence, run_all_on_path, run_all_on_vfs,
+    run_all_with_persistence, run_all_with_persistence_vfs, run_plugin,
 };
 
 pub use vfs_materialize::{materialize_targets, MaterializeReport};

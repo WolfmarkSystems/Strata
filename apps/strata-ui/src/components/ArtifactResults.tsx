@@ -2,6 +2,19 @@ import { useState } from 'react'
 import type { ArtifactCategory, Artifact } from '../ipc'
 import { useAppStore } from '../store/appStore'
 
+// Sprint-11 P3 — render a unix-epoch-string timestamp as an
+// examiner-readable UTC string. Falls back to the raw string when
+// the value isn't a parseable epoch (some plugins set human-readable
+// strings directly).
+function formatArtifactTimestamp(ts: string | null): string {
+  if (!ts) return '—'
+  const n = Number(ts)
+  if (!Number.isFinite(n) || n <= 0) return ts
+  const d = new Date(n * 1000)
+  if (Number.isNaN(d.getTime())) return ts
+  return d.toISOString().replace('T', ' ').replace(/\..*$/, ' UTC')
+}
+
 interface Props {
   category: ArtifactCategory | null
   artifacts: Artifact[]
@@ -348,7 +361,7 @@ function ArtifactRow({
 
       <Cell flex={cols[1].flex}>{artifact.value}</Cell>
       <Cell flex={cols[2].flex} mono>
-        {artifact.timestamp ?? '\u2014'}
+        {formatArtifactTimestamp(artifact.timestamp)}
       </Cell>
       <Cell flex={cols[3].flex} mono>
         {artifact.source_file}

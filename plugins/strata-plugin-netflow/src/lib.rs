@@ -802,17 +802,28 @@ impl StrataPlugin for NetFlowPlugin {
                     }
                 }
             };
+            // Sprint-11 P3 — propagate timestamp + raw_data.
+            let raw_data = if a.data.is_empty() {
+                None
+            } else {
+                let json: serde_json::Map<String, serde_json::Value> = a
+                    .data
+                    .iter()
+                    .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                    .collect();
+                Some(serde_json::Value::Object(json))
+            };
             records.push(ArtifactRecord {
                 category,
                 subcategory: ft,
-                timestamp: None,
+                timestamp: a.timestamp.map(|t| t as i64),
                 title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
                 source_path: a.source.clone(),
                 forensic_value: fv,
                 mitre_technique: a.data.get("mitre").cloned(),
                 is_suspicious: is_sus,
-                raw_data: None,
+                raw_data,
                 confidence: 0,
             });
         }
