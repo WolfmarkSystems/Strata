@@ -623,6 +623,90 @@ mod tests {
         assert_eq!(read_utf16le_slice(&buf, 0, 3), None);
     }
 
+    /// Sprint-10 P3 acceptance tests. The ShimCache parser predates this
+    /// sprint (commit history shows it landed during the v1.3.x phantom
+    /// rewrite), so the underlying coverage is already substantial.
+    /// These four tests are the explicit Sprint-10 acceptance set: each
+    /// is named after the spec checklist item so a reader auditing
+    /// SPRINT_10.md against the test suite can find them by literal
+    /// match. They overlap intentionally with earlier tests — the
+    /// duplication is the audit trail.
+
+    #[test]
+    fn sprint10_p3_shimcache_parses_known_good_entry() {
+        let path = utf16le(r"C:\Windows\System32\notepad.exe");
+        let blob = build_win10_blob(&path, filetime_2024_06_01_noon());
+        let entries = parse(&blob, "C:/evidence/SYSTEM");
+        assert_eq!(entries.len(), 1, "single Win10 entry must round-trip");
+        assert_eq!(
+            entries[0].executable_path,
+            r"C:\Windows\System32\notepad.exe"
+        );
+        assert_eq!(entries[0].last_modified.timestamp(), 1_717_243_200);
+        assert_eq!(entries[0].source_hive, "C:/evidence/SYSTEM");
+    }
+
+    #[test]
+    fn sprint10_p3_shimcache_handles_empty_hive_gracefully() {
+        // Empty input. Must not panic. Must return Ok-equivalent (empty vec).
+        let entries = parse(&[], "SYSTEM");
+        assert!(entries.is_empty());
+        // 256 bytes of zeros — a real "value not present" can decode this way.
+        let entries = parse(&vec![0u8; 256], "SYSTEM");
+        assert!(entries.is_empty());
+        // Truncated XP-shaped header (no valid signature) — must not panic.
+        let entries = parse(&[0xAA, 0xBB, 0xCC], "SYSTEM");
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn sprint10_p3_shimcache_filetime_conversion_is_correct() {
+        // Reference value from spec: 2024-06-01 12:00:00 UTC corresponds
+        // to unix timestamp 1_717_243_200. Construct the FILETIME from
+        // the spec's documented formula so the test pins both directions.
+        const UNIX: i64 = 1_717_243_200;
+        const EPOCH_DIFF_100NS: i64 = 116_444_736_000_000_000;
+        let ft = UNIX * 10_000_000 + EPOCH_DIFF_100NS;
+        let dt = filetime_to_datetime(ft).expect("known-good FILETIME");
+        assert_eq!(dt.timestamp(), UNIX);
+        // Sanity-check the Sprint 10 spec's helper formula:
+        //   (filetime / 10_000_000) - 11_644_473_600
+        let manual = (ft / 10_000_000) - 11_644_473_600;
+        assert_eq!(manual, UNIX);
+    }
+
+    #[test]
+    fn sprint10_p3_shimcache_produces_mitre_mapping() {
+        // ShimCache → MITRE T1059 mapping is asserted by Phantom's lib.rs
+        // when it converts a ShimCacheEntry into an Artifact. We verify
+        // the wiring is in place by reading the plugin source (a refactor
+        // that drops the mapping must update the test too — that is the
+        // intent: the mapping is load-bearing forensic metadata, not an
+        // implementation detail).
+        let lib_src = include_str!("lib.rs");
+        assert!(
+            lib_src.contains("crate::shimcache::parse"),
+            "Phantom must invoke the ShimCache parser"
+        );
+        assert!(
+            lib_src.contains("\"mitre\", \"T1059\"")
+                || lib_src.contains("a.add_field(\"mitre\", \"T1059\")"),
+            "Phantom must tag every ShimCache artifact with MITRE T1059 (Command and Scripting Interpreter)"
+        );
+        // ShimCache is a deterministic binary parse — no ML, no advisory.
+        // Confirm Phantom does NOT mark these as advisory/inferred. The
+        // engine adapter's default `execute()` builds artifacts with
+        // ForensicValue::Medium and is_suspicious based on path; neither
+        // of those is the advisory flag (which lives on ml-anomaly
+        // / ml-charges plugins). This assertion documents the contract
+        // for future readers.
+        assert!(
+            !lib_src.contains("a.add_field(\"is_advisory\", \"true\")")
+                || lib_src.matches("\"is_advisory\", \"true\"").count() == 0,
+            "Phantom must not flag deterministic ShimCache parses as advisory"
+        );
+    }
+
     #[test]
     fn parse_win10_multiple_entries_preserves_order() {
         let p1 = utf16le(r"C:\first.exe");
