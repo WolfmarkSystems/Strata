@@ -10,7 +10,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use strata_plugin_sdk::{
-    Artifact, ForensicValue, PluginContext, PluginError, PluginOutput, StrataPlugin,
+    Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginContext, PluginError,
+    PluginOutput, PluginSummary, StrataPlugin,
 };
 
 use once_cell::sync::Lazy;
@@ -267,6 +268,87 @@ pub fn get_artifacts_by_category(
     Ok(out)
 }
 
+/// Sprint-10 P1 — panic sandbox.
+///
+/// Wraps `plugin.execute(context)` in `catch_unwind` so a panic in any
+/// single plugin (e.g. Phantom's `nt-hive` crate asserting on a
+/// non-Windows-hive file when fed a macOS filesystem) does NOT take
+/// down the entire run. Subsequent plugins continue executing.
+///
+/// On panic the helper synthesizes a visible `plugin_error` artifact
+/// describing what happened so examiners can see exactly which plugin
+/// was skipped and why — silent failure would let an examiner think
+/// they got "no findings" from Phantom on a macOS image when in
+/// reality the parser never even ran. The synthesized artifact
+/// carries `forensic_value: Informational` and `confidence: 0` so it
+/// does not pollute scoring or counts of real findings.
+fn execute_plugin_safely(
+    plugin: &dyn StrataPlugin,
+    context: PluginContext,
+) -> Result<PluginOutput, PluginError> {
+    let plugin_name = plugin.name().to_string();
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        plugin.execute(context)
+    }));
+    match result {
+        Ok(real) => real,
+        Err(payload) => {
+            let msg = extract_panic_msg(payload.as_ref());
+            log::error!(
+                "Plugin '{plugin_name}' panicked: {msg} — continuing with remaining plugins"
+            );
+            Ok(PluginOutput {
+                plugin_name: plugin_name.clone(),
+                plugin_version: plugin.version().to_string(),
+                executed_at: chrono::Utc::now().to_rfc3339(),
+                duration_ms: 0,
+                artifacts: vec![synthesize_panic_artifact(&plugin_name, &msg)],
+                summary: PluginSummary {
+                    total_artifacts: 1,
+                    suspicious_count: 0,
+                    categories_populated: vec!["System Activity".to_string()],
+                    headline: format!("{plugin_name} panicked — skipped"),
+                },
+                warnings: vec![format!("plugin panicked: {msg}")],
+            })
+        }
+    }
+}
+
+/// Pull a human-readable message out of a panic payload.
+fn extract_panic_msg(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(s) = payload.downcast_ref::<&str>() {
+        return s.to_string();
+    }
+    if let Some(s) = payload.downcast_ref::<String>() {
+        return s.clone();
+    }
+    "unknown panic".to_string()
+}
+
+/// Build a synthetic `ArtifactRecord` describing a plugin panic. Visible
+/// in the Artifacts panel so examiners notice the skipped plugin instead
+/// of assuming it produced zero real findings.
+fn synthesize_panic_artifact(plugin_name: &str, msg: &str) -> ArtifactRecord {
+    ArtifactRecord {
+        category: ArtifactCategory::SystemActivity,
+        subcategory: "plugin_error".to_string(),
+        timestamp: None,
+        title: format!("Plugin '{plugin_name}' panicked"),
+        detail: format!(
+            "Plugin '{plugin_name}' encountered a panic and was skipped: {msg}. \
+             Results from this plugin are unavailable for this evidence; the \
+             remaining plugins ran to completion."
+        ),
+        source_path: String::new(),
+        forensic_value: ForensicValue::Informational,
+        mitre_technique: None,
+        is_suspicious: false,
+        raw_data: None,
+        confidence: 0,
+    }
+}
+
 /// Run a single named plugin against the loaded evidence.
 pub fn run_plugin(evidence_id: &str, plugin_name: &str) -> AdapterResult<Vec<PluginArtifact>> {
     let plugins = build_plugins();
@@ -294,8 +376,7 @@ pub fn run_plugin(evidence_id: &str, plugin_name: &str) -> AdapterResult<Vec<Plu
         prior_results: Vec::new(),
     };
 
-    let output = plugin
-        .execute(context)
+    let output = execute_plugin_safely(plugin.as_ref(), context)
         .map_err(|e: PluginError| AdapterError::EngineError(format!("plugin execute: {e}")))?;
 
     let artifacts = convert_output(&output, plugin_name);
@@ -473,8 +554,18 @@ where
             prior_results: prior.clone(),
         };
 
-        match plugin.execute(context) {
+        match execute_plugin_safely(plugin.as_ref(), context) {
             Ok(output) => {
+                // A panic-synthesized output carries a single
+                // `plugin_error` artifact + a non-empty `warnings`
+                // list; surface it as `error` to the UI but keep the
+                // synthesized artifact in the cache so examiners see
+                // the skip in the Artifacts panel.
+                let panic_msg = output
+                    .warnings
+                    .iter()
+                    .find(|w| w.starts_with("plugin panicked:"))
+                    .cloned();
                 let artifacts = convert_output(&output, &name);
                 let count = artifacts.len() as u64;
                 {
@@ -486,7 +577,11 @@ where
                     );
                 }
                 prior.push(output);
-                on_event(&name, "complete", count, None);
+                if let Some(msg) = panic_msg {
+                    on_event(&name, "error", count, Some(&msg));
+                } else {
+                    on_event(&name, "complete", count, None);
+                }
             }
             Err(e) => {
                 let msg = format!("{e}");
@@ -527,7 +622,7 @@ pub fn run_all_on_path(
             config: HashMap::new(),
             prior_results: prior.clone(),
         };
-        match plugin.execute(context) {
+        match execute_plugin_safely(plugin.as_ref(), context) {
             Ok(output) => {
                 prior.push(output.clone());
                 results.push((name, Ok(output)));
@@ -569,7 +664,7 @@ pub fn run_all_on_vfs(
             config: HashMap::new(),
             prior_results: prior.clone(),
         };
-        match plugin.execute(context) {
+        match execute_plugin_safely(plugin.as_ref(), context) {
             Ok(output) => {
                 prior.push(output.clone());
                 results.push((name, Ok(output)));
@@ -820,5 +915,185 @@ mod sprint8_run_all_on_evidence_tests {
         drop(cache);
 
         cleanup_evidence(&evidence_id);
+    }
+}
+
+#[cfg(test)]
+mod sprint10_panic_sandbox_tests {
+    //! Sprint-10 P1 — verify `execute_plugin_safely` catches panics
+    //! from any single plugin and surfaces a visible `plugin_error`
+    //! artifact instead of unwinding through the whole run.
+    //!
+    //! These tests use lightweight mock plugins that bypass
+    //! `build_plugins()` so we can deterministically exercise the
+    //! panic + good-plugin interaction without depending on the
+    //! statically-linked plugin set.
+
+    use super::*;
+    use strata_plugin_sdk::{PluginCapability, PluginResult, PluginType};
+
+    struct PanickingPlugin;
+    impl StrataPlugin for PanickingPlugin {
+        fn name(&self) -> &str {
+            "TestPanicker"
+        }
+        fn version(&self) -> &str {
+            "0.0.0"
+        }
+        fn supported_inputs(&self) -> Vec<String> {
+            vec![]
+        }
+        fn plugin_type(&self) -> PluginType {
+            PluginType::Analyzer
+        }
+        fn capabilities(&self) -> Vec<PluginCapability> {
+            vec![]
+        }
+        fn description(&self) -> &str {
+            "panics on every execute() call"
+        }
+        fn run(&self, _ctx: PluginContext) -> PluginResult {
+            panic!("run() should not be reached — execute() panics first")
+        }
+        fn execute(&self, _ctx: PluginContext) -> Result<PluginOutput, PluginError> {
+            panic!("synthetic test panic — must not unwind through engine")
+        }
+    }
+
+    struct GoodPlugin;
+    impl StrataPlugin for GoodPlugin {
+        fn name(&self) -> &str {
+            "TestGood"
+        }
+        fn version(&self) -> &str {
+            "0.0.0"
+        }
+        fn supported_inputs(&self) -> Vec<String> {
+            vec![]
+        }
+        fn plugin_type(&self) -> PluginType {
+            PluginType::Analyzer
+        }
+        fn capabilities(&self) -> Vec<PluginCapability> {
+            vec![]
+        }
+        fn description(&self) -> &str {
+            "returns one synthetic artifact"
+        }
+        fn run(&self, _ctx: PluginContext) -> PluginResult {
+            Ok(vec![])
+        }
+        fn execute(&self, _ctx: PluginContext) -> Result<PluginOutput, PluginError> {
+            Ok(PluginOutput {
+                plugin_name: "TestGood".to_string(),
+                plugin_version: "0.0.0".to_string(),
+                executed_at: "now".to_string(),
+                duration_ms: 0,
+                artifacts: vec![ArtifactRecord {
+                    category: ArtifactCategory::SystemActivity,
+                    subcategory: "synthetic".to_string(),
+                    timestamp: None,
+                    title: "good".to_string(),
+                    detail: "good detail".to_string(),
+                    source_path: "/tmp/x".to_string(),
+                    forensic_value: ForensicValue::Low,
+                    mitre_technique: Some("T0000".to_string()),
+                    is_suspicious: false,
+                    raw_data: None,
+                    confidence: 50,
+                }],
+                summary: PluginSummary {
+                    total_artifacts: 1,
+                    suspicious_count: 0,
+                    categories_populated: vec!["System Activity".to_string()],
+                    headline: "ok".to_string(),
+                },
+                warnings: vec![],
+            })
+        }
+    }
+
+    fn ctx() -> PluginContext {
+        PluginContext {
+            root_path: "/tmp".to_string(),
+            vfs: None,
+            config: HashMap::new(),
+            prior_results: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn panicking_plugin_does_not_stop_subsequent_plugins() {
+        // Drive the same loop shape `run_all_on_path` uses: iterate
+        // a sequence of plugins, call `execute_plugin_safely`, and
+        // confirm the second plugin runs even after the first
+        // panics. This is the load-bearing guarantee — a panic must
+        // never abort the run.
+        let plugins: Vec<Box<dyn StrataPlugin>> =
+            vec![Box::new(PanickingPlugin), Box::new(GoodPlugin)];
+        let mut completed = Vec::new();
+        for p in plugins.iter() {
+            let out = execute_plugin_safely(p.as_ref(), ctx())
+                .expect("execute_plugin_safely must absorb panic, not return Err");
+            completed.push((p.name().to_string(), out));
+        }
+        assert_eq!(completed.len(), 2, "both plugins must run");
+        // Panicker contributed exactly one synthetic plugin_error artifact.
+        let (panic_name, panic_out) = &completed[0];
+        assert_eq!(panic_name, "TestPanicker");
+        assert_eq!(panic_out.artifacts.len(), 1);
+        assert_eq!(panic_out.artifacts[0].subcategory, "plugin_error");
+        // Good plugin contributed its real artifact.
+        let (good_name, good_out) = &completed[1];
+        assert_eq!(good_name, "TestGood");
+        assert_eq!(good_out.artifacts.len(), 1);
+        assert_eq!(good_out.artifacts[0].title, "good");
+    }
+
+    #[test]
+    fn panic_message_is_captured_in_error_artifact() {
+        let p = PanickingPlugin;
+        let out =
+            execute_plugin_safely(&p, ctx()).expect("panic absorbed → Ok with synthetic output");
+        let detail = &out.artifacts[0].detail;
+        assert!(
+            detail.contains("synthetic test panic"),
+            "panic msg must be embedded in the synthesized artifact detail, got: {detail}"
+        );
+        assert!(
+            detail.contains("TestPanicker"),
+            "plugin name must be in the synthesized artifact detail, got: {detail}"
+        );
+        assert_eq!(
+            out.artifacts[0].forensic_value,
+            ForensicValue::Informational,
+            "plugin_error artifacts must not pollute high-value scoring"
+        );
+        assert_eq!(
+            out.artifacts[0].confidence, 0,
+            "synthetic panic artifact must not contribute confidence"
+        );
+    }
+
+    #[test]
+    fn single_plugin_rerun_survives_panic() {
+        // Mirrors the `run_plugin` single-plugin path. The synthetic
+        // `PanickingPlugin` returns Ok via `execute_plugin_safely`
+        // (panic absorbed) — the single-plugin caller in
+        // `run_plugin` then `convert_output`s and caches as if the
+        // plugin had returned the synthetic artifact normally. The
+        // examiner who clicks "RE-RUN" on a panicking plugin gets
+        // back a structured plugin_error row instead of a process
+        // crash or a generic engine error.
+        let p = PanickingPlugin;
+        let out = execute_plugin_safely(&p, ctx())
+            .expect("single-plugin re-run must survive plugin panic");
+        let converted = convert_output(&out, p.name());
+        assert_eq!(
+            converted.len(),
+            1,
+            "single-plugin re-run on a panic produces exactly one plugin_error row"
+        );
+        assert_eq!(converted[0].name, "Plugin 'TestPanicker' panicked");
     }
 }
