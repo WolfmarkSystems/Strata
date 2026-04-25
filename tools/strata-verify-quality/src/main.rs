@@ -152,8 +152,7 @@ use syn::__private::ToTokens;
 
 impl<'ast> Visit<'ast> for QualityVisitor<'_> {
     fn visit_item_mod(&mut self, node: &'ast syn::ItemMod) {
-        let is_test_mod = node.ident == "tests"
-            || node.attrs.iter().any(is_test_attribute);
+        let is_test_mod = node.ident == "tests" || node.attrs.iter().any(is_test_attribute);
 
         if is_test_mod {
             let prev = self.in_test_module;
@@ -266,7 +265,8 @@ fn load_waivers(path: &Path) -> Waivers {
 fn should_skip(path: &Path) -> bool {
     for comp in path.components() {
         let s = comp.as_os_str().to_string_lossy();
-        if s == "target" || s == ".git" || s == "node_modules" {
+        if s == "target" || s == ".git" || s == "node_modules"
+            || s == "worktrees" || s == "examples" {
             return true;
         }
     }
@@ -327,7 +327,10 @@ fn print_report(counts: &AllCounts) {
     println!("  CLI (strata-shield-cli):");
     println!("    unwrap:       {:>6}", counts.cli.unwrap);
     println!("    unsafe{{}}:     {:>6}", counts.cli.unsafe_block);
-    println!("    println!:     {:>6}  (intentional — human output)", counts.cli.println);
+    println!(
+        "    println!:     {:>6}  (intentional — human output)",
+        counts.cli.println
+    );
     println!();
     println!("  Tools / Apps (tools/, apps/, examples/, build.rs):");
     println!("    unwrap:       {:>6}", counts.tool_or_app.unwrap);
@@ -554,7 +557,9 @@ mod tests {
             FileContext::ToolOrApp
         );
         assert_eq!(
-            classify_file(&PathBuf::from("/x/apps/strata-desktop/src-tauri/src/lib.rs")),
+            classify_file(&PathBuf::from(
+                "/x/apps/strata-desktop/src-tauri/src/lib.rs"
+            )),
             FileContext::ToolOrApp
         );
     }
