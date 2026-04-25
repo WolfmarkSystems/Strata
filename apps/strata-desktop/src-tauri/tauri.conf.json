@@ -24,11 +24,15 @@
       }
     ],
     "security": {
-      "csp": null,
-      "freezePrototype": false,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset:; connect-src ipc: http://ipc.localhost",
+      "freezePrototype": true,
       "assetProtocol": {
-        "enable": true,
-        "scope": ["**"]
+        "scope": [
+          "$APPDATA/strata/**",
+          "$APPDATA/wolfmark/**",
+          "$TEMP/strata-ui/**"
+        ],
+        "enable": true
       }
     }
   },
