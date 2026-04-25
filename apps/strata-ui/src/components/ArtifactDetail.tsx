@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Artifact } from '../ipc'
 import { navigateToPath } from '../ipc'
 import { useAppStore } from '../store/appStore'
+import ThreadContextPanel from './ThreadContextPanel'
 
 interface Props {
   artifact: Artifact | null
@@ -250,6 +251,16 @@ export default function ArtifactDetail({ artifact }: Props) {
               )}
             </>
           )}
+
+          {/* Sprint-11 follow-up — thread context renders below the
+              raw-data section, only when the selected artifact
+              belongs to a real conversation thread. Hidden for
+              non-message categories. */}
+          <ThreadContextPanel
+            evidenceId={evidenceId}
+            category={artifact.category}
+            artifactId={artifact.id}
+          />
         </div>
       )}
     </div>
