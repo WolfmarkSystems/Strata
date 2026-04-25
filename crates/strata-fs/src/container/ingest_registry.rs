@@ -64,6 +64,21 @@ impl IngestRegistry {
             "qcow2" => (ContainerType::Qcow2, "container::qcow2".to_string()),
             "ufdr" => (ContainerType::Ufdr, "ios::cellebrite".to_string()),
             "ufd" | "ufdx" => (ContainerType::Ufed, "ios::cellebrite".to_string()),
+            "zip" => (
+                ContainerType::ArchiveZip,
+                "container::archive_zip".to_string(),
+            ),
+            "tar" | "tgz" => (
+                ContainerType::ArchiveTar,
+                "container::archive_tar".to_string(),
+            ),
+            // Files ending in `.tar.gz` arrive here with `ext = "gz"`; the
+            // unpack engine sniffs magic bytes (gzip 1F 8B + ustar at 257)
+            // so a bare `.gz` that wraps a tar will still extract correctly.
+            "gz" => (
+                ContainerType::ArchiveTar,
+                "container::archive_tar".to_string(),
+            ),
             _ => {
                 if is_numeric_split || is_r_split || is_alpha_split {
                     (ContainerType::SplitRaw, "container::split_raw".to_string())

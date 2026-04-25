@@ -97,6 +97,13 @@ pub enum ContainerType {
     /// Cellebrite UFDR report package: `.ufdr` file, or a directory
     /// containing `report.xml` with a Cellebrite signature. FIX-2.
     Ufdr,
+    /// ZIP archive (e.g. Hexordia CTF MacBookPro.zip). Sprint-9 P3:
+    /// extracted lazily into a scratch directory by `EvidenceSource::open`,
+    /// then walked as `ContainerType::Directory` via `FsVfs`.
+    ArchiveZip,
+    /// TAR / TAR.GZ / TGZ archive. Sprint-9 P3: same extract-to-scratch
+    /// pipeline as `ArchiveZip`. Decompression is handled by `UnpackEngine`.
+    ArchiveTar,
 }
 
 impl ContainerType {
@@ -132,6 +139,8 @@ impl ContainerType {
             ContainerType::Qcow2 => "QCOW2",
             ContainerType::Ufed => "UFED (Cellebrite export)",
             ContainerType::Ufdr => "UFDR (Cellebrite report package)",
+            ContainerType::ArchiveZip => "ZIP archive",
+            ContainerType::ArchiveTar => "TAR archive",
         }
     }
 
@@ -209,6 +218,16 @@ impl EvidenceSource {
                 let fs_vfs = FsVfs::new(path.to_path_buf());
                 Some(Box::new(fs_vfs))
             }
+            // Sprint-9 P3: ZIP / TAR archive ingestion. Extract once into
+            // a deterministic scratch dir (keyed by archive path hash so
+            // re-opening the same archive is idempotent), then walk the
+            // extracted tree via FsVfs — identical to the folder path.
+            ContainerType::ArchiveZip | ContainerType::ArchiveTar => {
+                let extracted = ensure_archive_extracted(path)?;
+                size = 0;
+                let fs_vfs = FsVfs::new(extracted);
+                Some(Box::new(fs_vfs))
+            }
         };
 
         if let Some(ref v) = vfs {
@@ -236,6 +255,199 @@ pub fn open_evidence_container(path: &Path) -> Result<EvidenceSource, ForensicEr
     EvidenceSource::open(path)
 }
 
+/// Sprint-9 P3 helper. Extract the archive at `archive_path` into a
+/// deterministic scratch directory under the system temp root, returning
+/// the path that should be walked as a filesystem.
+///
+/// Idempotent: if a previous run already populated the scratch directory
+/// the archive is *not* re-extracted (avoids redundant disk I/O when the
+/// examiner reopens the same evidence).
+///
+/// Encrypted archives are surfaced as `ForensicError::UnsupportedFormat`
+/// rather than silently producing an empty directory — examiners need to
+/// know they have to provide the password through a third-party tool
+/// before reopening in Strata.
+fn ensure_archive_extracted(archive_path: &Path) -> Result<std::path::PathBuf, ForensicError> {
+    use crate::unpack::{unpack, UnpackEngine, UnpackWarning};
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = DefaultHasher::new();
+    archive_path.to_string_lossy().hash(&mut hasher);
+    let key = format!("{:016x}", hasher.finish());
+    let scratch = std::env::temp_dir().join("strata-archives").join(&key);
+    let leaf = scratch.join("layer_0");
+
+    // Idempotency: a populated `layer_0` from a prior run is reused.
+    let already_extracted = leaf.is_dir()
+        && std::fs::read_dir(&leaf)
+            .map(|mut it| it.next().is_some())
+            .unwrap_or(false);
+    if already_extracted {
+        log::debug!(
+            "Archive {:?} reusing extracted scratch at {:?}",
+            archive_path,
+            leaf
+        );
+        return Ok(leaf);
+    }
+
+    std::fs::create_dir_all(&scratch)?;
+
+    // Forensic archives (e.g. the 82 GB Hexordia MacBookPro.zip) routinely
+    // exceed the unpack engine's 2 GiB default cap. Examiners explicitly
+    // chose this archive — the cap exists to defend against zip bombs in
+    // automated/recursive contexts, not to throttle deliberate ingestion.
+    // Bump to 1 TiB (still bounded, still trips runaway nested archives).
+    let engine = UnpackEngine::new(scratch.clone())
+        .with_max_total_bytes(1024 * 1024 * 1024 * 1024);
+    let result = unpack(archive_path, &engine)
+        .map_err(|e| ForensicError::Container(format!("archive unpack failed: {e}")))?;
+
+    let encrypted = result
+        .warnings
+        .iter()
+        .any(|w| matches!(w, UnpackWarning::EncryptedArchive { .. }));
+    if encrypted && result.total_files_extracted == 0 {
+        return Err(ForensicError::UnsupportedImageFormat(
+            "archive is encrypted — extract it externally with the password, then reopen the resulting folder in Strata"
+                .into(),
+        ));
+    }
+
+    log::info!(
+        "Archive {:?} extracted to {:?}: {} files, {} bytes",
+        archive_path,
+        result.filesystem_root,
+        result.total_files_extracted,
+        result.total_bytes_extracted
+    );
+    Ok(result.filesystem_root)
+}
+
 pub fn detect_container_type(path: &Path) -> ContainerType {
     IngestRegistry::detect(path).container_type
+}
+
+#[cfg(test)]
+mod sprint9_archive_ingestion_tests {
+    //! Sprint-9 P3 — verify zip / tar archives flow through
+    //! `EvidenceSource::open` end-to-end: detection → extraction →
+    //! walkable VFS. Encryption returns a clear error rather than a
+    //! silent empty extraction.
+
+    use super::*;
+    use std::io::Write;
+
+    fn write_zip(path: &Path, entries: &[(&str, &[u8])]) {
+        let file = std::fs::File::create(path).expect("create zip");
+        let mut w = zip::ZipWriter::new(file);
+        let opts: zip::write::SimpleFileOptions = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        for (name, payload) in entries {
+            w.start_file::<_, ()>(*name, opts).expect("start");
+            w.write_all(payload).expect("write");
+        }
+        w.finish().expect("finish");
+    }
+
+    fn collect_files(root: &Path, into: &mut Vec<PathBuf>) {
+        if let Ok(entries) = std::fs::read_dir(root) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_dir() {
+                    collect_files(&p, into);
+                } else {
+                    into.push(p);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn zip_extraction_produces_walkable_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let zip_path = dir.path().join("evidence.zip");
+        write_zip(
+            &zip_path,
+            &[
+                ("notes.txt", b"hello"),
+                ("subdir/data.bin", &[0u8, 1, 2, 3]),
+            ],
+        );
+
+        let src = EvidenceSource::open(&zip_path).expect("open zip");
+        assert_eq!(src.container_type, ContainerType::ArchiveZip);
+        let vfs = src.vfs.as_ref().expect("vfs");
+        // FsVfs root points at the extracted layer — walking it must
+        // surface the entries we packed.
+        let root = vfs.root().clone();
+        let mut walked = Vec::new();
+        collect_files(&root, &mut walked);
+        let names: Vec<String> = walked
+            .iter()
+            .map(|p| p.to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            names.iter().any(|p| p.ends_with("notes.txt")),
+            "expected notes.txt in extracted tree, got {names:?}"
+        );
+        assert!(
+            names.iter().any(|p| p.ends_with("data.bin")),
+            "expected subdir/data.bin in extracted tree, got {names:?}"
+        );
+    }
+
+    #[test]
+    fn tar_extraction_produces_walkable_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let tar_path = dir.path().join("evidence.tar");
+        let file = std::fs::File::create(&tar_path).expect("create tar");
+        let mut builder = tar::Builder::new(file);
+        let payload = b"tar body";
+        let mut header = tar::Header::new_gnu();
+        header.set_path("inside/file.txt").expect("set path");
+        header.set_size(payload.len() as u64);
+        header.set_cksum();
+        builder
+            .append(&header, std::io::Cursor::new(payload))
+            .expect("append");
+        builder.finish().expect("finish");
+
+        let src = EvidenceSource::open(&tar_path).expect("open tar");
+        assert_eq!(src.container_type, ContainerType::ArchiveTar);
+        let root = src.vfs.as_ref().expect("vfs").root().clone();
+        let mut walked = Vec::new();
+        collect_files(&root, &mut walked);
+        let found = walked
+            .iter()
+            .any(|p| p.file_name().map(|n| n == "file.txt").unwrap_or(false));
+        assert!(found, "expected file.txt under extracted tar root {root:?}");
+    }
+
+    #[test]
+    fn encrypted_zip_returns_clear_error() {
+        use zip::unstable::write::FileOptionsExt;
+        let dir = tempfile::tempdir().expect("tempdir");
+        let zip_path = dir.path().join("locked.zip");
+        let file = std::fs::File::create(&zip_path).expect("create zip");
+        let mut w = zip::ZipWriter::new(file);
+        let opts: zip::write::SimpleFileOptions = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored)
+            .with_deprecated_encryption(b"hunter2");
+        w.start_file::<_, ()>("secret.txt", opts).expect("s");
+        w.write_all(b"top secret").expect("w");
+        w.finish().expect("f");
+
+        let result = EvidenceSource::open(&zip_path);
+        let err = match result {
+            Ok(_) => panic!("encrypted zip must not silently produce empty VFS"),
+            Err(e) => e,
+        };
+        let msg = format!("{err}");
+        assert!(
+            msg.to_lowercase().contains("encrypted"),
+            "expected error to mention encryption, got {msg:?}"
+        );
+    }
 }

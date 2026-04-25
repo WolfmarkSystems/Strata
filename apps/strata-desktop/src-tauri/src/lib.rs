@@ -972,6 +972,8 @@ async fn open_evidence_dialog(app: tauri::AppHandle) -> Result<Option<String>, S
                 "ufdr", "ufd", "ufdx",
                 // S01 (EnCase split)
                 "s01", "S01",
+                // Sprint-9 P3: archives unpacked into a scratch dir
+                "zip", "ZIP", "tar", "TAR", "tgz", "TGZ", "gz", "GZ",
             ],
         )
         .add_filter("All Files", &["*"])
