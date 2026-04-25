@@ -178,6 +178,16 @@ pub fn get_tree_root(evidence_id: &str) -> AdapterResult<Vec<TreeNode>> {
     Ok(out)
 }
 
+/// Sprint-10 P4 — defense-in-depth recursion guard.
+///
+/// 50 levels is far deeper than any real forensic image hierarchy
+/// (NTFS observed max is ~30 levels of nested folders in real-world
+/// suspect images; the Strata test fixtures top out at 12). If the
+/// lazy-load tree walker ever asks for children below this depth,
+/// something has gone wrong — return an empty vec and log loudly so
+/// the bug surfaces in the next run instead of locking up the UI.
+const MAX_TREE_DEPTH: u32 = 50;
+
 /// Return the children of a tree node, lazily walking the underlying VFS the
 /// first time the node is expanded.
 pub fn get_tree_children(evidence_id: &str, node_id: &str) -> AdapterResult<Vec<TreeNode>> {
@@ -211,10 +221,47 @@ pub fn get_tree_children(evidence_id: &str, node_id: &str) -> AdapterResult<Vec<
         (n.vfs_path.clone(), n.depth, n.volume_index)
     };
 
+    // Sprint-10 P4 — short-circuit pathological recursion. If a node's
+    // depth has grown past MAX_TREE_DEPTH something is feeding the
+    // walker its own root back (the "Volume 0 (10223990784 bytes)
+    // nested 20+ levels" symptom Sprint 8 surfaced on Charlie). Mark
+    // the node as fully expanded with no children, log the cycle, and
+    // return cleanly so the UI doesn't lock up.
+    if depth >= MAX_TREE_DEPTH {
+        log::warn!(
+            "tree recursion guard fired for node {} at depth {} (>= {}); \
+             returning empty children. vfs_path={:?}",
+            node_id,
+            depth,
+            MAX_TREE_DEPTH,
+            vfs_path
+        );
+        if let Some(node) = guard.nodes.get_mut(node_id) {
+            node.children_loaded = true;
+            node.child_ids.clear();
+        }
+        return Ok(Vec::new());
+    }
+
     let entries = walk_directory(&guard, &vfs_path, vol_index)?;
 
     let mut new_child_ids = Vec::new();
     for entry in entries {
+        // Sprint-10 P4 root-cause guard: if the VFS hands back an
+        // entry whose path equals the directory we just walked, that
+        // entry IS the parent — descending would loop forever (this
+        // is the source of the "Volume 0 nested 20+ levels" symptom
+        // Sprint 8 captured). Skip self-references; the depth limit
+        // above is the load-bearing safety net but this stops the
+        // cycle at depth=1 instead of letting it run to 50.
+        if entry.path == vfs_path {
+            log::warn!(
+                "tree self-reference filtered: entry path {:?} == parent path {:?}",
+                entry.path,
+                vfs_path
+            );
+            continue;
+        }
         let child_id = format!("{}-{}", node_id, sanitize(&entry.name));
         let cached = CachedNode {
             id: child_id.clone(),
@@ -408,4 +455,98 @@ fn sanitize(name: &str) -> String {
         .chars()
         .take(32)
         .collect()
+}
+
+#[cfg(test)]
+mod sprint10_p4_tree_recursion_guard_tests {
+    //! Sprint-10 P4 — verify the recursion safety net.
+    //!
+    //! These tests exercise `get_tree_children` directly against an
+    //! evidence store seeded with a synthetic node at the limit. We
+    //! do not need a real VFS because the guard runs *before* the
+    //! VFS walk — that is the whole point of the safety net.
+
+    use super::*;
+    use crate::store::{insert_evidence, EVIDENCE_STORE};
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    static COUNTER: AtomicU32 = AtomicU32::new(0);
+
+    fn unique_evidence_id() -> String {
+        format!(
+            "test-tree-ev-{}-{}",
+            std::process::id(),
+            COUNTER.fetch_add(1, Ordering::Relaxed),
+        )
+    }
+
+    fn cleanup(evidence_id: &str) {
+        let mut store = EVIDENCE_STORE.lock().expect("evidence store");
+        store.remove(evidence_id);
+    }
+
+    /// Synthesize an evidence entry with a single deep node so we can
+    /// drive `get_tree_children` without a real forensic image.
+    fn seed_evidence_with_node(node_id: &str, depth: u32) -> String {
+        let evidence_id = unique_evidence_id();
+        // Open a real-but-empty tempdir so EvidenceSource has a valid
+        // VFS handle (irrelevant — the guard short-circuits before the
+        // VFS is touched).
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let source = strata_fs::container::EvidenceSource::open(tmp.path())
+            .expect("EvidenceSource::open on tempdir");
+        let arc = insert_evidence(evidence_id.clone(), source);
+        {
+            let mut guard = arc.lock().expect("evidence lock");
+            guard.nodes.insert(
+                node_id.to_string(),
+                CachedNode {
+                    id: node_id.to_string(),
+                    name: "deep-node".to_string(),
+                    node_type: "folder".to_string(),
+                    vfs_path: PathBuf::from("/synthetic"),
+                    volume_index: None,
+                    parent_id: None,
+                    depth,
+                    child_ids: Vec::new(),
+                    children_loaded: false,
+                },
+            );
+        }
+        evidence_id
+    }
+
+    #[test]
+    fn depth_guard_returns_empty_at_or_above_max_depth() {
+        let evidence_id = seed_evidence_with_node("deep-node-id", MAX_TREE_DEPTH);
+        let result = get_tree_children(&evidence_id, "deep-node-id")
+            .expect("guard must return Ok, not an error");
+        assert!(
+            result.is_empty(),
+            "depth >= MAX_TREE_DEPTH must yield no children"
+        );
+        cleanup(&evidence_id);
+    }
+
+    #[test]
+    fn depth_guard_marks_node_loaded_to_avoid_repeat_walks() {
+        let evidence_id = seed_evidence_with_node("deep-node-id-2", MAX_TREE_DEPTH);
+        let _ = get_tree_children(&evidence_id, "deep-node-id-2").expect("first call ok");
+        // Second call must not re-trigger the walk path. Easiest way to
+        // verify: confirm the cached `children_loaded` flag is set so the
+        // early-return branch fires.
+        let arc = crate::store::get_evidence(&evidence_id).expect("store lookup");
+        let guard = arc.lock().expect("lock");
+        let node = guard
+            .nodes
+            .get("deep-node-id-2")
+            .expect("node still present");
+        assert!(
+            node.children_loaded,
+            "guard must mark the node loaded so it is not re-walked"
+        );
+        assert!(node.child_ids.is_empty(), "guard must clear stale child ids");
+        drop(guard);
+        cleanup(&evidence_id);
+    }
 }
