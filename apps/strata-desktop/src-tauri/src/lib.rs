@@ -964,6 +964,22 @@ async fn open_evidence_dialog(app: tauri::AppHandle) -> Result<Option<String>, S
 }
 
 #[tauri::command]
+async fn open_folder_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.dialog()
+        .file()
+        .set_title("Open Evidence Folder")
+        .pick_folder(move |path| {
+            let _ = tx.send(path);
+        });
+
+    let picked = rx.recv().map_err(|e| e.to_string())?;
+    Ok(picked.map(|p| p.to_string()))
+}
+
+#[tauri::command]
 async fn load_evidence(path: String) -> Result<EvidenceLoadResult, String> {
     // Run the (potentially heavy) parse on a blocking thread so the Tauri
     // command thread isn't held up.
@@ -2194,6 +2210,7 @@ pub fn run() {
             list_drives,
             select_evidence_drive,
             open_evidence_dialog,
+            open_folder_dialog,
             load_evidence,
             get_tree_root,
             get_tree_children,

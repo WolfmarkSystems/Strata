@@ -315,6 +315,15 @@ export async function openEvidenceDialog(): Promise<string | null> {
   }
 }
 
+export async function openFolderDialog(): Promise<string | null> {
+  if (!IN_TAURI) return '/mock/evidence/folder'
+  try {
+    return await invoke('open_folder_dialog')
+  } catch {
+    return null
+  }
+}
+
 export async function loadEvidence(path: string): Promise<EvidenceLoadResult> {
   if (!IN_TAURI) {
     return {

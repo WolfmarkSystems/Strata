@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   openEvidenceDialog,
+  openFolderDialog,
   loadEvidence,
   getStats,
   generateReport,
@@ -118,8 +119,7 @@ export default function TopBar() {
   const setPluginsRunning = useAppStore((s) => s.setPluginsRunning)
   const pluginsRunning = useAppStore((s) => s.pluginsRunning)
 
-  const handleOpenEvidence = async () => {
-    const path = await openEvidenceDialog()
+  const handleOpenPath = async (path: string | null) => {
     if (!path) return
 
     const result = await loadEvidence(path)
@@ -237,8 +237,18 @@ export default function TopBar() {
             flexShrink: 0,
           }}
         >
-          <button className="btn-primary" onClick={handleOpenEvidence}>
+          <button
+            className="btn-primary"
+            onClick={async () => handleOpenPath(await openEvidenceDialog())}
+          >
             {narrow ? '+' : '+ Open Evidence'}
+          </button>
+          <button
+            className="btn-secondary"
+            onClick={async () => handleOpenPath(await openFolderDialog())}
+            title="Open a folder of extracted evidence (logical image, mobile filesystem dump, Cellebrite UFED export, etc.)"
+          >
+            {narrow ? '+F' : '+ Open Folder'}
           </button>
           <button className="btn-secondary" onClick={() => setNewCaseOpen(true)}>
             {narrow ? 'New' : 'New Case'}
