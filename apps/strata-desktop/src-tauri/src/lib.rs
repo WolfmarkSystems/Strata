@@ -951,7 +951,28 @@ async fn open_evidence_dialog(app: tauri::AppHandle) -> Result<Option<String>, S
         .file()
         .add_filter(
             "Evidence Images",
-            &["E01", "e01", "dd", "img", "raw", "vmdk", "vhd", "vhdx"],
+            &[
+                // E01 / EnCase
+                "E01", "e01", "EX01", "ex01",
+                // EnCase logical
+                "L01", "l01", "Lx01", "lx01", "Lx02", "lx02",
+                // AFF / AFF4
+                "aff", "AFF", "aff4", "AFF4",
+                // Raw disk images
+                "dd", "DD", "img", "IMG", "raw", "RAW",
+                // Split raw sequences
+                "001", "r01", "R01", "aa",
+                // VM disk formats
+                "vmdk", "VMDK", "vhd", "VHD", "vhdx", "VHDX",
+                // ISO
+                "iso", "ISO",
+                // QEMU
+                "qcow2",
+                // Cellebrite UFED
+                "ufdr", "ufd", "ufdx",
+                // S01 (EnCase split)
+                "s01", "S01",
+            ],
         )
         .add_filter("All Files", &["*"])
         .set_title("Open Evidence Image")

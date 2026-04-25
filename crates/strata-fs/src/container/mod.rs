@@ -151,9 +151,10 @@ impl EvidenceSource {
     pub fn open(path: &Path) -> Result<Self, ForensicError> {
         let descriptor = IngestRegistry::detect(path);
         let container_type = descriptor.container_type;
-        println!(
-            "DEBUG: EvidenceSource open: path={:?}, detected_type={:?}",
-            path, container_type
+        log::debug!(
+            "EvidenceSource open: path={:?}, detected_type={:?}",
+            path,
+            container_type
         );
 
         let mut size = if path.is_dir() {
