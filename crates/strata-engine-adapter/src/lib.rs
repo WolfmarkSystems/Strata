@@ -35,7 +35,7 @@ pub use hashing::{hash_all_files, hash_file, hashed_count};
 
 pub use plugins::{
     get_artifact_categories, get_artifacts_by_category, get_plugin_artifacts, list_plugins,
-    run_all_on_path, run_all_on_vfs, run_all_with_persistence,
+    run_all_on_evidence, run_all_on_path, run_all_on_vfs, run_all_with_persistence,
     run_all_with_persistence_vfs, run_plugin,
 };
 

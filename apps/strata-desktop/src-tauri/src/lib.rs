@@ -327,10 +327,48 @@ fn get_plugin_status_store() -> Arc<Mutex<HashMap<String, PluginStatus>>> {
         .clone()
 }
 
+/// Short display names for every plugin registered in
+/// `strata_engine_adapter::plugins::build_plugins()`. Order matches the
+/// adapter's registration order so Sigma remains last. Sprint 8 P1 F2
+/// expanded this from the pre-sprint 15-entry list to the full 23
+/// plugins; the prior list silently dropped Apex, Carbon, Pulse, Vault,
+/// ARBOR, Advisory, CSAM Scanner, and Sentinel — ~184 Charlie
+/// artifacts the UI could never reach.
 const PLUGIN_NAMES: &[&str] = &[
-    "Remnant", "Chronicle", "Cipher", "Trace", "Specter", "Conduit", "Nimbus", "Wraith", "Vector",
-    "Recon", "Phantom", "Guardian", "NetFlow", "MacTrace", "Sigma",
+    "Remnant",
+    "Chronicle",
+    "Cipher",
+    "Trace",
+    "Specter",
+    "Conduit",
+    "Nimbus",
+    "Wraith",
+    "Vector",
+    "Recon",
+    "Phantom",
+    "Guardian",
+    "NetFlow",
+    "MacTrace",
+    "Sentinel",
+    "CSAM Scanner",
+    "Apex",
+    "Carbon",
+    "Pulse",
+    "Vault",
+    "ARBOR",
+    "Advisory Analytics",
+    "Sigma",
 ];
+
+/// Sprint 8 P1 F4 — the canonical set of plugin-status strings that
+/// mean "this plugin finished successfully." `run_plugin` /
+/// `run_all_plugins` emit `"complete"`; kept permissive so
+/// `"completed"` / `"success"` don't silently re-break the
+/// `plugins_not_run` signal in `get_artifacts` if an upstream emitter
+/// drifts.
+fn is_plugin_complete(status: &str) -> bool {
+    matches!(status, "complete" | "completed" | "success")
+}
 
 
 #[derive(Serialize, Deserialize)]
@@ -1251,9 +1289,15 @@ async fn get_artifacts(
     let plugins_not_run = tokio::task::spawn_blocking(move || {
         let store = get_plugin_status_store();
         let map = store.lock().map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+        // Sprint 8 P1 F4: backend `run_plugin` / `run_all_plugins`
+        // writes `"complete"` on success. The pre-fix predicate
+        // checked only `"completed"` / `"success"` — neither was ever
+        // produced, so this flag was always stuck at `true` after a
+        // real successful run, surfacing a "plugins haven't been
+        // run" banner in ArtifactsView even after Run All.
         let any_completed = map
             .values()
-            .any(|s| s.status == "completed" || s.status == "success");
+            .any(|s| is_plugin_complete(&s.status));
         Ok::<bool, String>(!any_completed)
     })
     .await
@@ -1429,9 +1473,61 @@ async fn run_plugin(
 
 #[tauri::command]
 async fn run_all_plugins(evidence_id: String, app: tauri::AppHandle) -> Result<(), String> {
-    for plugin in PLUGIN_NAMES {
-        let _ = run_plugin(plugin.to_string(), evidence_id.clone(), app.clone()).await;
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    if eid.is_empty() {
+        return Err("no evidence loaded".to_string());
     }
+
+    // Sprint 8 P1 F3: collapse the UI path onto a single threaded run
+    // rather than N independent run_plugin calls. Each previous call
+    // built a fresh empty `prior_results`, which starved Sigma (and
+    // Advisory) of the correlation inputs they need to fire. This
+    // routes through `engine::run_all_on_evidence` which threads
+    // `prior_results` identically to the CLI's `run_all_on_path`.
+    tokio::task::spawn_blocking(move || {
+        engine::run_all_on_evidence(&eid, |full_name, status, count, err| {
+            // Frontend PLUGIN_DATA uses short names ("Remnant" not
+            // "Strata Remnant") — strip the prefix so per-card UI
+            // status lookups match.
+            let short_name = full_name
+                .strip_prefix("Strata ")
+                .unwrap_or(full_name)
+                .to_string();
+            let progress: u8 = if status == "running" { 0 } else { 100 };
+
+            if let Ok(mut map) = get_plugin_status_store().lock() {
+                map.insert(
+                    short_name.clone(),
+                    PluginStatus {
+                        name: short_name.clone(),
+                        status: status.to_string(),
+                        progress,
+                        artifact_count: count,
+                    },
+                );
+            }
+
+            let mut payload = json!({
+                "name": short_name,
+                "progress": progress,
+                "status": status,
+                "artifact_count": count,
+            });
+            if let Some(e) = err {
+                if let Some(obj) = payload.as_object_mut() {
+                    obj.insert("error".into(), json!(e));
+                }
+            }
+            let _ = app.emit("plugin-progress", payload);
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -2133,4 +2229,65 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod sprint8_p1_tests {
+    use super::*;
+
+    // Sprint 8 P1 F4 tripwire: `run_plugin`'s success branch writes
+    // `"complete"` into the plugin-status store. Before Sprint 8
+    // `get_artifacts`'s `plugins_not_run` probe only accepted
+    // `"completed"` / `"success"` and so was permanently stuck at
+    // `true` after a real successful Run All. `is_plugin_complete`
+    // is now the single source of truth. If an upstream emitter ever
+    // drifts (back to `"done"`, `"ok"`, etc.), this test fails
+    // loudly rather than silently re-breaking ArtifactsView.
+    #[test]
+    fn is_plugin_complete_accepts_emitted_status_strings() {
+        // The status `run_plugin` / `run_all_plugins` actually write.
+        assert!(is_plugin_complete("complete"));
+        // Permissive aliases — kept so prior-art callers don't regress.
+        assert!(is_plugin_complete("completed"));
+        assert!(is_plugin_complete("success"));
+    }
+
+    #[test]
+    fn is_plugin_complete_rejects_non_complete_states() {
+        assert!(!is_plugin_complete("idle"));
+        assert!(!is_plugin_complete("running"));
+        assert!(!is_plugin_complete("error"));
+        assert!(!is_plugin_complete(""));
+    }
+
+    // Sprint 8 P1 F2 tripwire: ensure the UI-facing `PLUGIN_NAMES`
+    // list matches the backend plugin registry. Missing entries here
+    // silently drop whole plugins from the desktop pipeline (~184
+    // Charlie artifacts slipped through the pre-sprint 15-name list).
+    #[test]
+    fn plugin_names_covers_the_full_backend_registry() {
+        let backend: Vec<String> = engine::list_plugins()
+            .into_iter()
+            .map(|n| n.strip_prefix("Strata ").unwrap_or(&n).to_string())
+            .collect();
+        for name in PLUGIN_NAMES {
+            assert!(
+                backend.iter().any(|b| b == *name),
+                "PLUGIN_NAMES entry {name:?} has no matching backend plugin \
+                 (backend registers: {backend:?})"
+            );
+        }
+        // And the reverse direction — every registered backend plugin
+        // should surface in the UI list so examiners can see its
+        // status card and artifact count.
+        for b in &backend {
+            assert!(
+                PLUGIN_NAMES.iter().any(|n| *n == b),
+                "backend plugin {b:?} is missing from PLUGIN_NAMES \
+                 (UI will not show its status card; artifacts roll \
+                 up into stats only via the plugin-progress event \
+                 loop)"
+            );
+        }
+    }
 }

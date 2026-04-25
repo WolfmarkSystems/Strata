@@ -5601,7 +5601,7 @@ dependencies = [
 
 [[package]]
 name = "strata-desktop"
-version = "1.5.0"
+version = "0.16.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -5637,6 +5637,7 @@ dependencies = [
  "sha2",
  "strata-core",
  "strata-csam",
+ "strata-evidence",
  "strata-fs",
  "strata-plugin-advisory",
  "strata-plugin-apex",

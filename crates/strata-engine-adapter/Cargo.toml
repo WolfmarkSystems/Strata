@@ -13,6 +13,7 @@ path = "src/lib.rs"
 # Engine crates we wrap.
 strata-fs = { path = "../strata-fs" }
 strata-core = { path = "../strata-core" }
+strata-evidence = { path = "../strata-evidence" }
 strata-plugin-sdk = { path = "../strata-plugin-sdk" }
 
 # Built-in plugins (statically linked, CJIS compliance).

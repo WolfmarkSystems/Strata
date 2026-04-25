@@ -20,6 +20,10 @@ interface AppStore extends AppState {
   setSearchActive: (v: boolean) => void
   pluginStatuses: Record<string, PluginStatus>
   setPluginStatus: (name: string, status: PluginStatus) => void
+  // Sprint 8 P1 F1 — set true while `runAllPlugins` is in flight
+  // from the "Open Evidence" flow. TopBar renders an INDEXING badge.
+  pluginsRunning: boolean
+  setPluginsRunning: (v: boolean) => void
   selectedArtifactId: string | null
   setSelectedArtifactId: (id: string | null) => void
   taggedFiles: Record<string, string>
@@ -120,6 +124,8 @@ export const useAppStore = create<AppStore>((set) => ({
     set((s) => ({
       pluginStatuses: { ...s.pluginStatuses, [name]: status },
     })),
+  pluginsRunning: false,
+  setPluginsRunning: (v) => set({ pluginsRunning: v }),
   selectedArtifactId: null,
   setSelectedArtifactId: (id) => set({ selectedArtifactId: id }),
   taggedFiles: {

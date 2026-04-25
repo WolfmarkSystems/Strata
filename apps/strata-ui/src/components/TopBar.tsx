@@ -10,9 +10,43 @@ import {
   hashAllFiles,
   onHashProgress,
   openCase,
+  runAllPlugins,
 } from '../ipc'
 import WolfMark from './WolfMark'
 import NewCaseModal from './NewCaseModal'
+
+// Sprint 8 P1 F1 — pulsed badge shown while the post-load auto-index
+// (`runAllPlugins` triggered from `handleOpenEvidence`) is in flight.
+function IndexingBadge() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '2px 10px',
+        borderRadius: 4,
+        background: 'rgba(200, 160, 64, 0.12)',
+        border: '1px solid rgba(200, 160, 64, 0.45)',
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.12em',
+        color: 'var(--artifact)',
+        animation: 'pulse 1.6s ease-in-out infinite',
+      }}
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: 'var(--artifact)',
+        }}
+      />
+      INDEXING...
+    </div>
+  )
+}
 
 export default function TopBar() {
   const stats = useAppStore((s) => s.stats)
@@ -81,6 +115,9 @@ export default function TopBar() {
     }
   }
 
+  const setPluginsRunning = useAppStore((s) => s.setPluginsRunning)
+  const pluginsRunning = useAppStore((s) => s.pluginsRunning)
+
   const handleOpenEvidence = async () => {
     const path = await openEvidenceDialog()
     if (!path) return
@@ -94,10 +131,25 @@ export default function TopBar() {
     setEvidence(result.evidence_id, result.name)
     setCase(result.evidence_id, result.name)
 
-    const stats = await getStats(result.evidence_id)
-    setStats(stats)
+    const preStats = await getStats(result.evidence_id)
+    setStats(preStats)
 
     setSelectedNode('vol-ntfs')
+
+    // Sprint 8 P1 F1: auto-index immediately after load so the
+    // artifact count reflects reality by the time the examiner
+    // reaches the Artifacts view. TopBar renders an INDEXING badge
+    // while this is in flight.
+    setPluginsRunning(true)
+    try {
+      await runAllPlugins(result.evidence_id)
+      const postStats = await getStats(result.evidence_id)
+      setStats(postStats)
+    } catch (e) {
+      console.error('runAllPlugins failed:', e)
+    } finally {
+      setPluginsRunning(false)
+    }
   }
 
   const handleReport = async () => {
@@ -362,6 +414,7 @@ export default function TopBar() {
           {!veryNarrow && <Stat label="CARVED" value={stats.carved} color="var(--carved)" />}
           {!veryNarrow && <Stat label="HASHED" value={stats.hashed} color="var(--hashed)" />}
           {!narrow && <Stat label="ARTIFACTS" value={stats.artifacts} color="var(--artifact)" />}
+          {pluginsRunning && <IndexingBadge />}
         </div>
 
         {/* Action buttons bubble */}

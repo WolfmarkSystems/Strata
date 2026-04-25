@@ -14,7 +14,7 @@ import PluginsView from './views/PluginsView'
 import SettingsView from './views/SettingsView'
 import NotesView from './views/NotesView'
 import { useAppStore } from './store/appStore'
-import { generateReport, openEvidenceDialog, loadEvidence, getStats } from './ipc'
+import { generateReport, openEvidenceDialog, loadEvidence, getStats, runAllPlugins } from './ipc'
 
 export default function App() {
   const gate = useAppStore((s) => s.gate)
@@ -31,6 +31,7 @@ export default function App() {
   const setCase = useAppStore((s) => s.setCase)
   const setStats = useAppStore((s) => s.setStats)
   const setSelectedNode = useAppStore((s) => s.setSelectedNode)
+  const setPluginsRunning = useAppStore((s) => s.setPluginsRunning)
 
   useEffect(() => {
     const handler = async (e: KeyboardEvent) => {
@@ -78,9 +79,22 @@ export default function App() {
         if (!result.success) return
         setEvidence(result.evidence_id, result.name)
         setCase(result.evidence_id, result.name)
-        const stats = await getStats(result.evidence_id)
-        setStats(stats)
+        const preStats = await getStats(result.evidence_id)
+        setStats(preStats)
         setSelectedNode('vol-ntfs')
+        // Sprint 8 P1 F1 — auto-index after load; same flow as the
+        // TopBar "Open Evidence" button. INDEXING badge is rendered
+        // in TopBar from the shared `pluginsRunning` store flag.
+        setPluginsRunning(true)
+        try {
+          await runAllPlugins(result.evidence_id)
+          const postStats = await getStats(result.evidence_id)
+          setStats(postStats)
+        } catch (err) {
+          console.error('runAllPlugins failed:', err)
+        } finally {
+          setPluginsRunning(false)
+        }
         return
       }
       if (e.metaKey || e.ctrlKey) {
@@ -96,7 +110,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [setSearchActive, setView, setReportVisible, setReportHtml, caseName, examinerProfile, setEvidence, setCase, setStats, setSelectedNode])
+  }, [setSearchActive, setView, setReportVisible, setReportHtml, caseName, examinerProfile, setEvidence, setCase, setStats, setSelectedNode, setPluginsRunning])
 
   // Gate routing
   if (gate === 'splash') return <SplashScreen />

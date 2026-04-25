@@ -101,7 +101,7 @@ export default function PluginsView() {
         >
           Analysis Plugins
         </span>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>11 plugins</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{PLUGIN_DATA.length} plugins</span>
         <button
           onClick={handleRunAll}
           disabled={!evidenceLoaded}
