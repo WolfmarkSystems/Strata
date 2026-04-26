@@ -1,10 +1,14 @@
 //! Evidence loading + filesystem tree walking. Wires the strata-fs
 //! `EvidenceSource` + `VirtualFileSystem` API into the adapter's clean types.
 
+use crate::custody::{log_custody, now_unix, CustodyEntry};
 use crate::store::{
     drop_evidence, get_evidence, insert_evidence, CachedFile, CachedNode, OpenEvidence,
 };
 use crate::types::*;
+use sha2::{Digest, Sha256};
+use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use strata_fs::container::EvidenceSource;
 use strata_fs::virtualization::{VfsEntry, VolumeInfo};
@@ -99,13 +103,25 @@ pub fn parse_evidence(path: &str) -> AdapterResult<EvidenceInfo> {
         ev.child_ids = volume_child_ids.clone();
     }
 
+    let integrity = compute_evidence_integrity(p)?;
+
     // Stash in store
     let arc = insert_evidence(id.clone(), source);
     {
         let mut guard = arc.lock().expect("evidence lock poisoned");
         guard.nodes = nodes;
         guard.root_node_ids = root_node_ids;
+        guard.integrity = Some(integrity.clone());
     }
+    log_custody(CustodyEntry {
+        timestamp: now_unix(),
+        examiner: "System".to_string(),
+        action: "evidence_hash_verified".to_string(),
+        evidence_id: id.clone(),
+        details: format!("Computed evidence SHA-256 on load for {path}"),
+        hash_before: None,
+        hash_after: Some(integrity.sha256.clone()),
+    });
 
     Ok(EvidenceInfo {
         id,
@@ -139,8 +155,120 @@ pub fn get_stats(evidence_id: &str) -> AdapterResult<EngineStats> {
         flagged,
         carved,
         hashed,
+        known_good: guard.files.values().filter(|f| f.known_good).count() as u64,
+        unknown: guard.files.values().filter(|f| !f.known_good).count() as u64,
         artifacts,
     })
+}
+
+pub fn get_evidence_integrity(evidence_id: &str) -> AdapterResult<EvidenceIntegrity> {
+    let arc = get_evidence(evidence_id)?;
+    let guard = arc.lock().expect("evidence lock poisoned");
+    guard
+        .integrity
+        .clone()
+        .ok_or_else(|| AdapterError::NotFound(format!("integrity not found for {evidence_id}")))
+}
+
+pub fn verify_evidence_integrity(evidence_id: &str) -> AdapterResult<EvidenceIntegrity> {
+    let arc = get_evidence(evidence_id)?;
+    let evidence_path = {
+        let guard = arc.lock().expect("evidence lock poisoned");
+        guard.source.path.clone()
+    };
+    let previous = get_evidence_integrity(evidence_id)?;
+    let mut current = compute_evidence_integrity(&evidence_path)?;
+    current.verified = current.sha256 == previous.sha256;
+    {
+        let mut guard = arc.lock().expect("evidence lock poisoned");
+        guard.integrity = Some(current.clone());
+    }
+    log_custody(CustodyEntry {
+        timestamp: now_unix(),
+        examiner: "System".to_string(),
+        action: "evidence_hash_verified".to_string(),
+        evidence_id: evidence_id.to_string(),
+        details: if current.verified {
+            "Evidence hash re-verified".to_string()
+        } else {
+            "Evidence hash mismatch detected".to_string()
+        },
+        hash_before: Some(previous.sha256),
+        hash_after: Some(current.sha256.clone()),
+    });
+    Ok(current)
+}
+
+fn compute_evidence_integrity(path: &Path) -> AdapterResult<EvidenceIntegrity> {
+    let (sha256, file_size_bytes) = if path.is_dir() {
+        compute_directory_manifest_hash(path)?
+    } else {
+        compute_file_hash(path)?
+    };
+    Ok(EvidenceIntegrity {
+        sha256,
+        computed_at: now_unix(),
+        file_size_bytes,
+        verified: true,
+    })
+}
+
+fn compute_file_hash(path: &Path) -> AdapterResult<(String, u64)> {
+    let mut file = fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut total: u64 = 0;
+    let mut buf = [0_u8; 64 * 1024];
+    loop {
+        let n = file.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        total = total.saturating_add(n as u64);
+        hasher.update(&buf[..n]);
+    }
+    Ok((hex::encode(hasher.finalize()), total))
+}
+
+fn compute_directory_manifest_hash(root: &Path) -> AdapterResult<(String, u64)> {
+    let mut files = Vec::new();
+    collect_manifest_files(root, root, &mut files)?;
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut manifest = Sha256::new();
+    let mut total: u64 = 0;
+    for (relative, path) in files {
+        let (file_hash, size) = compute_file_hash(&path)?;
+        total = total.saturating_add(size);
+        manifest.update(relative.as_bytes());
+        manifest.update([0]);
+        manifest.update(size.to_le_bytes());
+        manifest.update(file_hash.as_bytes());
+        manifest.update([0xff]);
+    }
+    Ok((hex::encode(manifest.finalize()), total))
+}
+
+fn collect_manifest_files(
+    root: &Path,
+    dir: &Path,
+    out: &mut Vec<(String, PathBuf)>,
+) -> AdapterResult<()> {
+    let mut entries = fs::read_dir(dir)?.collect::<Result<Vec<_>, _>>()?;
+    entries.sort_by_key(|entry| entry.path());
+    for entry in entries {
+        let path = entry.path();
+        let meta = entry.metadata()?;
+        if meta.is_dir() {
+            collect_manifest_files(root, &path, out)?;
+        } else if meta.is_file() {
+            let relative = path
+                .strip_prefix(root)
+                .map(|p| p.to_string_lossy().replace('\\', "/"))
+                .map_err(|e| AdapterError::EngineError(format!("manifest path error: {e}")))?;
+            out.push((relative, path));
+        }
+    }
+    Ok(())
 }
 
 fn is_suspicious(f: &crate::store::CachedFile) -> bool {
@@ -503,6 +631,7 @@ pub fn get_tree_children(evidence_id: &str, node_id: &str) -> AdapterResult<Vec<
                 parent_node_id: node_id.to_string(),
                 mft_entry: None,
                 inode: None,
+                known_good: false,
             };
             guard.files.insert(file_id, cached_file);
         }
@@ -629,6 +758,7 @@ fn to_file_entry(f: &CachedFile) -> FileEntry {
         is_deleted: false,
         is_suspicious: false,
         is_flagged: false,
+        known_good: f.known_good,
         category: classify(&f.extension),
         inode: f.inode,
         mft_entry: f.mft_entry,
@@ -909,5 +1039,53 @@ mod sprint10_p4_tree_recursion_guard_tests {
         );
         drop(guard);
         cleanup(&evidence_id);
+    }
+
+    #[test]
+    fn integrity_sha256_computed_on_load() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let file = tmp.path().join("evidence.bin");
+        std::fs::write(&file, b"strata evidence").expect("write evidence");
+
+        let info = parse_evidence(file.to_string_lossy().as_ref()).expect("parse evidence");
+        let integrity = get_evidence_integrity(&info.id).expect("integrity");
+
+        assert_eq!(
+            integrity.sha256,
+            "36b268eb4c0a6c74dc37b50e6fa5798ea9ec1c7832fa64f0194f3b1fcfdd8f69"
+        );
+        assert_eq!(integrity.file_size_bytes, 15);
+        assert!(integrity.verified);
+        cleanup(&info.id);
+    }
+
+    #[test]
+    fn integrity_mismatch_detected() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let file = tmp.path().join("evidence.bin");
+        std::fs::write(&file, b"original").expect("write original");
+
+        let info = parse_evidence(file.to_string_lossy().as_ref()).expect("parse evidence");
+        std::fs::write(&file, b"changed").expect("write changed");
+
+        let integrity = verify_evidence_integrity(&info.id).expect("verify integrity");
+
+        assert!(!integrity.verified);
+        cleanup(&info.id);
+    }
+
+    #[test]
+    fn integrity_included_in_custody_log() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let file = tmp.path().join("evidence.bin");
+        std::fs::write(&file, b"custody").expect("write evidence");
+
+        let info = parse_evidence(file.to_string_lossy().as_ref()).expect("parse evidence");
+        let found = crate::custody::get_custody_log(&info.id)
+            .into_iter()
+            .any(|entry| entry.evidence_id == info.id && entry.action == "evidence_hash_verified");
+
+        assert!(found);
+        cleanup(&info.id);
     }
 }

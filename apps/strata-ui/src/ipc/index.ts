@@ -34,7 +34,39 @@ export interface StatsResult {
   flagged: number
   carved: number
   hashed: number
+  known_good: number
+  unknown: number
   artifacts: number
+}
+
+export interface EvidenceIntegrity {
+  sha256: string
+  computed_at: number
+  file_size_bytes: number
+  verified: boolean
+}
+
+export interface HashSetInfo {
+  name: string
+  description: string
+  hash_count: number
+  imported_at: number
+}
+
+export interface HashSetStats {
+  set_count: number
+  hash_count: number
+  known_good: number
+  unknown: number
+}
+
+export interface ArtifactNote {
+  artifact_id: string
+  evidence_id: string
+  note: string
+  created_at: number
+  examiner: string
+  flagged: boolean
 }
 
 export interface HexLine {
@@ -1194,13 +1226,135 @@ export async function csamSessionSummary(
 
 export async function getStats(evidenceId: string): Promise<StatsResult> {
   if (!IN_TAURI) {
-    return { files: 26235, suspicious: 8993, flagged: 12, carved: 0, hashed: 0, artifacts: 0 }
+    return {
+      files: 26235,
+      suspicious: 8993,
+      flagged: 12,
+      carved: 0,
+      hashed: 0,
+      known_good: 0,
+      unknown: 26235,
+      artifacts: 0,
+    }
   }
   try {
     return await invoke('get_stats', { evidenceId })
   } catch (e) {
     reportIpcError('get_stats', e)
-    return { files: 0, suspicious: 0, flagged: 0, carved: 0, hashed: 0, artifacts: 0 }
+    return {
+      files: 0,
+      suspicious: 0,
+      flagged: 0,
+      carved: 0,
+      hashed: 0,
+      known_good: 0,
+      unknown: 0,
+      artifacts: 0,
+    }
+  }
+}
+
+export async function getEvidenceIntegrity(
+  evidenceId: string,
+): Promise<EvidenceIntegrity | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<EvidenceIntegrity>('get_evidence_integrity', { evidenceId })
+  } catch (e) {
+    reportIpcError('get_evidence_integrity', e)
+    return null
+  }
+}
+
+export async function verifyEvidenceIntegrity(
+  evidenceId: string,
+): Promise<EvidenceIntegrity | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<EvidenceIntegrity>('verify_evidence_integrity', { evidenceId })
+  } catch (e) {
+    reportIpcError('verify_evidence_integrity', e)
+    return null
+  }
+}
+
+export async function importHashSet(name: string, filePath: string): Promise<number> {
+  if (!IN_TAURI) return 0
+  try {
+    return await invoke<number>('import_hash_set', { name, filePath })
+  } catch (e) {
+    reportIpcError('import_hash_set', e)
+    return 0
+  }
+}
+
+export async function listHashSets(): Promise<HashSetInfo[]> {
+  if (!IN_TAURI) return []
+  try {
+    return await invoke<HashSetInfo[]>('list_hash_sets')
+  } catch (e) {
+    reportIpcError('list_hash_sets', e)
+    return []
+  }
+}
+
+export async function deleteHashSet(name: string): Promise<boolean> {
+  if (!IN_TAURI) return false
+  try {
+    return await invoke<boolean>('delete_hash_set', { name })
+  } catch (e) {
+    reportIpcError('delete_hash_set', e)
+    return false
+  }
+}
+
+export async function getHashSetStats(evidenceId: string): Promise<HashSetStats> {
+  if (!IN_TAURI) return { set_count: 0, hash_count: 0, known_good: 0, unknown: 0 }
+  try {
+    return await invoke<HashSetStats>('get_hash_set_stats', { evidenceId })
+  } catch (e) {
+    reportIpcError('get_hash_set_stats', e)
+    return { set_count: 0, hash_count: 0, known_good: 0, unknown: 0 }
+  }
+}
+
+export async function saveArtifactNote(
+  artifactId: string,
+  evidenceId: string,
+  note: string,
+  flagged: boolean,
+): Promise<ArtifactNote | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<ArtifactNote>('save_artifact_note', {
+      artifactId,
+      evidenceId,
+      note,
+      flagged,
+    })
+  } catch (e) {
+    reportIpcError('save_artifact_note', e)
+    return null
+  }
+}
+
+export async function getArtifactNote(artifactId: string): Promise<ArtifactNote | null> {
+  if (!IN_TAURI) return null
+  try {
+    return await invoke<ArtifactNote | null>('get_artifact_note', { artifactId })
+  } catch (e) {
+    reportIpcError('get_artifact_note', e)
+    return null
+  }
+}
+
+export async function getFlaggedArtifacts(evidenceId: string): Promise<ArtifactNote[]> {
+  if (!IN_TAURI) return []
+  try {
+    return await invoke<ArtifactNote[]>('get_flagged_artifacts', { evidenceId })
+  } catch (e) {
+    reportIpcError('get_flagged_artifacts', e)
+    return []
   }
 }
 

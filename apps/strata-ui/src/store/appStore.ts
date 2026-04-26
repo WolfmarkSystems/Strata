@@ -27,7 +27,7 @@ interface AppStore extends AppState {
   selectedArtifactId: string | null
   setSelectedArtifactId: (id: string | null) => void
   taggedFiles: Record<string, string>
-  setFileTag: (fileId: string, tag: string) => void
+  setFileTag: (fileId: string, tag: string, color?: string, note?: string) => void
   removeFileTag: (fileId: string) => void
   gate: AppGate
   licenseResult: LicenseResult | null
@@ -104,6 +104,8 @@ export const useAppStore = create<AppStore>((set) => ({
     flagged: 0,
     carved: 0,
     hashed: 0,
+    known_good: 0,
+    unknown: 0,
     artifacts: 0,
   },
   selectedFileId: null,
@@ -131,20 +133,43 @@ export const useAppStore = create<AppStore>((set) => ({
   setPluginsRunning: (v) => set({ pluginsRunning: v }),
   selectedArtifactId: null,
   setSelectedArtifactId: (id) => set({ selectedArtifactId: id }),
-  taggedFiles: {
-    f004: 'Critical Evidence',
-    f003: 'Suspicious',
-    f010: 'Suspicious',
-    f005: 'Key Artifact',
+  taggedFiles: {},
+  setFileTag: (fileId, tag, color = '', note) => {
+    set((s) => ({
+      taggedFiles: { ...s.taggedFiles, [fileId]: tag },
+      caseData: s.caseData
+        ? {
+            ...s.caseData,
+            tags: {
+              ...s.caseData.tags,
+              [fileId]: {
+                tag,
+                color,
+                note: note ?? null,
+                tagged_at: new Date().toISOString(),
+                tagged_by: s.examinerProfile?.name ?? s.examinerName,
+              },
+            },
+          }
+        : s.caseData,
+      caseModified: s.caseData ? true : s.caseModified,
+    }))
+    scheduleAutosave()
   },
-  setFileTag: (fileId, tag) =>
-    set((s) => ({ taggedFiles: { ...s.taggedFiles, [fileId]: tag } })),
-  removeFileTag: (fileId) =>
+  removeFileTag: (fileId) => {
     set((s) => {
       const next = { ...s.taggedFiles }
+      const caseTags = s.caseData ? { ...s.caseData.tags } : null
       delete next[fileId]
-      return { taggedFiles: next }
-    }),
+      if (caseTags) delete caseTags[fileId]
+      return {
+        taggedFiles: next,
+        caseData: s.caseData && caseTags ? { ...s.caseData, tags: caseTags } : s.caseData,
+        caseModified: s.caseData ? true : s.caseModified,
+      }
+    })
+    scheduleAutosave()
+  },
   gate: 'splash',
   licenseResult: null,
   examinerProfile: null,
@@ -175,6 +200,9 @@ export const useAppStore = create<AppStore>((set) => ({
       caseName: c.case_name,
       examinerProfile: c.examiner,
       examinerName: c.examiner.name || 'Examiner',
+      taggedFiles: Object.fromEntries(
+        Object.entries(c.tags ?? {}).map(([fileId, tag]) => [fileId, tag.tag]),
+      ),
     }),
   updateCaseNotes: (notes) => {
     set((s) => {

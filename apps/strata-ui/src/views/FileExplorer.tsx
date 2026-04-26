@@ -62,7 +62,7 @@ export default function FileExplorer() {
       <PanelResizeHandle className="resize-handle" />
 
       <Panel defaultSize={27} minSize={18} maxSize={50}>
-        <DetailPane fileId={selectedFileId} />
+        <DetailPane fileId={selectedFileId} evidenceId={evidenceId} />
       </Panel>
     </PanelGroup>
   )

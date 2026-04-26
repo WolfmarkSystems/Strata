@@ -22,6 +22,8 @@ interface Props {
   selectedId: string | null
   onSelect: (a: Artifact) => void
   loading: boolean
+  flaggedOnly: boolean
+  onToggleFlagged: () => void
 }
 
 interface ColumnDef {
@@ -75,6 +77,8 @@ export default function ArtifactResults({
   selectedId,
   onSelect,
   loading,
+  flaggedOnly,
+  onToggleFlagged,
 }: Props) {
   const setView = useAppStore((s) => s.setView)
   const cols = columnsFor(category?.name)
@@ -131,6 +135,21 @@ export default function ArtifactResults({
             via {pluginFor(artifacts)}
           </span>
         )}
+        <button
+          onClick={onToggleFlagged}
+          style={{
+            fontSize: 10,
+            padding: '2px 7px',
+            borderRadius: 3,
+            background: flaggedOnly ? 'rgba(168,64,64,0.16)' : 'var(--bg-elevated)',
+            border: `1px solid ${flaggedOnly ? 'rgba(168,64,64,0.45)' : 'var(--border)'}`,
+            color: flaggedOnly ? 'var(--flag)' : 'var(--text-muted)',
+            fontFamily: 'monospace',
+            cursor: 'pointer',
+          }}
+        >
+          FLAGGED
+        </button>
       </div>
 
       {/* Column headers */}

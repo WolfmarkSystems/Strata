@@ -8,7 +8,11 @@ import {
   deactivateLicense,
   checkLicense,
   activateLicense,
+  importHashSet,
+  listHashSets,
+  deleteHashSet,
   type LicenseResult,
+  type HashSetInfo,
 } from '../ipc'
 
 type Tab = 'appearance' | 'examiner' | 'hashsets' | 'license' | 'about'
@@ -297,9 +301,26 @@ function Field({
 // ──────────────────────────────────────────────────────────────────────────────
 
 function HashSetsTab() {
+  const [sets, setSets] = useState<HashSetInfo[]>([])
+  const [name, setName] = useState('NSRL')
+  const [filePath, setFilePath] = useState('')
+  const [status, setStatus] = useState<string | null>(null)
   const [flagMalware, setFlagMalware] = useState(true)
   const [markClean, setMarkClean] = useState(true)
   const [showName, setShowName] = useState(false)
+
+  const refresh = async () => setSets(await listHashSets())
+
+  useEffect(() => {
+    void refresh()
+  }, [])
+
+  const handleImport = async () => {
+    if (!name.trim() || !filePath.trim()) return
+    const count = await importHashSet(name.trim(), filePath.trim())
+    setStatus(`Imported ${count.toLocaleString()} hashes`)
+    await refresh()
+  }
 
   return (
     <div>
@@ -333,11 +354,36 @@ function HashSetsTab() {
           <span style={{ flex: 1 }}>Hashes</span>
           <span style={{ flex: 1 }}>Status</span>
         </div>
-        <HashRow name="NSAM v3.0" hashes="78,244,903" />
-        <HashRow name="Custom-IOC" hashes="247" last />
+        {sets.length === 0 ? (
+          <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--text-muted)' }}>
+            No hash sets imported.
+          </div>
+        ) : (
+          sets.map((set, idx) => (
+            <HashRow
+              key={set.name}
+              name={set.name}
+              hashes={set.hash_count.toLocaleString()}
+              last={idx === sets.length - 1}
+              onDelete={async () => {
+                await deleteHashSet(set.name)
+                await refresh()
+              }}
+            />
+          ))
+        )}
       </div>
 
-      <button className="btn-secondary">Import .txt / .csv / .hdb</button>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', maxWidth: 760 }}>
+        <Field label="Name" value={name} onChange={setName} />
+        <Field label="Hash Set Path" value={filePath} onChange={setFilePath} />
+        <button className="btn-secondary" onClick={handleImport}>
+          Import
+        </button>
+      </div>
+      {status && (
+        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--clean)' }}>{status}</div>
+      )}
 
       <div style={{ marginTop: 24 }}>
         <SectionLabel>Hash Settings</SectionLabel>
@@ -363,7 +409,17 @@ function HashSetsTab() {
   )
 }
 
-function HashRow({ name, hashes, last = false }: { name: string; hashes: string; last?: boolean }) {
+function HashRow({
+  name,
+  hashes,
+  last = false,
+  onDelete,
+}: {
+  name: string
+  hashes: string
+  last?: boolean
+  onDelete: () => void
+}) {
   return (
     <div
       style={{
@@ -379,6 +435,19 @@ function HashRow({ name, hashes, last = false }: { name: string; hashes: string;
       <span style={{ flex: 2 }}>{name}</span>
       <span style={{ flex: 1, fontFamily: 'monospace', color: 'var(--text-muted)' }}>{hashes}</span>
       <span style={{ flex: 1, color: 'var(--clean)' }}>{'\u2713'} Loaded</span>
+      <button
+        onClick={onDelete}
+        style={{
+          border: '1px solid var(--border)',
+          background: 'var(--bg-elevated)',
+          color: 'var(--text-muted)',
+          borderRadius: 4,
+          fontSize: 10,
+          cursor: 'pointer',
+        }}
+      >
+        Delete
+      </button>
     </div>
   )
 }

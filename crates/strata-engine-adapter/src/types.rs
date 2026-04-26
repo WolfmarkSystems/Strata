@@ -49,9 +49,18 @@ pub struct FileEntry {
     pub is_deleted: bool,
     pub is_suspicious: bool,
     pub is_flagged: bool,
+    pub known_good: bool,
     pub category: String,
     pub inode: Option<u64>,
     pub mft_entry: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct EvidenceIntegrity {
+    pub sha256: String,
+    pub computed_at: i64,
+    pub file_size_bytes: u64,
+    pub verified: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -144,6 +153,8 @@ pub struct EngineStats {
     pub flagged: u64,
     pub carved: u64,
     pub hashed: u64,
+    pub known_good: u64,
+    pub unknown: u64,
     pub artifacts: u64,
 }
 
@@ -154,6 +165,22 @@ pub struct HashResult {
     pub sha1: String,
     pub sha256: String,
     pub sha512: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct HashSetInfo {
+    pub name: String,
+    pub description: String,
+    pub hash_count: usize,
+    pub imported_at: i64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct HashSetStats {
+    pub set_count: usize,
+    pub hash_count: usize,
+    pub known_good: u64,
+    pub unknown: u64,
 }
 
 pub type AdapterResult<T> = Result<T, AdapterError>;

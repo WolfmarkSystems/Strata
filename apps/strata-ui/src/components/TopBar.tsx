@@ -9,6 +9,8 @@ import {
   getStats,
   generateReport,
   hashAllFiles,
+  getTreeChildren,
+  getTreeRoot,
   onHashProgress,
   openCase,
   runAllPlugins,
@@ -134,7 +136,12 @@ export default function TopBar() {
     const preStats = await getStats(result.evidence_id)
     setStats(preStats)
 
-    setSelectedNode('vol-ntfs')
+    const roots = await getTreeRoot(result.evidence_id)
+    const root = roots[0]
+    if (root) {
+      const children = root.has_children ? await getTreeChildren(root.id) : []
+      setSelectedNode(children[0]?.id ?? root.id)
+    }
 
     // Sprint 8 P1 F1: auto-index immediately after load so the
     // artifact count reflects reality by the time the examiner
@@ -418,7 +425,14 @@ export default function TopBar() {
             flexShrink: 0,
           }}
         >
-          {!veryNarrow && <Stat label="FILES" value={stats.files} color="var(--text-2)" />}
+          {!veryNarrow && (
+            <Stat
+              label="FILES"
+              value={stats.files}
+              color="var(--text-2)"
+              sub={`${stats.known_good} known-good / ${stats.unknown} unknown`}
+            />
+          )}
           <Stat label="SUSPICIOUS" value={stats.suspicious} color="var(--sus)" />
           <Stat label="FLAGGED" value={stats.flagged} color="var(--flag)" />
           {!veryNarrow && <Stat label="CARVED" value={stats.carved} color="var(--carved)" />}
@@ -495,9 +509,20 @@ export default function TopBar() {
   )
 }
 
-function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+function Stat({
+  label,
+  value,
+  color,
+  sub,
+}: {
+  label: string
+  value: number
+  color: string
+  sub?: string
+}) {
   return (
     <div
+      title={sub}
       style={{
         display: 'flex',
         gap: 4,

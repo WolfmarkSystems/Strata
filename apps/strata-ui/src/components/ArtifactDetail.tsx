@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Artifact } from '../ipc'
-import { navigateToPath } from '../ipc'
+import { getArtifactNote, navigateToPath, saveArtifactNote } from '../ipc'
 import { useAppStore } from '../store/appStore'
 import ThreadContextPanel from './ThreadContextPanel'
 
@@ -15,6 +15,23 @@ export default function ArtifactDetail({ artifact }: Props) {
   const setSelectedNode = useAppStore((s) => s.setSelectedNode)
   const expandTreeNodes = useAppStore((s) => s.expandTreeNodes)
   const [navStatus, setNavStatus] = useState<string | null>(null)
+  const [note, setNote] = useState('')
+  const [flagged, setFlagged] = useState(false)
+  const [noteStatus, setNoteStatus] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!artifact) {
+      setNote('')
+      setFlagged(false)
+      setNoteStatus(null)
+      return
+    }
+    getArtifactNote(artifact.id).then((saved) => {
+      setNote(saved?.note ?? '')
+      setFlagged(saved?.flagged ?? false)
+      setNoteStatus(null)
+    })
+  }, [artifact])
 
   const handleGoToSource = async () => {
     if (!artifact || !evidenceId) return
@@ -29,6 +46,18 @@ export default function ArtifactDetail({ artifact }: Props) {
     setSelectedNode(target.node_id)
     setView('files')
     setNavStatus(null)
+  }
+
+  const handleSaveNote = async () => {
+    if (!artifact || !evidenceId) return
+    const saved = await saveArtifactNote(artifact.id, evidenceId, note, flagged)
+    if (saved) {
+      setNote(saved.note)
+      setFlagged(saved.flagged)
+      setNoteStatus('Saved')
+      window.dispatchEvent(new CustomEvent('strata-artifact-note-saved'))
+      setTimeout(() => setNoteStatus(null), 1800)
+    }
   }
 
   return (
@@ -251,6 +280,75 @@ export default function ArtifactDetail({ artifact }: Props) {
               )}
             </>
           )}
+
+          <Sep />
+          <div
+            style={{
+              fontSize: 10,
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              marginBottom: 6,
+            }}
+          >
+            Examiner Note
+          </div>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 11,
+              color: 'var(--text-2)',
+              marginBottom: 8,
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={flagged}
+              onChange={(e) => setFlagged(e.target.checked)}
+            />
+            Flag artifact
+          </label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            style={{
+              width: '100%',
+              minHeight: 82,
+              boxSizing: 'border-box',
+              resize: 'vertical',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: 4,
+              color: 'var(--text-2)',
+              fontSize: 12,
+              fontFamily: 'inherit',
+              padding: 8,
+              outline: 'none',
+            }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+            <button
+              onClick={handleSaveNote}
+              disabled={!evidenceId}
+              style={{
+                padding: '5px 10px',
+                fontSize: 11,
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                color: 'var(--text-1)',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: 4,
+                cursor: evidenceId ? 'pointer' : 'not-allowed',
+              }}
+            >
+              SAVE NOTE
+            </button>
+            {noteStatus && <span style={{ fontSize: 11, color: 'var(--clean)' }}>{noteStatus}</span>}
+          </div>
 
           {/* Sprint-11 follow-up — thread context renders below the
               raw-data section, only when the selected artifact

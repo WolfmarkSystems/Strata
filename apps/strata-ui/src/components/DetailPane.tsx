@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getFileMetadata } from '../ipc'
+import { getEvidenceIntegrity, getFileMetadata, verifyEvidenceIntegrity } from '../ipc'
 import type { FileMetadata } from '../types'
+import type { EvidenceIntegrity } from '../ipc'
 import HexViewer from './HexViewer'
 import TextViewer from './TextViewer'
 import SqliteViewer from './SqliteViewer'
@@ -9,6 +10,7 @@ import { lookupKnowledge, type KnowledgeLookupResult } from '../data/knowledgeBa
 
 interface Props {
   fileId: string | null
+  evidenceId: string | null
 }
 
 type Tab = 'meta' | 'hex' | 'text' | 'image' | 'sqlite'
@@ -40,10 +42,12 @@ function isSqliteFile(meta: FileMetadata | null): boolean {
   )
 }
 
-export default function DetailPane({ fileId }: Props) {
+export default function DetailPane({ fileId, evidenceId }: Props) {
   const [tab, setTab] = useState<Tab>('meta')
   const [meta, setMeta] = useState<FileMetadata | null>(null)
   const [loading, setLoading] = useState(false)
+  const [integrity, setIntegrity] = useState<EvidenceIntegrity | null>(null)
+  const [verifying, setVerifying] = useState(false)
 
   useEffect(() => {
     if (!fileId) {
@@ -56,6 +60,25 @@ export default function DetailPane({ fileId }: Props) {
       setLoading(false)
     })
   }, [fileId])
+
+  useEffect(() => {
+    if (!evidenceId || fileId) {
+      setIntegrity(null)
+      return
+    }
+    getEvidenceIntegrity(evidenceId).then(setIntegrity)
+  }, [evidenceId, fileId])
+
+  const handleVerify = async () => {
+    if (!evidenceId || verifying) return
+    setVerifying(true)
+    try {
+      const next = await verifyEvidenceIntegrity(evidenceId)
+      setIntegrity(next)
+    } finally {
+      setVerifying(false)
+    }
+  }
 
   // Build the tab list dynamically — append SQLITE when the selected file
   // is a SQLite database.
@@ -123,20 +146,11 @@ export default function DetailPane({ fileId }: Props) {
       {/* Body */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {!fileId ? (
-          <div
-            style={{
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 13,
-              color: 'var(--text-muted)',
-              padding: 12,
-              textAlign: 'center',
-            }}
-          >
-            Select a file to preview
-          </div>
+          <EvidenceIntegrityPanel
+            integrity={integrity}
+            verifying={verifying}
+            onVerify={handleVerify}
+          />
         ) : tab === 'meta' ? (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <MetaContent meta={meta} loading={loading} />
@@ -185,6 +199,94 @@ export default function DetailPane({ fileId }: Props) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function EvidenceIntegrityPanel({
+  integrity,
+  verifying,
+  onVerify,
+}: {
+  integrity: EvidenceIntegrity | null
+  verifying: boolean
+  onVerify: () => void
+}) {
+  if (!integrity) {
+    return (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 13,
+          color: 'var(--text-muted)',
+          padding: 12,
+          textAlign: 'center',
+        }}
+      >
+        Select a file to preview
+      </div>
+    )
+  }
+  const computed = new Date(integrity.computed_at * 1000).toLocaleString()
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+      <div
+        style={{
+          fontSize: 10,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          marginBottom: 8,
+        }}
+      >
+        Evidence Integrity
+      </div>
+      <Row k="Status" v={integrity.verified ? 'Verified at load time' : 'Mismatch detected'} />
+      <Row k="Size" v={`${integrity.file_size_bytes.toLocaleString()} bytes`} />
+      <Row k="Computed" v={computed} />
+      <div
+        style={{
+          fontSize: 10,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          marginTop: 8,
+          marginBottom: 4,
+        }}
+      >
+        SHA-256
+      </div>
+      <div
+        style={{
+          fontFamily: 'monospace',
+          fontSize: 10,
+          color: integrity.verified ? 'var(--text-2)' : 'var(--flag)',
+          wordBreak: 'break-all',
+          marginBottom: 12,
+        }}
+      >
+        {integrity.sha256}
+      </div>
+      <button
+        onClick={onVerify}
+        disabled={verifying}
+        style={{
+          padding: '6px 10px',
+          fontSize: 11,
+          fontFamily: 'monospace',
+          fontWeight: 700,
+          color: 'var(--text-1)',
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border)',
+          borderRadius: 4,
+          cursor: verifying ? 'wait' : 'pointer',
+        }}
+      >
+        {verifying ? 'VERIFYING...' : 'RE-VERIFY'}
+      </button>
     </div>
   )
 }

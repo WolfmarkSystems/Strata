@@ -56,15 +56,14 @@ pub fn hash_file(evidence_id: &str, file_id: &str) -> AdapterResult<HashResult> 
         sha256: hex::encode(Sha256::digest(&bytes)),
         sha512: hex::encode(Sha512::digest(&bytes)),
     };
+    let known_good = crate::hash_sets::lookup_hash_result(&result);
+    crate::hash_sets::mark_file_known_good(evidence_id, file_id, known_good);
 
     // Cache the result
-    HASH_CACHE
-        .lock()
-        .expect("hash cache poisoned")
-        .insert(
-            (evidence_id.to_string(), file_id.to_string()),
-            result.clone(),
-        );
+    HASH_CACHE.lock().expect("hash cache poisoned").insert(
+        (evidence_id.to_string(), file_id.to_string()),
+        result.clone(),
+    );
 
     Ok(result)
 }
@@ -98,8 +97,5 @@ where
 /// Number of files hashed for this evidence (used by `get_stats`).
 pub fn hashed_count(evidence_id: &str) -> u64 {
     let cache = HASH_CACHE.lock().expect("hash cache poisoned");
-    cache
-        .keys()
-        .filter(|(eid, _)| eid == evidence_id)
-        .count() as u64
+    cache.keys().filter(|(eid, _)| eid == evidence_id).count() as u64
 }

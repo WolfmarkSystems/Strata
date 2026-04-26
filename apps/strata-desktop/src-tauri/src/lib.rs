@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 
@@ -64,6 +65,7 @@ fn adapter_file_to_desktop(f: engine::FileEntry) -> FileEntry {
         is_deleted: f.is_deleted,
         is_suspicious: f.is_suspicious,
         is_flagged: f.is_flagged,
+        known_good: f.known_good,
         category: f.category,
         tag: None,
         tag_color: None,
@@ -86,6 +88,7 @@ fn adapter_file_to_metadata(f: engine::FileEntry) -> FileMetadata {
         is_deleted: f.is_deleted,
         is_suspicious: f.is_suspicious,
         is_flagged: f.is_flagged,
+        known_good: f.known_good,
         mft_entry: f.mft_entry,
         extension: f.extension,
         mime_type: None,
@@ -163,6 +166,39 @@ fn log_custody_event(
     });
 }
 
+fn artifact_notes_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.join("artifact_notes.json"))
+}
+
+fn load_artifact_notes_from_path(path: &Path) -> Result<Vec<ArtifactNote>, String> {
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+    let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&raw).map_err(|e| e.to_string())
+}
+
+fn save_artifact_notes_to_path(path: &Path, notes: &[ArtifactNote]) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let raw = serde_json::to_string_pretty(notes).map_err(|e| e.to_string())?;
+    std::fs::write(path, raw).map_err(|e| e.to_string())
+}
+
+fn upsert_artifact_note(notes: &mut Vec<ArtifactNote>, note: ArtifactNote) {
+    if let Some(existing) = notes
+        .iter_mut()
+        .find(|existing| existing.artifact_id == note.artifact_id)
+    {
+        *existing = note;
+    } else {
+        notes.push(note);
+    }
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────────────────────────────────────
@@ -196,6 +232,7 @@ pub struct FileEntry {
     pub is_deleted: bool,
     pub is_suspicious: bool,
     pub is_flagged: bool,
+    pub known_good: bool,
     pub category: String,
     pub tag: Option<String>,
     pub tag_color: Option<String>,
@@ -217,6 +254,7 @@ pub struct FileMetadata {
     pub is_deleted: bool,
     pub is_suspicious: bool,
     pub is_flagged: bool,
+    pub known_good: bool,
     pub mft_entry: Option<u64>,
     pub extension: String,
     pub mime_type: Option<String>,
@@ -241,7 +279,76 @@ pub struct Stats {
     pub flagged: u64,
     pub carved: u64,
     pub hashed: u64,
+    pub known_good: u64,
+    pub unknown: u64,
     pub artifacts: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EvidenceIntegrity {
+    pub sha256: String,
+    pub computed_at: i64,
+    pub file_size_bytes: u64,
+    pub verified: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct HashSetInfo {
+    pub name: String,
+    pub description: String,
+    pub hash_count: usize,
+    pub imported_at: i64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct HashSetStats {
+    pub set_count: usize,
+    pub hash_count: usize,
+    pub known_good: u64,
+    pub unknown: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ArtifactNote {
+    pub artifact_id: String,
+    pub evidence_id: String,
+    pub note: String,
+    pub created_at: i64,
+    pub examiner: String,
+    pub flagged: bool,
+}
+
+impl From<engine::EvidenceIntegrity> for EvidenceIntegrity {
+    fn from(value: engine::EvidenceIntegrity) -> Self {
+        Self {
+            sha256: value.sha256,
+            computed_at: value.computed_at,
+            file_size_bytes: value.file_size_bytes,
+            verified: value.verified,
+        }
+    }
+}
+
+impl From<engine::HashSetInfo> for HashSetInfo {
+    fn from(value: engine::HashSetInfo) -> Self {
+        Self {
+            name: value.name,
+            description: value.description,
+            hash_count: value.hash_count,
+            imported_at: value.imported_at,
+        }
+    }
+}
+
+impl From<engine::HashSetStats> for HashSetStats {
+    fn from(value: engine::HashSetStats) -> Self {
+        Self {
+            set_count: value.set_count,
+            hash_count: value.hash_count,
+            known_good: value.known_good,
+            unknown: value.unknown,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -883,12 +990,14 @@ struct ReportSnapshot {
     generated_at: String,
     app_version: String,
     stats: Stats,
+    integrity: Option<EvidenceIntegrity>,
     tagged: Vec<TaggedFile>,
+    flagged_notes: Vec<ArtifactNote>,
     categories: Vec<ArtifactCategory>,
 }
 
 #[tauri::command]
-async fn generate_report(options: ReportOptions) -> Result<ReportResult, String> {
+async fn generate_report(app: tauri::AppHandle, options: ReportOptions) -> Result<ReportResult, String> {
     let evidence_id = current_evidence_id().unwrap_or_default();
     let stats = if evidence_id.is_empty() {
         Stats {
@@ -897,6 +1006,8 @@ async fn generate_report(options: ReportOptions) -> Result<ReportResult, String>
             flagged: 0,
             carved: 0,
             hashed: 0,
+            known_good: 0,
+            unknown: 0,
             artifacts: 0,
         }
     } else {
@@ -905,18 +1016,30 @@ async fn generate_report(options: ReportOptions) -> Result<ReportResult, String>
     let categories = if evidence_id.is_empty() {
         Vec::new()
     } else {
-        get_artifact_categories(evidence_id).await?
+        get_artifact_categories(evidence_id.clone()).await?
+    };
+    let integrity = if evidence_id.is_empty() {
+        None
+    } else {
+        get_evidence_integrity(evidence_id.clone()).await.ok()
     };
     let tagged = {
         let store = get_tag_store();
         let map = store.lock().map_err(|e| e.to_string())?;
         map.values().cloned().collect()
     };
+    let flagged_notes = if evidence_id.is_empty() {
+        Vec::new()
+    } else {
+        get_flagged_artifacts(app.clone(), evidence_id.clone()).await?
+    };
     let snapshot = ReportSnapshot {
         generated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M UTC").to_string(),
         app_version: env!("CARGO_PKG_VERSION").to_string(),
         stats,
+        integrity,
         tagged,
+        flagged_notes,
         categories,
     };
     let html = build_report_html(&options, &snapshot);
@@ -980,6 +1103,45 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
                     html_escape(&c.name),
                     c.count,
                     html_escape(&c.color)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("")
+    };
+    let integrity_section = snapshot
+        .integrity
+        .as_ref()
+        .map(|i| {
+            format!(
+                r#"<div class="section">
+    <h2>Evidence Integrity</h2>
+    <div class="info-grid">
+      <div class="info-row"><span class="info-key">SHA-256</span><span class="info-val" style="font-family:monospace;font-size:10px;">{}</span></div>
+      <div class="info-row"><span class="info-key">Verified</span><span class="info-val">{}</span></div>
+      <div class="info-row"><span class="info-key">Size</span><span class="info-val">{} bytes</span></div>
+      <div class="info-row"><span class="info-key">Computed</span><span class="info-val">{}</span></div>
+    </div>
+  </div>"#,
+                html_escape(&i.sha256),
+                if i.verified { "Yes" } else { "No" },
+                i.file_size_bytes,
+                i.computed_at
+            )
+        })
+        .unwrap_or_default();
+    let flagged_rows = if snapshot.flagged_notes.is_empty() {
+        "<tr><td colspan=\"4\">No flagged artifact notes recorded.</td></tr>".to_string()
+    } else {
+        snapshot
+            .flagged_notes
+            .iter()
+            .map(|note| {
+                format!(
+                    "<tr><td style=\"font-family:monospace;font-size:10px;\">{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                    html_escape(&note.artifact_id),
+                    html_escape(&note.examiner),
+                    note.created_at,
+                    html_escape(&note.note)
                 )
             })
             .collect::<Vec<_>>()
@@ -1053,6 +1215,8 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </p>
   </div>
 
+  {integrity_section}
+
   <div class="section">
     <h2>Artifact Categories</h2>
     <table>
@@ -1069,6 +1233,16 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
       <thead><tr><th>File</th><th>Tag</th><th>Path</th><th>Note</th></tr></thead>
       <tbody>
         {tagged_rows}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Flagged Artifacts</h2>
+    <table>
+      <thead><tr><th>Artifact ID</th><th>Examiner</th><th>Created</th><th>Note</th></tr></thead>
+      <tbody>
+        {flagged_rows}
       </tbody>
     </table>
   </div>
@@ -1129,8 +1303,10 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
         artifacts = snapshot.stats.artifacts,
         tagged_count = snapshot.tagged.len(),
         hashed = snapshot.stats.hashed,
+        integrity_section = integrity_section,
         category_rows = category_rows,
         tagged_rows = tagged_rows,
+        flagged_rows = flagged_rows,
     )
 }
 
@@ -1910,6 +2086,8 @@ async fn get_stats(evidence_id: String) -> Result<Stats, String> {
             flagged: 0,
             carved: 0,
             hashed: 0,
+            known_good: 0,
+            unknown: 0,
             artifacts: 0,
         });
     }
@@ -1923,8 +2101,120 @@ async fn get_stats(evidence_id: String) -> Result<Stats, String> {
         flagged: s.flagged,
         carved: s.carved,
         hashed: s.hashed,
+        known_good: s.known_good,
+        unknown: s.unknown,
         artifacts: s.artifacts,
     })
+}
+
+#[tauri::command]
+async fn get_evidence_integrity(evidence_id: String) -> Result<EvidenceIntegrity, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    tokio::task::spawn_blocking(move || engine::get_evidence_integrity(&eid))
+        .await
+        .map_err(|e| e.to_string())?
+        .map(EvidenceIntegrity::from)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn verify_evidence_integrity(evidence_id: String) -> Result<EvidenceIntegrity, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    tokio::task::spawn_blocking(move || engine::verify_evidence_integrity(&eid))
+        .await
+        .map_err(|e| e.to_string())?
+        .map(EvidenceIntegrity::from)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn import_hash_set(name: String, file_path: String) -> Result<usize, String> {
+    tokio::task::spawn_blocking(move || engine::import_hash_set(&name, &file_path))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn list_hash_sets() -> Result<Vec<HashSetInfo>, String> {
+    tokio::task::spawn_blocking(engine::list_hash_sets)
+        .await
+        .map_err(|e| e.to_string())
+        .map(|sets| sets.into_iter().map(HashSetInfo::from).collect())
+}
+
+#[tauri::command]
+async fn delete_hash_set(name: String) -> Result<bool, String> {
+    tokio::task::spawn_blocking(move || engine::delete_hash_set(&name))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_hash_set_stats(evidence_id: String) -> Result<HashSetStats, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    tokio::task::spawn_blocking(move || engine::get_hash_set_stats(&eid))
+        .await
+        .map_err(|e| e.to_string())
+        .map(HashSetStats::from)
+}
+
+#[tauri::command]
+async fn save_artifact_note(
+    app: tauri::AppHandle,
+    artifact_id: String,
+    evidence_id: String,
+    note: String,
+    flagged: bool,
+) -> Result<ArtifactNote, String> {
+    let path = artifact_notes_path(&app)?;
+    let mut notes = load_artifact_notes_from_path(&path)?;
+    let saved = ArtifactNote {
+        artifact_id,
+        evidence_id,
+        note,
+        created_at: engine::now_unix(),
+        examiner: examiner_name_for_app(&app),
+        flagged,
+    };
+    upsert_artifact_note(&mut notes, saved.clone());
+    save_artifact_notes_to_path(&path, &notes)?;
+    Ok(saved)
+}
+
+#[tauri::command]
+async fn get_artifact_note(
+    app: tauri::AppHandle,
+    artifact_id: String,
+) -> Result<Option<ArtifactNote>, String> {
+    let path = artifact_notes_path(&app)?;
+    let notes = load_artifact_notes_from_path(&path)?;
+    Ok(notes.into_iter().find(|note| note.artifact_id == artifact_id))
+}
+
+#[tauri::command]
+async fn get_flagged_artifacts(
+    app: tauri::AppHandle,
+    evidence_id: String,
+) -> Result<Vec<ArtifactNote>, String> {
+    let path = artifact_notes_path(&app)?;
+    let notes = load_artifact_notes_from_path(&path)?;
+    Ok(notes
+        .into_iter()
+        .filter(|note| note.evidence_id == evidence_id && note.flagged)
+        .collect())
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -2740,6 +3030,15 @@ pub fn run() {
             get_files,
             get_file_metadata,
             get_stats,
+            get_evidence_integrity,
+            verify_evidence_integrity,
+            import_hash_set,
+            list_hash_sets,
+            delete_hash_set,
+            get_hash_set_stats,
+            save_artifact_note,
+            get_artifact_note,
+            get_flagged_artifacts,
             get_file_hex,
             get_file_text,
             search_files,
@@ -2863,5 +3162,77 @@ mod sprint8_p1_tests {
         assert_eq!(html_escape("\"quoted\""), "&quot;quoted&quot;");
         assert_eq!(html_escape("'single'"), "&#x27;single&#x27;");
         assert_eq!(html_escape("<tag>"), "&lt;tag&gt;");
+    }
+
+    #[test]
+    fn artifact_note_persists_across_sessions() {
+        let path = std::env::temp_dir().join(format!(
+            "strata-artifact-notes-{}-persist.json",
+            std::process::id()
+        ));
+        let note = ArtifactNote {
+            artifact_id: "artifact-1".to_string(),
+            evidence_id: "ev-1".to_string(),
+            note: "reviewed".to_string(),
+            created_at: 123,
+            examiner: "Examiner".to_string(),
+            flagged: true,
+        };
+        save_artifact_notes_to_path(&path, &[note.clone()]).expect("save notes");
+        let loaded = load_artifact_notes_from_path(&path).expect("load notes");
+
+        assert_eq!(loaded, vec![note]);
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn flagged_artifacts_queryable_by_evidence() {
+        let path = std::env::temp_dir().join(format!(
+            "strata-artifact-notes-{}-flagged.json",
+            std::process::id()
+        ));
+        let notes = vec![
+            ArtifactNote {
+                artifact_id: "artifact-1".to_string(),
+                evidence_id: "ev-1".to_string(),
+                note: "one".to_string(),
+                created_at: 1,
+                examiner: "Examiner".to_string(),
+                flagged: true,
+            },
+            ArtifactNote {
+                artifact_id: "artifact-2".to_string(),
+                evidence_id: "ev-1".to_string(),
+                note: "two".to_string(),
+                created_at: 2,
+                examiner: "Examiner".to_string(),
+                flagged: true,
+            },
+            ArtifactNote {
+                artifact_id: "artifact-3".to_string(),
+                evidence_id: "ev-2".to_string(),
+                note: "three".to_string(),
+                created_at: 3,
+                examiner: "Examiner".to_string(),
+                flagged: true,
+            },
+            ArtifactNote {
+                artifact_id: "artifact-4".to_string(),
+                evidence_id: "ev-1".to_string(),
+                note: "four".to_string(),
+                created_at: 4,
+                examiner: "Examiner".to_string(),
+                flagged: false,
+            },
+        ];
+        save_artifact_notes_to_path(&path, &notes).expect("save notes");
+        let loaded = load_artifact_notes_from_path(&path).expect("load notes");
+        let flagged_for_ev1 = loaded
+            .into_iter()
+            .filter(|note| note.evidence_id == "ev-1" && note.flagged)
+            .count();
+
+        assert_eq!(flagged_for_ev1, 2);
+        let _ = std::fs::remove_file(path);
     }
 }

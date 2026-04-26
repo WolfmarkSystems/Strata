@@ -47,7 +47,13 @@ pub fn get_file_hex(
             .join(" ");
         let ascii_str: String = chunk
             .iter()
-            .map(|&b| if (0x20..0x7F).contains(&b) { b as char } else { '.' })
+            .map(|&b| {
+                if (0x20..0x7F).contains(&b) {
+                    b as char
+                } else {
+                    '.'
+                }
+            })
             .collect();
         lines.push(HexLine {
             offset: format!("{:08X}", off),
@@ -116,6 +122,7 @@ pub fn get_file_metadata(evidence_id: &str, file_id: &str) -> AdapterResult<File
         is_deleted: false,
         is_suspicious: false,
         is_flagged: false,
+        known_good: f.known_good,
         category: classify_extension(&f.extension),
         inode: f.inode,
         mft_entry: f.mft_entry,

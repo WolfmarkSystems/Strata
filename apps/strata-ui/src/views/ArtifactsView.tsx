@@ -5,7 +5,7 @@ import ArtifactCategories from '../components/ArtifactCategories'
 import ArtifactResults from '../components/ArtifactResults'
 import ArtifactDetail from '../components/ArtifactDetail'
 import EmptyState from '../components/EmptyState'
-import { getArtifactCategories, getArtifacts } from '../ipc'
+import { getArtifactCategories, getArtifacts, getFlaggedArtifacts } from '../ipc'
 import type { ArtifactCategory, Artifact } from '../ipc'
 
 export default function ArtifactsView() {
@@ -20,6 +20,8 @@ export default function ArtifactsView() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [pluginsNotRun, setPluginsNotRun] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [flaggedOnly, setFlaggedOnly] = useState(false)
+  const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set())
 
   // Load categories when evidence loaded
   useEffect(() => {
@@ -28,6 +30,12 @@ export default function ArtifactsView() {
       return
     }
     getArtifactCategories(evidenceId).then(setCategories)
+    const refreshFlagged = () => getFlaggedArtifacts(evidenceId).then((notes) => {
+      setFlaggedIds(new Set(notes.map((note) => note.artifact_id)))
+    })
+    void refreshFlagged()
+    window.addEventListener('strata-artifact-note-saved', refreshFlagged)
+    return () => window.removeEventListener('strata-artifact-note-saved', refreshFlagged)
   }, [evidenceId])
 
   // Load artifacts when category changes
@@ -50,6 +58,9 @@ export default function ArtifactsView() {
 
   const selectedArtifact = artifacts.find((a) => a.id === selectedArtifactId) ?? null
   const selectedCategory = categories.find((c) => c.name === selectedArtifactCat) ?? null
+  const visibleArtifacts = flaggedOnly
+    ? artifacts.filter((artifact) => flaggedIds.has(artifact.id))
+    : artifacts
 
   if (!evidenceLoaded) {
     return (
@@ -77,11 +88,13 @@ export default function ArtifactsView() {
       <Panel defaultSize={52} minSize={25}>
         <ArtifactResults
           category={selectedCategory}
-          artifacts={artifacts}
+          artifacts={visibleArtifacts}
           pluginsNotRun={pluginsNotRun}
           selectedId={selectedArtifactId}
           onSelect={(a) => setSelectedArtifactId(a.id)}
           loading={loading}
+          flaggedOnly={flaggedOnly}
+          onToggleFlagged={() => setFlaggedOnly((v) => !v)}
         />
       </Panel>
       <PanelResizeHandle className="resize-handle" />

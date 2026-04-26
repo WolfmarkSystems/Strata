@@ -6,6 +6,7 @@ use crate::store::get_evidence;
 #[allow(unused_imports)]
 use crate::types::ArtifactCategoryInfo;
 use crate::types::*;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -99,6 +100,7 @@ fn populate_cached_files_from_host_dir(evidence_id: &str, root: &Path) -> Adapte
                 parent_node_id: String::new(),
                 mft_entry: None,
                 inode: None,
+                known_good: false,
             },
         );
     }
@@ -1072,9 +1074,8 @@ fn convert_output(output: &PluginOutput, plugin_name: &str) -> Vec<PluginArtifac
     output
         .artifacts
         .iter()
-        .enumerate()
-        .map(|(i, rec)| PluginArtifact {
-            id: format!("{}-{}", plugin_name, i),
+        .map(|rec| PluginArtifact {
+            id: deterministic_artifact_id(&rec.source_path, rec.category.as_str(), &rec.detail),
             category: rec.category.as_str().to_string(),
             name: rec.title.clone(),
             value: rec.detail.clone(),
@@ -1088,6 +1089,16 @@ fn convert_output(output: &PluginOutput, plugin_name: &str) -> Vec<PluginArtifac
             raw_data: rec.raw_data.as_ref().map(|v| v.to_string()),
         })
         .collect()
+}
+
+pub fn deterministic_artifact_id(source_path: &str, artifact_type: &str, value: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(source_path.as_bytes());
+    hasher.update([0]);
+    hasher.update(artifact_type.as_bytes());
+    hasher.update([0]);
+    hasher.update(value.as_bytes());
+    format!("artifact-{}", hex::encode(hasher.finalize()))
 }
 
 fn forensic_value_str(v: &ForensicValue) -> &'static str {
@@ -1970,6 +1981,16 @@ mod sprint10_panic_sandbox_tests {
             "single-plugin re-run on a panic produces exactly one plugin_error row"
         );
         assert_eq!(converted[0].name, "Plugin 'TestPanicker' panicked");
+    }
+
+    #[test]
+    fn artifact_id_is_deterministic() {
+        let first = deterministic_artifact_id("/Users/a/file.txt", "User Activity", "opened");
+        let second = deterministic_artifact_id("/Users/a/file.txt", "User Activity", "opened");
+        let changed = deterministic_artifact_id("/Users/a/file.txt", "User Activity", "closed");
+
+        assert_eq!(first, second);
+        assert_ne!(first, changed);
     }
 
     #[test]

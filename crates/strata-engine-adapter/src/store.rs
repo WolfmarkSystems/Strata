@@ -1,7 +1,7 @@
 //! In-process registry of opened evidence images. Each `parse_evidence` call
 //! produces a stable `evidence_id` that subsequent commands look up here.
 
-use crate::types::AdapterError;
+use crate::types::{AdapterError, EvidenceIntegrity};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -24,6 +24,7 @@ pub struct CachedFile {
     pub parent_node_id: String,
     pub mft_entry: Option<u64>,
     pub inode: Option<u64>,
+    pub known_good: bool,
 }
 
 /// Snapshot of a tree node so the UI can list children without re-walking the
@@ -48,6 +49,7 @@ pub struct OpenEvidence {
     pub nodes: HashMap<String, CachedNode>,
     pub files: HashMap<String, CachedFile>,
     pub root_node_ids: Vec<String>,
+    pub integrity: Option<EvidenceIntegrity>,
 }
 
 impl OpenEvidence {
@@ -58,6 +60,7 @@ impl OpenEvidence {
             nodes: HashMap::new(),
             files: HashMap::new(),
             root_node_ids: Vec::new(),
+            integrity: None,
         }
     }
 }

@@ -38,13 +38,14 @@ const COLS: { id: SortCol; label: string; flex: number }[] = [
 export default function FileListing({ files, selectedFileId, onFileSelect }: Props) {
   const [sortCol, setSortCol] = useState<SortCol>('name')
   const [sortAsc, setSortAsc] = useState(true)
+  const [hideKnownGood, setHideKnownGood] = useState(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const taggedFiles = useAppStore((s) => s.taggedFiles)
   const setFileTag = useAppStore((s) => s.setFileTag)
   const removeFileTag = useAppStore((s) => s.removeFileTag)
 
   const sorted = useMemo(() => {
-    const arr = [...files]
+    const arr = files.filter((file) => !hideKnownGood || !file.known_good)
     arr.sort((a, b) => {
       let cmp = 0
       switch (sortCol) {
@@ -57,7 +58,7 @@ export default function FileListing({ files, selectedFileId, onFileSelect }: Pro
       return sortAsc ? cmp : -cmp
     })
     return arr
-  }, [files, sortCol, sortAsc])
+  }, [files, hideKnownGood, sortCol, sortAsc])
 
   const handleSort = (col: SortCol) => {
     if (col === sortCol) setSortAsc(!sortAsc)
@@ -77,6 +78,35 @@ export default function FileListing({ files, selectedFileId, onFileSelect }: Pro
         flexDirection: 'column',
       }}
     >
+      <div
+        style={{
+          padding: '6px 10px',
+          borderBottom: '1px solid var(--border-sub)',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          flexShrink: 0,
+        }}
+      >
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 10,
+            color: 'var(--text-muted)',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={hideKnownGood}
+            onChange={(e) => setHideKnownGood(e.target.checked)}
+          />
+          Hide known-good
+        </label>
+      </div>
+
       {/* Column headers */}
       <div
         style={{
@@ -172,7 +202,7 @@ export default function FileListing({ files, selectedFileId, onFileSelect }: Pro
               tag,
               color,
             )
-            setFileTag(f.id, tag)
+            setFileTag(f.id, tag, color)
             setContextMenu(null)
           }}
           onUntag={async () => {
@@ -205,6 +235,7 @@ function FileRow({
   let nameColor: string = 'var(--text-2)'
   if (file.is_flagged) nameColor = 'var(--flag)'
   else if (file.is_suspicious) nameColor = 'var(--sus)'
+  else if (file.known_good) nameColor = 'var(--text-off)'
 
   const deletedStyle: React.CSSProperties = file.is_deleted
     ? { textDecoration: 'line-through', color: 'var(--text-off)' }
@@ -233,6 +264,7 @@ function FileRow({
         cursor: 'pointer',
         background: bg,
         transition: 'background 0.1s',
+        opacity: file.known_good ? 0.55 : 1,
       }}
     >
       {/* Name */}
@@ -253,6 +285,18 @@ function FileRow({
               height: 7,
               borderRadius: '50%',
               background: tagDotColor,
+              flexShrink: 0,
+            }}
+          />
+        )}
+        {file.known_good && (
+          <span
+            title="Known-good hash set match"
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: 2,
+              background: 'var(--clean)',
               flexShrink: 0,
             }}
           />

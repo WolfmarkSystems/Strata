@@ -13,6 +13,7 @@ pub mod csam;
 pub mod custody;
 pub mod evidence;
 pub mod files;
+pub mod hash_sets;
 pub mod hashing;
 pub mod plugins;
 pub mod store;
@@ -23,18 +24,20 @@ pub mod vfs_materialize;
 
 pub use types::{
     format_size, AdapterError, AdapterResult, ArtifactCategoryInfo, EngineStats, EvidenceInfo,
-    FileEntry, HashResult, HexData, HexLine, IocMatch, IocQuery, MessageThread, PluginArtifact,
-    ThreadMessage, TreeNode,
+    EvidenceIntegrity, FileEntry, HashResult, HashSetInfo, HashSetStats, HexData, HexLine,
+    IocMatch, IocQuery, MessageThread, PluginArtifact, ThreadMessage, TreeNode,
 };
 
 pub use evidence::{
-    close_evidence, get_files, get_stats, get_tree_children, get_tree_root, navigate_to_path,
-    parse_evidence, NavigationTarget,
+    close_evidence, get_evidence_integrity, get_files, get_stats, get_tree_children, get_tree_root,
+    navigate_to_path, parse_evidence, verify_evidence_integrity, NavigationTarget,
 };
 
 pub use files::{get_file_hex, get_file_metadata, get_file_text};
 
 pub use hashing::{hash_all_files, hash_file, hashed_count};
+
+pub use hash_sets::{delete_hash_set, get_hash_set_stats, import_hash_set, list_hash_sets};
 
 pub use plugins::{
     get_artifact_categories, get_artifacts_by_category, get_artifacts_by_thread,

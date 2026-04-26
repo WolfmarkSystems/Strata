@@ -1,6 +1,9 @@
 export type ViewMode =
   | 'files'
   | 'artifacts'
+  | 'timeline'
+  | 'ioc'
+  | 'custody'
   | 'tags'
   | 'plugins'
   | 'notes'
@@ -33,6 +36,8 @@ export interface Stats {
   flagged: number
   carved: number
   hashed: number
+  known_good: number
+  unknown: number
   artifacts: number
 }
 
@@ -63,6 +68,7 @@ export interface FileEntry {
   is_deleted: boolean
   is_suspicious: boolean
   is_flagged: boolean
+  known_good: boolean
   category: string
   tag: string | null
   tag_color: string | null
@@ -83,6 +89,7 @@ export interface FileMetadata {
   is_deleted: boolean
   is_suspicious: boolean
   is_flagged: boolean
+  known_good: boolean
   mft_entry: number | null
   extension: string
   mime_type: string | null
