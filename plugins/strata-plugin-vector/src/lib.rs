@@ -5,6 +5,8 @@ use strata_plugin_sdk::{
     PluginError, PluginOutput, PluginResult, PluginSummary, PluginType, StrataPlugin,
 };
 
+pub mod tor;
+
 pub struct VectorPlugin {
     name: String,
     version: String,
@@ -35,7 +37,12 @@ impl VectorPlugin {
 
     /// Known malware-related strings.
     const MALWARE_STRINGS: &'static [&'static str] = &[
-        "mimikatz", "meterpreter", "cobalt strike", "beacon", "bloodhound", "rubeus",
+        "mimikatz",
+        "meterpreter",
+        "cobalt strike",
+        "beacon",
+        "bloodhound",
+        "rubeus",
     ];
 
     /// Suspicious script indicators.
@@ -66,7 +73,8 @@ impl VectorPlugin {
             return results;
         }
 
-        let e_lfanew = u32::from_le_bytes([data[0x3C], data[0x3D], data[0x3E], data[0x3F]]) as usize;
+        let e_lfanew =
+            u32::from_le_bytes([data[0x3C], data[0x3D], data[0x3E], data[0x3F]]) as usize;
 
         let mut flags = Vec::new();
 
@@ -107,11 +115,14 @@ impl VectorPlugin {
         let mut artifact = Artifact::new("ExecutionHistory", &path_str);
         artifact.add_field("title", &format!("Suspicious PE Analysis: {}", name));
         artifact.add_field("file_type", "Suspicious PE Analysis");
-        artifact.add_field("detail", &if is_flagged {
-            flags.join(" | ")
-        } else {
-            "Valid PE file — no anomalies detected in header".to_string()
-        });
+        artifact.add_field(
+            "detail",
+            &if is_flagged {
+                flags.join(" | ")
+            } else {
+                "Valid PE file — no anomalies detected in header".to_string()
+            },
+        );
         if is_flagged {
             artifact.add_field("suspicious", "true");
         }
@@ -337,13 +348,14 @@ impl VectorPlugin {
             };
             let mut detail_parts = Vec::new();
             if !critical.is_empty() {
-                let cs: Vec<String> =
-                    critical.iter().map(|(k, m)| format!("{} ({})", k, m)).collect();
+                let cs: Vec<String> = critical
+                    .iter()
+                    .map(|(k, m)| format!("{} ({})", k, m))
+                    .collect();
                 detail_parts.push(format!("CRITICAL: {}", cs.join(", ")));
             }
             if !high.is_empty() {
-                let hs: Vec<String> =
-                    high.iter().map(|(k, m)| format!("{} ({})", k, m)).collect();
+                let hs: Vec<String> = high.iter().map(|(k, m)| format!("{} ({})", k, m)).collect();
                 detail_parts.push(format!("HIGH: {}", hs.join(", ")));
             }
             if !found_indicators.is_empty() {
@@ -385,10 +397,13 @@ impl VectorPlugin {
             let mut artifact = Artifact::new("ExecutionHistory", &path_str);
             artifact.add_field("title", &format!("Known Malware String: {}", name));
             artifact.add_field("file_type", "Known Malware String");
-            artifact.add_field("detail", &format!(
-                "File contains known malware tool strings: {}",
-                found.join(", ")
-            ));
+            artifact.add_field(
+                "detail",
+                &format!(
+                    "File contains known malware tool strings: {}",
+                    found.join(", ")
+                ),
+            );
             artifact.add_field("suspicious", "true");
             results.push(artifact);
         }
@@ -398,14 +413,8 @@ impl VectorPlugin {
 
     fn analyze_file(path: &Path) -> Vec<Artifact> {
         let mut results = Vec::new();
-        let name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
-        let ext = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("");
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         let ext_lower = ext.to_lowercase();
 
         // PE analysis for .exe/.dll — bounded 64 KB read.
@@ -448,13 +457,20 @@ impl VectorPlugin {
         }
 
         // For all other files, do a malware string scan on first 4KB
-        if !matches!(ext_lower.as_str(), "exe" | "dll" | "doc" | "xls" | "ppt" | "ps1" | "vbs" | "js" | "bat" | "cmd") {
+        if !matches!(
+            ext_lower.as_str(),
+            "exe" | "dll" | "doc" | "xls" | "ppt" | "ps1" | "vbs" | "js" | "bat" | "cmd"
+        ) {
             // Only scan small-to-medium files to avoid performance issues
             if let Ok(metadata) = path.metadata() {
                 if metadata.len() < 1_048_576 {
                     if let Ok(data) = std::fs::read(path) {
                         let scan_len = data.len().min(4096);
-                        results.extend(Self::scan_for_malware_strings(path, name, &data[..scan_len]));
+                        results.extend(Self::scan_for_malware_strings(
+                            path,
+                            name,
+                            &data[..scan_len],
+                        ));
                     }
                 }
             }
@@ -499,6 +515,7 @@ impl StrataPlugin for VectorPlugin {
         if let Ok(entries) = walk_dir(root) {
             for entry_path in entries {
                 results.extend(Self::analyze_file(&entry_path));
+                results.extend(crate::tor::scan(&entry_path));
             }
         }
 
@@ -520,7 +537,11 @@ impl StrataPlugin for VectorPlugin {
 
             let forensic_value = match file_type.as_str() {
                 "Suspicious PE Analysis" => {
-                    if is_suspicious { ForensicValue::Critical } else { ForensicValue::Medium }
+                    if is_suspicious {
+                        ForensicValue::Critical
+                    } else {
+                        ForensicValue::Medium
+                    }
                 }
                 "Office Macro Detected" => ForensicValue::Critical,
                 "Suspicious Script" => ForensicValue::Critical,
@@ -537,11 +558,7 @@ impl StrataPlugin for VectorPlugin {
                     .get("title")
                     .cloned()
                     .unwrap_or_else(|| artifact.source.clone()),
-                detail: artifact
-                    .data
-                    .get("detail")
-                    .cloned()
-                    .unwrap_or_default(),
+                detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                 source_path: artifact.source.clone(),
                 forensic_value,
                 mitre_technique: artifact.data.get("mitre").cloned(),
@@ -636,8 +653,11 @@ mod sprint75_backfill_tests {
                 .unwrap_or(0),
         ));
         std::fs::create_dir_all(&dir).expect("mkdir");
-        std::fs::write(dir.join("garbage.bin"), [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
-            .expect("write garbage");
+        std::fs::write(
+            dir.join("garbage.bin"),
+            [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF],
+        )
+        .expect("write garbage");
         PluginContext {
             root_path: dir.to_string_lossy().into_owned(),
             vfs: None,

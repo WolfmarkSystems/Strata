@@ -28,7 +28,7 @@ pub fn description() -> &'static str {
 }
 
 pub fn color() -> &'static str {
-    "#22d3ee"
+    "#84cc16"
 }
 
 pub struct ArborPlugin {
@@ -59,7 +59,13 @@ impl StrataPlugin for ArborPlugin {
         &self.version
     }
     fn supported_inputs(&self) -> Vec<String> {
-        vec!["bash_history".into(), "zsh_history".into(), "fish_history".into()]
+        vec![
+            "linux".into(),
+            "directory".into(),
+            "bash_history".into(),
+            "zsh_history".into(),
+            "fish_history".into(),
+        ]
     }
     fn plugin_type(&self) -> PluginType {
         PluginType::Analyzer
@@ -76,6 +82,9 @@ impl StrataPlugin for ArborPlugin {
         let mut out = Vec::new();
         for path in walk_dir(root).unwrap_or_default() {
             out.extend(crate::shell_artifacts::scan(&path));
+            out.extend(crate::persistence::scan(&path));
+            out.extend(crate::logs::scan(&path));
+            out.extend(crate::system_artifacts::scan(&path));
         }
         Ok(out)
     }
@@ -88,7 +97,11 @@ impl StrataPlugin for ArborPlugin {
         let mut suspicious = 0usize;
         for a in &artifacts {
             let ft = a.data.get("file_type").cloned().unwrap_or_default();
-            let is_sus = a.data.get("suspicious").map(|s| s == "true").unwrap_or(false);
+            let is_sus = a
+                .data
+                .get("suspicious")
+                .map(|s| s == "true")
+                .unwrap_or(false);
             if is_sus {
                 suspicious += 1;
             }
@@ -103,7 +116,11 @@ impl StrataPlugin for ArborPlugin {
                 category,
                 subcategory: ft,
                 timestamp: a.timestamp.map(|t| t as i64),
-                title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
+                title: a
+                    .data
+                    .get("title")
+                    .cloned()
+                    .unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
                 source_path: a.source.clone(),
                 forensic_value: fv,
@@ -124,7 +141,10 @@ impl StrataPlugin for ArborPlugin {
                 total_artifacts: total,
                 suspicious_count: suspicious,
                 categories_populated: cats.into_iter().collect(),
-                headline: format!("ARBOR: {} Linux artifacts ({} suspicious)", total, suspicious),
+                headline: format!(
+                    "ARBOR: {} Linux artifacts ({} suspicious)",
+                    total, suspicious
+                ),
             },
             warnings: vec![],
         })
@@ -157,6 +177,6 @@ mod tests {
     fn plugin_metadata_shape() {
         let p = ArborPlugin::new();
         assert_eq!(p.name(), "Strata ARBOR");
-        assert_eq!(color(), "#22d3ee");
+        assert_eq!(color(), "#84cc16");
     }
 }

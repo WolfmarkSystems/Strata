@@ -12,6 +12,30 @@ use std::path::Path;
 use strata_plugin_sdk::Artifact;
 
 const BDB_MAGIC: [u8; 8] = [0x00, 0x31, 0xBB, 0x30, 0xDB, 0xBB, 0xC4, 0x02];
+const EXCHANGE_DOMAINS: &[(&str, &str)] = &[
+    ("coinbase.com", "Coinbase"),
+    ("binance.com", "Binance"),
+    ("kraken.com", "Kraken"),
+    ("crypto.com", "Crypto.com"),
+    ("gemini.com", "Gemini"),
+    ("blockchain.com", "Blockchain.com"),
+];
+const HARDWARE_WALLETS: &[(&str, &str, &str)] = &[
+    ("VID_2C97", "PID_0001", "Ledger Nano S"),
+    ("VID_2C97", "PID_4011", "Ledger Nano X"),
+    ("VID_1209", "PID_53C1", "Trezor Model T"),
+    ("VID_1209", "PID_53C0", "Trezor One"),
+    ("VID_1209", "PID_4B24", "Coldcard"),
+];
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ElectrumWallet {
+    pub file_path: String,
+    pub wallet_type: String,
+    pub seed_version: Option<i64>,
+    pub use_encryption: bool,
+    pub is_encrypted: bool,
+}
 
 pub fn scan(path: &Path) -> Vec<Artifact> {
     let mut out = Vec::new();
@@ -57,11 +81,23 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
         a.add_field("file_type", "Crypto Wallet");
         a.add_field("wallet_kind", "Electrum");
         if let Ok(body) = fs::read_to_string(path) {
-            if body.contains("\"use_encryption\": true") || body.contains("\"use_encryption\":true") {
-                a.add_field("encrypted", "true");
-            }
-            if let Some(wallet_type) = extract_json_field(&body, "wallet_type") {
-                a.add_field("wallet_type", &wallet_type);
+            if let Some(wallet) = parse_electrum_wallet_at(path, &body) {
+                a.add_field(
+                    "encrypted",
+                    if wallet.is_encrypted { "true" } else { "false" },
+                );
+                a.add_field(
+                    "use_encryption",
+                    if wallet.use_encryption {
+                        "true"
+                    } else {
+                        "false"
+                    },
+                );
+                a.add_field("wallet_type", &wallet.wallet_type);
+                if let Some(seed_version) = wallet.seed_version {
+                    a.add_field("seed_version", &seed_version.to_string());
+                }
             }
         }
         a.add_field("mitre", "T1657");
@@ -72,7 +108,7 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
     }
     // MetaMask LevelDB extension settings.
     if lower.contains("nkbihfbeogaeaoehlefnkodbefgpgknn")
-        && (name.ends_with(".ldb") || name.ends_with(".log"))
+        && (name.ends_with(".ldb") || name.ends_with(".log") || name == "manifest-000001")
     {
         let mut a = Artifact::new("Crypto Wallet", &path.to_string_lossy());
         a.add_field("title", "MetaMask extension storage");
@@ -83,6 +119,26 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
         a.add_field("suspicious", "true");
         out.push(a);
         return out;
+    }
+    if let Some(exchange) = identify_exchange_domain(&lower) {
+        let mut a = Artifact::new("Exchange Browser Artifact", &path.to_string_lossy());
+        a.add_field("title", &format!("{exchange} browser artifact"));
+        a.add_field("file_type", "Exchange Browser Artifact");
+        a.add_field("exchange", exchange);
+        a.add_field("mitre", "T1583.006");
+        a.add_field("forensic_value", "High");
+        a.add_field("suspicious", "true");
+        out.push(a);
+    }
+    if let Some(wallet) = identify_hardware_wallet(&lower) {
+        let mut a = Artifact::new("Crypto Hardware Wallet", &path.to_string_lossy());
+        a.add_field("title", &format!("Hardware wallet USB artifact: {wallet}"));
+        a.add_field("file_type", "Crypto Hardware Wallet");
+        a.add_field("wallet_kind", wallet);
+        a.add_field("mitre", "T1583.006");
+        a.add_field("forensic_value", "High");
+        a.add_field("suspicious", "true");
+        out.push(a);
     }
     // Exchange CSV detection.
     if name.ends_with(".csv") {
@@ -102,33 +158,80 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
     out
 }
 
-fn extract_json_field(body: &str, field: &str) -> Option<String> {
-    let needle = format!("\"{}\"", field);
-    let pos = body.find(&needle)? + needle.len();
-    let after = &body[pos..];
-    let colon = after.find(':')?;
-    let rest = after[colon + 1..].trim_start();
-    if let Some(rest) = rest.strip_prefix('"') {
-        let end = rest.find('"')?;
-        Some(rest[..end].to_string())
-    } else {
-        let end = rest.find([',', '}']).unwrap_or(rest.len());
-        Some(rest[..end].trim().to_string())
+pub fn parse_electrum_wallet(json: &str) -> Option<ElectrumWallet> {
+    parse_electrum_wallet_at(Path::new(""), json)
+}
+
+fn parse_electrum_wallet_at(path: &Path, json: &str) -> Option<ElectrumWallet> {
+    let value: serde_json::Value = serde_json::from_str(json).ok()?;
+    let wallet_type = value
+        .get("wallet_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown")
+        .to_string();
+    let seed_version = value.get("seed_version").and_then(|v| v.as_i64());
+    let use_encryption = value
+        .get("use_encryption")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let is_encrypted = use_encryption
+        || value.get("keystore").is_some()
+        || value
+            .get("wallet_type")
+            .and_then(|v| v.as_str())
+            .map(|v| v.contains("hardware"))
+            .unwrap_or(false);
+    Some(ElectrumWallet {
+        file_path: path.to_string_lossy().to_string(),
+        wallet_type,
+        seed_version,
+        use_encryption,
+        is_encrypted,
+    })
+}
+
+pub fn identify_exchange_domain(text: &str) -> Option<&'static str> {
+    let lower = text.to_ascii_lowercase();
+    for (domain, name) in EXCHANGE_DOMAINS {
+        if lower.contains(domain) {
+            return Some(*name);
+        }
     }
+    None
+}
+
+pub fn identify_hardware_wallet(text: &str) -> Option<&'static str> {
+    let upper = text.to_ascii_uppercase();
+    for (vid, pid, name) in HARDWARE_WALLETS {
+        if upper.contains(vid) && upper.contains(pid) {
+            return Some(*name);
+        }
+    }
+    None
 }
 
 fn identify_exchange(body: &str) -> Option<&'static str> {
     let first_line = body.lines().next()?;
     let lc = first_line.to_ascii_lowercase();
-    if lc.contains("timestamp") && lc.contains("transaction type") && lc.contains("asset")
+    if lc.contains("timestamp")
+        && lc.contains("transaction type")
+        && lc.contains("asset")
         && lc.contains("quantity transacted")
     {
         return Some("Coinbase");
     }
-    if lc.contains("date(utc)") && lc.contains("pair") && lc.contains("side") && lc.contains("executed") {
+    if lc.contains("date(utc)")
+        && lc.contains("pair")
+        && lc.contains("side")
+        && lc.contains("executed")
+    {
         return Some("Binance");
     }
-    if lc.contains("txid") && lc.contains("ordertxid") && lc.contains("pair") && lc.contains("ordertype") {
+    if lc.contains("txid")
+        && lc.contains("ordertxid")
+        && lc.contains("pair")
+        && lc.contains("ordertype")
+    {
         return Some("Kraken");
     }
     if lc.contains("date")
@@ -192,6 +295,14 @@ mod tests {
     }
 
     #[test]
+    fn electrum_wallet_encryption_detected() {
+        let json = r#"{"wallet_type":"standard","use_encryption":true,"seed_version":17}"#;
+        let wallet = parse_electrum_wallet(json).expect("electrum wallet");
+        assert!(wallet.is_encrypted);
+        assert_eq!(wallet.seed_version, Some(17));
+    }
+
+    #[test]
     fn detects_metamask_ldb() {
         let dir = tempfile::tempdir().expect("tempdir");
         let metamask_dir = dir
@@ -216,5 +327,21 @@ mod tests {
         let path = dir.path().join("report.txt");
         std::fs::write(&path, b"hello").expect("write");
         assert!(scan(&path).is_empty());
+    }
+
+    #[test]
+    fn hardware_wallet_vid_pid_detected() {
+        assert_eq!(
+            identify_hardware_wallet(r"HKLM\SYSTEM\CurrentControlSet\Enum\USB\VID_2C97&PID_4011"),
+            Some("Ledger Nano X")
+        );
+    }
+
+    #[test]
+    fn exchange_domain_detected_from_browser_artifact_path() {
+        assert_eq!(
+            identify_exchange_domain("/History https://www.coinbase.com/transactions"),
+            Some("Coinbase")
+        );
     }
 }

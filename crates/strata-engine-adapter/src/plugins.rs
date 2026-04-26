@@ -1149,7 +1149,7 @@ pub fn get_plugin_artifacts(
 // ────────────────────────────────────────────────────────────────────────────
 
 fn convert_output(output: &PluginOutput, plugin_name: &str) -> Vec<PluginArtifact> {
-    output
+    let mut artifacts: Vec<PluginArtifact> = output
         .artifacts
         .iter()
         .map(|rec| {
@@ -1171,6 +1171,51 @@ fn convert_output(output: &PluginOutput, plugin_name: &str) -> Vec<PluginArtifac
                 advisory_notice,
                 confidence_score: confidence_score_for(plugin_name, rec),
                 confidence_basis: confidence_basis_for(plugin_name, rec).to_string(),
+            }
+        })
+        .collect();
+    let crypto_hits = artifacts
+        .iter()
+        .flat_map(crypto_address_artifacts_for)
+        .collect::<Vec<_>>();
+    artifacts.extend(crypto_hits);
+    artifacts
+}
+
+fn crypto_address_artifacts_for(parent: &PluginArtifact) -> Vec<PluginArtifact> {
+    let mut text = format!("{} {}", parent.name, parent.value);
+    if let Some(raw) = &parent.raw_data {
+        text.push(' ');
+        text.push_str(raw);
+    }
+    strata_core::crypto_detect::scan_for_crypto_addresses(&text)
+        .into_iter()
+        .map(|hit| {
+            let currency = hit.currency.as_str();
+            PluginArtifact {
+                id: deterministic_artifact_id(
+                    &parent.source_path,
+                    "Cryptocurrency Address",
+                    &hit.address,
+                ),
+                category: "Credentials".to_string(),
+                name: format!("Cryptocurrency Address Detected ({currency})"),
+                value: hit.address,
+                timestamp: parent.timestamp.clone(),
+                source_file: parent.source_file.clone(),
+                source_path: parent.source_path.clone(),
+                forensic_value: "high".to_string(),
+                mitre_technique: Some("T1583.006".to_string()),
+                mitre_name: Some("Web Services: Cryptocurrency".to_string()),
+                plugin: parent.plugin.clone(),
+                raw_data: Some(format!(
+                    "{{\"parent_artifact_id\":\"{}\",\"currency\":\"{}\",\"confidence\":{:.2}}}",
+                    parent.id, currency, hit.confidence
+                )),
+                is_advisory: false,
+                advisory_notice: None,
+                confidence_score: hit.confidence,
+                confidence_basis: "pattern_match".to_string(),
             }
         })
         .collect()

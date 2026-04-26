@@ -21,7 +21,10 @@ pub struct LinuxLogEntry {
 }
 
 pub fn classify_path(path: &Path) -> Option<&'static str> {
-    let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let lower = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
     let name = lower.rsplit('/').next().unwrap_or("");
     if name.starts_with("auth.log") || name.starts_with("secure") {
         return Some("auth");
@@ -45,6 +48,57 @@ pub fn parse_auth_log(body: &str) -> Vec<LinuxLogEntry> {
             continue;
         };
         out.push(entry);
+    }
+    out
+}
+
+pub fn brute_force_source_ips(entries: &[LinuxLogEntry]) -> Vec<String> {
+    let mut counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for entry in entries {
+        if matches!(entry.event_type.as_str(), "SSHFail" | "InvalidUser") {
+            if let Some(ip) = &entry.source_ip {
+                *counts.entry(ip.clone()).or_insert(0) += 1;
+            }
+        }
+    }
+    counts
+        .into_iter()
+        .filter_map(|(ip, count)| (count > 5).then_some(ip))
+        .collect()
+}
+
+pub fn parse_syslog(body: &str) -> Vec<LinuxLogEntry> {
+    let mut out = Vec::new();
+    for line in body.lines() {
+        if line.len() < 16 {
+            continue;
+        }
+        let Some(ts) = parse_auth_timestamp(&line[..15]) else {
+            continue;
+        };
+        let rest = line[15..].trim_start();
+        let lower = rest.to_ascii_lowercase();
+        let event_type = if lower.contains("cron[") || lower.contains(" crond[") {
+            "CronEvent"
+        } else if lower.contains("started ")
+            || lower.contains("stopped ")
+            || lower.contains("systemd[")
+        {
+            "ServiceEvent"
+        } else if lower.contains("kernel:") {
+            "KernelEvent"
+        } else {
+            continue;
+        };
+        out.push(LinuxLogEntry {
+            source: "syslog".into(),
+            timestamp: ts,
+            event_type: event_type.to_string(),
+            username: extract_after(rest, "USER="),
+            source_ip: None,
+            command: extract_after(rest, "CMD "),
+            raw_line: line.to_string(),
+        });
     }
     out
 }
@@ -187,7 +241,20 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
     match kind {
         "auth" => {
             if let Ok(body) = fs::read_to_string(path) {
-                for entry in parse_auth_log(&body) {
+                let entries = parse_auth_log(&body);
+                for ip in brute_force_source_ips(&entries) {
+                    let mut a = Artifact::new("Linux Log Event", &path.to_string_lossy());
+                    a.add_field("title", &format!("SSH brute force suspected from {ip}"));
+                    a.add_field("file_type", "Linux Log Event");
+                    a.add_field("source", "auth");
+                    a.add_field("event_type", "SSHBruteForce");
+                    a.add_field("source_ip", &ip);
+                    a.add_field("mitre", "T1021.004");
+                    a.add_field("forensic_value", "High");
+                    a.add_field("suspicious", "true");
+                    out.push(a);
+                }
+                for entry in entries {
                     let mut a = Artifact::new("Linux Log Event", &path.to_string_lossy());
                     a.timestamp = Some(entry.timestamp.timestamp() as u64);
                     a.add_field(
@@ -209,6 +276,15 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
                     }
                     if let Some(c) = &entry.command {
                         a.add_field("command", c);
+                    }
+                    if entry.event_type == "SudoUse"
+                        && entry
+                            .command
+                            .as_deref()
+                            .map(|c| c == "/bin/bash" || c == "/bin/sh")
+                            .unwrap_or(false)
+                    {
+                        a.add_field("suspicious_reason", "successful root shell via sudo");
                     }
                     let mitre = match entry.event_type.as_str() {
                         "SSHLogin" | "SSHFail" | "InvalidUser" => "T1021.004",
@@ -233,13 +309,44 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
                 }
             }
         }
+        "syslog" => {
+            if let Ok(body) = fs::read_to_string(path) {
+                for entry in parse_syslog(&body) {
+                    let mut a = Artifact::new("Linux Log Event", &path.to_string_lossy());
+                    a.timestamp = Some(entry.timestamp.timestamp() as u64);
+                    a.add_field(
+                        "title",
+                        &format!("{}: {}", entry.event_type, entry.raw_line),
+                    );
+                    a.add_field("file_type", "Linux Log Event");
+                    a.add_field("source", "syslog");
+                    a.add_field("event_type", &entry.event_type);
+                    if let Some(c) = &entry.command {
+                        a.add_field("command", c);
+                    }
+                    a.add_field(
+                        "mitre",
+                        if entry.event_type == "CronEvent" {
+                            "T1053.003"
+                        } else {
+                            "T1078"
+                        },
+                    );
+                    a.add_field("forensic_value", "Medium");
+                    out.push(a);
+                }
+            }
+        }
         "journal" => {
             if let Ok(bytes) = fs::read(path) {
                 for run in scan_journal_bytes(&bytes) {
                     let mut a = Artifact::new("Linux Log Event", &path.to_string_lossy());
                     a.add_field(
                         "title",
-                        &format!("journal fragment: {}", run.chars().take(80).collect::<String>()),
+                        &format!(
+                            "journal fragment: {}",
+                            run.chars().take(80).collect::<String>()
+                        ),
                     );
                     a.add_field("file_type", "Linux Log Event");
                     a.add_field("source", "journal");
@@ -278,7 +385,9 @@ mod tests {
         let body = "Jun  1 12:00:00 host sshd[1234]: Accepted password for alice from 10.0.0.5 port 54321 ssh2\n\
                     Jun  1 12:01:00 host sshd[1235]: Failed password for bob from 10.0.0.6 port 54322 ssh2\n";
         let entries = parse_auth_log(body);
-        assert!(entries.iter().any(|e| e.event_type == "SSHLogin" && e.username.as_deref() == Some("alice")));
+        assert!(entries
+            .iter()
+            .any(|e| e.event_type == "SSHLogin" && e.username.as_deref() == Some("alice")));
         assert!(entries.iter().any(|e| e.event_type == "SSHFail"));
     }
 
@@ -310,6 +419,20 @@ mod tests {
         )
         .expect("w");
         let arts = scan(&path);
-        assert!(arts.iter().any(|a| a.data.get("event_type").map(|s| s.as_str()) == Some("InvalidUser")));
+        assert!(arts
+            .iter()
+            .any(|a| a.data.get("event_type").map(|s| s.as_str()) == Some("InvalidUser")));
+    }
+
+    #[test]
+    fn brute_force_source_ip_detected_after_six_failures() {
+        let mut body = String::new();
+        for i in 0..6 {
+            body.push_str(&format!(
+                "Jun  1 12:0{i}:00 host sshd[99]: Failed password for root from 192.0.2.5 port 22 ssh2\n"
+            ));
+        }
+        let entries = parse_auth_log(&body);
+        assert_eq!(brute_force_source_ips(&entries), vec!["192.0.2.5"]);
     }
 }

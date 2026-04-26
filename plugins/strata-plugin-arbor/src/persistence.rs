@@ -21,8 +21,20 @@ pub struct PersistenceArtifact {
     pub schedule: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CrontabEntry {
+    pub schedule: String,
+    pub user: Option<String>,
+    pub command: String,
+    pub is_suspicious: bool,
+    pub suspicious_reason: Option<String>,
+}
+
 pub fn classify_path(path: &Path) -> Option<&'static str> {
-    let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let lower = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
     let name = lower.rsplit('/').next().unwrap_or("");
     let in_systemd_dir = lower.contains("/etc/systemd/system/")
         || lower.contains("/lib/systemd/system/")
@@ -80,6 +92,37 @@ pub fn parse_cron_line(line: &str) -> Option<(String, String)> {
     Some((schedule, command))
 }
 
+pub fn parse_crontab_line(line: &str) -> Option<CrontabEntry> {
+    let t = line.trim();
+    if t.is_empty() || t.starts_with('#') {
+        return None;
+    }
+    let parts: Vec<&str> = t.split_whitespace().collect();
+    if parts.len() < 6 {
+        return None;
+    }
+    let schedule = parts[..5].join(" ");
+    let known_user = parts
+        .get(5)
+        .copied()
+        .filter(|u| !u.contains('/') && !u.contains('=') && !u.contains('-'));
+    let command_start = if known_user.is_some() { 6 } else { 5 };
+    let command = parts.get(command_start..)?.join(" ");
+    if command.is_empty() {
+        return None;
+    }
+    let reason = classify_cron_command(&command)
+        .or_else(|| classify_cron_schedule(&schedule))
+        .map(ToString::to_string);
+    Some(CrontabEntry {
+        schedule,
+        user: known_user.map(ToString::to_string),
+        command,
+        is_suspicious: reason.is_some(),
+        suspicious_reason: reason,
+    })
+}
+
 fn classify_suspicious_exec(cmd: &str) -> Option<&'static str> {
     let lc = cmd.to_ascii_lowercase();
     if lc.contains("/tmp/") || lc.contains("/dev/shm/") || lc.contains("/var/tmp/") {
@@ -105,7 +148,8 @@ fn classify_cron_command(cmd: &str) -> Option<&'static str> {
     if lc.contains("curl ") || lc.contains("wget ") {
         return Some("fetch command in cron");
     }
-    if lc.contains(" | bash") || lc.contains(" | sh") || lc.contains("|bash") || lc.contains("|sh") {
+    if lc.contains(" | bash") || lc.contains(" | sh") || lc.contains("|bash") || lc.contains("|sh")
+    {
         return Some("pipe-to-shell in cron");
     }
     if lc.contains("/dev/tcp/") || lc.contains("nc -e") {
@@ -144,9 +188,7 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
                 "title",
                 &format!(
                     "Systemd unit: {} {}",
-                    path.file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or(""),
+                    path.file_name().and_then(|n| n.to_str()).unwrap_or(""),
                     reason.unwrap_or("")
                 ),
             );
@@ -169,8 +211,14 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
         "Cron" => {
             for (idx, line) in body.lines().enumerate() {
                 if let Some((schedule, command)) = parse_cron_line(line) {
-                    let reason = classify_cron_command(&command)
-                        .or_else(|| classify_cron_schedule(&schedule));
+                    let parsed = parse_crontab_line(line);
+                    let reason = parsed
+                        .as_ref()
+                        .and_then(|p| p.suspicious_reason.as_deref())
+                        .or_else(|| {
+                            classify_cron_command(&command)
+                                .or_else(|| classify_cron_schedule(&schedule))
+                        });
                     let mut a = Artifact::new("Linux Persistence", &path.to_string_lossy());
                     a.add_field(
                         "title",
@@ -185,6 +233,9 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
                     a.add_field("mechanism", "Cron");
                     a.add_field("schedule", &schedule);
                     a.add_field("exec_command", &command);
+                    if let Some(user) = parsed.as_ref().and_then(|p| p.user.as_ref()) {
+                        a.add_field("user", user);
+                    }
                     if let Some(r) = reason {
                         a.add_field("suspicious_reason", r);
                         a.add_field("suspicious", "true");
@@ -199,7 +250,9 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
             }
         }
         "LdPreload" => {
-            let is_empty = body.lines().all(|l| l.trim().is_empty() || l.trim().starts_with('#'));
+            let is_empty = body
+                .lines()
+                .all(|l| l.trim().is_empty() || l.trim().starts_with('#'));
             if !is_empty {
                 let mut a = Artifact::new("Linux Persistence", &path.to_string_lossy());
                 a.add_field(
@@ -222,9 +275,9 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
             a.add_field("title", "/etc/rc.local present");
             a.add_field("file_type", "Linux Persistence");
             a.add_field("mechanism", "RcLocal");
-            let flagged = body
-                .lines()
-                .any(|l| classify_cron_command(l).is_some() || classify_suspicious_exec(l).is_some());
+            let flagged = body.lines().any(|l| {
+                classify_cron_command(l).is_some() || classify_suspicious_exec(l).is_some()
+            });
             if flagged {
                 a.add_field("suspicious_reason", "rc.local contains suspicious command");
                 a.add_field("suspicious", "true");
@@ -293,13 +346,11 @@ mod tests {
         let sys = dir.path().join("etc").join("systemd").join("system");
         std::fs::create_dir_all(&sys).expect("mkdirs");
         let path = sys.join("x.service");
-        std::fs::write(
-            &path,
-            b"[Service]\nExecStart=/tmp/evil\n",
-        )
-        .expect("w");
+        std::fs::write(&path, b"[Service]\nExecStart=/tmp/evil\n").expect("w");
         let out = scan(&path);
-        assert!(out.iter().any(|a| a.data.get("suspicious").map(|s| s.as_str()) == Some("true")));
+        assert!(out
+            .iter()
+            .any(|a| a.data.get("suspicious").map(|s| s.as_str()) == Some("true")));
     }
 
     #[test]
@@ -335,5 +386,13 @@ mod tests {
             classify_path(Path::new("/etc/ld.so.preload")),
             Some("LdPreload")
         );
+    }
+
+    #[test]
+    fn arbor_crontab_flags_tmp_execution() {
+        let entry = "* * * * * root /tmp/evil.sh";
+        let parsed = parse_crontab_line(entry).expect("parsed crontab");
+        assert!(parsed.is_suspicious);
+        assert_eq!(parsed.user.as_deref(), Some("root"));
     }
 }

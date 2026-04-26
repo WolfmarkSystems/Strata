@@ -21,6 +21,7 @@ pub mod android_antiforensic;
 pub mod antiforensic;
 pub mod crypto_wallets;
 pub mod encrypted_artifacts;
+pub mod financial;
 pub mod hidden_partition;
 pub mod photo_vault;
 pub mod veracrypt;
@@ -102,6 +103,7 @@ impl StrataPlugin for VaultPlugin {
             out.extend(crate::hidden_partition::scan(&path));
             out.extend(crate::encrypted_artifacts::scan(&path));
             out.extend(crate::crypto_wallets::scan(&path));
+            out.extend(crate::financial::scan(&path));
         }
         Ok(out)
     }
@@ -114,7 +116,11 @@ impl StrataPlugin for VaultPlugin {
         let mut suspicious = 0usize;
         for a in &artifacts {
             let file_type = a.data.get("file_type").cloned().unwrap_or_default();
-            let is_sus = a.data.get("suspicious").map(|v| v == "true").unwrap_or(false);
+            let is_sus = a
+                .data
+                .get("suspicious")
+                .map(|v| v == "true")
+                .unwrap_or(false);
             if is_sus {
                 suspicious += 1;
             }
@@ -202,7 +208,7 @@ mod tests {
     #[test]
     fn vault_run_dispatches_to_every_emitter_submodule() {
         // Post-v16 Sprint 4 Vault audit confirmation. Anti-
-        // regression tripwire for the six emitter submodules
+        // regression tripwire for the seven emitter submodules
         // already wired into run(). If a future refactor
         // accidentally drops one of these calls, the silent
         // reduction would look like "plugin quietly produces
@@ -211,8 +217,8 @@ mod tests {
         //
         // Each submodule's `scan(path)` is verified directly
         // at the module-level below; this tripwire pins the
-        // wiring of all six into Vault's run() so a future
-        // maintainer who deletes one of the six `out.extend(...)`
+        // wiring of all seven into Vault's run() so a future
+        // maintainer who deletes one of the seven `out.extend(...)`
         // lines fails this test loudly rather than shipping a
         // silently-reduced plugin.
         //
@@ -228,6 +234,7 @@ mod tests {
             "crate::hidden_partition::scan",
             "crate::encrypted_artifacts::scan",
             "crate::crypto_wallets::scan",
+            "crate::financial::scan",
         ] {
             assert!(
                 src.contains(emitter),
