@@ -41,6 +41,7 @@
 //! Zero `unwrap`, zero `unsafe`, zero `println` per CLAUDE.md.
 
 use chrono::{DateTime, Utc};
+use std::collections::HashMap;
 
 /// FILETIME → Unix epoch difference, in 100-nanosecond intervals.
 const FILETIME_EPOCH_DIFF_100NS: i64 = 116_444_736_000_000_000;
@@ -151,6 +152,19 @@ pub struct UsbHistory {
     pub devices: Vec<UsbDeviceEntry>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct UsbDeviceRecord {
+    pub vendor: String,
+    pub product: String,
+    pub serial: String,
+    pub vid_pid: String,
+    pub drive_letter: Option<String>,
+    pub volume_guid: Option<String>,
+    pub first_insert: Option<i64>,
+    pub last_insert: Option<i64>,
+    pub user_connected: Vec<String>,
+}
+
 /// Heuristic: serial numbers that look spoofed / Microsoft-generated.
 /// Forensically-actionable categories:
 /// * all zeros (or all repeating the same hex digit)
@@ -175,6 +189,87 @@ pub fn is_generic_serial(serial: &str) -> bool {
         }
     }
     false
+}
+
+pub fn serial_from_usbstor_key(key: &str) -> String {
+    key.rsplit('\\')
+        .next()
+        .unwrap_or(key)
+        .split('&')
+        .next()
+        .unwrap_or("")
+        .to_string()
+}
+
+pub fn parse_setupapi_first_insert(log: &str, serial: &str) -> Option<i64> {
+    let mut in_device = false;
+    for line in log.lines() {
+        if line.contains("Device Install")
+            && line.to_ascii_uppercase().contains("USBSTOR")
+            && line.contains(serial)
+        {
+            in_device = true;
+            continue;
+        }
+        if in_device && line.contains("Section start") {
+            let ts = line.split("Section start").nth(1)?.trim();
+            return parse_setupapi_timestamp(ts);
+        }
+    }
+    None
+}
+
+pub fn parse_setupapi_timestamp(raw: &str) -> Option<i64> {
+    let trimmed = raw.trim();
+    let naive = chrono::NaiveDateTime::parse_from_str(trimmed, "%Y/%m/%d %H:%M:%S%.f").ok()?;
+    Some(naive.and_utc().timestamp())
+}
+
+pub fn deduplicate_records(records: Vec<UsbDeviceRecord>) -> Vec<UsbDeviceRecord> {
+    let mut by_serial: HashMap<String, UsbDeviceRecord> = HashMap::new();
+    for record in records {
+        let key = record.serial.clone();
+        by_serial
+            .entry(key)
+            .and_modify(|existing| merge_record(existing, &record))
+            .or_insert(record);
+    }
+    let mut out: Vec<_> = by_serial.into_values().collect();
+    out.sort_by(|a, b| a.serial.cmp(&b.serial));
+    out
+}
+
+fn merge_record(existing: &mut UsbDeviceRecord, next: &UsbDeviceRecord) {
+    if existing.vendor.is_empty() {
+        existing.vendor = next.vendor.clone();
+    }
+    if existing.product.is_empty() {
+        existing.product = next.product.clone();
+    }
+    if existing.vid_pid.is_empty() {
+        existing.vid_pid = next.vid_pid.clone();
+    }
+    if existing.drive_letter.is_none() {
+        existing.drive_letter = next.drive_letter.clone();
+    }
+    if existing.volume_guid.is_none() {
+        existing.volume_guid = next.volume_guid.clone();
+    }
+    existing.first_insert = match (existing.first_insert, next.first_insert) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (None, b) => b,
+        (a, None) => a,
+    };
+    existing.last_insert = match (existing.last_insert, next.last_insert) {
+        (Some(a), Some(b)) => Some(a.max(b)),
+        (None, b) => b,
+        (a, None) => a,
+    };
+    for user in &next.user_connected {
+        if !existing.user_connected.contains(user) {
+            existing.user_connected.push(user.clone());
+        }
+    }
 }
 
 /// Parse the USB chain from the SYSTEM hive root. Walks both
@@ -218,7 +313,9 @@ fn collect_devices(
         let Some(level2_iter) = class_node.subkeys() else {
             continue;
         };
-        let Ok(level2_iter) = level2_iter else { continue };
+        let Ok(level2_iter) = level2_iter else {
+            continue;
+        };
         for instance_res in level2_iter {
             if out.len() >= MAX_DEVICES {
                 return;
@@ -233,13 +330,11 @@ fn collect_devices(
 
             let friendly_name =
                 read_value_string(&instance_node, "FriendlyName").unwrap_or_default();
-            let device_desc =
-                read_value_string(&instance_node, "DeviceDesc").unwrap_or_default();
-            let drive_letter = read_value_string(&instance_node, "DriveLetter")
-                .filter(|s| !s.is_empty());
+            let device_desc = read_value_string(&instance_node, "DeviceDesc").unwrap_or_default();
+            let drive_letter =
+                read_value_string(&instance_node, "DriveLetter").filter(|s| !s.is_empty());
 
-            let (first_install, last_connect, last_removal) =
-                read_property_times(&instance_node);
+            let (first_install, last_connect, last_removal) = read_property_times(&instance_node);
             let last_write_time = last_connect.or(first_install);
 
             out.push(UsbDeviceEntry {
@@ -261,7 +356,11 @@ fn collect_devices(
 }
 
 /// `(first_install, last_connect, last_removal)` triple in chrono UTC.
-type PropertyTimes = (Option<DateTime<Utc>>, Option<DateTime<Utc>>, Option<DateTime<Utc>>);
+type PropertyTimes = (
+    Option<DateTime<Utc>>,
+    Option<DateTime<Utc>>,
+    Option<DateTime<Utc>>,
+);
 
 /// Pull the three Properties timestamps for one USB device instance.
 /// Properties live under either
@@ -448,7 +547,10 @@ mod tests {
 
     #[test]
     fn extract_between_returns_text_or_empty() {
-        assert_eq!(extract_between("Ven_SanDisk&Prod_X", "Ven_", "&"), "SanDisk");
+        assert_eq!(
+            extract_between("Ven_SanDisk&Prod_X", "Ven_", "&"),
+            "SanDisk"
+        );
         assert_eq!(extract_between("nothing", "Ven_", "&"), "");
         // No terminator → take rest.
         assert_eq!(extract_between("Ven_SanDisk", "Ven_", "&"), "SanDisk");
@@ -490,5 +592,48 @@ mod tests {
     fn usb_history_default_is_empty() {
         let h = UsbHistory::default();
         assert!(h.devices.is_empty());
+    }
+
+    #[test]
+    fn usb_serial_extracted_from_usbstor_key() {
+        assert_eq!(
+            serial_from_usbstor_key(
+                r"USBSTOR\Disk&Ven_SanDisk&Prod_Cruzer&Rev_1.00\4C530001120508111375&0"
+            ),
+            "4C530001120508111375"
+        );
+    }
+
+    #[test]
+    fn setupapi_timestamp_parsed_correctly() {
+        assert_eq!(
+            parse_setupapi_timestamp("2025/11/04 17:19:08.123"),
+            Some(1_762_276_748)
+        );
+    }
+
+    #[test]
+    fn usb_records_deduplicated_by_serial() {
+        let records = vec![
+            UsbDeviceRecord {
+                vendor: "SanDisk".to_string(),
+                product: "Cruzer".to_string(),
+                serial: "ABC123".to_string(),
+                first_insert: Some(100),
+                ..UsbDeviceRecord::default()
+            },
+            UsbDeviceRecord {
+                serial: "ABC123".to_string(),
+                drive_letter: Some("E:".to_string()),
+                user_connected: vec!["alice".to_string()],
+                last_insert: Some(200),
+                ..UsbDeviceRecord::default()
+            },
+        ];
+        let deduped = deduplicate_records(records);
+        assert_eq!(deduped.len(), 1);
+        assert_eq!(deduped[0].serial, "ABC123");
+        assert_eq!(deduped[0].drive_letter.as_deref(), Some("E:"));
+        assert_eq!(deduped[0].user_connected, vec!["alice"]);
     }
 }

@@ -57,6 +57,25 @@ const MAX_EVTX_FILES: usize = 1024;
 /// on a 90-day-rolled domain controller).
 const MAX_EVTX_BYTES: u64 = 512 * 1024 * 1024;
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvtxAnalytic {
+    pub event_id: u32,
+    pub channel: String,
+    pub timestamp: i64,
+    pub computer: String,
+    pub subject_username: Option<String>,
+    pub subject_domain: Option<String>,
+    pub logon_type: Option<u32>,
+    pub target_username: Option<String>,
+    pub source_ip: Option<String>,
+    pub process_name: Option<String>,
+    pub command_line: Option<String>,
+    pub significance: String,
+    pub mitre_technique: String,
+    pub forensic_value: ForensicValue,
+    pub advisory_notice: Option<String>,
+}
+
 pub struct SentinelPlugin {
     name: String,
     version: String,
@@ -136,6 +155,9 @@ impl SentinelPlugin {
                 .get("event_id")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0) as u32;
+            if !is_high_value_event_id(event_id) {
+                continue;
+            }
             let channel = pa
                 .json_data
                 .get("channel")
@@ -148,18 +170,29 @@ impl SentinelPlugin {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let mitre = pa
+            let mitre = mitre_for_event(event_id)
+                .unwrap_or_else(|| {
+                    pa.json_data
+                        .get("mitre")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("T1078")
+                })
+                .to_string();
+            let _prior_mitre = pa
                 .json_data
                 .get("mitre")
                 .and_then(|v| v.as_str())
                 .unwrap_or("T1078")
                 .to_string();
-            let forensic_value = pa
-                .json_data
-                .get("forensic_value")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Medium")
-                .to_string();
+            let forensic_value = if matches!(event_id, 1102 | 104) {
+                "Critical".to_string()
+            } else {
+                pa.json_data
+                    .get("forensic_value")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Medium")
+                    .to_string()
+            };
 
             a.add_field("title", &pa.description);
             a.add_field("file_type", "Windows Event");
@@ -198,13 +231,135 @@ impl SentinelPlugin {
 
             // 1102 is anti-forensic by definition — flag it suspicious so
             // Sigma's downstream rules treat it as critical.
-            if event_id == 1102 {
+            if matches!(event_id, 1102 | 104) {
                 a.add_field("suspicious", "true");
+                a.add_field(
+                    "advisory_notice",
+                    "Event log was cleared. Prior events may be unrecoverable. This is a common anti-forensics technique.",
+                );
             }
             out.push(a);
         }
         out
     }
+}
+
+fn is_high_value_event_id(event_id: u32) -> bool {
+    matches!(
+        event_id,
+        4624 | 4625
+            | 4634
+            | 4647
+            | 4648
+            | 4672
+            | 4720
+            | 4726
+            | 4732
+            | 6005
+            | 6006
+            | 7045
+            | 7040
+            | 1102
+            | 104
+            | 4103
+            | 4104
+            | 4688
+    )
+}
+
+fn mitre_for_event(event_id: u32) -> Option<&'static str> {
+    match event_id {
+        4624 | 4648 | 4672 => Some("T1078"),
+        4625 => Some("T1110"),
+        4720 | 4726 | 4732 => Some("T1098"),
+        7045 => Some("T1543.003"),
+        7040 => Some("T1562.001"),
+        4103 | 4104 | 4688 => Some("T1059.001"),
+        1102 | 104 => Some("T1070.001"),
+        6005 | 6006 | 4634 | 4647 => Some("T1082"),
+        _ => None,
+    }
+}
+
+fn significance_for_event(event_id: u32, logon_type: Option<u32>) -> String {
+    match event_id {
+        4624 => format!(
+            "Successful logon{}",
+            logon_type
+                .map(|t| format!(" ({})", logon_type_label(t)))
+                .unwrap_or_default()
+        ),
+        4625 => "Failed logon attempt".to_string(),
+        4648 => "Explicit credential logon; possible pass-the-hash pivot".to_string(),
+        4672 => "Special privileges assigned to new logon".to_string(),
+        7045 => "New service installed; persistence indicator".to_string(),
+        4104 => "PowerShell script block content captured".to_string(),
+        1102 | 104 => "Event log cleared; anti-forensics indicator".to_string(),
+        _ => "High-value Windows event".to_string(),
+    }
+}
+
+fn logon_type_label(logon_type: u32) -> &'static str {
+    match logon_type {
+        2 => "interactive",
+        3 => "network",
+        10 => "remote",
+        _ => "other",
+    }
+}
+
+pub fn analytic_from_event_xml(channel: &str, xml: &str) -> Option<EvtxAnalytic> {
+    let event_id = extract_xml_text(xml, "EventID")?.parse::<u32>().ok()?;
+    if !is_high_value_event_id(event_id) {
+        return None;
+    }
+    let logon_type = extract_named_data(xml, "LogonType").and_then(|v| v.parse::<u32>().ok());
+    let forensic_value = if matches!(event_id, 1102 | 104) {
+        ForensicValue::Critical
+    } else {
+        ForensicValue::High
+    };
+    Some(EvtxAnalytic {
+        event_id,
+        channel: channel.to_string(),
+        timestamp: 0,
+        computer: extract_xml_text(xml, "Computer").unwrap_or_default(),
+        subject_username: extract_named_data(xml, "SubjectUserName"),
+        subject_domain: extract_named_data(xml, "SubjectDomainName"),
+        logon_type,
+        target_username: extract_named_data(xml, "TargetUserName"),
+        source_ip: extract_named_data(xml, "IpAddress"),
+        process_name: extract_named_data(xml, "ProcessName"),
+        command_line: extract_named_data(xml, "CommandLine")
+            .or_else(|| extract_named_data(xml, "ScriptBlockText")),
+        significance: significance_for_event(event_id, logon_type),
+        mitre_technique: mitre_for_event(event_id).unwrap_or("T1078").to_string(),
+        forensic_value,
+        advisory_notice: if matches!(event_id, 1102 | 104) {
+            Some("Event log was cleared. Prior events may be unrecoverable. This is a common anti-forensics technique.".to_string())
+        } else {
+            None
+        },
+    })
+}
+
+fn extract_xml_text(xml: &str, tag: &str) -> Option<String> {
+    let open = format!("<{tag}>");
+    let close = format!("</{tag}>");
+    let start = xml.find(&open)? + open.len();
+    let end = xml[start..].find(&close)? + start;
+    Some(xml[start..end].trim().to_string())
+}
+
+fn extract_named_data(xml: &str, name: &str) -> Option<String> {
+    let marker = format!("Name='{name}'>");
+    let marker_alt = format!("Name=\"{name}\">");
+    let start = xml
+        .find(&marker)
+        .map(|idx| idx + marker.len())
+        .or_else(|| xml.find(&marker_alt).map(|idx| idx + marker_alt.len()))?;
+    let end = xml[start..].find("</Data>")? + start;
+    Some(xml[start..end].trim().to_string()).filter(|v| !v.is_empty())
 }
 
 /// Serialize a `serde_json::Value` to a compact JSON string. Returns
@@ -314,7 +469,11 @@ impl StrataPlugin for SentinelPlugin {
                 category,
                 subcategory,
                 timestamp: a.timestamp.map(|t| t as i64),
-                title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
+                title: a
+                    .data
+                    .get("title")
+                    .cloned()
+                    .unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
                 source_path: a.source.clone(),
                 forensic_value: fv,
@@ -551,6 +710,52 @@ mod tests {
         assert_eq!(evtx_subcategory_for(bad.as_ref()), "Windows Event");
         let empty = Some(String::new());
         assert_eq!(evtx_subcategory_for(empty.as_ref()), "Windows Event");
+    }
+
+    #[test]
+    fn evtx_4624_logon_type_extracted() {
+        let xml = r#"
+<Event><System><EventID>4624</EventID><Computer>host</Computer></System>
+<EventData><Data Name='TargetUserName'>alice</Data><Data Name='LogonType'>10</Data><Data Name='IpAddress'>10.0.0.5</Data></EventData></Event>
+"#;
+        let analytic = analytic_from_event_xml("Security", xml).expect("analytic");
+        assert_eq!(analytic.event_id, 4624);
+        assert_eq!(analytic.logon_type, Some(10));
+        assert!(analytic.significance.contains("remote"));
+        assert_eq!(analytic.source_ip.as_deref(), Some("10.0.0.5"));
+    }
+
+    #[test]
+    fn evtx_1102_audit_cleared_is_critical() {
+        let xml = r#"
+<Event><System><EventID>1102</EventID><Computer>host</Computer></System><EventData></EventData></Event>
+"#;
+        let analytic = analytic_from_event_xml("Security", xml).expect("analytic");
+        assert_eq!(analytic.forensic_value, ForensicValue::Critical);
+        assert!(analytic
+            .advisory_notice
+            .as_deref()
+            .unwrap_or("")
+            .contains("anti-forensics"));
+    }
+
+    #[test]
+    fn evtx_analytics_filter_to_high_value_ids_only() {
+        let mut produced = 0;
+        for id in 1..=110 {
+            let xml = format!(
+                "<Event><System><EventID>{id}</EventID><Computer>host</Computer></System></Event>"
+            );
+            if analytic_from_event_xml("Security", &xml).is_some() {
+                produced += 1;
+            }
+        }
+        assert_eq!(produced, 1, "only event 104 in 1..=110 is high-value");
+        assert!(analytic_from_event_xml(
+            "System",
+            "<Event><System><EventID>7045</EventID><Computer>host</Computer></System></Event>",
+        )
+        .is_some());
     }
 
     #[test]

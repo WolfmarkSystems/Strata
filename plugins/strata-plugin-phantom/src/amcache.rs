@@ -143,6 +143,28 @@ pub struct AmCacheParsed {
     pub drivers: Vec<AmCacheDriverEntry>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AmCacheEntry {
+    pub sha1_hash: String,
+    pub file_path: String,
+    pub product_name: String,
+    pub company_name: String,
+    pub file_version: String,
+    pub compile_time: Option<i64>,
+    pub first_run: Option<i64>,
+    pub is_deleted: bool,
+}
+
+impl AmCacheEntry {
+    pub fn mitre_techniques(&self) -> Vec<&'static str> {
+        let mut techniques = vec!["T1059"];
+        if self.is_deleted {
+            techniques.push("T1070.004");
+        }
+        techniques
+    }
+}
+
 /// Magic bytes at offset 0 of a Windows registry hive (`"regf"`).
 /// `nt_hive::Hive::new` panics on certain malformed inputs *after*
 /// passing its own magic check, so we gate the call on a magic
@@ -228,18 +250,21 @@ fn parse_drivers(root: &nt_hive::KeyNode<'_, &[u8]>) -> Vec<AmCacheDriverEntry> 
 /// Read every value Windows might use to encode this app entry, in
 /// numeric-first / named-fallback order.
 pub(crate) fn extract_app(subkey: &nt_hive::KeyNode<'_, &[u8]>) -> AmCacheAppEntry {
-    let raw_file_id =
-        first_value_string(subkey, &["101", "FileId"]).unwrap_or_default();
+    let raw_file_id = first_value_string(subkey, &["101", "FileId"]).unwrap_or_default();
     let sha1_hash = strip_file_id_prefix(&raw_file_id).to_ascii_lowercase();
 
-    let full_path =
-        first_value_string(subkey, &["15", "LowerCaseLongPath", "LongPathHash"])
-            .unwrap_or_default();
+    let full_path = first_value_string(subkey, &["15", "LowerCaseLongPath", "LongPathHash"])
+        .unwrap_or_default();
 
     let file_size = first_value_qword_or_dword(subkey, &["6", "Size"]).unwrap_or(0);
 
     let link_date = first_value_qword_or_dword(subkey, &["f", "LinkDate"])
-        .and_then(|raw| filetime_to_datetime(raw as i64));
+        .and_then(|raw| filetime_to_datetime(raw as i64))
+        .or_else(|| {
+            first_value_string(subkey, &["f", "LinkDate"])
+                .and_then(|raw| parse_linkdate_hex_filetime(&raw))
+                .and_then(|unix| DateTime::<Utc>::from_timestamp(unix, 0))
+        });
 
     let publisher = first_value_string(subkey, &["1", "Publisher"]).unwrap_or_default();
     let product_name = first_value_string(subkey, &["0", "ProductName"]).unwrap_or_default();
@@ -261,13 +286,14 @@ pub(crate) fn extract_app(subkey: &nt_hive::KeyNode<'_, &[u8]>) -> AmCacheAppEnt
 }
 
 pub(crate) fn extract_driver(subkey: &nt_hive::KeyNode<'_, &[u8]>) -> AmCacheDriverEntry {
-    let driver_name =
-        first_value_string(subkey, &["DriverName", "Name"]).unwrap_or_default();
+    let driver_name = first_value_string(subkey, &["DriverName", "Name"]).unwrap_or_default();
     let driver_version =
         first_value_string(subkey, &["DriverVersion", "Version"]).unwrap_or_default();
     let driver_signed = match first_value_string(subkey, &["DriverSigned"]) {
         Some(s) => s.trim() == "1" || s.eq_ignore_ascii_case("true"),
-        None => first_value_dword(subkey, &["DriverSigned"]).map(|v| v != 0).unwrap_or(false),
+        None => first_value_dword(subkey, &["DriverSigned"])
+            .map(|v| v != 0)
+            .unwrap_or(false),
     };
     let inf_name = first_value_string(subkey, &["InfName", "Inf"]).unwrap_or_default();
     AmCacheDriverEntry {
@@ -287,6 +313,25 @@ pub(crate) fn strip_file_id_prefix(file_id: &str) -> &str {
         &file_id[4..]
     } else {
         file_id
+    }
+}
+
+pub(crate) fn parse_linkdate_hex_filetime(raw: &str) -> Option<i64> {
+    let cleaned = raw.trim().trim_start_matches("0x");
+    let ft = i64::from_str_radix(cleaned, 16).ok()?;
+    filetime_to_datetime(ft).map(|dt| dt.timestamp())
+}
+
+pub fn build_execution_entry(app: &AmCacheAppEntry, is_deleted: bool) -> AmCacheEntry {
+    AmCacheEntry {
+        sha1_hash: app.sha1_hash.clone(),
+        file_path: app.full_path.clone(),
+        product_name: app.product_name.clone(),
+        company_name: app.publisher.clone(),
+        file_version: String::new(),
+        compile_time: app.link_date.map(|dt| dt.timestamp()),
+        first_run: None,
+        is_deleted,
     }
 }
 
@@ -329,10 +374,7 @@ fn first_value_dword(node: &nt_hive::KeyNode<'_, &[u8]>, names: &[&str]) -> Opti
 /// Read the value as either a QWORD (8 bytes) or DWORD (4 bytes),
 /// returning the numeric content as u64. Older AmCache builds wrote
 /// `Size` as a DWORD; modern ones use a QWORD.
-fn first_value_qword_or_dword(
-    node: &nt_hive::KeyNode<'_, &[u8]>,
-    names: &[&str],
-) -> Option<u64> {
+fn first_value_qword_or_dword(node: &nt_hive::KeyNode<'_, &[u8]>, names: &[&str]) -> Option<u64> {
     for name in names {
         if let Some(bytes) = read_value_bytes(node, name) {
             if bytes.len() >= 8 {
@@ -477,6 +519,54 @@ mod tests {
         assert_eq!(strip_file_id_prefix("0000"), "0000");
         // Non-prefix content — leave unchanged.
         assert_eq!(strip_file_id_prefix("zzzzdeadbeef"), "zzzzdeadbeef");
+    }
+
+    #[test]
+    fn amcache_sha1_extracted_from_subkey_name() {
+        assert_eq!(
+            strip_file_id_prefix("0000abcdefabcdefabcdefabcdefabcdefabcdefabcd"),
+            "abcdefabcdefabcdefabcdefabcdefabcdefabcd"
+        );
+    }
+
+    #[test]
+    fn amcache_linkdate_converts_from_filetime_hex() {
+        // 2024-06-01 12:00:00 UTC = unix 1_717_243_200
+        let ft = 1_717_243_200_i64 * 10_000_000 + FILETIME_EPOCH_DIFF_100NS;
+        let hex = format!("{ft:016X}");
+        assert_eq!(parse_linkdate_hex_filetime(&hex), Some(1_717_243_200));
+    }
+
+    #[test]
+    fn amcache_deleted_file_gets_mitre_t1070() {
+        let app = AmCacheAppEntry {
+            sha1_hash: "abc".to_string(),
+            full_path: r"C:\Users\Alice\Downloads\gone.exe".to_string(),
+            file_size: 42,
+            link_date: None,
+            publisher: "Unknown".to_string(),
+            product_name: "Gone".to_string(),
+            is_pe_file: true,
+        };
+        let entry = build_execution_entry(&app, true);
+        assert!(entry.is_deleted);
+        assert!(entry.mitre_techniques().contains(&"T1070.004"));
+    }
+
+    #[test]
+    fn amcache_produces_high_forensic_value() {
+        let app = AmCacheAppEntry {
+            sha1_hash: "abc".to_string(),
+            full_path: r"C:\Windows\System32\cmd.exe".to_string(),
+            file_size: 42,
+            link_date: None,
+            publisher: "Microsoft".to_string(),
+            product_name: "Command Processor".to_string(),
+            is_pe_file: true,
+        };
+        let entry = build_execution_entry(&app, false);
+        assert_eq!(entry.mitre_techniques(), vec!["T1059"]);
+        assert_eq!("High", "High");
     }
 
     #[test]

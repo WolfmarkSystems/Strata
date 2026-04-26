@@ -23,8 +23,6 @@ use std::path::{Path, PathBuf};
 pub mod amcache;
 pub mod cloud_cli;
 pub mod lnk;
-pub mod ring_doorbell;
-pub mod smart_locks;
 pub mod memory_carving;
 pub mod memory_structures;
 pub mod mru;
@@ -33,8 +31,10 @@ pub mod outlook;
 pub mod powershell;
 pub mod prefetch;
 pub mod regtxlog;
+pub mod ring_doorbell;
 pub mod services;
 pub mod shimcache;
+pub mod smart_locks;
 pub mod thumbcache;
 pub mod usb;
 pub mod windows_recall;
@@ -106,7 +106,10 @@ impl StrataPlugin for PhantomPlugin {
         if ctx.vfs.is_some() {
             const HIVE_MAX: usize = 512 * 1024 * 1024;
             for (hive_name, parse_fn) in [
-                ("SYSTEM", parsers::system::parse as fn(&Path, &[u8]) -> Vec<Artifact>),
+                (
+                    "SYSTEM",
+                    parsers::system::parse as fn(&Path, &[u8]) -> Vec<Artifact>,
+                ),
                 ("SOFTWARE", parsers::software::parse),
                 ("SAM", parsers::sam::parse),
                 ("SECURITY", parsers::security::parse),
@@ -169,6 +172,7 @@ impl StrataPlugin for PhantomPlugin {
                     let parsed = crate::amcache::parse(&data);
                     for app in &parsed.apps {
                         let suspicious = crate::amcache::is_suspicious_app(app);
+                        let deleted = !windows_path_exists(root, &app.full_path);
                         let mut a = Artifact::new("AmCache Application", &path_str);
                         a.timestamp = app.link_date.map(|dt| dt.timestamp() as u64);
                         let title_label = if !app.product_name.is_empty() {
@@ -209,6 +213,10 @@ impl StrataPlugin for PhantomPlugin {
                         // T1204 — User Execution
                         a.add_field("mitre", "T1059");
                         a.add_field("mitre_secondary", "T1204");
+                        if deleted {
+                            a.add_field("is_deleted", "true");
+                            a.add_field("mitre_deletion", "T1070.004");
+                        }
                         a.add_field("forensic_value", "High");
                         if suspicious {
                             a.add_field("suspicious", "true");
@@ -224,9 +232,21 @@ impl StrataPlugin for PhantomPlugin {
                             &format!(
                                 "Driver: {} | Version: {} | Signed: {} | INF: {}",
                                 drv.driver_name,
-                                if drv.driver_version.is_empty() { "<unknown>" } else { &drv.driver_version },
-                                if drv.driver_signed { "yes" } else { "NO (unsigned)" },
-                                if drv.inf_name.is_empty() { "<unknown>" } else { &drv.inf_name },
+                                if drv.driver_version.is_empty() {
+                                    "<unknown>"
+                                } else {
+                                    &drv.driver_version
+                                },
+                                if drv.driver_signed {
+                                    "yes"
+                                } else {
+                                    "NO (unsigned)"
+                                },
+                                if drv.inf_name.is_empty() {
+                                    "<unknown>"
+                                } else {
+                                    &drv.inf_name
+                                },
                             ),
                         );
                         a.add_field("file_type", "AmCache Driver");
@@ -241,10 +261,7 @@ impl StrataPlugin for PhantomPlugin {
                         // T1014 — Rootkit (unsigned drivers are the
                         // canonical BYOVD fingerprint).
                         a.add_field("mitre", "T1014");
-                        a.add_field(
-                            "forensic_value",
-                            if unsigned { "High" } else { "Medium" },
-                        );
+                        a.add_field("forensic_value", if unsigned { "High" } else { "Medium" });
                         if unsigned {
                             a.add_field("suspicious", "true");
                         }
@@ -330,10 +347,8 @@ impl StrataPlugin for PhantomPlugin {
                 if let Some(data) = read_hive_gated(&path) {
                     let path_str = path.to_string_lossy().to_string();
                     if let Some(header) = crate::regtxlog::parse(&data) {
-                        let uncommitted =
-                            crate::regtxlog::has_uncommitted_changes(&header);
-                        let mut a =
-                            Artifact::new("Registry Transaction Log", &path_str);
+                        let uncommitted = crate::regtxlog::has_uncommitted_changes(&header);
+                        let mut a = Artifact::new("Registry Transaction Log", &path_str);
                         let hive_label = if header.hive_name.is_empty() {
                             "<unknown hive>".to_string()
                         } else {
@@ -343,9 +358,7 @@ impl StrataPlugin for PhantomPlugin {
                             "title",
                             &format!(
                                 "Registry tx log: {} (LSN {}, {} dirty pages)",
-                                hive_label,
-                                header.log_sequence_number,
-                                header.dirty_page_count
+                                hive_label, header.log_sequence_number, header.dirty_page_count
                             ),
                         );
                         a.add_field(
@@ -368,10 +381,7 @@ impl StrataPlugin for PhantomPlugin {
                             "log_sequence_number",
                             &header.log_sequence_number.to_string(),
                         );
-                        a.add_field(
-                            "dirty_page_count",
-                            &header.dirty_page_count.to_string(),
-                        );
+                        a.add_field("dirty_page_count", &header.dirty_page_count.to_string());
                         a.add_field(
                             "has_uncommitted_changes",
                             if uncommitted { "true" } else { "false" },
@@ -462,10 +472,7 @@ impl StrataPlugin for PhantomPlugin {
                 if let Some(entry) = crate::prefetch::parse_file(&path) {
                     let path_str = path.to_string_lossy().to_string();
                     let mut a = Artifact::new("Prefetch Execution", &path_str);
-                    a.timestamp = entry
-                        .last_run_times
-                        .first()
-                        .map(|dt| dt.timestamp() as u64);
+                    a.timestamp = entry.last_run_times.first().map(|dt| dt.timestamp() as u64);
                     let last_run_str = entry
                         .last_run_times
                         .first()
@@ -506,10 +513,7 @@ impl StrataPlugin for PhantomPlugin {
                     a.add_field("last_run_time", &last_run_str);
                     a.add_field("all_run_times", &all_run_times);
                     a.add_field("volume_paths", &volume_paths_joined);
-                    a.add_field(
-                        "loaded_file_count",
-                        &entry.loaded_files.len().to_string(),
-                    );
+                    a.add_field("loaded_file_count", &entry.loaded_files.len().to_string());
                     a.add_field("format_version", &entry.format_version.to_string());
                     // T1059 — Command and Scripting Interpreter (proves
                     //         shell-launched executable execution).
@@ -625,18 +629,13 @@ impl StrataPlugin for PhantomPlugin {
                     if let Ok(bytes) = std::fs::read(&path) {
                         let guid = crate::notepad_tabstate::tab_guid_from_path(&path);
                         let tab = crate::notepad_tabstate::parse(&bytes, &guid);
-                        let mut a = Artifact::new(
-                            "Notepad TabState",
-                            &path.to_string_lossy(),
-                        );
+                        let mut a = Artifact::new("Notepad TabState", &path.to_string_lossy());
                         a.add_field(
                             "title",
                             &format!(
                                 "Notepad tab {}: {} ({} bytes unsaved)",
                                 tab.tab_guid,
-                                tab.file_path
-                                    .as_deref()
-                                    .unwrap_or("(no file path)"),
+                                tab.file_path.as_deref().unwrap_or("(no file path)"),
                                 tab.content_length,
                             ),
                         );
@@ -673,19 +672,14 @@ impl StrataPlugin for PhantomPlugin {
                         if let Ok(bytes) = std::fs::read(&path) {
                             if crate::outlook::has_pst_magic(&bytes) {
                                 for hit in crate::outlook::carve(&bytes) {
-                                    let mut a = Artifact::new(
-                                        "Outlook Carved",
-                                        &path.to_string_lossy(),
-                                    );
+                                    let mut a =
+                                        Artifact::new("Outlook Carved", &path.to_string_lossy());
                                     a.add_field(
                                         "title",
                                         &format!(
                                             "Outlook {}: {}",
                                             hit.kind,
-                                            hit.value
-                                                .chars()
-                                                .take(120)
-                                                .collect::<String>(),
+                                            hit.value.chars().take(120).collect::<String>(),
                                         ),
                                     );
                                     a.add_field(
@@ -714,10 +708,8 @@ impl StrataPlugin for PhantomPlugin {
                             let is_sus = e.suspicious_pattern.is_some()
                                 || e.has_encoded_content
                                 || e.has_download_cradle;
-                            let mut a = Artifact::new(
-                                "PowerShell History",
-                                &path.to_string_lossy(),
-                            );
+                            let mut a =
+                                Artifact::new("PowerShell History", &path.to_string_lossy());
                             a.add_field(
                                 "title",
                                 &format!(
@@ -757,23 +749,17 @@ impl StrataPlugin for PhantomPlugin {
                 if let Some(tag) = crate::cloud_cli::classify(&path) {
                     if let Ok(body) = std::fs::read_to_string(&path) {
                         let hits: Vec<crate::cloud_cli::CloudCliArtifact> = match tag {
-                            "aws_credentials" => {
-                                crate::cloud_cli::parse_aws_credentials(&body)
-                            }
+                            "aws_credentials" => crate::cloud_cli::parse_aws_credentials(&body),
                             "aws_config" => crate::cloud_cli::parse_aws_config(&body),
                             "azure_access_tokens" => {
                                 crate::cloud_cli::parse_azure_access_tokens(&body)
                             }
-                            "terraform_state" => {
-                                crate::cloud_cli::parse_terraform_state(&body)
-                            }
+                            "terraform_state" => crate::cloud_cli::parse_terraform_state(&body),
                             _ => Vec::new(),
                         };
                         for hit in &hits {
-                            let mut a = Artifact::new(
-                                "Cloud CLI Credential",
-                                &path.to_string_lossy(),
-                            );
+                            let mut a =
+                                Artifact::new("Cloud CLI Credential", &path.to_string_lossy());
                             a.add_field(
                                 "title",
                                 &format!(
@@ -846,10 +832,8 @@ impl StrataPlugin for PhantomPlugin {
                             }
                         }
                         crate::windows_recall::RecallOutcome::Locked => {
-                            let mut a = Artifact::new(
-                                "Windows Recall Locked",
-                                &path.to_string_lossy(),
-                            );
+                            let mut a =
+                                Artifact::new("Windows Recall Locked", &path.to_string_lossy());
                             a.add_field(
                                 "title",
                                 "Windows Recall DB present but locked / unreadable",
@@ -877,10 +861,7 @@ impl StrataPlugin for PhantomPlugin {
                     let path_str = path.to_string_lossy().to_string();
                     for e in &entries {
                         let mut a = Artifact::new("Search Index Entry", &path_str);
-                        a.add_field(
-                            "title",
-                            &format!("Indexed path: {}", e.item_path),
-                        );
+                        a.add_field("title", &format!("Indexed path: {}", e.item_path));
                         a.add_field(
                             "detail",
                             &format!(
@@ -932,10 +913,8 @@ impl StrataPlugin for PhantomPlugin {
                     ArtifactCategory::NetworkArtifacts
                 }
                 "AmCache Shortcut" => ArtifactCategory::UserActivity,
-                "Shellbag" | "MuiCache" | "UserChoice" | "MRU Entry"
-                | "Thumbcache Entry" | "Search Index Entry" | "LNK File" => {
-                    ArtifactCategory::UserActivity
-                }
+                "Shellbag" | "MuiCache" | "UserChoice" | "MRU Entry" | "Thumbcache Entry"
+                | "Search Index Entry" | "LNK File" => ArtifactCategory::UserActivity,
                 // v1.5.0 RegRipper-coverage parsers
                 "Print Monitor"
                 | "LSA Security Package"
@@ -960,10 +939,11 @@ impl StrataPlugin for PhantomPlugin {
                     ArtifactCategory::NetworkArtifacts
                 }
                 // Post-v16 Sprint 5 — seven new submodule categories.
-                "Memory String" | "Memory Process" | "Memory Network Connection"
-                | "Windows Recall Capture" | "Windows Recall Locked" => {
-                    ArtifactCategory::SystemActivity
-                }
+                "Memory String"
+                | "Memory Process"
+                | "Memory Network Connection"
+                | "Windows Recall Capture"
+                | "Windows Recall Locked" => ArtifactCategory::SystemActivity,
                 "Notepad TabState" => ArtifactCategory::UserActivity,
                 "Outlook Carved" => ArtifactCategory::UserActivity,
                 "PowerShell History" => ArtifactCategory::ExecutionHistory,
@@ -971,7 +951,11 @@ impl StrataPlugin for PhantomPlugin {
                 _ => ArtifactCategory::SystemActivity,
             };
 
-            let suspicious = a.data.get("suspicious").map(|s| s == "true").unwrap_or(false);
+            let suspicious = a
+                .data
+                .get("suspicious")
+                .map(|s| s == "true")
+                .unwrap_or(false);
             if suspicious {
                 suspicious_count += 1;
             }
@@ -995,7 +979,11 @@ impl StrataPlugin for PhantomPlugin {
                 category,
                 subcategory: file_type,
                 timestamp: a.timestamp.map(|t| t as i64),
-                title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
+                title: a
+                    .data
+                    .get("title")
+                    .cloned()
+                    .unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
                 source_path: a.source.clone(),
                 forensic_value,
@@ -1019,9 +1007,7 @@ impl StrataPlugin for PhantomPlugin {
                 categories_populated: categories.into_iter().collect(),
                 headline: format!(
                     "Parsed {} registry artifacts across {} hive types ({} suspicious)",
-                    total,
-                    6,
-                    suspicious_count
+                    total, 6, suspicious_count
                 ),
             },
             warnings: vec![],
@@ -1116,16 +1102,17 @@ mod parsers {
             ) {
                 let mut a = Artifact::new("Computer Identity", &path_str);
                 a.add_field("title", &format!("Time Zone: {}", tz));
-                a.add_field("detail", "SYSTEM\\ControlSet001\\Control\\TimeZoneInformation");
+                a.add_field(
+                    "detail",
+                    "SYSTEM\\ControlSet001\\Control\\TimeZoneInformation",
+                );
                 a.add_field("file_type", "Computer Identity");
                 a.add_field("forensic_value", "Medium");
                 out.push(a);
             }
 
             // ── Last shutdown time ──────────────────────────────────────
-            if let Some(node) =
-                walk(&root, &["ControlSet001", "Control", "Windows"])
-            {
+            if let Some(node) = walk(&root, &["ControlSet001", "Control", "Windows"]) {
                 if let Some(bytes) = read_value_bytes(&node, "ShutdownTime") {
                     if bytes.len() >= 8 {
                         let ft = i64::from_le_bytes(bytes[0..8].try_into().unwrap_or([0; 8]));
@@ -1154,7 +1141,12 @@ mod parsers {
             // rather than "unknown time".
             if let Some(node) = walk(
                 &root,
-                &["ControlSet001", "Control", "Session Manager", "AppCompatCache"],
+                &[
+                    "ControlSet001",
+                    "Control",
+                    "Session Manager",
+                    "AppCompatCache",
+                ],
             ) {
                 if let Some(bytes) = read_value_bytes(&node, "AppCompatCache") {
                     let entries = crate::shimcache::parse(&bytes, &path_str);
@@ -1162,10 +1154,7 @@ mod parsers {
                         let suspicious = is_suspicious_exe_path(&entry.executable_path);
                         let mut a = Artifact::new("ShimCache", &path_str);
                         a.timestamp = Some(entry.last_modified.timestamp() as u64);
-                        a.add_field(
-                            "title",
-                            &format!("ShimCache: {}", entry.executable_path),
-                        );
+                        a.add_field("title", &format!("ShimCache: {}", entry.executable_path));
                         a.add_field(
                             "detail",
                             &format!(
@@ -1185,10 +1174,7 @@ mod parsers {
                         //         correlation.
                         a.add_field("mitre", "T1059");
                         a.add_field("mitre_secondary", "T1112");
-                        a.add_field(
-                            "forensic_value",
-                            if suspicious { "High" } else { "Medium" },
-                        );
+                        a.add_field("forensic_value", if suspicious { "High" } else { "Medium" });
                         a.add_field("executable_path", &entry.executable_path);
                         a.add_field("entry_index", &entry.entry_index.to_string());
                         a.add_field("shimmed", if entry.shimmed { "true" } else { "false" });
@@ -1209,9 +1195,7 @@ mod parsers {
             for dev in &usb_history.devices {
                 let suspicious = crate::usb::is_generic_serial(&dev.serial_number);
                 let mut a = Artifact::new("USB Device", &path_str);
-                a.timestamp = dev
-                    .last_write_time
-                    .map(|dt| dt.timestamp() as u64);
+                a.timestamp = dev.last_write_time.map(|dt| dt.timestamp() as u64);
                 let title_label = if !dev.friendly_name.is_empty() {
                     dev.friendly_name.clone()
                 } else if !dev.product.is_empty() {
@@ -1239,8 +1223,16 @@ mod parsers {
                          First install: {} | Last connected: {} | Last removal: {}",
                         dev.bus.as_str(),
                         dev.device_type,
-                        if dev.vendor.is_empty() { "<unknown>" } else { &dev.vendor },
-                        if dev.product.is_empty() { "<unknown>" } else { &dev.product },
+                        if dev.vendor.is_empty() {
+                            "<unknown>"
+                        } else {
+                            &dev.vendor
+                        },
+                        if dev.product.is_empty() {
+                            "<unknown>"
+                        } else {
+                            &dev.product
+                        },
                         dev.serial_number,
                         install_str,
                         connect_str,
@@ -1261,7 +1253,8 @@ mod parsers {
                 a.add_field("first_install_time", &install_str);
                 a.add_field("last_connect_time", &connect_str);
                 a.add_field("last_removal_time", &removal_str);
-                a.add_field("mitre", "T1052.001");
+                a.add_field("mitre", "T1091");
+                a.add_field("mitre_secondary", "T1052.001");
                 a.add_field("forensic_value", "High");
                 if suspicious {
                     a.add_field("suspicious", "true");
@@ -1278,7 +1271,9 @@ mod parsers {
                 if let Some(Ok(svc_iter)) = svcs.subkeys() {
                     for svc_res in svc_iter {
                         let Ok(svc_node) = svc_res else { continue };
-                        let Ok(svc_name) = svc_node.name() else { continue };
+                        let Ok(svc_name) = svc_node.name() else {
+                            continue;
+                        };
                         let svc_name = svc_name.to_string_lossy();
 
                         let image_path =
@@ -1333,7 +1328,13 @@ mod parsers {
             // ── Network adapter history ──────────────────────────────────
             if let Some(ifs) = walk(
                 &root,
-                &["ControlSet001", "Services", "Tcpip", "Parameters", "Interfaces"],
+                &[
+                    "ControlSet001",
+                    "Services",
+                    "Tcpip",
+                    "Parameters",
+                    "Interfaces",
+                ],
             ) {
                 if let Some(Ok(if_iter)) = ifs.subkeys() {
                     for if_res in if_iter {
@@ -1341,10 +1342,8 @@ mod parsers {
                         let Ok(guid) = if_node.name() else { continue };
                         let guid = guid.to_string_lossy();
                         let ip = read_value_string(&if_node, "DhcpIPAddress").unwrap_or_default();
-                        let server =
-                            read_value_string(&if_node, "DhcpServer").unwrap_or_default();
-                        let domain =
-                            read_value_string(&if_node, "DhcpDomain").unwrap_or_default();
+                        let server = read_value_string(&if_node, "DhcpServer").unwrap_or_default();
+                        let domain = read_value_string(&if_node, "DhcpDomain").unwrap_or_default();
                         if ip.is_empty() && server.is_empty() {
                             continue;
                         }
@@ -1609,7 +1608,11 @@ mod parsers {
             if provider_csv.is_empty() {
                 return;
             }
-            for provider in provider_csv.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+            for provider in provider_csv
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+            {
                 let suspicious = !is_known_network_provider(provider);
                 let mut a = Artifact::new("Network Provider", path_str);
                 a.add_field("title", &format!("Network Provider: {}", provider));
@@ -1636,12 +1639,7 @@ mod parsers {
         ) {
             let Some(node) = walk(
                 root,
-                &[
-                    "ControlSet001",
-                    "Control",
-                    "SecurityProviders",
-                    "WDigest",
-                ],
+                &["ControlSet001", "Control", "SecurityProviders", "WDigest"],
             ) else {
                 return;
             };
@@ -1763,10 +1761,7 @@ mod parsers {
                     "RDP disabled (fDenyTSConnections = 1)"
                 },
             );
-            a.add_field(
-                "detail",
-                "SYSTEM\\...\\Terminal Server\\fDenyTSConnections",
-            );
+            a.add_field("detail", "SYSTEM\\...\\Terminal Server\\fDenyTSConnections");
             a.add_field("file_type", "RDP State");
             a.add_field("mitre", "T1021.001");
             if enabled {
@@ -1839,8 +1834,10 @@ mod parsers {
                 let enabled = read_value_dword(&k, "Enabled")
                     .map(|d| d != 0)
                     .unwrap_or(false);
-                let suspicious = !matches!(name.to_ascii_lowercase().as_str(), "ntpclient" | "ntpserver" | "vmictimeprovider")
-                    && enabled;
+                let suspicious = !matches!(
+                    name.to_ascii_lowercase().as_str(),
+                    "ntpclient" | "ntpserver" | "vmictimeprovider"
+                ) && enabled;
                 let mut a = Artifact::new("Time Provider", path_str);
                 a.add_field("title", &format!("Time Provider: {}", name));
                 a.add_field(
@@ -1945,30 +1942,6 @@ mod parsers {
                 || l.contains("\\appdata\\local\\temp")
                 || l.contains("\\users\\public\\")
                 || l.contains("\\windows\\debug\\")
-        }
-
-        // Used only by the v1.0 inline USB block, now superseded by
-        // `crate::usb`. Kept for any future hive-property timestamp work.
-        #[allow(dead_code)]
-        fn read_filetime_in_properties(
-            props: &nt_hive::KeyNode<'_, &[u8]>,
-            sub_name: &str,
-        ) -> Option<i64> {
-            // Walk one level deep looking for a value with the matching name
-            // that contains an 8-byte FILETIME.
-            let target = props.subkey(sub_name).and_then(|r| r.ok())?;
-            let values = target.values()?.ok()?;
-            for vr in values {
-                let v = vr.ok()?;
-                let bytes = v.data().ok()?.into_vec().ok()?;
-                if bytes.len() >= 8 {
-                    let ft = i64::from_le_bytes(bytes[0..8].try_into().unwrap_or([0; 8]));
-                    if let Some(u) = filetime_to_unix(ft) {
-                        return Some(u);
-                    }
-                }
-            }
-            None
         }
 
         #[cfg(test)]
@@ -2379,10 +2352,8 @@ mod parsers {
             path_str: &str,
             out: &mut Vec<Artifact>,
         ) {
-            let Some(node) = walk(
-                root,
-                &["Microsoft", "Active Setup", "Installed Components"],
-            ) else {
+            let Some(node) = walk(root, &["Microsoft", "Active Setup", "Installed Components"])
+            else {
                 return;
             };
             let Some(Ok(iter)) = node.subkeys() else {
@@ -2405,7 +2376,10 @@ mod parsers {
                     "title",
                     &format!(
                         "Active Setup: {}",
-                        k.name().ok().map(|n| n.to_string_lossy()).unwrap_or_default()
+                        k.name()
+                            .ok()
+                            .map(|n| n.to_string_lossy())
+                            .unwrap_or_default()
                     ),
                 );
                 a.add_field(
@@ -2564,10 +2538,7 @@ mod parsers {
                     let lower = name.to_lowercase();
                     let suspicious = is_suspicious_defender_exclusion(&lower);
                     let mut a = Artifact::new("Defender Exclusion", path_str);
-                    a.add_field(
-                        "title",
-                        &format!("Defender Exclusion ({}): {}", kind, name),
-                    );
+                    a.add_field("title", &format!("Defender Exclusion ({}): {}", kind, name));
                     a.add_field(
                         "detail",
                         "Microsoft\\Windows Defender\\Exclusions — defender will \
@@ -2593,13 +2564,7 @@ mod parsers {
         ) {
             let Some(node) = walk(
                 root,
-                &[
-                    "Microsoft",
-                    "Windows",
-                    "CurrentVersion",
-                    "WSMAN",
-                    "Client",
-                ],
+                &["Microsoft", "Windows", "CurrentVersion", "WSMAN", "Client"],
             ) else {
                 return;
             };
@@ -2653,7 +2618,9 @@ mod parsers {
                 assert!(is_default_userinit("C:\\Windows\\System32\\userinit.exe,"));
                 assert!(is_default_userinit("c:\\windows\\system32\\userinit.exe"));
                 assert!(is_default_userinit("Userinit.exe,"));
-                assert!(!is_default_userinit("C:\\Windows\\System32\\userinit.exe,evil.exe"));
+                assert!(!is_default_userinit(
+                    "C:\\Windows\\System32\\userinit.exe,evil.exe"
+                ));
                 assert!(!is_default_userinit("powershell.exe -enc xxx"));
             }
 
@@ -2668,12 +2635,16 @@ mod parsers {
 
             #[test]
             fn is_suspicious_defender_exclusion_flags_drop_locations_and_wildcards() {
-                assert!(is_suspicious_defender_exclusion("c:\\users\\victim\\downloads\\"));
+                assert!(is_suspicious_defender_exclusion(
+                    "c:\\users\\victim\\downloads\\"
+                ));
                 assert!(is_suspicious_defender_exclusion("c:\\temp\\stage\\"));
                 assert!(is_suspicious_defender_exclusion("c:\\users\\public\\"));
                 assert!(is_suspicious_defender_exclusion("*"));
                 assert!(is_suspicious_defender_exclusion("c:\\some\\folder\\*"));
-                assert!(!is_suspicious_defender_exclusion("c:\\program files\\corp_av\\"));
+                assert!(!is_suspicious_defender_exclusion(
+                    "c:\\program files\\corp_av\\"
+                ));
                 assert!(!is_suspicious_defender_exclusion(".vmdk"));
             }
 
@@ -2795,17 +2766,6 @@ mod parsers {
 
         use super::*;
 
-        /// FileId values in `InventoryApplicationFile` are recorded as
-        /// `"0000" + sha1_hex`. Strip the four leading zeros and return
-        /// the underlying hash. Anything shorter is returned unchanged.
-        pub fn strip_file_id_prefix(file_id: &str) -> String {
-            if file_id.len() > 4 && file_id.starts_with("0000") {
-                file_id[4..].to_string()
-            } else {
-                file_id.to_string()
-            }
-        }
-
         /// Apply Strata's "this AmCache file is interesting" heuristic.
         /// Empty publisher OR path inside Temp/AppData/Downloads/Public is
         /// the trigger — these are the high-signal locations malware drops
@@ -2856,14 +2816,10 @@ mod parsers {
                 return out;
             };
 
-            // InventoryApplicationFile + InventoryDriverBinary now owned
-            // by `crate::amcache` (typed structs, run from the top-level
-            // `*.hve` dispatch in `lib.rs::run`). Avoid duplicate
-            // artifacts by skipping them here.
-            // parse_inventory_application_file(&root, &path_str, &mut out);
+            // InventoryApplicationFile + InventoryDriverBinary are owned
+            // by `crate::amcache`; avoid duplicate artifacts here.
             parse_inventory_application(&root, &path_str, &mut out);
             parse_inventory_application_shortcut(&root, &path_str, &mut out);
-            // parse_inventory_driver_binary(&root, &path_str, &mut out);
             parse_inventory_driver_package(&root, &path_str, &mut out);
             parse_inventory_device_container(&root, &path_str, &mut out);
             parse_inventory_device_pnp(&root, &path_str, &mut out);
@@ -2871,67 +2827,6 @@ mod parsers {
             parse_legacy_programs(&root, &path_str, &mut out);
 
             out
-        }
-
-        // ── Modern: Root\InventoryApplicationFile ───────────────────────
-        // Superseded by `crate::amcache` (typed parser). Kept compiled
-        // so we can A/B against the typed parser if the new module
-        // regresses, but no longer wired into the dispatch.
-        #[allow(dead_code)]
-        fn parse_inventory_application_file(
-            root: &nt_hive::KeyNode<'_, &[u8]>,
-            path_str: &str,
-            out: &mut Vec<Artifact>,
-        ) {
-            let Some(node) = walk(root, &["Root", "InventoryApplicationFile"]) else {
-                return;
-            };
-            let Some(Ok(iter)) = node.subkeys() else {
-                return;
-            };
-            let mut count = 0;
-            for k_res in iter {
-                let Ok(k) = k_res else { continue };
-                let name = read_value_string(&k, "Name").unwrap_or_default();
-                let path_l = read_value_string(&k, "LowerCaseLongPath").unwrap_or_default();
-                let sha1 =
-                    strip_file_id_prefix(&read_value_string(&k, "FileId").unwrap_or_default());
-                let publisher = read_value_string(&k, "Publisher").unwrap_or_default();
-                let product = read_value_string(&k, "ProductName").unwrap_or_default();
-                let version = read_value_string(&k, "ProductVersion").unwrap_or_default();
-                if name.is_empty() && path_l.is_empty() {
-                    continue;
-                }
-                let suspicious = is_suspicious_amcache_path(&path_l.to_lowercase(), &publisher);
-                let mut a = Artifact::new("AmCache File", path_str);
-                a.add_field(
-                    "title",
-                    &format!(
-                        "AmCache: {}",
-                        if !name.is_empty() { &name } else { &path_l }
-                    ),
-                );
-                a.add_field(
-                    "detail",
-                    &format!(
-                        "Path: {} | SHA1: {} | Publisher: {} | Product: {} {}",
-                        path_l, sha1, publisher, product, version
-                    ),
-                );
-                a.add_field("file_type", "AmCache File");
-                a.add_field("mitre", "T1059");
-                if suspicious {
-                    a.add_field("forensic_value", "High");
-                    a.add_field("suspicious", "true");
-                } else {
-                    a.add_field("forensic_value", "Medium");
-                }
-                out.push(a);
-                count += 1;
-                if count > 5000 {
-                    break;
-                }
-            }
         }
 
         // ── Modern: Root\InventoryApplication ──────────────────────────
@@ -2968,14 +2863,22 @@ mod parsers {
                 let mut a = Artifact::new("AmCache Installed App", path_str);
                 a.add_field(
                     "title",
-                    &format!("Installed: {}", if !name.is_empty() { &name } else { &root_dir }),
+                    &format!(
+                        "Installed: {}",
+                        if !name.is_empty() { &name } else { &root_dir }
+                    ),
                 );
                 a.add_field(
                     "detail",
                     &format!(
                         "Publisher: {} | Version: {} | InstallDate: {} | Type: {} | Source: {} \
                          | RootDir: {} | RegKey: {}",
-                        publisher, version, install_date, install_type, install_source, root_dir,
+                        publisher,
+                        version,
+                        install_date,
+                        install_type,
+                        install_source,
+                        root_dir,
                         registry_key
                     ),
                 );
@@ -3035,57 +2938,6 @@ mod parsers {
             }
         }
 
-        // ── Modern: Root\InventoryDriverBinary ─────────────────────────
-        // Superseded by `crate::amcache` (typed parser). Same A/B
-        // rationale as `parse_inventory_application_file` above.
-        #[allow(dead_code)]
-        fn parse_inventory_driver_binary(
-            root: &nt_hive::KeyNode<'_, &[u8]>,
-            path_str: &str,
-            out: &mut Vec<Artifact>,
-        ) {
-            let Some(node) = walk(root, &["Root", "InventoryDriverBinary"]) else {
-                return;
-            };
-            let Some(Ok(iter)) = node.subkeys() else {
-                return;
-            };
-            let mut count = 0;
-            for k_res in iter {
-                let Ok(k) = k_res else { continue };
-                let driver = read_value_string(&k, "DriverName").unwrap_or_default();
-                let company = read_value_string(&k, "DriverCompany").unwrap_or_default();
-                let signed = read_value_string(&k, "DriverSigned").unwrap_or_default();
-                if driver.is_empty() {
-                    continue;
-                }
-                let unsigned = signed != "1";
-                let mut a = Artifact::new("AmCache Driver", path_str);
-                a.add_field("title", &format!("Driver: {}", driver));
-                a.add_field(
-                    "detail",
-                    &format!(
-                        "Company: {} | Signed: {}",
-                        company,
-                        if unsigned { "NO (unsigned)" } else { "yes" }
-                    ),
-                );
-                a.add_field("file_type", "AmCache Driver");
-                a.add_field("mitre", "T1014");
-                if unsigned {
-                    a.add_field("forensic_value", "High");
-                    a.add_field("suspicious", "true");
-                } else {
-                    a.add_field("forensic_value", "Medium");
-                }
-                out.push(a);
-                count += 1;
-                if count > 1000 {
-                    break;
-                }
-            }
-        }
-
         // ── Modern: Root\InventoryDriverPackage ────────────────────────
         fn parse_inventory_driver_package(
             root: &nt_hive::KeyNode<'_, &[u8]>,
@@ -3101,7 +2953,11 @@ mod parsers {
             let mut count = 0;
             for k_res in iter {
                 let Ok(k) = k_res else { continue };
-                let pkg_id = k.name().ok().map(|n| n.to_string_lossy()).unwrap_or_default();
+                let pkg_id = k
+                    .name()
+                    .ok()
+                    .map(|n| n.to_string_lossy())
+                    .unwrap_or_default();
                 let provider = read_value_string(&k, "ProviderName").unwrap_or_default();
                 let inf = read_value_string(&k, "Inf").unwrap_or_default();
                 let class = read_value_string(&k, "Class").unwrap_or_default();
@@ -3154,10 +3010,7 @@ mod parsers {
                     continue;
                 }
                 let mut a = Artifact::new("AmCache Device Container", path_str);
-                a.add_field(
-                    "title",
-                    &format!("Device: {} ({})", model, manufacturer),
-                );
+                a.add_field("title", &format!("Device: {} ({})", model, manufacturer));
                 a.add_field(
                     "detail",
                     &format!(
@@ -3201,10 +3054,7 @@ mod parsers {
                 }
                 let class_label = device_class_label(&class_guid);
                 let mut a = Artifact::new("AmCache PnP Device", path_str);
-                a.add_field(
-                    "title",
-                    &format!("PnP: {} ({})", description, class_label),
-                );
+                a.add_field("title", &format!("PnP: {} ({})", description, class_label));
                 a.add_field(
                     "detail",
                     &format!(
@@ -3261,7 +3111,10 @@ mod parsers {
                     a.add_field("title", &format!("Legacy AmCache: {}", path_l));
                     a.add_field(
                         "detail",
-                        &format!("Vol: {} | SHA1: {} | Publisher: {}", vol_guid, sha1, publisher),
+                        &format!(
+                            "Vol: {} | SHA1: {} | Publisher: {}",
+                            vol_guid, sha1, publisher
+                        ),
                     );
                     a.add_field("file_type", "AmCache Legacy File");
                     a.add_field("mitre", "T1059");
@@ -3333,24 +3186,13 @@ mod parsers {
             use super::*;
 
             #[test]
-            fn strip_file_id_prefix_strips_leading_zeros_only_when_present() {
-                assert_eq!(
-                    strip_file_id_prefix("0000abcdef1234567890abcdef1234567890abcd"),
-                    "abcdef1234567890abcdef1234567890abcd"
-                );
-                // Already raw — leave alone.
-                assert_eq!(strip_file_id_prefix("abcd"), "abcd");
-                // Empty — leave alone.
-                assert_eq!(strip_file_id_prefix(""), "");
-                // No leading zeros — leave alone.
-                assert_eq!(strip_file_id_prefix("1111deadbeef"), "1111deadbeef");
-            }
-
-            #[test]
             fn is_suspicious_amcache_path_flags_drop_locations() {
                 // Empty publisher — always suspicious.
                 assert!(is_suspicious_amcache_path("c:\\windows\\notepad.exe", ""));
-                assert!(is_suspicious_amcache_path("c:\\windows\\notepad.exe", "   "));
+                assert!(is_suspicious_amcache_path(
+                    "c:\\windows\\notepad.exe",
+                    "   "
+                ));
                 // Temp / AppData / Downloads / Public / ProgramData
                 assert!(is_suspicious_amcache_path(
                     "c:\\users\\victim\\appdata\\local\\temp\\foo.exe",
@@ -3422,12 +3264,26 @@ mod parsers {
             // MuiCache — display names of executed apps
             if let Some(node) = walk(
                 &root,
-                &["Local Settings", "Software", "Microsoft", "Windows", "ShellNoRoam", "MUICache"],
+                &[
+                    "Local Settings",
+                    "Software",
+                    "Microsoft",
+                    "Windows",
+                    "ShellNoRoam",
+                    "MUICache",
+                ],
             )
             .or_else(|| {
                 walk(
                     &root,
-                    &["Local Settings", "Software", "Microsoft", "Windows", "Shell", "MuiCache"],
+                    &[
+                        "Local Settings",
+                        "Software",
+                        "Microsoft",
+                        "Windows",
+                        "Shell",
+                        "MuiCache",
+                    ],
                 )
             }) {
                 if let Some(Ok(values)) = node.values() {
@@ -3482,11 +3338,10 @@ mod parsers {
                         if progid.is_empty() {
                             continue;
                         }
-                        let suspicious = matches!(
-                            ext.as_ref(),
-                            ".exe" | ".bat" | ".ps1" | ".js" | ".vbs"
-                        ) && !progid.to_lowercase().contains("exefile")
-                            && !progid.to_lowercase().contains("batfile");
+                        let suspicious =
+                            matches!(ext.as_ref(), ".exe" | ".bat" | ".ps1" | ".js" | ".vbs")
+                                && !progid.to_lowercase().contains("exefile")
+                                && !progid.to_lowercase().contains("batfile");
                         let mut a = Artifact::new("UserChoice", &path_str);
                         a.add_field("title", &format!("Default handler: {} → {}", ext, progid));
                         a.add_field("detail", "USRCLASS\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts");
@@ -3555,7 +3410,9 @@ mod parsers {
                 if let Some(Ok(cap_iter)) = consent.subkeys() {
                     for cap_res in cap_iter {
                         let Ok(cap_node) = cap_res else { continue };
-                        let Ok(cap_name) = cap_node.name() else { continue };
+                        let Ok(cap_name) = cap_node.name() else {
+                            continue;
+                        };
                         let cap_name = cap_name.to_string_lossy();
                         let mitre = match cap_name.as_ref() {
                             "microphone" => "T1123",
@@ -3578,7 +3435,9 @@ mod parsers {
                             if let Some(Ok(app_iter)) = parent.subkeys() {
                                 for app_res in app_iter {
                                     let Ok(app_node) = app_res else { continue };
-                                    let Ok(app_path_raw) = app_node.name() else { continue };
+                                    let Ok(app_path_raw) = app_node.name() else {
+                                        continue;
+                                    };
                                     let app_path = app_path_raw.to_string_lossy();
                                     if app_path == "NonPackaged" {
                                         continue;
@@ -3612,7 +3471,10 @@ mod parsers {
                                     }
                                     a.add_field(
                                         "title",
-                                        &format!("Capability: {} \u{2192} {}", cap_name, display_path),
+                                        &format!(
+                                            "Capability: {} \u{2192} {}",
+                                            cap_name, display_path
+                                        ),
                                     );
                                     a.add_field(
                                         "detail",
@@ -3635,9 +3497,7 @@ mod parsers {
             }
 
             // ── 7-Zip FolderHistory ────────────────────────────────────
-            if let Some(node) =
-                walk(&root, &["Software", "7-Zip", "FM"])
-            {
+            if let Some(node) = walk(&root, &["Software", "7-Zip", "FM"]) {
                 if let Some(bytes) = read_value_bytes(&node, "FolderHistory") {
                     // Multi-string (REG_MULTI_SZ) — null-separated UTF-16LE.
                     let entries = decode_multi_sz(&bytes);
@@ -3713,10 +3573,7 @@ mod parsers {
                             continue;
                         }
                         let mut a = Artifact::new("Archive Tool", &path_str);
-                        a.add_field(
-                            "title",
-                            &format!("WinRAR extracted to: {}", extract_path),
-                        );
+                        a.add_field("title", &format!("WinRAR extracted to: {}", extract_path));
                         a.add_field("detail", "WinRAR DialogEditHistory ExtrPath");
                         a.add_field("file_type", "Archive Tool");
                         a.add_field("mitre", "T1560.001");
@@ -3761,9 +3618,9 @@ mod parsers {
                             let app = vname.to_string_lossy();
                             let count = match v.data() {
                                 Ok(d) => match d.into_vec() {
-                                    Ok(b) if b.len() >= 4 => u32::from_le_bytes(
-                                        b[0..4].try_into().unwrap_or([0; 4]),
-                                    ),
+                                    Ok(b) if b.len() >= 4 => {
+                                        u32::from_le_bytes(b[0..4].try_into().unwrap_or([0; 4]))
+                                    }
                                     _ => 0,
                                 },
                                 Err(_) => 0,
@@ -3793,9 +3650,9 @@ mod parsers {
                             let app = vname.to_string_lossy();
                             let count = match v.data() {
                                 Ok(d) => match d.into_vec() {
-                                    Ok(b) if b.len() >= 4 => u32::from_le_bytes(
-                                        b[0..4].try_into().unwrap_or([0; 4]),
-                                    ),
+                                    Ok(b) if b.len() >= 4 => {
+                                        u32::from_le_bytes(b[0..4].try_into().unwrap_or([0; 4]))
+                                    }
                                     _ => 0,
                                 },
                                 Err(_) => 0,
@@ -4054,6 +3911,19 @@ fn read_hive_gated(path: &Path) -> Option<Vec<u8>> {
         return None;
     }
     std::fs::read(path).ok()
+}
+
+fn windows_path_exists(root: &Path, windows_path: &str) -> bool {
+    let normalized = windows_path.replace('\\', "/");
+    let relative = normalized
+        .split_once(':')
+        .map(|(_, rest)| rest)
+        .unwrap_or(normalized.as_str())
+        .trim_start_matches('/');
+    if relative.is_empty() {
+        return false;
+    }
+    root.join(relative).exists()
 }
 
 fn walk_dir(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
