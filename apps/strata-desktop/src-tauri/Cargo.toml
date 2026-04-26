@@ -22,7 +22,7 @@ tauri-build = { version = "2.5.6", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.10.3", features = ["devtools", "protocol-asset"] }
+tauri = { version = "2.10.3", features = ["protocol-asset", "devtools"] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tokio = { version = "1", features = ["full"] }
@@ -32,6 +32,7 @@ sysinfo = "0.33"
 # JSON-friendly surface. The adapter lives inside the main strata workspace
 # so it can resolve `{ workspace = true }` deps; we reach it via path.
 strata-engine-adapter = { path = "../../../crates/strata-engine-adapter" }
+augur-plugin-sdk = { path = "../../../../augur/crates/augur-plugin-sdk", optional = true }
 
 # Day 13 — case management
 chrono = { version = "0.4", features = ["serde"] }
@@ -44,3 +45,7 @@ machine-uid = "0.5"
 
 # v1.2.0 — SQLite viewer feature
 rusqlite = { version = "0.30", features = ["bundled"] }
+
+[features]
+default = []
+augur = ["dep:augur-plugin-sdk", "strata-engine-adapter/augur"]

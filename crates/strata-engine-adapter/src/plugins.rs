@@ -14,6 +14,7 @@ use strata_plugin_sdk::{
     Artifact, ArtifactCategory, ArtifactRecord, ForensicValue, PluginContext, PluginError,
     PluginOutput, PluginSummary, StrataPlugin,
 };
+use strata_plugin_sdk::{PluginCapability, PluginResult, PluginTier, PluginType};
 
 use once_cell::sync::Lazy;
 
@@ -286,6 +287,7 @@ fn build_plugins() -> Vec<Box<dyn StrataPlugin>> {
         Box::new(strata_plugin_arbor::ArborPlugin::new()),
         // Note: strata-plugin-index is a cdylib-only dynamic plugin and is
         // loaded through the dynamic loader path, not the static registry.
+        Box::new(AugurBridgePlugin::new()),
         //
         // v16 Session 2 — ML-WIRE-1. The advisory analytics plugin runs
         // after every forensic plugin (its `run` consumes
@@ -300,6 +302,82 @@ fn build_plugins() -> Vec<Box<dyn StrataPlugin>> {
         Box::new(strata_plugin_advisory::AdvisoryPlugin::new()),
         Box::new(strata_plugin_sigma::SigmaPlugin::new()),
     ]
+}
+
+struct AugurBridgePlugin;
+
+impl AugurBridgePlugin {
+    fn new() -> Self {
+        Self
+    }
+}
+
+impl StrataPlugin for AugurBridgePlugin {
+    fn name(&self) -> &str {
+        "AUGUR"
+    }
+
+    fn version(&self) -> &str {
+        #[cfg(feature = "augur")]
+        {
+            augur_plugin_sdk::AugurStrataPlugin::new().version()
+        }
+        #[cfg(not(feature = "augur"))]
+        {
+            "disabled"
+        }
+    }
+
+    fn supported_inputs(&self) -> Vec<String> {
+        vec![
+            "audio".to_string(),
+            "video".to_string(),
+            "image".to_string(),
+            "directory".to_string(),
+        ]
+    }
+
+    fn plugin_type(&self) -> PluginType {
+        PluginType::Analyzer
+    }
+
+    fn capabilities(&self) -> Vec<PluginCapability> {
+        vec![PluginCapability::ArtifactExtraction]
+    }
+
+    fn description(&self) -> &str {
+        "Foreign-language detection and machine translation. AUGUR outputs are advisory and require certified human translator review before legal use."
+    }
+
+    fn required_tier(&self) -> PluginTier {
+        PluginTier::Professional
+    }
+
+    fn run(&self, _context: PluginContext) -> PluginResult {
+        Ok(Vec::new())
+    }
+
+    fn execute(&self, _context: PluginContext) -> Result<PluginOutput, PluginError> {
+        let warning = if cfg!(feature = "augur") {
+            "AUGUR SDK dependency is present; runtime bridge is advisory-only until the external SDK shares Strata's plugin ABI."
+        } else {
+            "AUGUR feature is not enabled for this build."
+        };
+        Ok(PluginOutput {
+            plugin_name: self.name().to_string(),
+            plugin_version: self.version().to_string(),
+            executed_at: chrono::Utc::now().to_rfc3339(),
+            duration_ms: 0,
+            artifacts: Vec::new(),
+            summary: PluginSummary {
+                total_artifacts: 0,
+                suspicious_count: 0,
+                categories_populated: vec![ArtifactCategory::Communications.as_str().to_string()],
+                headline: "AUGUR: 0 advisory translation artifact(s)".to_string(),
+            },
+            warnings: vec![warning.to_string()],
+        })
+    }
 }
 
 /// Cache key: (evidence_id, plugin_name).
@@ -1074,23 +1152,54 @@ fn convert_output(output: &PluginOutput, plugin_name: &str) -> Vec<PluginArtifac
     output
         .artifacts
         .iter()
-        .map(|rec| PluginArtifact {
-            id: deterministic_artifact_id(&rec.source_path, rec.category.as_str(), &rec.detail),
-            category: rec.category.as_str().to_string(),
-            name: rec.title.clone(),
-            value: rec.detail.clone(),
-            timestamp: rec.timestamp.map(|t| t.to_string()),
-            source_file: rec.source_path.clone(),
-            source_path: rec.source_path.clone(),
-            forensic_value: forensic_value_str(&rec.forensic_value).to_string(),
-            mitre_technique: rec.mitre_technique.clone(),
-            mitre_name: None,
-            plugin: plugin_name.to_string(),
-            raw_data: rec.raw_data.as_ref().map(|v| v.to_string()),
-            confidence_score: confidence_score_for(plugin_name, rec),
-            confidence_basis: confidence_basis_for(plugin_name, rec).to_string(),
+        .map(|rec| {
+            let (is_advisory, advisory_notice) = advisory_fields_for(plugin_name, rec);
+            PluginArtifact {
+                id: deterministic_artifact_id(&rec.source_path, rec.category.as_str(), &rec.detail),
+                category: rec.category.as_str().to_string(),
+                name: rec.title.clone(),
+                value: rec.detail.clone(),
+                timestamp: rec.timestamp.map(|t| t.to_string()),
+                source_file: rec.source_path.clone(),
+                source_path: rec.source_path.clone(),
+                forensic_value: forensic_value_str(&rec.forensic_value).to_string(),
+                mitre_technique: rec.mitre_technique.clone(),
+                mitre_name: None,
+                plugin: plugin_name.to_string(),
+                raw_data: rec.raw_data.as_ref().map(|v| v.to_string()),
+                is_advisory,
+                advisory_notice,
+                confidence_score: confidence_score_for(plugin_name, rec),
+                confidence_basis: confidence_basis_for(plugin_name, rec).to_string(),
+            }
         })
         .collect()
+}
+
+fn advisory_fields_for(plugin_name: &str, rec: &ArtifactRecord) -> (bool, Option<String>) {
+    let plugin_lower = plugin_name.to_ascii_lowercase();
+    let mut is_advisory = plugin_name.eq_ignore_ascii_case("AUGUR")
+        || plugin_lower.contains("advisory")
+        || rec.title.contains("[MT");
+    let mut notice = None;
+
+    if let Some(raw) = rec.raw_data.as_ref() {
+        if raw
+            .get("is_advisory")
+            .or_else(|| raw.get("is_machine_translation"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
+            is_advisory = true;
+        }
+        notice = raw
+            .get("advisory_notice")
+            .or_else(|| raw.get("ADVISORY_NOTICE"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+    }
+
+    (is_advisory, notice)
 }
 
 fn confidence_score_for(plugin_name: &str, rec: &ArtifactRecord) -> f32 {
@@ -1366,6 +1475,8 @@ mod sprint11_p4_dedup_tests {
             mitre_name: None,
             plugin: plugin.into(),
             raw_data: None,
+            is_advisory: false,
+            advisory_notice: None,
             confidence_score: 1.0,
             confidence_basis: "deterministic_parse".into(),
         }
@@ -1438,6 +1549,8 @@ mod sprint14_timeline_tests {
             mitre_name: None,
             plugin: "Test".to_string(),
             raw_data: None,
+            is_advisory: false,
+            advisory_notice: None,
             confidence_score: 1.0,
             confidence_basis: "deterministic_parse".to_string(),
         }
@@ -1528,6 +1641,8 @@ mod sprint14_ioc_search_tests {
             mitre_name: None,
             plugin: "Test".to_string(),
             raw_data: None,
+            is_advisory: false,
+            advisory_notice: None,
             confidence_score: 1.0,
             confidence_basis: "deterministic_parse".to_string(),
         }
@@ -1660,6 +1775,8 @@ mod sprint11_p1_thread_grouping_tests {
             mitre_name: None,
             plugin: plugin.into(),
             raw_data: Some(raw),
+            is_advisory: false,
+            advisory_notice: None,
             confidence_score: 1.0,
             confidence_basis: "deterministic_parse".into(),
         };
@@ -1809,6 +1926,8 @@ mod sprint11_p1_thread_grouping_tests {
                 mitre_name: None,
                 plugin: "MacTrace".into(),
                 raw_data: Some(raw.clone()),
+                is_advisory: false,
+                advisory_notice: None,
                 confidence_score: 1.0,
                 confidence_basis: "deterministic_parse".into(),
             };

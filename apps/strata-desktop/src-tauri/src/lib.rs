@@ -127,6 +127,8 @@ fn adapter_artifact_to_desktop(a: engine::PluginArtifact) -> Artifact {
         mitre_name: a.mitre_name,
         plugin: a.plugin,
         raw_data: a.raw_data,
+        is_advisory: a.is_advisory,
+        advisory_notice: a.advisory_notice,
         confidence_score: a.confidence_score,
         confidence_basis: a.confidence_basis,
     }
@@ -451,6 +453,8 @@ pub struct Artifact {
     pub mitre_name: Option<String>,
     pub plugin: String,
     pub raw_data: Option<String>,
+    pub is_advisory: bool,
+    pub advisory_notice: Option<String>,
     pub confidence_score: f32,
     pub confidence_basis: String,
 }
@@ -503,7 +507,7 @@ fn get_plugin_status_store() -> Arc<Mutex<HashMap<String, PluginStatus>>> {
 /// Short display names for every plugin registered in
 /// `strata_engine_adapter::plugins::build_plugins()`. Order matches the
 /// adapter's registration order so Sigma remains last. Sprint 8 P1 F2
-/// expanded this from the pre-sprint 15-entry list to the full 23
+/// expanded this from the pre-sprint 15-entry list to the full 24
 /// plugins; the prior list silently dropped Apex, Carbon, Pulse, Vault,
 /// ARBOR, Advisory, CSAM Scanner, and Sentinel — ~184 Charlie
 /// artifacts the UI could never reach.
@@ -529,6 +533,7 @@ const PLUGIN_NAMES: &[&str] = &[
     "Pulse",
     "Vault",
     "ARBOR",
+    "AUGUR",
     "Advisory Analytics",
     "Sigma",
 ];
@@ -996,6 +1001,7 @@ struct ReportSnapshot {
     categories: Vec<ArtifactCategory>,
     custody: Vec<engine::CustodyEntry>,
     hash_sets: Vec<HashSetInfo>,
+    augur_artifacts: Vec<engine::PluginArtifact>,
 }
 
 #[tauri::command]
@@ -1078,11 +1084,12 @@ async fn generate_report(
             .into_iter()
             .map(HashSetInfo::from)
             .collect(),
+        augur_artifacts: engine::get_plugin_artifacts(&evidence_id, "AUGUR").unwrap_or_default(),
     };
     let html = build_report_html(&options, &snapshot);
     let out = if output_path.trim().is_empty() {
         std::env::temp_dir()
-            .join(format!("strata-report-{}.html", evidence_id))
+            .join(report_filename_for_case(&options.case_number, chrono::Utc::now()))
             .to_string_lossy()
             .to_string()
     } else {
@@ -1105,6 +1112,23 @@ async fn generate_report(
         );
     }
     Ok(report_path)
+}
+
+fn report_filename_for_case(case_number: &str, generated_at: chrono::DateTime<chrono::Utc>) -> String {
+    let mut case = case_number
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect::<String>();
+    while case.contains("__") {
+        case = case.replace("__", "_");
+    }
+    let case = case.trim_matches('_');
+    let case = if case.is_empty() { "Case" } else { case };
+    format!(
+        "Strata_Report_{}_{}.html",
+        case,
+        generated_at.format("%Y%m%d_%H%M%S")
+    )
 }
 
 fn write_report_pdf_or_html(html: &str, output_path: &str) -> Result<String, String> {
@@ -1207,8 +1231,8 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
         .as_ref()
         .map(|i| {
             format!(
-                r#"<div class="section">
-    <h2>Evidence Integrity</h2>
+                r#"<div class="section" id="evidence-integrity">
+    <h2>3. Evidence Integrity</h2>
     <div class="info-grid">
       <div class="info-row"><span class="info-key">SHA-256</span><span class="info-val" style="font-family:monospace;font-size:10px;">{}</span></div>
       <div class="info-row"><span class="info-key">Analysis SHA-256</span><span class="info-val" style="font-family:monospace;font-size:10px;">{}</span></div>
@@ -1281,6 +1305,31 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
             .collect::<Vec<_>>()
             .join("")
     };
+    let augur_rows = if snapshot.augur_artifacts.is_empty() {
+        "<tr><td colspan=\"5\">No AUGUR advisory translation artifacts recorded.</td></tr>"
+            .to_string()
+    } else {
+        snapshot
+            .augur_artifacts
+            .iter()
+            .map(|artifact| {
+                format!(
+                    "<tr><td>{}</td><td>{}</td><td style=\"font-family:monospace;font-size:10px;\">{}</td><td>{}</td><td>{}</td></tr>",
+                    html_escape(&artifact.name),
+                    html_escape(&artifact.value),
+                    html_escape(&artifact.source_path),
+                    html_escape(
+                        artifact
+                            .advisory_notice
+                            .as_deref()
+                            .unwrap_or("Machine translation is advisory.")
+                    ),
+                    format!("{:.2}", artifact.confidence_score)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("")
+    };
     let chevron_svg = r##"<svg class="logo-chevron" viewBox="0 0 40 35" xmlns="http://www.w3.org/2000/svg">
 <polygon points="20,2 34,10 20,18 6,10" fill="#1a2e44" opacity="0.95"/>
 <polygon points="34,10 34,14 20,22 20,18" fill="#4a6890"/>
@@ -1322,8 +1371,8 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </div>
   </div>
 
-  <div class="section">
-    <h1>Cover Page</h1>
+  <div class="section" id="cover">
+    <h1>1. Cover Page</h1>
     <div class="info-grid">
       <div class="info-row"><span class="info-key">Case No.</span><span class="info-val">{case_number}</span></div>
       <div class="info-row"><span class="info-key">Case Name</span><span class="info-val">{case_name}</span></div>
@@ -1339,8 +1388,25 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </div>
   </div>
 
-  <div class="section">
-    <h2>Methodology</h2>
+  <div class="section toc" id="table-of-contents">
+    <h2>Table of Contents</h2>
+    <ol>
+      <li><a href="#cover">1. Cover Page</a></li>
+      <li><a href="#methodology">2. Methodology</a></li>
+      <li><a href="#evidence-integrity">3. Evidence Integrity</a></li>
+      <li><a href="#executive-summary">4. Executive Summary</a></li>
+      <li><a href="#findings-by-category">5. Findings by Category</a></li>
+      <li><a href="#tagged-evidence">6. Tagged Evidence</a></li>
+      <li><a href="#flagged-artifacts">7. Flagged Artifacts</a></li>
+      <li><a href="#chain-of-custody">8. Chain of Custody Log</a></li>
+      <li><a href="#mitre-coverage">9. MITRE ATT&amp;CK Coverage</a></li>
+      <li><a href="#augur-advisory">10. AUGUR Advisory Translation Findings</a></li>
+      <li><a href="#examiner-certification">11. Examiner Certification</a></li>
+    </ol>
+  </div>
+
+  <div class="section" id="methodology">
+    <h2>2. Methodology</h2>
     <p>Strata parsed the loaded evidence, ran configured analysis plugins, applied imported known-good hash sets where available, and preserved examiner actions in the custody log.</p>
     <div class="info-grid">
       <div class="info-row"><span class="info-key">Analysis Start</span><span class="info-val">{analysis_start}</span></div>
@@ -1354,8 +1420,8 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
 
   {integrity_section}
 
-  <div class="section">
-    <h2>Executive Summary</h2>
+  <div class="section" id="executive-summary">
+    <h2>4. Executive Summary</h2>
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-label">Files</div><div class="stat-value">{files}</div></div>
       <div class="stat-card"><div class="stat-label">Suspicious</div><div class="stat-value sus">{suspicious}</div></div>
@@ -1369,8 +1435,8 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </p>
   </div>
 
-  <div class="section">
-    <h2>Findings by Category</h2>
+  <div class="section" id="findings-by-category">
+    <h2>5. Findings by Category</h2>
     <table>
       <thead><tr><th>Category</th><th>Artifacts</th><th>Color</th></tr></thead>
       <tbody>
@@ -1379,8 +1445,8 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </table>
   </div>
 
-  <div class="section">
-    <h2>Tagged Evidence</h2>
+  <div class="section" id="tagged-evidence">
+    <h2>6. Tagged Evidence</h2>
     <table>
       <thead><tr><th>File</th><th>Tag</th><th>Path</th><th>Note</th></tr></thead>
       <tbody>
@@ -1389,8 +1455,8 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </table>
   </div>
 
-  <div class="section">
-    <h2>Flagged Artifacts</h2>
+  <div class="section" id="flagged-artifacts">
+    <h2>7. Flagged Artifacts</h2>
     <table>
       <thead><tr><th>Artifact ID</th><th>Evidence</th><th>Examiner</th><th>Created</th><th>Note</th></tr></thead>
       <tbody>
@@ -1399,8 +1465,8 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </table>
   </div>
 
-  <div class="section">
-    <h2>Chain of Custody Log</h2>
+  <div class="section" id="chain-of-custody">
+    <h2>8. Chain of Custody Log</h2>
     <table>
       <thead><tr><th>Timestamp</th><th>Examiner</th><th>Action</th><th>Evidence</th><th>Details</th><th>Hash After</th></tr></thead>
       <tbody>
@@ -1409,8 +1475,8 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </table>
   </div>
 
-  <div class="section">
-    <h2>MITRE ATT&amp;CK Coverage</h2>
+  <div class="section" id="mitre-coverage">
+    <h2>9. MITRE ATT&amp;CK Coverage</h2>
     <div class="mitre-grid">
       <span class="mitre-pill">T1003</span>
       <span class="mitre-pill">T1003.001</span>
@@ -1428,8 +1494,19 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </div>
   </div>
 
-  <div class="section">
-    <h2>Examiner Certification</h2>
+  <div class="section" id="augur-advisory">
+    <h2>10. AUGUR Advisory Translation Findings</h2>
+    <p class="advisory-note">AUGUR machine translation is advisory. Review by a certified human translator is required before legal use.</p>
+    <table>
+      <thead><tr><th>Artifact</th><th>Translation</th><th>Source</th><th>Advisory Notice</th><th>Confidence</th></tr></thead>
+      <tbody>
+        {augur_rows}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section" id="examiner-certification">
+    <h2>11. Examiner Certification</h2>
     <div class="cert-block">
       I, {examiner_name}, of {examiner_agency}, badge number {examiner_badge}, certify that the forensic examination described in this report was conducted in accordance with accepted digital forensic practices. The findings contained herein are accurate and complete to the best of my knowledge. This report was generated by Strata v{app_version}, a Wolfmark Systems forensic intelligence platform.
     </div>
@@ -1477,6 +1554,7 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
         tagged_rows = tagged_rows,
         flagged_rows = flagged_rows,
         custody_rows = custody_rows,
+        augur_rows = augur_rows,
     )
 }
 
@@ -3317,6 +3395,24 @@ mod sprint8_p1_tests {
     }
 
     #[test]
+    fn augur_is_registered_for_desktop_pipeline() {
+        let backend: Vec<String> = engine::list_plugins()
+            .into_iter()
+            .map(|n| n.strip_prefix("Strata ").unwrap_or(&n).to_string())
+            .collect();
+        assert!(PLUGIN_NAMES.contains(&"AUGUR"));
+        assert!(backend.iter().any(|name| name == "AUGUR"));
+    }
+
+    #[test]
+    fn frontend_augur_card_carries_advisory_note() {
+        let plugin_data = include_str!("../../../strata-ui/src/types/index.ts");
+        assert!(plugin_data.contains("name: 'AUGUR'"));
+        assert!(plugin_data.contains("advisory_note"));
+        assert!(plugin_data.contains("certified human translator"));
+    }
+
+    #[test]
     fn html_escape_prevents_script_injection() {
         let malicious = "<script>alert('xss')</script>";
         let escaped = html_escape(malicious);
@@ -3383,6 +3479,7 @@ mod sprint8_p1_tests {
                 hash_after: Some("abc123def456".to_string()),
             }],
             hash_sets: Vec::new(),
+            augur_artifacts: Vec::new(),
         }
     }
 
@@ -3409,6 +3506,59 @@ mod sprint8_p1_tests {
         assert!(html.contains("Chain of Custody Log"));
         assert!(html.contains("evidence_loaded"));
         assert!(html.contains("Loaded evidence"));
+    }
+
+    #[test]
+    fn report_contains_table_of_contents() {
+        let html = build_report_html(&report_options_for_test("Case"), &report_snapshot_for_test());
+        assert!(html.contains("Table of Contents"));
+        assert!(html.contains("href=\"#chain-of-custody\""));
+        assert!(html.contains("id=\"augur-advisory\""));
+    }
+
+    #[test]
+    fn report_certification_block_includes_examiner_name() {
+        let html = build_report_html(&report_options_for_test("Case"), &report_snapshot_for_test());
+        assert!(html.contains("I, Examiner, of Agency"));
+        assert!(html.contains("id=\"examiner-certification\""));
+    }
+
+    #[test]
+    fn report_filename_includes_case_number() {
+        let dt = chrono::DateTime::parse_from_rfc3339("2026-04-26T12:34:56Z")
+            .expect("fixed datetime")
+            .with_timezone(&chrono::Utc);
+        assert_eq!(
+            report_filename_for_case("Case 19/A", dt),
+            "Strata_Report_Case_19_A_20260426_123456.html"
+        );
+    }
+
+    #[test]
+    fn report_augur_section_present_when_advisory_artifacts_exist() {
+        let mut snapshot = report_snapshot_for_test();
+        snapshot.augur_artifacts.push(engine::PluginArtifact {
+            id: "augur-1".to_string(),
+            category: "Communications".to_string(),
+            name: "AUGUR Translation: clip.mp3".to_string(),
+            value: "translated text".to_string(),
+            timestamp: None,
+            source_file: "clip.mp3".to_string(),
+            source_path: "/evidence/clip.mp3".to_string(),
+            forensic_value: "medium".to_string(),
+            mitre_technique: Some("T1005".to_string()),
+            mitre_name: None,
+            plugin: "AUGUR".to_string(),
+            raw_data: None,
+            is_advisory: true,
+            advisory_notice: Some("Review by a certified human translator.".to_string()),
+            confidence_score: 0.5,
+            confidence_basis: "advisory".to_string(),
+        });
+        let html = build_report_html(&report_options_for_test("Case"), &snapshot);
+        assert!(html.contains("AUGUR Advisory Translation Findings"));
+        assert!(html.contains("translated text"));
+        assert!(html.contains("Review by a certified human translator."));
     }
 
     #[test]

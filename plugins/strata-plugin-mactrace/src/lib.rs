@@ -32,6 +32,7 @@ pub mod ios_knowledgec;
 pub mod knowledgec;
 pub mod modern_macos;
 pub mod plist_artifacts;
+pub mod quarantine;
 pub mod rosetta;
 pub mod tcc;
 pub mod unified_logs;
@@ -204,6 +205,9 @@ impl MacTracePlugin {
         }
         if lc_path.contains("kmditem") || lc_name == ".com.apple.metadata.plist" {
             return Some(("Spotlight Metadata Xattr", "Metadata"));
+        }
+        if lc_path.contains("com.apple.quarantine") || lc_name == ".com.apple.quarantine" {
+            return Some(("macOS Quarantine Xattr", "Download Provenance"));
         }
         if lc_path.ends_with(".ufdr") {
             return Some(("UFDR Container", "Mobile Extraction"));
@@ -1609,6 +1613,26 @@ impl StrataPlugin for MacTracePlugin {
                     "High",
                     false,
                 ),
+                "macOS Quarantine Xattr" => {
+                    let mut title = "macOS quarantine xattr".to_string();
+                    let mut detail = "com.apple.quarantine extended attribute".to_string();
+                    if let Ok(bytes) = std::fs::read(&path) {
+                        if let Some(q) = crate::quarantine::parse_quarantine_xattr(&bytes) {
+                            if let Some(agent) = &q.agent {
+                                title = format!("macOS quarantine xattr ({agent})");
+                            }
+                            let mut parts = vec![format!("flags={}", q.flags_hex)];
+                            if let Some(ts) = q.timestamp_unix {
+                                parts.push(format!("timestamp_unix={ts}"));
+                            }
+                            if let Some(url) = q.data_url.as_ref().or(q.origin_url.as_ref()) {
+                                parts.push(format!("origin={url}"));
+                            }
+                            detail = parts.join(" | ");
+                        }
+                    }
+                    (title, detail, Some("T1204"), "High", false)
+                }
                 "UFDR Container" => (
                     "Cellebrite UFDR container".to_string(),
                     "Mobile extraction archive — original device paths reconstructed by UFDR parser".to_string(),

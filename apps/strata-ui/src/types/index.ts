@@ -111,6 +111,7 @@ export interface PluginInfo {
   artifact_count: number
   progress: number
   generic_run_disabled?: boolean
+  advisory_note?: string
 }
 
 export interface ChangelogEntry {
@@ -136,6 +137,8 @@ export interface Artifact {
   mitre_technique: string | null
   confidence_score?: number
   confidence_basis?: string
+  is_advisory?: boolean
+  advisory_notice?: string | null
 }
 
 export interface TagSummary {
@@ -424,6 +427,19 @@ export const PLUGIN_DATA: PluginInfo[] = [
     changelog: [{ version: 'v1.0.0', changes: ['Initial release'] }],
     accent_color: '#50a050',
     status: 'idle', artifact_count: 0, progress: 0,
+  },
+  {
+    name: 'AUGUR',
+    version: 'v1.0.0',
+    plugin_type: 'Analyzer',
+    short_desc: 'Foreign-language translation — audio, video, image, and PDF advisory artifacts',
+    full_desc: 'AUGUR detects foreign-language media and document content, extracts speech or OCR text, and emits machine-translated artifacts for examiner triage. Every AUGUR artifact is advisory and requires review by a certified human translator before legal use.',
+    mitre: ['T1005'],
+    categories: ['Communications', 'Translation', 'ML Advisory'],
+    changelog: [{ version: 'v1.0.0', changes: ['Initial Strata registry entry with advisory artifact handling'] }],
+    accent_color: '#b87840',
+    status: 'idle', artifact_count: 0, progress: 0,
+    advisory_note: 'Machine translation is advisory. Review by a certified human translator is required before legal use.',
   },
   {
     name: 'Advisory Analytics',

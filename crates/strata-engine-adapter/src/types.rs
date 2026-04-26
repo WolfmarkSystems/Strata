@@ -99,6 +99,8 @@ pub struct PluginArtifact {
     pub mitre_name: Option<String>,
     pub plugin: String,
     pub raw_data: Option<String>,
+    pub is_advisory: bool,
+    pub advisory_notice: Option<String>,
     pub confidence_score: f32,
     pub confidence_basis: String,
 }

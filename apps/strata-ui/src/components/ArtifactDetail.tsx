@@ -18,6 +18,7 @@ export default function ArtifactDetail({ artifact }: Props) {
   const [note, setNote] = useState('')
   const [flagged, setFlagged] = useState(false)
   const [noteStatus, setNoteStatus] = useState<string | null>(null)
+  const advisoryNotice = advisoryNoticeFor(artifact)
 
   useEffect(() => {
     if (!artifact) {
@@ -129,6 +130,7 @@ export default function ArtifactDetail({ artifact }: Props) {
             v={`${(artifact.confidence_score ?? 1).toFixed(2)} (${artifact.confidence_basis ?? 'deterministic_parse'})`}
             mono
           />
+          {advisoryNotice && <AdvisoryBanner notice={advisoryNotice} />}
 
           <Sep />
 
@@ -407,6 +409,35 @@ function ForensicBanner({ value }: { value: string }) {
       }}
     >
       {label}
+    </div>
+  )
+}
+
+function advisoryNoticeFor(artifact: Artifact | null): string | null {
+  if (!artifact) return null
+  if (artifact.advisory_notice) return artifact.advisory_notice
+  if (artifact.is_advisory || artifact.plugin === 'AUGUR') {
+    return 'Machine translation is advisory. Review by a certified human translator is required before legal use.'
+  }
+  return null
+}
+
+function AdvisoryBanner({ notice }: { notice: string }) {
+  return (
+    <div
+      style={{
+        margin: '8px 0 10px',
+        padding: '7px 10px',
+        borderRadius: 4,
+        fontSize: 11,
+        lineHeight: 1.45,
+        background: 'rgba(184,120,64,0.12)',
+        border: '1px solid rgba(184,120,64,0.35)',
+        color: 'var(--sus)',
+      }}
+    >
+      <strong>{'\u26A0'} Machine Translation</strong>
+      <div style={{ marginTop: 3, color: 'var(--text-2)' }}>{notice}</div>
     </div>
   )
 }

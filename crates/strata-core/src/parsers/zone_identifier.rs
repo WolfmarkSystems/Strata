@@ -88,6 +88,27 @@ pub struct ZoneIdentifier {
     pub host_ip_address: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HostUrlClassification {
+    PublicInternet,
+    LocalNetwork,
+    FileShare,
+    EmailAttachment,
+    Unknown,
+}
+
+impl HostUrlClassification {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            HostUrlClassification::PublicInternet => "public_internet",
+            HostUrlClassification::LocalNetwork => "local_network",
+            HostUrlClassification::FileShare => "file_share",
+            HostUrlClassification::EmailAttachment => "email_attachment",
+            HostUrlClassification::Unknown => "unknown",
+        }
+    }
+}
+
 impl ZoneIdentifier {
     /// Convenience: `true` when the file crossed the local trust
     /// boundary (Internet or Untrusted zones). Equivalent to
@@ -107,6 +128,43 @@ pub fn zone_name_for(zone_id: u8) -> &'static str {
         4 => "Untrusted",
         _ => "Unknown",
     }
+}
+
+pub fn classify_host_url(url: &str) -> HostUrlClassification {
+    let lower = url.trim().to_ascii_lowercase();
+    if lower.is_empty() {
+        return HostUrlClassification::Unknown;
+    }
+    if lower.starts_with("file://") || lower.starts_with("\\\\") || lower.starts_with("smb://") {
+        return HostUrlClassification::FileShare;
+    }
+    if lower.contains("outlook.office.com")
+        || lower.contains("attachments.office.net")
+        || lower.contains("mail.google.com")
+        || lower.contains("attachment")
+    {
+        return HostUrlClassification::EmailAttachment;
+    }
+    if lower.contains("://localhost")
+        || lower.contains("://127.")
+        || lower.contains("://10.")
+        || lower.contains("://192.168.")
+        || lower.contains("://172.16.")
+        || lower.contains("://172.17.")
+        || lower.contains("://172.18.")
+        || lower.contains("://172.19.")
+        || lower.contains("://172.2")
+        || lower.contains("://172.30.")
+        || lower.contains("://172.31.")
+        || lower.contains(".local/")
+        || lower.contains(".lan/")
+    {
+        return HostUrlClassification::LocalNetwork;
+    }
+    if lower.starts_with("http://") || lower.starts_with("https://") {
+        return HostUrlClassification::PublicInternet;
+    }
+    HostUrlClassification::Unknown
 }
 
 /// Parse a `Zone.Identifier` ADS body.
@@ -219,6 +277,7 @@ pub fn to_artifact(zi: &ZoneIdentifier, source: &str) -> Artifact {
     }
     if let Some(u) = &zi.host_url {
         a.add_field("host_url", u);
+        a.add_field("host_url_classification", classify_host_url(u).as_str());
     }
     if let Some(ip) = &zi.host_ip_address {
         a.add_field("host_ip_address", ip);
@@ -288,10 +347,40 @@ mod tests {
         let zi = parse(body).expect("must parse");
         assert_eq!(zi.zone_id, 3);
         assert_eq!(zi.zone_name, "Internet");
-        assert_eq!(zi.referring_url.as_deref(), Some("https://attacker.example/landing"));
-        assert_eq!(zi.host_url.as_deref(), Some("https://cdn.attacker.example/payload.exe"));
+        assert_eq!(
+            zi.referring_url.as_deref(),
+            Some("https://attacker.example/landing")
+        );
+        assert_eq!(
+            zi.host_url.as_deref(),
+            Some("https://cdn.attacker.example/payload.exe")
+        );
         assert_eq!(zi.host_ip_address.as_deref(), Some("203.0.113.42"));
         assert!(zi.from_internet());
+    }
+
+    #[test]
+    fn host_url_classification_marks_public_and_local_sources() {
+        assert_eq!(
+            classify_host_url("https://cdn.example.test/payload.exe"),
+            HostUrlClassification::PublicInternet
+        );
+        assert_eq!(
+            classify_host_url("https://192.168.1.20/share/tool.exe"),
+            HostUrlClassification::LocalNetwork
+        );
+        assert_eq!(
+            classify_host_url("\\\\server\\share\\tool.exe"),
+            HostUrlClassification::FileShare
+        );
+    }
+
+    #[test]
+    fn host_url_classification_marks_email_attachment_urls() {
+        assert_eq!(
+            classify_host_url("https://outlook.office.com/owa/service.svc/attachment?id=1"),
+            HostUrlClassification::EmailAttachment
+        );
     }
 
     #[test]
@@ -317,7 +406,8 @@ mod tests {
 
     #[test]
     fn parse_tolerates_case_insensitive_keys_and_quoting() {
-        let body = b"[zonetransfer]\nzoneid = 2\nhosturl = \"https://trusted.example/installer.msi\"\n";
+        let body =
+            b"[zonetransfer]\nzoneid = 2\nhosturl = \"https://trusted.example/installer.msi\"\n";
         let zi = parse(body).expect("must parse case-insensitively");
         assert_eq!(zi.zone_id, 2);
         assert_eq!(zi.zone_name, "Trusted");
@@ -362,13 +452,23 @@ mod tests {
         };
         let a = to_artifact(&zi, "/evid/x.exe:Zone.Identifier");
         assert_eq!(a.data.get("zone_id").map(String::as_str), Some("3"));
-        assert_eq!(a.data.get("zone_name").map(String::as_str), Some("Internet"));
+        assert_eq!(
+            a.data.get("zone_name").map(String::as_str),
+            Some("Internet")
+        );
         assert_eq!(a.data.get("mitre").map(String::as_str), Some("T1566"));
         assert_eq!(
             a.data.get("mitre_secondary").map(String::as_str),
             Some("T1105")
         );
-        assert_eq!(a.data.get("forensic_value").map(String::as_str), Some("High"));
+        assert_eq!(
+            a.data.get("host_url_classification").map(String::as_str),
+            Some("public_internet")
+        );
+        assert_eq!(
+            a.data.get("forensic_value").map(String::as_str),
+            Some("High")
+        );
         assert_eq!(a.data.get("suspicious").map(String::as_str), Some("true"));
     }
 
@@ -384,7 +484,10 @@ mod tests {
         let a = to_artifact(&zi, "/evid/x.exe:Zone.Identifier");
         assert_eq!(a.data.get("mitre").map(String::as_str), Some("T1566"));
         assert!(!a.data.contains_key("mitre_secondary"));
-        assert_eq!(a.data.get("forensic_value").map(String::as_str), Some("High"));
+        assert_eq!(
+            a.data.get("forensic_value").map(String::as_str),
+            Some("High")
+        );
     }
 
     #[test]
@@ -399,7 +502,10 @@ mod tests {
         let a = to_artifact(&zi, "/evid/x.exe:Zone.Identifier");
         assert_eq!(a.data.get("mitre").map(String::as_str), Some("T1105"));
         assert!(!a.data.contains_key("mitre_secondary"));
-        assert_eq!(a.data.get("forensic_value").map(String::as_str), Some("Low"));
+        assert_eq!(
+            a.data.get("forensic_value").map(String::as_str),
+            Some("Low")
+        );
         assert!(!a.data.contains_key("suspicious"));
     }
 
@@ -413,7 +519,10 @@ mod tests {
             host_ip_address: None,
         };
         let a = to_artifact(&zi, "/evid/internal.docx:Zone.Identifier");
-        assert_eq!(a.data.get("forensic_value").map(String::as_str), Some("Low"));
+        assert_eq!(
+            a.data.get("forensic_value").map(String::as_str),
+            Some("Low")
+        );
         assert!(!a.data.contains_key("mitre"));
     }
 

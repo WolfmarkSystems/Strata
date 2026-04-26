@@ -120,6 +120,8 @@ export interface Artifact {
   mitre_name: string | null
   plugin: string
   raw_data: string | null
+  is_advisory?: boolean
+  advisory_notice?: string | null
   confidence_score?: number
   confidence_basis?: string
 }
@@ -859,13 +861,13 @@ const MOCK_ARTIFACTS: Record<string, Artifact[]> = {
 const PLUGIN_NAMES = [
   'Remnant', 'Chronicle', 'Cipher', 'Trace', 'Specter',
   'Conduit', 'Nimbus', 'Wraith', 'Vector', 'Recon',
-  'Phantom', 'Guardian', 'NetFlow', 'MacTrace', 'Sigma',
+  'Phantom', 'Guardian', 'NetFlow', 'MacTrace', 'AUGUR', 'Sigma',
 ] as const
 
 const MOCK_ARTIFACT_COUNTS: Record<string, number> = {
   Remnant: 47, Chronicle: 183, Cipher: 12, Trace: 89, Specter: 0,
   Conduit: 34, Nimbus: 5, Wraith: 2, Vector: 8, Recon: 23,
-  Phantom: 0, Guardian: 0, NetFlow: 0, MacTrace: 0, Sigma: 156,
+  Phantom: 0, Guardian: 0, NetFlow: 0, MacTrace: 0, AUGUR: 0, Sigma: 156,
 }
 
 // Mock state for browser preview mode

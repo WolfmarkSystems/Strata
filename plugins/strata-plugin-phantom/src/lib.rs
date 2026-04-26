@@ -329,10 +329,14 @@ impl StrataPlugin for PhantomPlugin {
                                 a.add_field("order", &order_str);
                                 a.add_field("raw_value_name", &e.raw_value_name);
                                 a.add_field("source_hive", &path_str);
-                                // T1074.001 — Local Data Staging
-                                // T1059   — Command and Scripting (RunMRU)
-                                a.add_field("mitre", "T1074.001");
-                                a.add_field("mitre_secondary", "T1059");
+                                // T1005      — Data from Local System
+                                // T1074.001  — Local Data Staging
+                                // T1059      — Command and Scripting (RunMRU)
+                                a.add_field("mitre", "T1005");
+                                a.add_field("mitre_secondary", "T1074.001");
+                                if matches!(e.mru_type, crate::mru::MruType::RunMRU) {
+                                    a.add_field("mitre_tertiary", "T1059");
+                                }
                                 a.add_field("forensic_value", "Medium");
                                 results.push(a);
                             }

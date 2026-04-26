@@ -8,6 +8,9 @@
 //! | `Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSavePidlMRU` | Files referenced by the common Open / Save dialogs |
 //! | `Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\LastVisitedPidlMRU` | Last folders visited by the common Open dialog (per executable) |
 //! | `Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU` | Strings typed into the Win-R Run dialog |
+//! | `Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery` | Explorer / Start search terms |
+//! | `Software\Microsoft\Internet Explorer\TypedURLs` | URLs typed into Internet Explorer / legacy shell URL boxes |
+//! | `Software\Microsoft\Office\*\*\User MRU\*\File MRU` | Office documents opened by Word / Excel / PowerPoint |
 //!
 //! All four share the same shape: numerically- or alphabetically-named
 //! values plus an `MRUList` (REG_SZ char ordering) or `MRUListEx`
@@ -57,6 +60,15 @@ pub enum MruType {
     /// `Software\…\Explorer\RunMRU` (Win-R typed strings, REG_SZ
     /// values terminated with `\1`).
     RunMRU,
+    /// `Software\…\Explorer\WordWheelQuery` (Start menu / Explorer
+    /// search box history).
+    WordWheelQuery,
+    /// `Software\Microsoft\Internet Explorer\TypedURLs` (legacy URL
+    /// entry history).
+    TypedURLs,
+    /// `Software\Microsoft\Office\*\*\User MRU\*\File MRU` entries,
+    /// including Office's embedded FILETIME when present.
+    OfficeMRU,
 }
 
 impl MruType {
@@ -66,8 +78,23 @@ impl MruType {
             MruType::OpenSave => "OpenSavePidlMRU",
             MruType::LastVisited => "LastVisitedPidlMRU",
             MruType::RunMRU => "RunMRU",
+            MruType::WordWheelQuery => "WordWheelQuery",
+            MruType::TypedURLs => "TypedURLs",
+            MruType::OfficeMRU => "OfficeMRU",
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LastVisitedEntry {
+    pub exe_name: String,
+    pub folder: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OfficeMruEntry {
+    pub path: String,
+    pub opened_at_unix: Option<i64>,
 }
 
 /// One typed MRU entry.
@@ -143,11 +170,7 @@ pub fn parse(root: &nt_hive::KeyNode<'_, &[u8]>) -> MruParsed {
     }
 
     // ── ComDlg32\OpenSavePidlMRU (per-extension subkeys + top-level)
-    if let Some(open_save) = walk_extend(
-        root,
-        &explorer_path,
-        &["ComDlg32", "OpenSavePidlMRU"],
-    ) {
+    if let Some(open_save) = walk_extend(root, &explorer_path, &["ComDlg32", "OpenSavePidlMRU"]) {
         collect_store(&open_save, MruType::OpenSave, "", &mut entries);
         if let Some(Ok(child_iter)) = open_save.subkeys() {
             for child_res in child_iter {
@@ -160,17 +183,34 @@ pub fn parse(root: &nt_hive::KeyNode<'_, &[u8]>) -> MruParsed {
     }
 
     // ── ComDlg32\LastVisitedPidlMRU (single key, no per-ext children)
-    if let Some(last_visited) = walk_extend(
-        root,
-        &explorer_path,
-        &["ComDlg32", "LastVisitedPidlMRU"],
-    ) {
+    if let Some(last_visited) =
+        walk_extend(root, &explorer_path, &["ComDlg32", "LastVisitedPidlMRU"])
+    {
         collect_store(&last_visited, MruType::LastVisited, "", &mut entries);
     }
 
     // ── RunMRU (single key) ──────────────────────────────────────────
     if let Some(run) = walk_extend(root, &explorer_path, &["RunMRU"]) {
         collect_store(&run, MruType::RunMRU, "", &mut entries);
+    }
+
+    // ── WordWheelQuery (Explorer / Start search text) ───────────────
+    if let Some(word_wheel) = walk_extend(root, &explorer_path, &["WordWheelQuery"]) {
+        collect_store(&word_wheel, MruType::WordWheelQuery, "", &mut entries);
+    }
+
+    // ── Internet Explorer / shell TypedURLs ─────────────────────────
+    if let Some(typed_urls) = walk_extend(
+        root,
+        &["Software", "Microsoft", "Internet Explorer"],
+        &["TypedURLs"],
+    ) {
+        collect_store(&typed_urls, MruType::TypedURLs, "", &mut entries);
+    }
+
+    // ── Office MRU trees: Office\<ver>\<app>\User MRU\<user>\File MRU
+    if let Some(office) = walk_extend(root, &["Software", "Microsoft"], &["Office"]) {
+        collect_office_mru(&office, "", &mut entries);
     }
 
     MruParsed { entries }
@@ -200,9 +240,7 @@ fn collect_store(
         let Ok(value) = value_res else { continue };
         let Ok(name_raw) = value.name() else { continue };
         let name = name_raw.to_string_lossy();
-        if name.eq_ignore_ascii_case("MRUList")
-            || name.eq_ignore_ascii_case("MRUListEx")
-        {
+        if name.eq_ignore_ascii_case("MRUList") || name.eq_ignore_ascii_case("MRUListEx") {
             continue;
         }
         let bytes = match value.data().and_then(|d| d.into_vec()) {
@@ -240,6 +278,14 @@ pub(crate) fn decode_value(bytes: &[u8], mru_type: MruType) -> String {
                 .trim_end()
                 .to_string()
         }
+        MruType::WordWheelQuery => parse_word_wheel_query(bytes),
+        MruType::TypedURLs => decode_plain_string(bytes),
+        MruType::OfficeMRU => parse_office_mru_item(bytes)
+            .map(|entry| match entry.opened_at_unix {
+                Some(ts) => format!("{} | opened_at_unix={ts}", entry.path),
+                None => entry.path,
+            })
+            .unwrap_or_default(),
         // RecentDocs values are PIDL blobs prefixed with a UTF-16LE
         // filename (the user-visible name Explorer assigned). Try a
         // straight UTF-16 decode first, fall back to embedded-string
@@ -253,8 +299,116 @@ pub(crate) fn decode_value(bytes: &[u8], mru_type: MruType) -> String {
             }
         }
         // OpenSave / LastVisited are pure PIDL — extract best-effort.
-        MruType::OpenSave | MruType::LastVisited => best_effort_pidl_string(bytes),
+        MruType::OpenSave => best_effort_pidl_string(bytes),
+        MruType::LastVisited => parse_last_visited_entry(bytes)
+            .map(|entry| {
+                if entry.folder.is_empty() {
+                    entry.exe_name
+                } else {
+                    format!("{} -> {}", entry.exe_name, entry.folder)
+                }
+            })
+            .unwrap_or_else(|| best_effort_pidl_string(bytes)),
     }
+}
+
+fn collect_office_mru(node: &nt_hive::KeyNode<'_, &[u8]>, path: &str, out: &mut Vec<MruEntry>) {
+    let name = node
+        .name()
+        .map(|n| n.to_string_lossy())
+        .unwrap_or_else(|_| String::new());
+    let current = if path.is_empty() {
+        name
+    } else {
+        format!("{path}\\{name}")
+    };
+    if current.ends_with("\\File MRU") || current == "File MRU" {
+        collect_store(node, MruType::OfficeMRU, &current, out);
+    }
+    if let Some(Ok(children)) = node.subkeys() {
+        for child_res in children {
+            let Ok(child) = child_res else { continue };
+            collect_office_mru(&child, &current, out);
+        }
+    }
+}
+
+pub(crate) fn parse_word_wheel_query(bytes: &[u8]) -> String {
+    decode_plain_string(bytes)
+}
+
+pub(crate) fn parse_last_visited_entry(bytes: &[u8]) -> Option<LastVisitedEntry> {
+    let strings = utf16le_strings(bytes);
+    let exe_name = strings
+        .iter()
+        .find(|s| s.to_ascii_lowercase().ends_with(".exe"))
+        .cloned()
+        .or_else(|| strings.first().cloned())?;
+    let folder = strings
+        .iter()
+        .filter(|s| *s != &exe_name)
+        .max_by_key(|s| s.len())
+        .cloned()
+        .unwrap_or_default();
+    Some(LastVisitedEntry { exe_name, folder })
+}
+
+pub(crate) fn parse_office_mru_item(bytes: &[u8]) -> Option<OfficeMruEntry> {
+    let text = decode_plain_string(bytes);
+    if text.is_empty() {
+        return None;
+    }
+    let opened_at_unix = extract_office_filetime_unix(&text);
+    let path = text
+        .rsplit_once('*')
+        .map(|(_, tail)| tail)
+        .unwrap_or(text.as_str())
+        .trim_matches('\0')
+        .trim()
+        .to_string();
+    if path.is_empty() {
+        None
+    } else {
+        Some(OfficeMruEntry {
+            path,
+            opened_at_unix,
+        })
+    }
+}
+
+fn extract_office_filetime_unix(text: &str) -> Option<i64> {
+    let start = text.find("[T")? + 2;
+    let rest = text.get(start..)?;
+    let hex: String = rest
+        .chars()
+        .take_while(|c| c.is_ascii_hexdigit())
+        .take(16)
+        .collect();
+    if hex.len() != 16 {
+        return None;
+    }
+    filetime_hex_to_unix(&hex)
+}
+
+fn filetime_hex_to_unix(hex: &str) -> Option<i64> {
+    let ticks = u64::from_str_radix(hex, 16).ok()?;
+    let seconds = ticks.checked_div(10_000_000)?;
+    let unix = seconds.checked_sub(11_644_473_600)?;
+    i64::try_from(unix).ok()
+}
+
+fn decode_plain_string(bytes: &[u8]) -> String {
+    let utf16 = utf16le_to_string(bytes)
+        .trim_end_matches('\0')
+        .trim()
+        .to_string();
+    if !utf16.is_empty() && utf16.chars().all(is_printable) {
+        return utf16;
+    }
+    String::from_utf8_lossy(bytes)
+        .trim_end_matches('\0')
+        .trim()
+        .to_string()
 }
 
 /// Build a `value_name -> order_index` map from the key's `MRUListEx`
@@ -267,7 +421,9 @@ fn read_order_map(node: &nt_hive::KeyNode<'_, &[u8]>) -> std::collections::HashM
     // numeric value name (0..n). Terminator = 0xFFFFFFFF.
     if let Some(bytes) = read_value_bytes(node, "MRUListEx") {
         for (idx, chunk) in bytes.chunks_exact(4).enumerate() {
-            let Ok(arr) = <[u8; 4]>::try_from(chunk) else { continue };
+            let Ok(arr) = <[u8; 4]>::try_from(chunk) else {
+                continue;
+            };
             let v = u32::from_le_bytes(arr);
             if v == u32::MAX {
                 break;
@@ -375,6 +531,44 @@ fn utf16le_to_string(data: &[u8]) -> String {
     String::from_utf16_lossy(&u16s)
 }
 
+fn utf16le_strings(data: &[u8]) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut current = Vec::new();
+    for chunk in data.chunks_exact(2) {
+        let ch = u16::from_le_bytes([chunk[0], chunk[1]]);
+        if ch == 0 {
+            if !current.is_empty() {
+                let s = String::from_utf16_lossy(&current)
+                    .trim_matches('\0')
+                    .trim()
+                    .to_string();
+                if s.chars().count() >= MIN_PIDL_STRING_CHARS && s.chars().all(is_printable) {
+                    out.push(s);
+                }
+                current.clear();
+            }
+            continue;
+        }
+        if let Some(c) = char::from_u32(ch as u32) {
+            if is_printable(c) {
+                current.push(ch);
+                continue;
+            }
+        }
+        current.clear();
+    }
+    if !current.is_empty() {
+        let s = String::from_utf16_lossy(&current)
+            .trim_matches('\0')
+            .trim()
+            .to_string();
+        if s.chars().count() >= MIN_PIDL_STRING_CHARS && s.chars().all(is_printable) {
+            out.push(s);
+        }
+    }
+    out
+}
+
 fn walk_extend<'a>(
     root: &nt_hive::KeyNode<'a, &'a [u8]>,
     base: &[&str],
@@ -405,12 +599,18 @@ mod tests {
         assert_eq!(MruType::OpenSave.as_str(), "OpenSavePidlMRU");
         assert_eq!(MruType::LastVisited.as_str(), "LastVisitedPidlMRU");
         assert_eq!(MruType::RunMRU.as_str(), "RunMRU");
+        assert_eq!(MruType::WordWheelQuery.as_str(), "WordWheelQuery");
+        assert_eq!(MruType::TypedURLs.as_str(), "TypedURLs");
+        assert_eq!(MruType::OfficeMRU.as_str(), "OfficeMRU");
     }
 
     #[test]
     fn decode_value_runmru_strips_explorer_terminator() {
         // RunMRU stores e.g. "powershell.exe\u{1}" terminated with \1.
-        let mut bytes: Vec<u8> = "powershell.exe".encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+        let mut bytes: Vec<u8> = "powershell.exe"
+            .encode_utf16()
+            .flat_map(|u| u.to_le_bytes())
+            .collect();
         // Append \1 terminator + null terminator.
         bytes.extend_from_slice(&1u16.to_le_bytes());
         bytes.extend_from_slice(&0u16.to_le_bytes());
@@ -474,5 +674,34 @@ mod tests {
         let bytes = [0u8; 8];
         let decoded = decode_value(&bytes, MruType::LastVisited);
         assert_eq!(decoded, "");
+    }
+
+    #[test]
+    fn word_wheel_query_parses_plain_strings() {
+        let decoded = parse_word_wheel_query(&utf16le("confidential merger"));
+        assert_eq!(decoded, "confidential merger");
+    }
+
+    #[test]
+    fn office_mru_filetime_and_path_are_extracted() {
+        // 2024-01-01T00:00:00Z as Windows FILETIME.
+        let item = "[F00000000][T01DA3C457689C000]*C:\\Users\\Ada\\Desktop\\plan.docx";
+        let parsed = parse_office_mru_item(&utf16le(item)).expect("office mru item");
+        assert_eq!(parsed.path, "C:\\Users\\Ada\\Desktop\\plan.docx");
+        assert_eq!(parsed.opened_at_unix, Some(1_704_067_200));
+    }
+
+    #[test]
+    fn last_visited_exe_name_and_folder_are_extracted() {
+        let mut bytes = utf16le("WINWORD.EXE");
+        bytes.extend_from_slice(&[0x33, 0x22, 0x11, 0x00]);
+        bytes.extend_from_slice(&utf16le("C:\\Users\\Ada\\Documents"));
+        let parsed = parse_last_visited_entry(&bytes).expect("last visited entry");
+        assert_eq!(parsed.exe_name, "WINWORD.EXE");
+        assert_eq!(parsed.folder, "C:\\Users\\Ada\\Documents");
+        assert_eq!(
+            decode_value(&bytes, MruType::LastVisited),
+            "WINWORD.EXE -> C:\\Users\\Ada\\Documents"
+        );
     }
 }
