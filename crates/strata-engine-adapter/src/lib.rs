@@ -10,6 +10,7 @@
 //! `tokio::task::spawn_blocking` if needed).
 
 pub mod csam;
+pub mod custody;
 pub mod evidence;
 pub mod files;
 pub mod hashing;
@@ -22,8 +23,8 @@ pub mod vfs_materialize;
 
 pub use types::{
     format_size, AdapterError, AdapterResult, ArtifactCategoryInfo, EngineStats, EvidenceInfo,
-    FileEntry, HashResult, HexData, HexLine, MessageThread, PluginArtifact, ThreadMessage,
-    TreeNode,
+    FileEntry, HashResult, HexData, HexLine, IocMatch, IocQuery, MessageThread, PluginArtifact,
+    ThreadMessage, TreeNode,
 };
 
 pub use evidence::{
@@ -37,8 +38,9 @@ pub use hashing::{hash_all_files, hash_file, hashed_count};
 
 pub use plugins::{
     get_artifact_categories, get_artifacts_by_category, get_artifacts_by_thread,
-    get_plugin_artifacts, list_plugins, run_all_on_evidence, run_all_on_path, run_all_on_vfs,
-    run_all_with_persistence, run_all_with_persistence_vfs, run_plugin,
+    get_artifacts_timeline, get_plugin_artifacts, list_plugins, run_all_on_evidence,
+    run_all_on_path, run_all_on_vfs, run_all_with_persistence, run_all_with_persistence_vfs,
+    run_plugin, search_iocs,
 };
 
 pub use vfs_materialize::{materialize_targets, MaterializeReport};
@@ -49,3 +51,5 @@ pub use csam::{
     csam_review_hit, csam_run_scan, csam_session_summary, CsamHitInfo, CsamScanOptions,
     CsamScanSummary, CsamSessionSummary, HashSetImportResult,
 };
+
+pub use custody::{get_custody_log, log_custody, now_unix, sha256_file, CustodyEntry};

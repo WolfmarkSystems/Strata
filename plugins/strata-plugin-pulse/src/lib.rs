@@ -28,6 +28,7 @@ pub mod ephemeral;
 pub mod financial;
 pub mod gaming;
 pub mod ios;
+pub mod macos_social;
 pub mod messaging_extended;
 pub mod rideshare;
 pub mod telegram;
@@ -122,13 +123,15 @@ impl StrataPlugin for PulsePlugin {
         // iOS parsers — walk all files and dispatch
         let all_files = walk_dir(root).unwrap_or_default();
         for path in &all_files {
+            if macos_social::matches(path) {
+                records.extend(macos_social::parse(path));
+                continue;
+            }
             records.extend(ios::dispatch(path));
         }
 
         if records.is_empty() {
-            warnings.push(
-                "No mobile artifacts detected under evidence root".to_string()
-            );
+            warnings.push("No mobile artifacts detected under evidence root".to_string());
         }
 
         let suspicious_count = records.iter().filter(|r| r.is_suspicious).count();
@@ -151,9 +154,7 @@ impl StrataPlugin for PulsePlugin {
                 categories_populated: categories.into_iter().collect(),
                 headline: format!(
                     "Pulse: {} mobile artifacts ({} suspicious) across {} categories",
-                    total,
-                    suspicious_count,
-                    category_count
+                    total, suspicious_count, category_count
                 ),
             },
             warnings,

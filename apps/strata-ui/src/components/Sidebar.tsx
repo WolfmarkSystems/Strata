@@ -11,6 +11,9 @@ interface NavItem {
 const TOP_ITEMS: NavItem[] = [
   { id: 'files',     icon: '\u{1F4C1}', label: 'Files' },
   { id: 'artifacts', icon: '\u{1F5C2}', label: 'Artifacts' },
+  { id: 'timeline',  icon: '\u{1F552}', label: 'Timeline' },
+  { id: 'ioc',       icon: '\u{1F50E}', label: 'IOC Hunt' },
+  { id: 'custody',   icon: '\u{1F4DC}', label: 'Custody' },
   { id: 'tags',      icon: '\u{1F3F7}', label: 'Tags' },
   { id: 'notes',     icon: '\u{1F4DD}', label: 'Notes' },
   { id: 'plugins',   icon: '\u{1F50C}', label: 'Plugins' },

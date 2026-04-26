@@ -110,6 +110,59 @@ fn adapter_hex_to_desktop(h: engine::HexData) -> HexData {
     }
 }
 
+fn adapter_artifact_to_desktop(a: engine::PluginArtifact) -> Artifact {
+    Artifact {
+        id: a.id,
+        category: a.category,
+        name: a.name,
+        value: a.value,
+        timestamp: a.timestamp,
+        source_file: a.source_file,
+        source_path: a.source_path,
+        forensic_value: a.forensic_value,
+        mitre_technique: a.mitre_technique,
+        mitre_name: a.mitre_name,
+        plugin: a.plugin,
+        raw_data: a.raw_data,
+    }
+}
+
+fn examiner_name_for_app(app: &tauri::AppHandle) -> String {
+    get_examiner_profile_sync(app)
+        .map(|profile| profile.name)
+        .ok()
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or_else(|| "Unknown Examiner".to_string())
+}
+
+fn get_examiner_profile_sync(app: &tauri::AppHandle) -> Result<ExaminerProfile, String> {
+    let path = examiner_profile_path(app)?;
+    if !path.exists() {
+        return Ok(ExaminerProfile::default());
+    }
+    let s = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&s).map_err(|e| e.to_string())
+}
+
+fn log_custody_event(
+    examiner: String,
+    action: &str,
+    evidence_id: String,
+    details: String,
+    hash_before: Option<String>,
+    hash_after: Option<String>,
+) {
+    engine::log_custody(engine::CustodyEntry {
+        timestamp: engine::now_unix(),
+        examiner,
+        action: action.to_string(),
+        evidence_id,
+        details,
+        hash_before,
+        hash_after,
+    });
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────────────────────────────────────
@@ -295,6 +348,20 @@ pub struct Artifact {
 pub struct ArtifactsResponse {
     pub artifacts: Vec<Artifact>,
     pub plugins_not_run: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct IocQuery {
+    pub indicators: Vec<String>,
+    pub evidence_id: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct IocMatch {
+    pub indicator: String,
+    pub artifact: Artifact,
+    pub match_field: String,
+    pub confidence: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -853,6 +920,16 @@ async fn generate_report(options: ReportOptions) -> Result<ReportResult, String>
         categories,
     };
     let html = build_report_html(&options, &snapshot);
+    if !evidence_id.is_empty() {
+        log_custody_event(
+            options.examiner_name.clone(),
+            "report_generated",
+            evidence_id,
+            format!("Generated report preview for {}", options.case_name),
+            None,
+            None,
+        );
+    }
     Ok(ReportResult { html, path: None })
 }
 
@@ -1112,15 +1189,26 @@ async fn open_folder_dialog(app: tauri::AppHandle) -> Result<Option<String>, Str
 }
 
 #[tauri::command]
-async fn load_evidence(path: String) -> Result<EvidenceLoadResult, String> {
+async fn load_evidence(app: tauri::AppHandle, path: String) -> Result<EvidenceLoadResult, String> {
+    let path_for_parse = path.clone();
+    let path_for_hash = path.clone();
     // Run the (potentially heavy) parse on a blocking thread so the Tauri
     // command thread isn't held up.
-    let result = tokio::task::spawn_blocking(move || engine::parse_evidence(&path))
+    let result = tokio::task::spawn_blocking(move || engine::parse_evidence(&path_for_parse))
         .await
         .map_err(|e| e.to_string())?;
 
     match result {
         Ok(info) => {
+            let hash = engine::sha256_file(std::path::Path::new(&path_for_hash));
+            log_custody_event(
+                examiner_name_for_app(&app),
+                "evidence_loaded",
+                info.id.clone(),
+                format!("Loaded evidence from {path_for_hash}"),
+                hash.clone(),
+                hash,
+            );
             set_current_evidence_id(&info.id);
             Ok(EvidenceLoadResult {
                 success: true,
@@ -1405,23 +1493,7 @@ async fn get_artifacts(evidence_id: String, category: String) -> Result<Artifact
         .map_err(|e| e.to_string())?;
 
     if !real.is_empty() {
-        let artifacts = real
-            .into_iter()
-            .map(|a| Artifact {
-                id: a.id,
-                category: a.category,
-                name: a.name,
-                value: a.value,
-                timestamp: a.timestamp,
-                source_file: a.source_file,
-                source_path: a.source_path,
-                forensic_value: a.forensic_value,
-                mitre_technique: a.mitre_technique,
-                mitre_name: a.mitre_name,
-                plugin: a.plugin,
-                raw_data: a.raw_data,
-            })
-            .collect();
+        let artifacts = real.into_iter().map(adapter_artifact_to_desktop).collect();
         return Ok(ArtifactsResponse {
             artifacts,
             plugins_not_run: false,
@@ -1454,6 +1526,65 @@ async fn get_artifacts(evidence_id: String, category: String) -> Result<Artifact
         artifacts: Vec::new(),
         plugins_not_run,
     })
+}
+
+#[tauri::command]
+async fn get_artifacts_timeline(
+    evidence_id: String,
+    start_ts: Option<i64>,
+    end_ts: Option<i64>,
+    limit: Option<usize>,
+) -> Result<Vec<Artifact>, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    tokio::task::spawn_blocking(move || {
+        engine::get_artifacts_timeline(&eid, start_ts, end_ts, limit)
+            .map(|items| items.into_iter().map(adapter_artifact_to_desktop).collect())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn search_iocs(query: IocQuery) -> Result<Vec<IocMatch>, String> {
+    let q = engine::IocQuery {
+        indicators: query.indicators,
+        evidence_id: if query.evidence_id.is_empty() {
+            current_evidence_id().unwrap_or_default()
+        } else {
+            query.evidence_id
+        },
+    };
+    tokio::task::spawn_blocking(move || {
+        engine::search_iocs(q).map(|matches| {
+            matches
+                .into_iter()
+                .map(|m| IocMatch {
+                    indicator: m.indicator,
+                    artifact: adapter_artifact_to_desktop(m.artifact),
+                    match_field: m.match_field,
+                    confidence: m.confidence,
+                })
+                .collect()
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_custody_log(evidence_id: String) -> Result<Vec<engine::CustodyEntry>, String> {
+    let eid = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    Ok(engine::get_custody_log(&eid))
 }
 
 /// Sprint-11 P2 — resolve an artifact's source path to a tree node id
@@ -1553,6 +1684,15 @@ async fn run_plugin(
     } else {
         evidence_id
     };
+    let examiner = examiner_name_for_app(&app);
+    log_custody_event(
+        examiner.clone(),
+        "plugin_run_started",
+        eid.clone(),
+        format!("Started plugin {plugin_name}"),
+        None,
+        None,
+    );
 
     let plugin_name_run = plugin_name.clone();
     let eid_run = eid.clone();
@@ -1597,6 +1737,14 @@ async fn run_plugin(
     match plugin_result {
         Ok(artifacts) => {
             let count = artifacts.len() as u64;
+            log_custody_event(
+                examiner,
+                "plugin_run_completed",
+                eid.clone(),
+                format!("Completed plugin {plugin_name} with {count} artifacts"),
+                None,
+                None,
+            );
             if let Ok(mut map) = store.lock() {
                 map.insert(
                     plugin_name.clone(),
@@ -1627,6 +1775,14 @@ async fn run_plugin(
         }
         Err(e) => {
             let err_msg = e.to_string();
+            log_custody_event(
+                examiner,
+                "plugin_run_completed",
+                eid.clone(),
+                format!("Plugin {plugin_name} failed: {err_msg}"),
+                None,
+                None,
+            );
             if let Ok(mut map) = store.lock() {
                 map.insert(
                     plugin_name.clone(),
@@ -1668,6 +1824,7 @@ async fn run_all_plugins(evidence_id: String, app: tauri::AppHandle) -> Result<(
     if eid.is_empty() {
         return Err("no evidence loaded".to_string());
     }
+    let examiner = examiner_name_for_app(&app);
 
     // Sprint 8 P1 F3: collapse the UI path onto a single threaded run
     // rather than N independent run_plugin calls. Each previous call
@@ -1684,6 +1841,27 @@ async fn run_all_plugins(evidence_id: String, app: tauri::AppHandle) -> Result<(
                 .strip_prefix("Strata ")
                 .unwrap_or(full_name)
                 .to_string();
+            if full_name != "__materialize__" {
+                if status == "running" {
+                    log_custody_event(
+                        examiner.clone(),
+                        "plugin_run_started",
+                        eid.clone(),
+                        format!("Started plugin {short_name}"),
+                        None,
+                        None,
+                    );
+                } else if status == "complete" {
+                    log_custody_event(
+                        examiner.clone(),
+                        "plugin_run_completed",
+                        eid.clone(),
+                        format!("Completed plugin {short_name} with {count} artifacts"),
+                        None,
+                        None,
+                    );
+                }
+            }
             let progress: u8 = if status == "running" { 0 } else { 100 };
 
             if let Ok(mut map) = get_plugin_status_store().lock() {
@@ -1793,9 +1971,19 @@ async fn hash_all_files_cmd(evidence_id: String, app: tauri::AppHandle) -> Resul
         return Err("No evidence loaded".to_string());
     }
 
+    let examiner = examiner_name_for_app(&app);
+    log_custody_event(
+        examiner.clone(),
+        "hash_all_started",
+        eid.clone(),
+        "Hash All triggered".to_string(),
+        None,
+        None,
+    );
     let app_progress = app.clone();
+    let eid_for_hash = eid.clone();
     let results = tokio::task::spawn_blocking(move || {
-        engine::hash_all_files(&eid, move |done, total| {
+        engine::hash_all_files(&eid_for_hash, move |done, total| {
             let _ = app_progress.emit(
                 "hash-progress",
                 json!({
@@ -1809,6 +1997,14 @@ async fn hash_all_files_cmd(evidence_id: String, app: tauri::AppHandle) -> Resul
     .map_err(|e| e.to_string())?
     .map_err(|e| e.to_string())?;
 
+    log_custody_event(
+        examiner,
+        "hash_all_completed",
+        eid,
+        format!("Hash All completed for {} files", results.len()),
+        None,
+        None,
+    );
     Ok(results.len() as u64)
 }
 
@@ -1916,10 +2112,21 @@ async fn csam_generate_report(evidence_id: String, output_pdf_path: String) -> R
 
 #[tauri::command]
 async fn csam_export_audit_log(evidence_id: String, output_path: String) -> Result<(), String> {
+    let eid_for_log = evidence_id.clone();
+    let output_for_log = output_path.clone();
     tokio::task::spawn_blocking(move || engine::csam_export_audit_log(&evidence_id, &output_path))
         .await
         .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    log_custody_event(
+        "Unknown Examiner".to_string(),
+        "export_triggered",
+        eid_for_log,
+        format!("Exported CSAM audit log to {output_for_log}"),
+        None,
+        None,
+    );
+    Ok(())
 }
 
 #[tauri::command]
@@ -2136,7 +2343,27 @@ async fn save_report(html: String, case_path: String) -> Result<String, String> 
     let filename = format!("report_{}.html", ts);
     let path = exports.join(&filename);
     std::fs::write(&path, html).map_err(|e| e.to_string())?;
-    Ok(path.to_string_lossy().to_string())
+    let out = path.to_string_lossy().to_string();
+    let eid = current_evidence_id().unwrap_or_default();
+    if !eid.is_empty() {
+        log_custody_event(
+            "Unknown Examiner".to_string(),
+            "report_generated",
+            eid.clone(),
+            format!("Saved report to {out}"),
+            None,
+            engine::sha256_file(&path),
+        );
+        log_custody_event(
+            "Unknown Examiner".to_string(),
+            "export_triggered",
+            eid,
+            format!("Exported report to {out}"),
+            None,
+            None,
+        );
+    }
+    Ok(out)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -2516,12 +2743,15 @@ pub fn run() {
             get_file_hex,
             get_file_text,
             search_files,
+            search_iocs,
             get_plugin_statuses,
             run_plugin,
             run_all_plugins,
             get_artifact_categories,
             get_artifacts,
+            get_artifacts_timeline,
             get_artifacts_by_thread,
+            get_custody_log,
             navigate_to_path,
             get_tag_summaries,
             get_tagged_files,

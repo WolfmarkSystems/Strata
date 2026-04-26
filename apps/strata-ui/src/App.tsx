@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import TopBar from './components/TopBar'
 import Sidebar from './components/Sidebar'
@@ -9,14 +9,18 @@ import ExaminerSetup from './components/ExaminerSetup'
 import DriveSelection from './components/DriveSelection'
 import FileExplorer from './views/FileExplorer'
 import ArtifactsView from './views/ArtifactsView'
+import TimelineView from './views/TimelineView'
+import IocHuntView from './views/IocHuntView'
+import CustodyLogView from './views/CustodyLogView'
 import TaggedView from './views/TaggedView'
 import PluginsView from './views/PluginsView'
 import SettingsView from './views/SettingsView'
 import NotesView from './views/NotesView'
 import { useAppStore } from './store/appStore'
-import { generateReport, openEvidenceDialog, loadEvidence, getStats, runAllPlugins } from './ipc'
+import { generateReport, openEvidenceDialog, loadEvidence, getStats, getTreeChildren, getTreeRoot, runAllPlugins } from './ipc'
 
 export default function App() {
+  const [ipcError, setIpcError] = useState<string | null>(null)
   const gate = useAppStore((s) => s.gate)
   const view = useAppStore((s) => s.view)
   const searchActive = useAppStore((s) => s.searchActive)
@@ -81,7 +85,12 @@ export default function App() {
         setCase(result.evidence_id, result.name)
         const preStats = await getStats(result.evidence_id)
         setStats(preStats)
-        setSelectedNode('vol-ntfs')
+        const roots = await getTreeRoot(result.evidence_id)
+        const root = roots[0]
+        if (root) {
+          const children = root.has_children ? await getTreeChildren(root.id) : []
+          setSelectedNode(children[0]?.id ?? root.id)
+        }
         // Sprint 8 P1 F1 — auto-index after load; same flow as the
         // TopBar "Open Evidence" button. INDEXING badge is rendered
         // in TopBar from the shared `pluginsRunning` store flag.
@@ -111,6 +120,17 @@ export default function App() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [setSearchActive, setView, setReportVisible, setReportHtml, caseName, examinerProfile, setEvidence, setCase, setStats, setSelectedNode, setPluginsRunning])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ command: string; message: string }>).detail
+      if (!detail) return
+      setIpcError(`${detail.command}: ${detail.message}`)
+      window.setTimeout(() => setIpcError(null), 8000)
+    }
+    window.addEventListener('strata-ipc-error', handler)
+    return () => window.removeEventListener('strata-ipc-error', handler)
+  }, [])
 
   // Gate routing
   if (gate === 'splash') return <SplashScreen />
@@ -143,12 +163,35 @@ export default function App() {
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
           {view === 'files' && <FileExplorer />}
           {view === 'artifacts' && <ArtifactsView />}
+          {view === 'timeline' && <TimelineView />}
+          {view === 'ioc' && <IocHuntView />}
+          {view === 'custody' && <CustodyLogView />}
           {view === 'tags' && <TaggedView />}
           {view === 'notes' && <NotesView />}
           {view === 'plugins' && <PluginsView />}
           {view === 'settings' && <SettingsView />}
         </div>
       </div>
+      {ipcError && (
+        <div
+          style={{
+            position: 'fixed',
+            right: 16,
+            bottom: 16,
+            zIndex: 2000,
+            maxWidth: 520,
+            padding: '10px 12px',
+            borderRadius: 6,
+            border: '1px solid var(--sus)',
+            background: 'var(--bg-elevated)',
+            color: 'var(--text-1)',
+            fontSize: 12,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+          }}
+        >
+          {ipcError}
+        </div>
+      )}
       {searchActive && createPortal(<SearchOverlay />, document.body)}
       {reportVisible && createPortal(<ReportViewer />, document.body)}
     </div>

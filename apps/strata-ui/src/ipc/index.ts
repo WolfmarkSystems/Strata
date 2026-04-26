@@ -95,6 +95,28 @@ export interface ArtifactsResponse {
   plugins_not_run: boolean
 }
 
+export interface IocQuery {
+  indicators: string[]
+  evidence_id: string
+}
+
+export interface IocMatch {
+  indicator: string
+  artifact: Artifact
+  match_field: string
+  confidence: 'exact' | 'partial' | string
+}
+
+export interface CustodyEntry {
+  timestamp: number
+  examiner: string
+  action: string
+  evidence_id: string
+  details: string
+  hash_before: string | null
+  hash_after: string | null
+}
+
 export interface PluginStatus {
   name: string
   status: 'idle' | 'running' | 'complete' | 'error'
@@ -623,6 +645,72 @@ export async function getArtifacts(
   } catch (e) {
     reportIpcError('get_artifacts', e)
     return { artifacts: [], plugins_not_run: false }
+  }
+}
+
+export async function getArtifactsTimeline(
+  evidenceId: string,
+  startTs?: number,
+  endTs?: number,
+  limit = 500,
+): Promise<Artifact[]> {
+  if (!IN_TAURI) {
+    return Object.values(MOCK_ARTIFACTS)
+      .flat()
+      .filter((a) => a.timestamp)
+      .sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)))
+      .slice(0, limit)
+  }
+  try {
+    return await invoke<Artifact[]>('get_artifacts_timeline', {
+      evidenceId,
+      startTs: startTs ?? null,
+      endTs: endTs ?? null,
+      limit,
+    })
+  } catch (e) {
+    reportIpcError('get_artifacts_timeline', e)
+    return []
+  }
+}
+
+export async function searchIocs(query: IocQuery): Promise<IocMatch[]> {
+  if (!IN_TAURI) {
+    const indicators = query.indicators.map((ioc) => ioc.toLowerCase())
+    const artifacts = Object.values(MOCK_ARTIFACTS).flat()
+    return artifacts.flatMap((artifact) =>
+      indicators.flatMap((indicator) => {
+        const haystacks: Array<[string, string]> = [
+          ['value', artifact.value],
+          ['name', artifact.name],
+          ['source_path', artifact.source_path],
+        ]
+        return haystacks
+          .filter(([, value]) => value.toLowerCase().includes(indicator))
+          .map(([field]) => ({
+            indicator,
+            artifact,
+            match_field: field,
+            confidence: 'partial',
+          }))
+      }),
+    )
+  }
+  try {
+    return await invoke<IocMatch[]>('search_iocs', { query })
+  } catch (e) {
+    reportIpcError('search_iocs', e)
+    return []
+  }
+}
+
+export async function getCustodyLog(evidenceId: string): Promise<CustodyEntry[]> {
+  if (!IN_TAURI) return []
+  try {
+    return await invoke<CustodyEntry[]>('get_custody_log', { evidenceId })
+  } catch (e) {
+    reportIpcError('get_custody_log', e)
+    return []
   }
 }
 

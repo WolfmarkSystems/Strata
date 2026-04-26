@@ -123,6 +123,20 @@ pub struct MessageThread {
     pub messages: Vec<ThreadMessage>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct IocQuery {
+    pub indicators: Vec<String>,
+    pub evidence_id: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct IocMatch {
+    pub indicator: String,
+    pub artifact: PluginArtifact,
+    pub match_field: String,
+    pub confidence: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EngineStats {
     pub files: u64,

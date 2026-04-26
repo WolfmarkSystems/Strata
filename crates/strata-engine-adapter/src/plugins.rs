@@ -390,6 +390,124 @@ pub fn get_artifacts_by_category(
     Ok(deduplicate_artifacts(out))
 }
 
+pub fn get_artifacts_timeline(
+    evidence_id: &str,
+    start_ts: Option<i64>,
+    end_ts: Option<i64>,
+    limit: Option<usize>,
+) -> AdapterResult<Vec<PluginArtifact>> {
+    let cache = ARTIFACT_CACHE
+        .lock()
+        .map_err(|e| AdapterError::EngineError(format!("artifact cache poisoned: {e}")))?;
+    let mut out: Vec<(i64, PluginArtifact)> = cache
+        .iter()
+        .filter(|((eid, _), _)| eid == evidence_id)
+        .flat_map(|(_, artifacts)| artifacts.iter().cloned())
+        .filter_map(|artifact| {
+            let ts = artifact
+                .timestamp
+                .as_deref()
+                .and_then(parse_artifact_timestamp)?;
+            if ts == 0 {
+                return None;
+            }
+            if start_ts.map(|start| ts < start).unwrap_or(false) {
+                return None;
+            }
+            if end_ts.map(|end| ts > end).unwrap_or(false) {
+                return None;
+            }
+            Some((ts, artifact))
+        })
+        .collect();
+    out.sort_by_key(|(ts, _)| *ts);
+    out.truncate(limit.unwrap_or(500));
+    Ok(out.into_iter().map(|(_, artifact)| artifact).collect())
+}
+
+pub fn search_iocs(query: crate::types::IocQuery) -> AdapterResult<Vec<crate::types::IocMatch>> {
+    let indicators: Vec<String> = query
+        .indicators
+        .into_iter()
+        .map(|ioc| ioc.trim().to_string())
+        .filter(|ioc| !ioc.is_empty())
+        .collect();
+    if indicators.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let cache = ARTIFACT_CACHE
+        .lock()
+        .map_err(|e| AdapterError::EngineError(format!("artifact cache poisoned: {e}")))?;
+    let mut out = Vec::new();
+    for ((eid, _plugin), artifacts) in cache.iter() {
+        if eid != &query.evidence_id {
+            continue;
+        }
+        for artifact in artifacts {
+            for indicator in &indicators {
+                if let Some((field, confidence)) = artifact_matches_ioc(artifact, indicator) {
+                    out.push(crate::types::IocMatch {
+                        indicator: indicator.clone(),
+                        artifact: artifact.clone(),
+                        match_field: field,
+                        confidence,
+                    });
+                }
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn artifact_matches_ioc(artifact: &PluginArtifact, indicator: &str) -> Option<(String, String)> {
+    for (field, value) in [
+        ("value", artifact.value.as_str()),
+        ("name", artifact.name.as_str()),
+        ("source_path", artifact.source_path.as_str()),
+    ] {
+        if contains_case_insensitive(value, indicator) {
+            let confidence = if value.eq_ignore_ascii_case(indicator)
+                || std::path::Path::new(value)
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .map(|name| name.eq_ignore_ascii_case(indicator))
+                    .unwrap_or(false)
+            {
+                "exact"
+            } else {
+                "partial"
+            };
+            return Some((field.to_string(), confidence.to_string()));
+        }
+    }
+    None
+}
+
+fn contains_case_insensitive(haystack: &str, needle: &str) -> bool {
+    haystack
+        .to_ascii_lowercase()
+        .contains(&needle.to_ascii_lowercase())
+}
+
+fn parse_artifact_timestamp(raw: &str) -> Option<i64> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if let Ok(ts) = trimmed.parse::<i64>() {
+        return Some(ts);
+    }
+    chrono::DateTime::parse_from_rfc3339(trimmed)
+        .map(|dt| dt.timestamp())
+        .ok()
+        .or_else(|| {
+            chrono::NaiveDateTime::parse_from_str(trimmed, "%Y-%m-%d %H:%M:%S")
+                .ok()
+                .map(|dt| dt.and_utc().timestamp())
+        })
+}
+
 /// Sprint-11 P4 — collapse exact-duplicate artifacts that cross
 /// plugin boundaries. Keys on `(source_path, name, value, timestamp)`
 /// — deliberately ignoring `plugin` so the same chat.db row surfaced
@@ -1237,6 +1355,191 @@ mod sprint11_p4_dedup_tests {
         ];
         let out = deduplicate_artifacts(dupes);
         assert_eq!(out.len(), 1, "three identical artifacts collapse to one");
+    }
+}
+
+#[cfg(test)]
+mod sprint14_timeline_tests {
+    use super::*;
+
+    fn artifact(id: &str, ts: Option<&str>) -> PluginArtifact {
+        PluginArtifact {
+            id: id.to_string(),
+            category: "User Activity".to_string(),
+            name: format!("artifact {id}"),
+            value: "value".to_string(),
+            timestamp: ts.map(String::from),
+            source_file: "source.db".to_string(),
+            source_path: "/evidence/source.db".to_string(),
+            forensic_value: "medium".to_string(),
+            mitre_technique: Some("T1083".to_string()),
+            mitre_name: None,
+            plugin: "Test".to_string(),
+            raw_data: None,
+        }
+    }
+
+    fn seed(evidence_id: &str, artifacts: Vec<PluginArtifact>) {
+        let mut cache = ARTIFACT_CACHE.lock().expect("cache");
+        cache.retain(|(eid, _), _| eid != evidence_id);
+        cache.insert((evidence_id.to_string(), "Test".to_string()), artifacts);
+    }
+
+    fn cleanup(evidence_id: &str) {
+        let mut cache = ARTIFACT_CACHE.lock().expect("cache");
+        cache.retain(|(eid, _), _| eid != evidence_id);
+    }
+
+    #[test]
+    fn timeline_sorts_artifacts_chronologically() {
+        let eid = "timeline-sort";
+        seed(
+            eid,
+            vec![
+                artifact("late", Some("300")),
+                artifact("early", Some("100")),
+                artifact("middle", Some("200")),
+            ],
+        );
+
+        let out = get_artifacts_timeline(eid, None, None, None).expect("timeline");
+        let ids: Vec<String> = out.into_iter().map(|a| a.id).collect();
+        assert_eq!(ids, vec!["early", "middle", "late"]);
+        cleanup(eid);
+    }
+
+    #[test]
+    fn timeline_filters_by_date_range() {
+        let eid = "timeline-range";
+        seed(
+            eid,
+            vec![
+                artifact("day1", Some("100")),
+                artifact("day2", Some("200")),
+                artifact("day3", Some("300")),
+                artifact("day4", Some("400")),
+            ],
+        );
+
+        let out = get_artifacts_timeline(eid, Some(200), Some(300), None).expect("timeline");
+        let ids: Vec<String> = out.into_iter().map(|a| a.id).collect();
+        assert_eq!(ids, vec!["day2", "day3"]);
+        cleanup(eid);
+    }
+
+    #[test]
+    fn timeline_excludes_artifacts_without_timestamps() {
+        let eid = "timeline-no-null";
+        seed(
+            eid,
+            vec![
+                artifact("null", None),
+                artifact("zero", Some("0")),
+                artifact("real", Some("200")),
+            ],
+        );
+
+        let out = get_artifacts_timeline(eid, None, None, None).expect("timeline");
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].id, "real");
+        cleanup(eid);
+    }
+}
+
+#[cfg(test)]
+mod sprint14_ioc_search_tests {
+    use super::*;
+
+    fn artifact(id: &str, name: &str, value: &str, source_path: &str) -> PluginArtifact {
+        PluginArtifact {
+            id: id.to_string(),
+            category: "Network Artifacts".to_string(),
+            name: name.to_string(),
+            value: value.to_string(),
+            timestamp: Some("200".to_string()),
+            source_file: "source.db".to_string(),
+            source_path: source_path.to_string(),
+            forensic_value: "high".to_string(),
+            mitre_technique: Some("T1071".to_string()),
+            mitre_name: None,
+            plugin: "Test".to_string(),
+            raw_data: None,
+        }
+    }
+
+    fn seed(evidence_id: &str, artifacts: Vec<PluginArtifact>) {
+        let mut cache = ARTIFACT_CACHE.lock().expect("cache");
+        cache.retain(|(eid, _), _| eid != evidence_id);
+        cache.insert((evidence_id.to_string(), "Test".to_string()), artifacts);
+    }
+
+    fn cleanup(evidence_id: &str) {
+        let mut cache = ARTIFACT_CACHE.lock().expect("cache");
+        cache.retain(|(eid, _), _| eid != evidence_id);
+    }
+
+    #[test]
+    fn ioc_search_finds_exact_ip_match() {
+        let eid = "ioc-ip";
+        seed(
+            eid,
+            vec![artifact(
+                "a1",
+                "TCP connection",
+                "192.168.1.100",
+                "/evidence/net.log",
+            )],
+        );
+
+        let hits = search_iocs(crate::types::IocQuery {
+            indicators: vec!["192.168.1.100".to_string()],
+            evidence_id: eid.to_string(),
+        })
+        .expect("ioc search");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].match_field, "value");
+        assert_eq!(hits[0].confidence, "exact");
+        cleanup(eid);
+    }
+
+    #[test]
+    fn ioc_search_is_case_insensitive() {
+        let eid = "ioc-case";
+        seed(
+            eid,
+            vec![artifact(
+                "a1",
+                "PE Analysis: MALWARE.EXE",
+                "execution",
+                "/evidence/MALWARE.EXE",
+            )],
+        );
+
+        let hits = search_iocs(crate::types::IocQuery {
+            indicators: vec!["malware.exe".to_string()],
+            evidence_id: eid.to_string(),
+        })
+        .expect("ioc search");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].indicator, "malware.exe");
+        cleanup(eid);
+    }
+
+    #[test]
+    fn ioc_search_returns_no_matches_for_clean_evidence() {
+        let eid = "ioc-clean";
+        seed(
+            eid,
+            vec![artifact("a1", "benign", "clean", "/evidence/clean.txt")],
+        );
+
+        let hits = search_iocs(crate::types::IocQuery {
+            indicators: vec!["not-present.example".to_string()],
+            evidence_id: eid.to_string(),
+        })
+        .expect("ioc search");
+        assert!(hits.is_empty());
+        cleanup(eid);
     }
 }
 
