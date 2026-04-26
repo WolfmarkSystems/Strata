@@ -1087,8 +1087,57 @@ fn convert_output(output: &PluginOutput, plugin_name: &str) -> Vec<PluginArtifac
             mitre_name: None,
             plugin: plugin_name.to_string(),
             raw_data: rec.raw_data.as_ref().map(|v| v.to_string()),
+            confidence_score: confidence_score_for(plugin_name, rec),
+            confidence_basis: confidence_basis_for(plugin_name, rec).to_string(),
         })
         .collect()
+}
+
+fn confidence_score_for(plugin_name: &str, rec: &ArtifactRecord) -> f32 {
+    let basis = confidence_basis_for(plugin_name, rec);
+    let scored = if rec.confidence > 0 {
+        f32::from(rec.confidence.min(100)) / 100.0
+    } else {
+        match basis {
+            "advisory" => 0.50,
+            "ml_model" => parse_ml_confidence(&rec.detail).unwrap_or(0.70),
+            "heuristic" => 0.70,
+            "pattern_match" => 0.85,
+            "file_signature_match" => 0.95,
+            _ => 1.0,
+        }
+    };
+    if basis == "advisory" {
+        scored.min(0.65)
+    } else {
+        scored.clamp(0.0, 1.0)
+    }
+}
+
+fn confidence_basis_for(plugin_name: &str, rec: &ArtifactRecord) -> &'static str {
+    let plugin = plugin_name.to_ascii_lowercase();
+    let detail = rec.detail.to_ascii_lowercase();
+    let subcategory = rec.subcategory.to_ascii_lowercase();
+    if plugin.contains("advisory") || detail.contains("advisory") {
+        "advisory"
+    } else if detail.contains("[confidence=") || detail.contains("ml ") {
+        "ml_model"
+    } else if detail.contains("signature") || subcategory.contains("signature") {
+        "file_signature_match"
+    } else if detail.contains("pattern") || subcategory.contains("pattern") {
+        "pattern_match"
+    } else if rec.is_suspicious {
+        "heuristic"
+    } else {
+        "deterministic_parse"
+    }
+}
+
+fn parse_ml_confidence(detail: &str) -> Option<f32> {
+    let marker = "[confidence=";
+    let start = detail.find(marker)? + marker.len();
+    let end = detail[start..].find(']')? + start;
+    detail[start..end].parse::<f32>().ok()
 }
 
 pub fn deterministic_artifact_id(source_path: &str, artifact_type: &str, value: &str) -> String {
@@ -1317,6 +1366,8 @@ mod sprint11_p4_dedup_tests {
             mitre_name: None,
             plugin: plugin.into(),
             raw_data: None,
+            confidence_score: 1.0,
+            confidence_basis: "deterministic_parse".into(),
         }
     }
 
@@ -1387,6 +1438,8 @@ mod sprint14_timeline_tests {
             mitre_name: None,
             plugin: "Test".to_string(),
             raw_data: None,
+            confidence_score: 1.0,
+            confidence_basis: "deterministic_parse".to_string(),
         }
     }
 
@@ -1475,6 +1528,8 @@ mod sprint14_ioc_search_tests {
             mitre_name: None,
             plugin: "Test".to_string(),
             raw_data: None,
+            confidence_score: 1.0,
+            confidence_basis: "deterministic_parse".to_string(),
         }
     }
 
@@ -1605,6 +1660,8 @@ mod sprint11_p1_thread_grouping_tests {
             mitre_name: None,
             plugin: plugin.into(),
             raw_data: Some(raw),
+            confidence_score: 1.0,
+            confidence_basis: "deterministic_parse".into(),
         };
         // Inject directly into ARTIFACT_CACHE so the grouping query sees it.
         let mut cache = ARTIFACT_CACHE.lock().expect("cache");
@@ -1752,6 +1809,8 @@ mod sprint11_p1_thread_grouping_tests {
                 mitre_name: None,
                 plugin: "MacTrace".into(),
                 raw_data: Some(raw.clone()),
+                confidence_score: 1.0,
+                confidence_basis: "deterministic_parse".into(),
             };
             let mut cache = ARTIFACT_CACHE.lock().expect("cache");
             cache
@@ -1991,6 +2050,49 @@ mod sprint10_panic_sandbox_tests {
 
         assert_eq!(first, second);
         assert_ne!(first, changed);
+    }
+
+    fn confidence_record(detail: &str, suspicious: bool) -> ArtifactRecord {
+        ArtifactRecord {
+            category: ArtifactCategory::SystemActivity,
+            subcategory: "Registry".to_string(),
+            timestamp: None,
+            title: "record".to_string(),
+            detail: detail.to_string(),
+            source_path: "/x".to_string(),
+            forensic_value: ForensicValue::Medium,
+            mitre_technique: None,
+            is_suspicious: suspicious,
+            raw_data: None,
+            confidence: 0,
+        }
+    }
+
+    #[test]
+    fn deterministic_parse_artifacts_score_1_0() {
+        let rec = confidence_record("registry value parsed", false);
+        assert_eq!(confidence_score_for("Trace", &rec), 1.0);
+        assert_eq!(confidence_basis_for("Trace", &rec), "deterministic_parse");
+    }
+
+    #[test]
+    fn advisory_artifacts_score_below_0_7() {
+        let rec = confidence_record("ADVISORY [confidence=0.88]", false);
+        assert!(confidence_score_for("Advisory", &rec) <= 0.65);
+        assert_eq!(confidence_basis_for("Advisory", &rec), "advisory");
+    }
+
+    #[test]
+    fn confidence_basis_is_never_empty() {
+        let recs = [
+            confidence_record("registry value parsed", false),
+            confidence_record("signature match", false),
+            confidence_record("[confidence=0.82] ml anomaly", false),
+            confidence_record("heuristic suspicious", true),
+        ];
+        for rec in &recs {
+            assert!(!confidence_basis_for("Trace", rec).is_empty());
+        }
     }
 
     #[test]

@@ -127,6 +127,8 @@ fn adapter_artifact_to_desktop(a: engine::PluginArtifact) -> Artifact {
         mitre_name: a.mitre_name,
         plugin: a.plugin,
         raw_data: a.raw_data,
+        confidence_score: a.confidence_score,
+        confidence_basis: a.confidence_basis,
     }
 }
 
@@ -449,6 +451,8 @@ pub struct Artifact {
     pub mitre_name: Option<String>,
     pub plugin: String,
     pub raw_data: Option<String>,
+    pub confidence_score: f32,
+    pub confidence_basis: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -980,13 +984,9 @@ pub struct ReportOptions {
     pub include_timeline: bool,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ReportResult {
-    pub html: String,
-    pub path: Option<String>,
-}
-
 struct ReportSnapshot {
+    evidence_id: String,
+    evidence_description: String,
     generated_at: String,
     app_version: String,
     stats: Stats,
@@ -994,11 +994,41 @@ struct ReportSnapshot {
     tagged: Vec<TaggedFile>,
     flagged_notes: Vec<ArtifactNote>,
     categories: Vec<ArtifactCategory>,
+    custody: Vec<engine::CustodyEntry>,
+    hash_sets: Vec<HashSetInfo>,
 }
 
 #[tauri::command]
-async fn generate_report(app: tauri::AppHandle, options: ReportOptions) -> Result<ReportResult, String> {
-    let evidence_id = current_evidence_id().unwrap_or_default();
+async fn generate_report(
+    app: tauri::AppHandle,
+    evidence_id: String,
+    output_path: String,
+    format: String,
+) -> Result<String, String> {
+    let evidence_id = if evidence_id.is_empty() {
+        current_evidence_id().unwrap_or_default()
+    } else {
+        evidence_id
+    };
+    if evidence_id.is_empty() {
+        return Err("No evidence loaded".to_string());
+    }
+    let profile = get_examiner_profile_sync(&app).unwrap_or_default();
+    let options = ReportOptions {
+        case_number: evidence_id.clone(),
+        case_name: current_evidence_id().unwrap_or_else(|| "Strata Analysis".to_string()),
+        examiner_name: if profile.name.is_empty() {
+            "Unknown Examiner".to_string()
+        } else {
+            profile.name
+        },
+        examiner_agency: profile.agency,
+        examiner_badge: profile.badge,
+        include_artifacts: true,
+        include_tagged: true,
+        include_mitre: true,
+        include_timeline: true,
+    };
     let stats = if evidence_id.is_empty() {
         Stats {
             files: 0,
@@ -1034,6 +1064,8 @@ async fn generate_report(app: tauri::AppHandle, options: ReportOptions) -> Resul
         get_flagged_artifacts(app.clone(), evidence_id.clone()).await?
     };
     let snapshot = ReportSnapshot {
+        evidence_id: evidence_id.clone(),
+        evidence_description: format!("Evidence {evidence_id}"),
         generated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M UTC").to_string(),
         app_version: env!("CARGO_PKG_VERSION").to_string(),
         stats,
@@ -1041,19 +1073,59 @@ async fn generate_report(app: tauri::AppHandle, options: ReportOptions) -> Resul
         tagged,
         flagged_notes,
         categories,
+        custody: engine::get_custody_log(&evidence_id),
+        hash_sets: engine::list_hash_sets()
+            .into_iter()
+            .map(HashSetInfo::from)
+            .collect(),
     };
     let html = build_report_html(&options, &snapshot);
+    let out = if output_path.trim().is_empty() {
+        std::env::temp_dir()
+            .join(format!("strata-report-{}.html", evidence_id))
+            .to_string_lossy()
+            .to_string()
+    } else {
+        output_path
+    };
+    let report_path = if format.eq_ignore_ascii_case("pdf") {
+        write_report_pdf_or_html(&html, &out)?
+    } else {
+        std::fs::write(&out, &html).map_err(|e| e.to_string())?;
+        out
+    };
     if !evidence_id.is_empty() {
         log_custody_event(
             options.examiner_name.clone(),
             "report_generated",
             evidence_id,
-            format!("Generated report preview for {}", options.case_name),
+            format!("Generated {} report at {}", format, report_path),
             None,
             None,
         );
     }
-    Ok(ReportResult { html, path: None })
+    Ok(report_path)
+}
+
+fn write_report_pdf_or_html(html: &str, output_path: &str) -> Result<String, String> {
+    let html_path = if output_path.to_ascii_lowercase().ends_with(".pdf") {
+        output_path.replace(".pdf", ".html")
+    } else {
+        format!("{output_path}.html")
+    };
+    std::fs::write(&html_path, html).map_err(|e| e.to_string())?;
+    if cfg!(target_os = "macos") {
+        let status = std::process::Command::new("wkhtmltopdf")
+            .arg(&html_path)
+            .arg(output_path)
+            .status();
+        if let Ok(status) = status {
+            if status.success() {
+                return Ok(output_path.to_string());
+            }
+        }
+    }
+    Ok(html_path)
 }
 
 fn html_escape(s: &str) -> String {
@@ -1071,6 +1143,28 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     let examiner_name = html_escape(&o.examiner_name);
     let examiner_agency = html_escape(&o.examiner_agency);
     let examiner_badge = html_escape(&o.examiner_badge);
+    let evidence_description = html_escape(&snapshot.evidence_description);
+    let evidence_id = html_escape(&snapshot.evidence_id);
+    let evidence_hash = snapshot
+        .integrity
+        .as_ref()
+        .map(|i| html_escape(&i.sha256))
+        .unwrap_or_else(|| "Not computed".to_string());
+    let evidence_size = snapshot
+        .integrity
+        .as_ref()
+        .map(|i| i.file_size_bytes.to_string())
+        .unwrap_or_else(|| "Unknown".to_string());
+    let analysis_start = snapshot
+        .custody
+        .first()
+        .map(|entry| entry.timestamp.to_string())
+        .unwrap_or_else(|| "Not recorded".to_string());
+    let analysis_end = snapshot
+        .custody
+        .last()
+        .map(|entry| entry.timestamp.to_string())
+        .unwrap_or_else(|| "Not recorded".to_string());
     let tagged_rows = if snapshot.tagged.is_empty() {
         "<tr><td colspan=\"4\">No tagged evidence recorded.</td></tr>".to_string()
     } else {
@@ -1117,31 +1211,71 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     <h2>Evidence Integrity</h2>
     <div class="info-grid">
       <div class="info-row"><span class="info-key">SHA-256</span><span class="info-val" style="font-family:monospace;font-size:10px;">{}</span></div>
-      <div class="info-row"><span class="info-key">Verified</span><span class="info-val">{}</span></div>
+      <div class="info-row"><span class="info-key">Analysis SHA-256</span><span class="info-val" style="font-family:monospace;font-size:10px;">{}</span></div>
+      <div class="info-row"><span class="info-key">Match Confirmation</span><span class="info-val">{}</span></div>
       <div class="info-row"><span class="info-key">Size</span><span class="info-val">{} bytes</span></div>
       <div class="info-row"><span class="info-key">Computed</span><span class="info-val">{}</span></div>
     </div>
   </div>"#,
                 html_escape(&i.sha256),
-                if i.verified { "Yes" } else { "No" },
+                html_escape(&i.sha256),
+                if i.verified { "MATCH CONFIRMED" } else { "MISMATCH WARNING" },
                 i.file_size_bytes,
                 i.computed_at
             )
         })
         .unwrap_or_default();
     let flagged_rows = if snapshot.flagged_notes.is_empty() {
-        "<tr><td colspan=\"4\">No flagged artifact notes recorded.</td></tr>".to_string()
+        "<tr><td colspan=\"5\">No flagged artifact notes recorded.</td></tr>".to_string()
     } else {
         snapshot
             .flagged_notes
             .iter()
             .map(|note| {
                 format!(
-                    "<tr><td style=\"font-family:monospace;font-size:10px;\">{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                    "<tr><td style=\"font-family:monospace;font-size:10px;\">{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
                     html_escape(&note.artifact_id),
+                    html_escape(&note.evidence_id),
                     html_escape(&note.examiner),
                     note.created_at,
                     html_escape(&note.note)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("")
+    };
+    let custody_rows = if snapshot.custody.is_empty() {
+        "<tr><td colspan=\"6\">No custody entries recorded.</td></tr>".to_string()
+    } else {
+        snapshot
+            .custody
+            .iter()
+            .map(|entry| {
+                format!(
+                    "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td style=\"font-family:monospace;font-size:10px;\">{}</td></tr>",
+                    entry.timestamp,
+                    html_escape(&entry.examiner),
+                    html_escape(&entry.action),
+                    html_escape(&entry.evidence_id),
+                    html_escape(&entry.details),
+                    html_escape(entry.hash_after.as_deref().unwrap_or(""))
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("")
+    };
+    let hash_set_rows = if snapshot.hash_sets.is_empty() {
+        "<tr><td colspan=\"3\">No hash sets applied.</td></tr>".to_string()
+    } else {
+        snapshot
+            .hash_sets
+            .iter()
+            .map(|set| {
+                format!(
+                    "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
+                    html_escape(&set.name),
+                    set.hash_count,
+                    set.imported_at
                 )
             })
             .collect::<Vec<_>>()
@@ -1189,16 +1323,36 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
   </div>
 
   <div class="section">
-    <h2>Case Information</h2>
+    <h1>Cover Page</h1>
     <div class="info-grid">
       <div class="info-row"><span class="info-key">Case No.</span><span class="info-val">{case_number}</span></div>
       <div class="info-row"><span class="info-key">Case Name</span><span class="info-val">{case_name}</span></div>
       <div class="info-row"><span class="info-key">Examiner</span><span class="info-val">{examiner_name}</span></div>
       <div class="info-row"><span class="info-key">Agency</span><span class="info-val">{examiner_agency}</span></div>
       <div class="info-row"><span class="info-key">Badge</span><span class="info-val">{examiner_badge}</span></div>
+      <div class="info-row"><span class="info-key">Evidence</span><span class="info-val">{evidence_description}</span></div>
+      <div class="info-row"><span class="info-key">Evidence ID</span><span class="info-val">{evidence_id}</span></div>
+      <div class="info-row"><span class="info-key">Evidence Size</span><span class="info-val">{evidence_size} bytes</span></div>
+      <div class="info-row"><span class="info-key">Evidence SHA-256</span><span class="info-val" style="font-family:monospace;font-size:10px;">{evidence_hash}</span></div>
+      <div class="info-row"><span class="info-key">Analysis Time</span><span class="info-val">{generated_at}</span></div>
       <div class="info-row"><span class="info-key">Platform</span><span class="info-val">Strata v{app_version}</span></div>
     </div>
   </div>
+
+  <div class="section">
+    <h2>Methodology</h2>
+    <p>Strata parsed the loaded evidence, ran configured analysis plugins, applied imported known-good hash sets where available, and preserved examiner actions in the custody log.</p>
+    <div class="info-grid">
+      <div class="info-row"><span class="info-key">Analysis Start</span><span class="info-val">{analysis_start}</span></div>
+      <div class="info-row"><span class="info-key">Analysis End</span><span class="info-val">{analysis_end}</span></div>
+    </div>
+    <table>
+      <thead><tr><th>Hash Set</th><th>Hashes</th><th>Imported</th></tr></thead>
+      <tbody>{hash_set_rows}</tbody>
+    </table>
+  </div>
+
+  {integrity_section}
 
   <div class="section">
     <h2>Executive Summary</h2>
@@ -1215,10 +1369,8 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </p>
   </div>
 
-  {integrity_section}
-
   <div class="section">
-    <h2>Artifact Categories</h2>
+    <h2>Findings by Category</h2>
     <table>
       <thead><tr><th>Category</th><th>Artifacts</th><th>Color</th></tr></thead>
       <tbody>
@@ -1240,9 +1392,19 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
   <div class="section">
     <h2>Flagged Artifacts</h2>
     <table>
-      <thead><tr><th>Artifact ID</th><th>Examiner</th><th>Created</th><th>Note</th></tr></thead>
+      <thead><tr><th>Artifact ID</th><th>Evidence</th><th>Examiner</th><th>Created</th><th>Note</th></tr></thead>
       <tbody>
         {flagged_rows}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Chain of Custody Log</h2>
+    <table>
+      <thead><tr><th>Timestamp</th><th>Examiner</th><th>Action</th><th>Evidence</th><th>Details</th><th>Hash After</th></tr></thead>
+      <tbody>
+        {custody_rows}
       </tbody>
     </table>
   </div>
@@ -1292,11 +1454,18 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
         chevron = chevron_svg,
         case_number = case_number,
         case_name = case_name,
+        evidence_description = evidence_description,
+        evidence_id = evidence_id,
+        evidence_size = evidence_size,
+        evidence_hash = evidence_hash,
         examiner_name = examiner_name,
         examiner_agency = examiner_agency,
         examiner_badge = examiner_badge,
         generated_at = snapshot.generated_at,
         app_version = snapshot.app_version,
+        analysis_start = analysis_start,
+        analysis_end = analysis_end,
+        hash_set_rows = hash_set_rows,
         files = snapshot.stats.files,
         suspicious = snapshot.stats.suspicious,
         flagged = snapshot.stats.flagged,
@@ -1307,6 +1476,7 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
         category_rows = category_rows,
         tagged_rows = tagged_rows,
         flagged_rows = flagged_rows,
+        custody_rows = custody_rows,
     )
 }
 
@@ -3162,6 +3332,83 @@ mod sprint8_p1_tests {
         assert_eq!(html_escape("\"quoted\""), "&quot;quoted&quot;");
         assert_eq!(html_escape("'single'"), "&#x27;single&#x27;");
         assert_eq!(html_escape("<tag>"), "&lt;tag&gt;");
+    }
+
+    fn report_options_for_test(case_name: &str) -> ReportOptions {
+        ReportOptions {
+            case_number: "CASE-1".to_string(),
+            case_name: case_name.to_string(),
+            examiner_name: "Examiner".to_string(),
+            examiner_agency: "Agency".to_string(),
+            examiner_badge: "Badge".to_string(),
+            include_artifacts: true,
+            include_tagged: true,
+            include_mitre: true,
+            include_timeline: true,
+        }
+    }
+
+    fn report_snapshot_for_test() -> ReportSnapshot {
+        ReportSnapshot {
+            evidence_id: "ev-test".to_string(),
+            evidence_description: "test.e01".to_string(),
+            generated_at: "2026-04-26 12:00 UTC".to_string(),
+            app_version: "test".to_string(),
+            stats: Stats {
+                files: 1,
+                suspicious: 0,
+                flagged: 0,
+                carved: 0,
+                hashed: 1,
+                known_good: 0,
+                unknown: 1,
+                artifacts: 0,
+            },
+            integrity: Some(EvidenceIntegrity {
+                sha256: "abc123def456".to_string(),
+                computed_at: 123,
+                file_size_bytes: 42,
+                verified: true,
+            }),
+            tagged: Vec::new(),
+            flagged_notes: Vec::new(),
+            categories: Vec::new(),
+            custody: vec![engine::CustodyEntry {
+                timestamp: 123,
+                examiner: "Examiner".to_string(),
+                action: "evidence_loaded".to_string(),
+                evidence_id: "ev-test".to_string(),
+                details: "Loaded evidence".to_string(),
+                hash_before: None,
+                hash_after: Some("abc123def456".to_string()),
+            }],
+            hash_sets: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn report_includes_evidence_hash() {
+        let html = build_report_html(&report_options_for_test("Case"), &report_snapshot_for_test());
+        assert!(html.contains("abc123def456"));
+        assert!(html.contains("Evidence Integrity"));
+    }
+
+    #[test]
+    fn report_html_escapes_case_name() {
+        let html = build_report_html(
+            &report_options_for_test("<script>alert('x')</script>"),
+            &report_snapshot_for_test(),
+        );
+        assert!(!html.contains("<script>"));
+        assert!(html.contains("&lt;script&gt;alert(&#x27;x&#x27;)&lt;/script&gt;"));
+    }
+
+    #[test]
+    fn report_includes_custody_log() {
+        let html = build_report_html(&report_options_for_test("Case"), &report_snapshot_for_test());
+        assert!(html.contains("Chain of Custody Log"));
+        assert!(html.contains("evidence_loaded"));
+        assert!(html.contains("Loaded evidence"));
     }
 
     #[test]

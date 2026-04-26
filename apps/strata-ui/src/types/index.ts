@@ -134,6 +134,8 @@ export interface Artifact {
   source_file: string
   forensic_value: 'high' | 'medium' | 'low'
   mitre_technique: string | null
+  confidence_score?: number
+  confidence_basis?: string
 }
 
 export interface TagSummary {

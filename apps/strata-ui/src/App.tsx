@@ -31,6 +31,7 @@ export default function App() {
   const setReportHtml = useAppStore((s) => s.setReportHtml)
   const caseName = useAppStore((s) => s.caseName)
   const examinerProfile = useAppStore((s) => s.examinerProfile)
+  const evidenceId = useAppStore((s) => s.evidenceId)
   const setEvidence = useAppStore((s) => s.setEvidence)
   const setCase = useAppStore((s) => s.setCase)
   const setStats = useAppStore((s) => s.setStats)
@@ -55,18 +56,9 @@ export default function App() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
         e.preventDefault()
-        const result = await generateReport({
-          case_number: 'STRATA-2026-001',
-          case_name: caseName ?? 'Unsaved Session',
-          examiner_name: examinerProfile?.name ?? 'Dev Examiner',
-          examiner_agency: examinerProfile?.agency ?? 'Wolfmark Systems',
-          examiner_badge: examinerProfile?.badge ?? 'DEV-001',
-          include_artifacts: true,
-          include_tagged: true,
-          include_mitre: true,
-          include_timeline: true,
-        })
-        setReportHtml(result.html)
+        if (!evidenceId) return
+        const path = await generateReport(evidenceId, '', 'html')
+        setReportHtml(`<pre style="padding:24px;font-family:monospace;">Report saved: ${path}</pre>`)
         setReportVisible(true)
         return
       }
@@ -119,7 +111,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [setSearchActive, setView, setReportVisible, setReportHtml, caseName, examinerProfile, setEvidence, setCase, setStats, setSelectedNode, setPluginsRunning])
+  }, [setSearchActive, setView, setReportVisible, setReportHtml, caseName, examinerProfile, evidenceId, setEvidence, setCase, setStats, setSelectedNode, setPluginsRunning])
 
   useEffect(() => {
     const handler = (event: Event) => {

@@ -406,6 +406,93 @@ impl StrataPlugin for MacTracePlugin {
             }
             if let Some(keychain) = crate::identity::detect_keychain(&path) {
                 let path_str = path.to_string_lossy().to_string();
+                let entries = crate::identity::parse_keychain_entries(&path);
+                if !entries.is_empty() {
+                    for entry in entries {
+                        let title = entry
+                            .label
+                            .clone()
+                            .or_else(|| entry.service.clone())
+                            .or_else(|| entry.server.clone())
+                            .or_else(|| entry.subject.clone())
+                            .unwrap_or_else(|| "Keychain Entry".to_string());
+                        let sync = if entry.icloud_synced { "YES" } else { "NO" };
+                        let port_display = entry
+                            .port
+                            .map(|p| p.to_string())
+                            .unwrap_or_else(|| "-".to_string());
+                        let detail = format!(
+                            "Keychain Entry: {}{} | Service: {} | Account: {} | Server: {} ({}, port {}) | Created: {} | Modified: {} | iCloud Sync: {} | Access Group: {}",
+                            title,
+                            if entry.icloud_synced { " (iCloud Sync)" } else { "" },
+                            entry.service.as_deref().unwrap_or("-"),
+                            entry.account.as_deref().unwrap_or("-"),
+                            entry.server.as_deref().unwrap_or("-"),
+                            entry.protocol.as_deref().unwrap_or("-"),
+                            port_display,
+                            entry.created_utc.as_deref().unwrap_or("-"),
+                            entry.modified_utc.as_deref().unwrap_or("-"),
+                            sync,
+                            entry.access_group.as_deref().unwrap_or("-"),
+                        );
+                        let mut a = Artifact::new("macOS Keychain Entry", &path_str);
+                        a.add_field("title", &format!("Keychain Entry: {title}"));
+                        a.add_field("detail", &detail);
+                        a.add_field("file_type", "macOS Keychain Entry");
+                        a.add_field("keychain_table", &entry.table);
+                        if let Some(v) = &entry.service {
+                            a.add_field("service", v);
+                        }
+                        if let Some(v) = &entry.account {
+                            a.add_field("account", v);
+                        }
+                        if let Some(v) = &entry.server {
+                            a.add_field("server", v);
+                        }
+                        if let Some(v) = &entry.protocol {
+                            a.add_field("protocol", v);
+                        }
+                        if let Some(v) = entry.port {
+                            a.add_field("port", &v.to_string());
+                        }
+                        if let Some(v) = &entry.url_path {
+                            a.add_field("path", v);
+                        }
+                        if let Some(v) = &entry.subject {
+                            a.add_field("subject", v);
+                        }
+                        if let Some(v) = &entry.issuer {
+                            a.add_field("issuer", v);
+                        }
+                        if let Some(v) = &entry.serial_number {
+                            a.add_field("serial_number", v);
+                        }
+                        if let Some(v) = &entry.created_utc {
+                            a.add_field("created_utc", v);
+                        }
+                        if let Some(v) = &entry.modified_utc {
+                            a.add_field("modified_utc", v);
+                        }
+                        if let Some(v) = &entry.access_group {
+                            a.add_field("access_group", v);
+                        }
+                        a.add_field(
+                            "icloud_synced",
+                            if entry.icloud_synced { "true" } else { "false" },
+                        );
+                        a.add_field("mitre", "T1555.001");
+                        a.add_field(
+                            "forensic_value",
+                            if entry.icloud_synced {
+                                "High"
+                            } else {
+                                "Medium"
+                            },
+                        );
+                        out.push(a);
+                    }
+                    continue;
+                }
                 let mut a = Artifact::new("macOS Keychain Metadata", &path_str);
                 let modified = keychain
                     .modified_utc

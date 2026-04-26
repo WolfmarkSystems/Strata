@@ -38,6 +38,7 @@ function columnsFor(categoryName: string | undefined): ColumnDef[] {
         { label: 'Artifact', flex: 3 },
         { label: 'Value',    flex: 2 },
         { label: 'Timestamp', flex: 2 },
+        { label: 'Confidence', flex: 1 },
         { label: 'Source',   flex: 1 },
       ]
     case 'Execution History':
@@ -45,6 +46,7 @@ function columnsFor(categoryName: string | undefined): ColumnDef[] {
         { label: 'Process / Task', flex: 3 },
         { label: 'Value',          flex: 2 },
         { label: 'Timestamp',      flex: 2 },
+        { label: 'Confidence',     flex: 1 },
         { label: 'Source',         flex: 1 },
       ]
     case 'Deleted & Recovered':
@@ -52,6 +54,7 @@ function columnsFor(categoryName: string | undefined): ColumnDef[] {
         { label: 'Item',       flex: 3 },
         { label: 'Value',      flex: 2 },
         { label: 'Deleted At', flex: 2 },
+        { label: 'Confidence', flex: 1 },
         { label: 'Source',     flex: 1 },
       ]
     default:
@@ -59,6 +62,7 @@ function columnsFor(categoryName: string | undefined): ColumnDef[] {
         { label: 'Name',      flex: 3 },
         { label: 'Value',     flex: 2 },
         { label: 'Timestamp', flex: 2 },
+        { label: 'Confidence', flex: 1 },
         { label: 'Source',    flex: 1 },
       ]
   }
@@ -82,6 +86,14 @@ export default function ArtifactResults({
 }: Props) {
   const setView = useAppStore((s) => s.setView)
   const cols = columnsFor(category?.name)
+  const [minConfidence, setMinConfidence] = useState(0.7)
+  const [hideLowConfidence, setHideLowConfidence] = useState(false)
+  const [sortByConfidence, setSortByConfidence] = useState(false)
+  const visibleArtifacts = [...artifacts]
+    .filter((artifact) => !hideLowConfidence || (artifact.confidence_score ?? 1) >= minConfidence)
+    .sort((a, b) =>
+      sortByConfidence ? (b.confidence_score ?? 1) - (a.confidence_score ?? 1) : 0,
+    )
 
   return (
     <div
@@ -149,6 +161,48 @@ export default function ArtifactResults({
           }}
         >
           FLAGGED
+        </button>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, textTransform: 'none', letterSpacing: 0 }}>
+          <span>Minimum confidence</span>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={minConfidence}
+            onChange={(e) => setMinConfidence(Number(e.target.value))}
+          />
+          <span style={{ fontFamily: 'monospace' }}>{minConfidence.toFixed(2)}</span>
+        </label>
+        <button
+          onClick={() => setHideLowConfidence((v) => !v)}
+          style={{
+            fontSize: 10,
+            padding: '2px 7px',
+            borderRadius: 3,
+            background: hideLowConfidence ? 'rgba(184,120,64,0.16)' : 'var(--bg-elevated)',
+            border: `1px solid ${hideLowConfidence ? 'rgba(184,120,64,0.45)' : 'var(--border)'}`,
+            color: hideLowConfidence ? 'var(--sus)' : 'var(--text-muted)',
+            fontFamily: 'monospace',
+            cursor: 'pointer',
+          }}
+        >
+          HIDE LOW
+        </button>
+        <button
+          onClick={() => setSortByConfidence((v) => !v)}
+          style={{
+            fontSize: 10,
+            padding: '2px 7px',
+            borderRadius: 3,
+            background: sortByConfidence ? 'rgba(74,120,144,0.16)' : 'var(--bg-elevated)',
+            border: `1px solid ${sortByConfidence ? 'rgba(74,120,144,0.45)' : 'var(--border)'}`,
+            color: sortByConfidence ? 'var(--carved)' : 'var(--text-muted)',
+            fontFamily: 'monospace',
+            cursor: 'pointer',
+          }}
+        >
+          CONF SORT
         </button>
       </div>
 
@@ -263,13 +317,14 @@ export default function ArtifactResults({
             </button>
           </div>
         ) : (
-          artifacts.map((a) => (
+          visibleArtifacts.map((a) => (
             <ArtifactRow
               key={a.id}
               artifact={a}
               cols={cols}
               selected={selectedId === a.id}
               onClick={() => onSelect(a)}
+              dimmed={(a.confidence_score ?? 1) < minConfidence}
             />
           ))
         )}
@@ -283,11 +338,13 @@ function ArtifactRow({
   cols,
   selected,
   onClick,
+  dimmed,
 }: {
   artifact: Artifact
   cols: ColumnDef[]
   selected: boolean
   onClick: () => void
+  dimmed: boolean
 }) {
   const [hover, setHover] = useState(false)
 
@@ -319,6 +376,7 @@ function ArtifactRow({
         cursor: 'pointer',
         background: bg,
         transition: 'background 0.1s',
+        opacity: dimmed ? 0.45 : 1,
       }}
     >
       {/* Forensic value bar */}
@@ -383,6 +441,9 @@ function ArtifactRow({
         {formatArtifactTimestamp(artifact.timestamp)}
       </Cell>
       <Cell flex={cols[3].flex} mono>
+        {(artifact.confidence_score ?? 1).toFixed(2)}
+      </Cell>
+      <Cell flex={cols[4].flex} mono>
         {artifact.source_file}
       </Cell>
     </div>

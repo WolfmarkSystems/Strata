@@ -66,14 +66,13 @@ export default function TopBar() {
   const setSearchActive = useAppStore((s) => s.setSearchActive)
   const licenseResult = useAppStore((s) => s.licenseResult)
   const examinerProfile = useAppStore((s) => s.examinerProfile)
-  const setReportHtml = useAppStore((s) => s.setReportHtml)
-  const setReportVisible = useAppStore((s) => s.setReportVisible)
   const evidenceId = useAppStore((s) => s.evidenceId)
   const caseData = useAppStore((s) => s.caseData)
   const caseModified = useAppStore((s) => s.caseModified)
   const setCaseData = useAppStore((s) => s.setCaseData)
 
   const [newCaseOpen, setNewCaseOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const handleOpenCase = async () => {
     const result = await openCase()
@@ -160,19 +159,8 @@ export default function TopBar() {
   }
 
   const handleReport = async () => {
-    const result = await generateReport({
-      case_number: 'STRATA-2026-001',
-      case_name: caseName ?? 'Unsaved Session',
-      examiner_name: examinerProfile?.name ?? 'Dev Examiner',
-      examiner_agency: examinerProfile?.agency ?? 'Wolfmark Systems',
-      examiner_badge: examinerProfile?.badge ?? 'DEV-001',
-      include_artifacts: true,
-      include_tagged: true,
-      include_mitre: true,
-      include_timeline: true,
-    })
-    setReportHtml(result.html)
-    setReportVisible(true)
+    if (!evidenceId) return
+    setReportOpen(true)
   }
 
   const { width } = useWindowSize()
@@ -505,6 +493,110 @@ export default function TopBar() {
         </div>
       </div>
       {newCaseOpen && createPortal(<NewCaseModal onClose={() => setNewCaseOpen(false)} />, document.body)}
+      {reportOpen && createPortal(
+        <ReportGenerateDialog
+          evidenceId={evidenceId}
+          caseName={caseName ?? 'Unsaved Session'}
+          examiner={examinerProfile?.name ?? 'Unknown Examiner'}
+          onClose={() => setReportOpen(false)}
+        />,
+        document.body,
+      )}
+    </div>
+  )
+}
+
+function ReportGenerateDialog({
+  evidenceId,
+  caseName,
+  examiner,
+  onClose,
+}: {
+  evidenceId: string | null
+  caseName: string
+  examiner: string
+  onClose: () => void
+}) {
+  const [format, setFormat] = useState<'html' | 'pdf'>('html')
+  const [outputPath, setOutputPath] = useState('')
+  const [generatedPath, setGeneratedPath] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const handleGenerate = async () => {
+    if (!evidenceId || busy) return
+    setBusy(true)
+    try {
+      const path = await generateReport(evidenceId, outputPath, format)
+      setGeneratedPath(path)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.45)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+    >
+      <div
+        className="bubble"
+        style={{ width: 520, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ flex: 1, fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>
+            Generate Report
+          </div>
+          <button className="btn-secondary" onClick={onClose}>Close</button>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          {caseName} · {examiner}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className={format === 'html' ? 'btn-primary' : 'btn-secondary'}
+            onClick={() => setFormat('html')}
+          >
+            HTML
+          </button>
+          <button
+            className={format === 'pdf' ? 'btn-primary' : 'btn-secondary'}
+            onClick={() => setFormat('pdf')}
+          >
+            PDF
+          </button>
+        </div>
+        <input
+          value={outputPath}
+          onChange={(e) => setOutputPath(e.target.value)}
+          placeholder={`/tmp/strata-report.${format}`}
+          style={{
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: 4,
+            color: 'var(--text-2)',
+            padding: '8px 10px',
+            fontSize: 12,
+          }}
+        />
+        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          Includes cover page, methodology, evidence integrity, findings, flagged notes, custody log, and certification.
+        </div>
+        <button className="btn-action" onClick={handleGenerate} disabled={!evidenceId || busy}>
+          {busy ? 'GENERATING...' : 'GENERATE'}
+        </button>
+        {generatedPath && (
+          <div style={{ fontSize: 11, color: 'var(--clean)', wordBreak: 'break-all' }}>
+            Saved: {generatedPath}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

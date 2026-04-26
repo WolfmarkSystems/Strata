@@ -120,6 +120,8 @@ export interface Artifact {
   mitre_name: string | null
   plugin: string
   raw_data: string | null
+  confidence_score?: number
+  confidence_basis?: string
 }
 
 export interface ArtifactsResponse {
@@ -1486,47 +1488,19 @@ function mockSearch(query: string): SearchResult[] {
 // Day 9 — Report Generation
 // ──────────────────────────────────────────────────────────────────────────────
 
-export interface ReportOptions {
-  case_number: string
-  case_name: string
-  examiner_name: string
-  examiner_agency: string
-  examiner_badge: string
-  include_artifacts: boolean
-  include_tagged: boolean
-  include_mitre: boolean
-  include_timeline: boolean
-}
-
-export interface ReportResult {
-  html: string
-  path: string | null
-}
-
-export async function generateReport(options: ReportOptions): Promise<ReportResult> {
+export async function generateReport(
+  evidenceId: string,
+  outputPath: string,
+  format: 'html' | 'pdf',
+): Promise<string> {
   if (!IN_TAURI) {
-    return {
-      html: `<!DOCTYPE html><html><head><title>Strata Report Preview</title><style>
-        body { font-family: Helvetica, Arial, sans-serif; padding: 48px; color: #1a1d23; background: #fff; }
-        h1 { color: #1a2e44; border-bottom: 2px solid #1a2e44; padding-bottom: 8px; }
-        .meta { color: #4a5568; font-size: 12px; margin-bottom: 24px; }
-        .box { border: 1px solid #c8d0dc; border-radius: 4px; padding: 16px; margin-top: 16px; }
-        </style></head><body>
-        <h1>STRATA Forensic Report (Preview Mock)</h1>
-        <div class="meta">Case ${options.case_number} &middot; ${options.case_name}</div>
-        <div class="box"><strong>Examiner:</strong> ${options.examiner_name}<br/>
-        <strong>Agency:</strong> ${options.examiner_agency}<br/>
-        <strong>Badge:</strong> ${options.examiner_badge}</div>
-        <p style="margin-top:24px;color:#4a5568;font-size:12px;">This is a browser-preview mock report. The full report renders when running inside Tauri.</p>
-        </body></html>`,
-      path: null,
-    }
+    return outputPath || `strata-report.${format}`
   }
   try {
-    return await invoke<ReportResult>('generate_report', { options })
+    return await invoke<string>('generate_report', { evidenceId, outputPath, format })
   } catch (e) {
     reportIpcError('generate_report', e)
-    return { html: '', path: null }
+    return ''
   }
 }
 

@@ -124,6 +124,11 @@ export default function ArtifactDetail({ artifact }: Props) {
 
           {/* Forensic value banner */}
           <ForensicBanner value={artifact.forensic_value} />
+          <Row
+            k="Confidence"
+            v={`${(artifact.confidence_score ?? 1).toFixed(2)} (${artifact.confidence_basis ?? 'deterministic_parse'})`}
+            mono
+          />
 
           <Sep />
 
