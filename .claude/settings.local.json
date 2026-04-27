@@ -87,5 +87,10 @@
       "Read(//Users/randolph/Wolfmark/strata/$HOME/**)",
       "Bash(pip3 install:*)"
     ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [],
+    "Stop": [],
+    "Notification": []
   }
 }

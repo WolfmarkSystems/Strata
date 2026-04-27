@@ -45,6 +45,14 @@ apps/shield/evidence/
 crates/strata-core/exports/
 crates/strata-shield-cli/exports/
 logs/
+*.log
+err*.txt
+check*.log
+build_errors.txt
+compile_errors.txt
+rust_errors.txt
+forensic.db*
+.!*!*
 
 # Validation run outputs are audit-trail artifacts kept
 # locally (per-image case-dirs include raw evidence outputs
