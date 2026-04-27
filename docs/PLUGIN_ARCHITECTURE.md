@@ -10,7 +10,7 @@ model is wired into release builds.
 
 ## Static plugins (the production path)
 
-All 22 in-tree plugins are statically linked into
+All 23 production in-tree plugins are statically linked into
 `strata-engine-adapter` at compile time. Registration happens in a
 single function:
 
@@ -59,8 +59,11 @@ What this means today:
 - FIX-6's plugin registration check treats `strata-plugin-index` and
   `strata-plugin-tree-example` as opt-out — neither is expected to
   appear in `build_plugins()`.
-- The crate is OK to keep shipping for now — it documents the shape
-  of a future dynamic plugin. When we commit to dynamic loading,
+- `strata-plugin-index` and `strata-plugin-tree-example` are marked
+  `publish = false`; they are scaffolding/test fixtures, not release
+  plugins.
+- The crates are OK to keep in the workspace for now — they document
+  the shape of a future dynamic plugin. When we commit to dynamic loading,
   either:
   - **Option A:** promote it to dual-crate (`crate-type = ["rlib",
     "cdylib"]`) and add it to the static registry too, or
@@ -80,12 +83,13 @@ carry correlation logic. Cross-artifact rules belong in Sigma.
 
 ## Static registry at a glance
 
-Current static roster (22 plugins, Sigma last):
+Current static roster (23 production plugins, Sigma last):
 
 ```
 remnant → chronicle → cipher → trace → specter → conduit → nimbus
 → wraith → vector → recon → phantom → guardian → netflow → mactrace
-→ sentinel → csam → apex → carbon → pulse → vault → arbor → sigma
+→ sentinel → csam → apex → carbon → pulse → vault → arbor → advisory
+→ sigma
 ```
 
 The CLI's `strata ingest run` executes plugins in this same order
