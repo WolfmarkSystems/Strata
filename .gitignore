@@ -59,3 +59,7 @@ forensic.db*
 # that can exceed 100MB). Not committed; the per-run report
 # lives in docs/FIELD_VALIDATION_REAL_IMAGES_*.md.
 /test-output/
+.archon/
+.claude/skills/
+.claude/worktrees/
+_archive_2026-04-25/
