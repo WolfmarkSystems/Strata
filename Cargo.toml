@@ -1,13 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "apps/tree/strata-tree",
     "crates/strata-shield-engine",
     "crates/strata-shield-cli",
-    "apps/tree/vt-core",
-    "apps/tree/vt-cli",
-    "apps/tree/vt-index",
-    "apps/tree/vt-snapshot",
     "apps/forge/apps/strata-forge-desktop/src-tauri",
     "crates/strata-acquire",
     "crates/strata-artifacts",
@@ -24,9 +19,7 @@ members = [
     "plugins/strata-plugin-trace",
     "plugins/strata-plugin-cipher",
     "plugins/strata-plugin-remnant",
-    "plugins/strata-plugin-tree-example",
     "crates/strata-evidence",
-    "crates/strata-tree-sdk", "crates/strata-license", "tools/wolfmark-license-gen",
     "tools/strata-verify-plugins",
     "tools/strata-verify-quality",
     "plugins/strata-plugin-specter",
@@ -106,4 +99,3 @@ strata-shield-cli = { path = "crates/strata-shield-cli" }
 strata-csam = { path = "crates/strata-csam" }
 strata-charges = { path = "crates/strata-charges" }
 strata-ml-summary = { path = "crates/strata-ml-summary" }
-vt-core = { path = "apps/tree/vt-core" }
