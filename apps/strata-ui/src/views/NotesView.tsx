@@ -1,11 +1,34 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import EmptyState from '../components/EmptyState'
+import { getFlaggedArtifacts, type ArtifactNote } from '../ipc'
 
 export default function NotesView() {
   const caseData = useAppStore((s) => s.caseData)
   const updateCaseNotes = useAppStore((s) => s.updateCaseNotes)
   const caseModified = useAppStore((s) => s.caseModified)
+  const evidenceId = useAppStore((s) => s.evidenceId)
+  const setView = useAppStore((s) => s.setView)
+  const setSelectedArtifactId = useAppStore((s) => s.setSelectedArtifactId)
+  const [artifactNotes, setArtifactNotes] = useState<ArtifactNote[]>([])
+
+  useEffect(() => {
+    if (!evidenceId) {
+      setArtifactNotes([])
+      return
+    }
+    getFlaggedArtifacts(evidenceId).then(setArtifactNotes)
+    const handler = () => {
+      if (evidenceId) getFlaggedArtifacts(evidenceId).then(setArtifactNotes)
+    }
+    window.addEventListener('strata-artifact-note-saved', handler)
+    return () => window.removeEventListener('strata-artifact-note-saved', handler)
+  }, [evidenceId])
+
+  const jumpToArtifact = (id: string) => {
+    setSelectedArtifactId(id)
+    setView('artifacts')
+  }
 
   // Local mirror so typing is instant; pushes to store on change.
   const [text, setText] = useState(caseData?.notes ?? '')
@@ -114,11 +137,12 @@ export default function NotesView() {
         </span>
       </div>
 
-      {/* Editor bubble */}
+      {/* Editor + Artifact notes side-by-side */}
+      <div style={{ flex: 1, display: 'flex', gap: 8, minHeight: 0 }}>
       <div
         className="bubble"
         style={{
-          flex: 1,
+          flex: 2,
           display: 'flex',
         }}
       >
@@ -146,6 +170,126 @@ export default function NotesView() {
             height: '100%',
           }}
         />
+      </div>
+
+      <div
+        className="bubble"
+        style={{
+          flex: 1,
+          minWidth: 280,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div
+          style={{
+            padding: '8px 12px',
+            fontSize: 9,
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            borderBottom: '1px solid var(--border-sub)',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 8,
+          }}
+        >
+          <span>Artifact Notes</span>
+          <span style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+            {artifactNotes.length}
+          </span>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: 10 }}>
+          {artifactNotes.length === 0 ? (
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--text-muted)',
+                padding: 16,
+                textAlign: 'center',
+                lineHeight: 1.5,
+              }}
+            >
+              No artifact notes yet. Flag artifacts from the Artifacts view to build the running examiner log.
+            </div>
+          ) : (
+            artifactNotes.map((n) => (
+              <div
+                key={`${n.evidence_id}-${n.artifact_id}`}
+                style={{
+                  marginBottom: 8,
+                  padding: 10,
+                  background: 'var(--bg-elevated)',
+                  border: `1px solid ${n.flagged ? 'rgba(168,64,64,0.4)' : 'var(--border)'}`,
+                  borderRadius: 4,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 6,
+                    marginBottom: 4,
+                  }}
+                >
+                  {n.flagged && (
+                    <span style={{ color: 'var(--flag)', fontSize: 11 }}>{'⚠'}</span>
+                  )}
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: 'var(--text-1)',
+                      fontFamily: 'monospace',
+                      flex: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {n.artifact_id}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: 'var(--text-muted)',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    {new Date(n.created_at * 1000).toLocaleString()}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--text-2)',
+                    whiteSpace: 'pre-wrap',
+                    lineHeight: 1.5,
+                    marginBottom: 6,
+                  }}
+                >
+                  {n.note || <span style={{ color: 'var(--text-muted)' }}>(no note)</span>}
+                </div>
+                <button
+                  onClick={() => jumpToArtifact(n.artifact_id)}
+                  style={{
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                    color: 'var(--carved)',
+                    background: 'rgba(74,120,144,0.1)',
+                    border: '1px solid rgba(74,120,144,0.3)',
+                    borderRadius: 3,
+                    padding: '2px 8px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {'→'} Jump to artifact
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
       </div>
     </div>
   )

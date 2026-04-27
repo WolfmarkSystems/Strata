@@ -8,6 +8,16 @@ export type ViewMode =
   | 'plugins'
   | 'notes'
   | 'settings'
+  | 'dashboard'
+  | 'csam'
+  | 'darkweb'
+  | 'crypto'
+  | 'financial'
+  | 'linux'
+  | 'advisory'
+  | 'charges'
+  | 'warrant'
+  | 'sqlite'
 
 export type LicenseStatus =
   | 'valid'

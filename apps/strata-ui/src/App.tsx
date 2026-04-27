@@ -16,6 +16,15 @@ import TaggedView from './views/TaggedView'
 import PluginsView from './views/PluginsView'
 import SettingsView from './views/SettingsView'
 import NotesView from './views/NotesView'
+import CsamReviewView from './views/CsamReviewView'
+import DarkWebView from './views/DarkWebView'
+import CryptoView from './views/CryptoView'
+import FinancialView from './views/FinancialView'
+import LinuxView from './views/LinuxView'
+import AdvisoryView from './views/AdvisoryView'
+import ChargesView from './views/ChargesView'
+import WarrantView from './views/WarrantView'
+import DashboardView from './views/DashboardView'
 import { useAppStore } from './store/appStore'
 import { generateReport, openEvidenceDialog, loadEvidence, getStats, getTreeChildren, getTreeRoot, runAllPlugins } from './ipc'
 
@@ -161,6 +170,15 @@ export default function App() {
           {view === 'tags' && <TaggedView />}
           {view === 'notes' && <NotesView />}
           {view === 'plugins' && <PluginsView />}
+          {view === 'csam' && <CsamReviewView />}
+          {view === 'darkweb' && <DarkWebView />}
+          {view === 'crypto' && <CryptoView />}
+          {view === 'financial' && <FinancialView />}
+          {view === 'linux' && <LinuxView />}
+          {view === 'advisory' && <AdvisoryView />}
+          {view === 'charges' && <ChargesView />}
+          {view === 'warrant' && <WarrantView />}
+          {view === 'dashboard' && <DashboardView />}
           {view === 'settings' && <SettingsView />}
         </div>
       </div>

@@ -11,6 +11,8 @@ import {
   importHashSet,
   listHashSets,
   deleteHashSet,
+  getHashSetStats,
+  type HashSetStats,
   type LicenseResult,
   type HashSetInfo,
 } from '../ipc'
@@ -301,7 +303,9 @@ function Field({
 // ──────────────────────────────────────────────────────────────────────────────
 
 function HashSetsTab() {
+  const evidenceId = useAppStore((s) => s.evidenceId)
   const [sets, setSets] = useState<HashSetInfo[]>([])
+  const [stats, setStats] = useState<HashSetStats | null>(null)
   const [name, setName] = useState('NSRL')
   const [filePath, setFilePath] = useState('')
   const [status, setStatus] = useState<string | null>(null)
@@ -309,11 +313,17 @@ function HashSetsTab() {
   const [markClean, setMarkClean] = useState(true)
   const [showName, setShowName] = useState(false)
 
-  const refresh = async () => setSets(await listHashSets())
+  const refresh = async () => {
+    setSets(await listHashSets())
+    if (evidenceId) {
+      setStats(await getHashSetStats(evidenceId))
+    }
+  }
 
   useEffect(() => {
     void refresh()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evidenceId])
 
   const handleImport = async () => {
     if (!name.trim() || !filePath.trim()) return
@@ -324,6 +334,28 @@ function HashSetsTab() {
 
   return (
     <div>
+      {stats && evidenceId && (
+        <>
+          <SectionLabel>Hash Coverage (Current Case)</SectionLabel>
+          <div
+            style={{
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              padding: '12px 16px',
+              marginBottom: 16,
+              display: 'flex',
+              gap: 24,
+              flexWrap: 'wrap',
+            }}
+          >
+            <StatBlock label="Hash Sets" value={stats.set_count.toLocaleString()} />
+            <StatBlock label="Total Hashes" value={stats.hash_count.toLocaleString()} />
+            <StatBlock label="Known Good" value={stats.known_good.toLocaleString()} color="var(--clean)" />
+            <StatBlock label="Unknown" value={stats.unknown.toLocaleString()} color="var(--sus)" />
+          </div>
+        </>
+      )}
       <SectionLabel>Loaded Hash Sets</SectionLabel>
       <div
         style={{
@@ -810,6 +842,41 @@ function InfoLine({ k, v }: { k: string; v: string }) {
 // ──────────────────────────────────────────────────────────────────────────────
 // Shared
 // ──────────────────────────────────────────────────────────────────────────────
+
+function StatBlock({
+  label,
+  value,
+  color = 'var(--text-1)',
+}: {
+  label: string
+  value: string
+  color?: string
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <span
+        style={{
+          fontSize: 9,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontSize: 18,
+          fontWeight: 700,
+          color,
+          fontFamily: 'monospace',
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (

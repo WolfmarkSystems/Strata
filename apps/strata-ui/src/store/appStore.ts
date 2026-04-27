@@ -92,7 +92,7 @@ function scheduleAutosave() {
 }
 
 export const useAppStore = create<AppStore>((set) => ({
-  view: 'files',
+  view: 'dashboard',
   licensed: 'none',
   caseId: null,
   caseName: null,

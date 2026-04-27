@@ -13,6 +13,8 @@ import {
   getTreeRoot,
   onHashProgress,
   openCase,
+  openCaseAtPath,
+  getRecentCases,
   runAllPlugins,
 } from '../ipc'
 import WolfMark from './WolfMark'
@@ -73,9 +75,25 @@ export default function TopBar() {
 
   const [newCaseOpen, setNewCaseOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
+  const [recentOpen, setRecentOpen] = useState(false)
+  const [recentCases, setRecentCases] = useState<string[]>([])
+
+  useEffect(() => {
+    getRecentCases().then((paths) => setRecentCases(paths.slice(0, 10)))
+  }, [])
 
   const handleOpenCase = async () => {
     const result = await openCase()
+    if (result) {
+      setCaseData(result.case, result.case_path)
+      const next = await getRecentCases()
+      setRecentCases(next.slice(0, 10))
+    }
+  }
+
+  const handleOpenRecent = async (path: string) => {
+    setRecentOpen(false)
+    const result = await openCaseAtPath(path)
     if (result) {
       setCaseData(result.case, result.case_path)
     }
@@ -248,9 +266,36 @@ export default function TopBar() {
           <button className="btn-secondary" onClick={() => setNewCaseOpen(true)}>
             {narrow ? 'New' : 'New Case'}
           </button>
-          <button className="btn-secondary" onClick={handleOpenCase}>
-            {narrow ? 'Open' : 'Open Case'}
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                if (recentCases.length > 0) {
+                  setRecentOpen((v) => !v)
+                } else {
+                  void handleOpenCase()
+                }
+              }}
+              title={recentCases.length > 0 ? 'Recent cases' : 'Open case file'}
+            >
+              {narrow ? 'Open' : 'Open Case'} {recentCases.length > 0 ? '▾' : ''}
+            </button>
+            {recentOpen && (
+              <RecentCasesMenu
+                paths={recentCases}
+                onPick={handleOpenRecent}
+                onOpenFile={async () => {
+                  setRecentOpen(false)
+                  await handleOpenCase()
+                }}
+                onOpenFolder={async () => {
+                  setRecentOpen(false)
+                  await handleOpenPath(await openFolderDialog())
+                }}
+                onClose={() => setRecentOpen(false)}
+              />
+            )}
+          </div>
         </div>
 
         <div style={{ flex: 1 }} />
@@ -627,6 +672,125 @@ function Stat({
       <span style={{ color }}>{value}</span>
     </div>
   )
+}
+
+function RecentCasesMenu({
+  paths,
+  onPick,
+  onOpenFile,
+  onOpenFolder,
+  onClose,
+}: {
+  paths: string[]
+  onPick: (path: string) => void
+  onOpenFile: () => void
+  onOpenFolder: () => void
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const handler = () => onClose()
+    window.addEventListener('click', handler)
+    return () => window.removeEventListener('click', handler)
+  }, [onClose])
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        position: 'absolute',
+        top: '100%',
+        right: 0,
+        marginTop: 4,
+        minWidth: 320,
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
+        borderRadius: 6,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+        zIndex: 800,
+        padding: 4,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 9,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          padding: '6px 10px 4px',
+        }}
+      >
+        Recent Cases
+      </div>
+      {paths.map((path) => {
+        const folder = path.split('/').slice(-2)[0] ?? path
+        return (
+          <button
+            key={path}
+            onClick={() => onPick(path)}
+            style={{
+              display: 'block',
+              width: '100%',
+              textAlign: 'left',
+              padding: '6px 10px',
+              fontSize: 11,
+              fontFamily: 'monospace',
+              background: 'transparent',
+              color: 'var(--text-2)',
+              border: 'none',
+              borderRadius: 4,
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-panel)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            title={path}
+          >
+            <div style={{ color: 'var(--text-1)' }}>{folder}</div>
+            <div
+              style={{
+                fontSize: 9,
+                color: 'var(--text-muted)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {path}
+            </div>
+          </button>
+        )
+      })}
+      <div style={{ height: 1, background: 'var(--border-sub)', margin: '4px 0' }} />
+      <button
+        onClick={onOpenFile}
+        style={menuItemStyle}
+        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-panel)')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+      >
+        Open case file...
+      </button>
+      <button
+        onClick={onOpenFolder}
+        style={menuItemStyle}
+        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-panel)')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+      >
+        Open folder...
+      </button>
+    </div>
+  )
+}
+
+const menuItemStyle: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  textAlign: 'left',
+  padding: '6px 10px',
+  fontSize: 11,
+  background: 'transparent',
+  color: 'var(--text-2)',
+  border: 'none',
+  borderRadius: 4,
+  cursor: 'pointer',
 }
 
 function shortName(name: string): string {

@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getEvidenceIntegrity, getFileMetadata, verifyEvidenceIntegrity } from '../ipc'
+import {
+  getEvidenceIntegrity,
+  getFileMetadata,
+  hashFile,
+  verifyEvidenceIntegrity,
+} from '../ipc'
 import type { FileMetadata } from '../types'
-import type { EvidenceIntegrity } from '../ipc'
+import type { EvidenceIntegrity, HashResult } from '../ipc'
 import HexViewer from './HexViewer'
 import TextViewer from './TextViewer'
 import SqliteViewer from './SqliteViewer'
@@ -153,7 +158,7 @@ export default function DetailPane({ fileId, evidenceId }: Props) {
           />
         ) : tab === 'meta' ? (
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            <MetaContent meta={meta} loading={loading} />
+            <MetaContent meta={meta} loading={loading} fileId={fileId} evidenceId={evidenceId} />
             {isSqlite && (
               <div style={{ padding: 10 }}>
                 <TimestampConverter />
@@ -291,7 +296,32 @@ function EvidenceIntegrityPanel({
   )
 }
 
-function MetaContent({ meta, loading }: { meta: FileMetadata | null; loading: boolean }) {
+function MetaContent({
+  meta,
+  loading,
+  fileId,
+  evidenceId,
+}: {
+  meta: FileMetadata | null
+  loading: boolean
+  fileId: string | null
+  evidenceId: string | null
+}) {
+  const [hashes, setHashes] = useState<HashResult | null>(null)
+  const [hashing, setHashing] = useState(false)
+  useEffect(() => {
+    setHashes(null)
+  }, [fileId])
+  const handleHash = async () => {
+    if (!fileId || !evidenceId || hashing) return
+    setHashing(true)
+    try {
+      const result = await hashFile(evidenceId, fileId)
+      setHashes(result)
+    } finally {
+      setHashing(false)
+    }
+  }
   if (loading) {
     return (
       <div
@@ -457,9 +487,77 @@ function MetaContent({ meta, loading }: { meta: FileMetadata | null; loading: bo
         </>
       )}
 
+      <Sep />
+      <div
+        style={{
+          fontSize: 10,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          marginBottom: 6,
+        }}
+      >
+        Compute Hashes
+      </div>
+      <button
+        onClick={handleHash}
+        disabled={!fileId || !evidenceId || hashing}
+        style={{
+          padding: '5px 10px',
+          fontSize: 11,
+          fontFamily: 'monospace',
+          fontWeight: 700,
+          color: 'var(--text-1)',
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border)',
+          borderRadius: 4,
+          cursor: !fileId || !evidenceId || hashing ? 'not-allowed' : 'pointer',
+          letterSpacing: '0.06em',
+        }}
+      >
+        {hashing ? 'HASHING...' : 'HASH FILE'}
+      </button>
+      {hashes && (
+        <div style={{ marginTop: 10 }}>
+          <HashLine label="MD5" value={hashes.md5} />
+          <HashLine label="SHA-1" value={hashes.sha1} />
+          <HashLine label="SHA-256" value={hashes.sha256} />
+          <HashLine label="SHA-512" value={hashes.sha512} />
+        </div>
+      )}
+
       <KnowledgeBankSection
         entry={lookupKnowledge(meta.name, meta.extension)}
       />
+    </div>
+  )
+}
+
+function HashLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div
+        style={{
+          fontSize: 9,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          marginBottom: 2,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontFamily: 'monospace',
+          fontSize: 10,
+          color: 'var(--text-2)',
+          wordBreak: 'break-all',
+          lineHeight: 1.5,
+        }}
+      >
+        {value}
+      </div>
     </div>
   )
 }
