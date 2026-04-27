@@ -86,8 +86,12 @@ impl StealthExecutionDetector {
                     "Executed at {}. Run count: {}. Focus time: {}ms. \
                      No LNK: {}. No Jump List: {}. No UserAssist: {}.",
                     time_str,
-                    exec.run_count.map(|c| c.to_string()).unwrap_or_else(|| "?".to_string()),
-                    exec.focus_time_ms.map(|f| f.to_string()).unwrap_or_else(|| "?".to_string()),
+                    exec.run_count
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|| "?".to_string()),
+                    exec.focus_time_ms
+                        .map(|f| f.to_string())
+                        .unwrap_or_else(|| "?".to_string()),
                     !exec.has_lnk,
                     !exec.has_jumplist,
                     !exec.has_userassist,
@@ -151,15 +155,18 @@ mod tests {
                     chrono::NaiveTime::from_hms_opt(h, 0, 0).unwrap(),
                 )
                 .and_utc();
-                vec![TimelineEntry {
-                    timestamp: dt,
-                    artifact_type: "test".to_string(),
-                    plugin: "test".to_string(),
-                    title: "normal".to_string(),
-                    detail: String::new(),
-                    source_path: String::new(),
-                    is_suspicious: false,
-                }; 10]
+                vec![
+                    TimelineEntry {
+                        timestamp: dt,
+                        artifact_type: "test".to_string(),
+                        plugin: "test".to_string(),
+                        title: "normal".to_string(),
+                        detail: String::new(),
+                        source_path: String::new(),
+                        is_suspicious: false,
+                    };
+                    10
+                ]
             })
             .collect()
     }

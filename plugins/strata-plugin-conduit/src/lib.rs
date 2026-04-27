@@ -28,26 +28,33 @@ impl ConduitPlugin {
         let mut results = Vec::new();
         let path_str = path.to_string_lossy();
         let path_lower = path_str.to_lowercase();
-        let name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let name_lower = name.to_lowercase();
 
         // Network Profile detection
-        if path_lower.contains("networklist/profiles") || path_lower.contains("networklist\\profiles") {
+        if path_lower.contains("networklist/profiles")
+            || path_lower.contains("networklist\\profiles")
+        {
             let mut artifact = Artifact::new("NetworkArtifacts", &path_str);
             artifact.add_field("title", &format!("Network Profile: {}", name));
-            artifact.add_field("detail", "Windows network profile entry — records previously connected networks");
+            artifact.add_field(
+                "detail",
+                "Windows network profile entry — records previously connected networks",
+            );
             artifact.add_field("file_type", "Network Profile");
             results.push(artifact);
         }
 
         // Network Interface Config
-        if path_lower.contains("tcpip/parameters/interfaces") || path_lower.contains("tcpip\\parameters\\interfaces") {
+        if path_lower.contains("tcpip/parameters/interfaces")
+            || path_lower.contains("tcpip\\parameters\\interfaces")
+        {
             let mut artifact = Artifact::new("NetworkArtifacts", &path_str);
             artifact.add_field("title", &format!("Network Interface Config: {}", name));
-            artifact.add_field("detail", "TCP/IP interface configuration — IP addresses, DNS servers, DHCP settings");
+            artifact.add_field(
+                "detail",
+                "TCP/IP interface configuration — IP addresses, DNS servers, DHCP settings",
+            );
             artifact.add_field("file_type", "Network Interface Config");
             results.push(artifact);
         }
@@ -56,17 +63,25 @@ impl ConduitPlugin {
         if path_lower.contains("anyconnect") || name_lower.contains("rasphone.pbk") {
             let mut artifact = Artifact::new("NetworkArtifacts", &path_str);
             artifact.add_field("title", &format!("VPN Profile: {}", name));
-            artifact.add_field("detail", "VPN connection profile detected — may indicate remote access capability");
+            artifact.add_field(
+                "detail",
+                "VPN connection profile detected — may indicate remote access capability",
+            );
             artifact.add_field("file_type", "VPN Profile");
             artifact.add_field("mitre", "T1133");
             results.push(artifact);
         }
 
         // RDP Connection History
-        if path_lower.contains("terminal server client") || path_lower.contains("terminal server client") {
+        if path_lower.contains("terminal server client")
+            || path_lower.contains("terminal server client")
+        {
             let mut artifact = Artifact::new("NetworkArtifacts", &path_str);
             artifact.add_field("title", &format!("RDP Connection History: {}", name));
-            artifact.add_field("detail", "Remote Desktop connection history — lateral movement indicator");
+            artifact.add_field(
+                "detail",
+                "Remote Desktop connection history — lateral movement indicator",
+            );
             artifact.add_field("file_type", "RDP Connection History");
             artifact.add_field("mitre", "T1021.001");
             artifact.add_field("suspicious", "true");
@@ -74,7 +89,11 @@ impl ConduitPlugin {
         }
 
         // Hosts File Entry
-        if name_lower == "hosts" && (path_lower.contains("drivers/etc") || path_lower.contains("drivers\\etc") || path_lower == "/etc/hosts") {
+        if name_lower == "hosts"
+            && (path_lower.contains("drivers/etc")
+                || path_lower.contains("drivers\\etc")
+                || path_lower == "/etc/hosts")
+        {
             let mut artifact = Artifact::new("NetworkArtifacts", &path_str);
             artifact.add_field("title", "Hosts File Entry");
 
@@ -84,7 +103,9 @@ impl ConduitPlugin {
                     .lines()
                     .filter(|l| {
                         let trimmed = l.trim();
-                        !trimmed.is_empty() && !trimmed.starts_with('#') && !trimmed.contains("localhost")
+                        !trimmed.is_empty()
+                            && !trimmed.starts_with('#')
+                            && !trimmed.contains("localhost")
                     })
                     .collect();
                 if custom_entries.is_empty() {
@@ -109,7 +130,10 @@ impl ConduitPlugin {
         if path_lower.contains("mountpoints2") {
             let mut artifact = Artifact::new("NetworkArtifacts", &path_str);
             artifact.add_field("title", &format!("Mounted Network Share: {}", name));
-            artifact.add_field("detail", "MountPoints2 registry key — records mounted network shares and drives");
+            artifact.add_field(
+                "detail",
+                "MountPoints2 registry key — records mounted network shares and drives",
+            );
             artifact.add_field("file_type", "Mounted Network Share");
             artifact.add_field("mitre", "T1021.002");
             results.push(artifact);
@@ -119,7 +143,10 @@ impl ConduitPlugin {
         if path_lower.contains("srudb") {
             let mut artifact = Artifact::new("NetworkArtifacts", &path_str);
             artifact.add_field("title", &format!("SRUM Network Usage: {}", name));
-            artifact.add_field("detail", "System Resource Usage Monitor database — per-application network byte counts");
+            artifact.add_field(
+                "detail",
+                "System Resource Usage Monitor database — per-application network byte counts",
+            );
             artifact.add_field("file_type", "SRUM Network Usage");
             results.push(artifact);
         }
@@ -200,11 +227,7 @@ impl StrataPlugin for ConduitPlugin {
                     .get("title")
                     .cloned()
                     .unwrap_or_else(|| artifact.source.clone()),
-                detail: artifact
-                    .data
-                    .get("detail")
-                    .cloned()
-                    .unwrap_or_default(),
+                detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                 source_path: artifact.source.clone(),
                 forensic_value,
                 mitre_technique: artifact.data.get("mitre").cloned(),
@@ -293,8 +316,11 @@ mod sprint75_backfill_tests {
                 .unwrap_or(0),
         ));
         std::fs::create_dir_all(&dir).expect("mkdir");
-        std::fs::write(dir.join("garbage.bin"), [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
-            .expect("write garbage");
+        std::fs::write(
+            dir.join("garbage.bin"),
+            [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF],
+        )
+        .expect("write garbage");
         PluginContext {
             root_path: dir.to_string_lossy().into_owned(),
             vfs: None,

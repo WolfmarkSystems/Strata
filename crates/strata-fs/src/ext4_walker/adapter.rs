@@ -24,11 +24,7 @@ pub struct Ext4PartitionReader {
 }
 
 impl Ext4PartitionReader {
-    pub fn new(
-        image: Arc<dyn EvidenceImage>,
-        partition_offset: u64,
-        partition_size: u64,
-    ) -> Self {
+    pub fn new(image: Arc<dyn EvidenceImage>, partition_offset: u64, partition_size: u64) -> Self {
         Self {
             image,
             partition_offset,
@@ -55,13 +51,11 @@ impl Ext4Read for Ext4PartitionReader {
         // The filesystem layer must never read beyond its declared
         // window.
         let want = dst.len() as u64;
-        let end = start_byte
-            .checked_add(want)
-            .ok_or_else(|| {
-                Box::<dyn Error + Send + Sync>::from(format!(
-                    "ext4 read offset overflow: {start_byte} + {want}"
-                ))
-            })?;
+        let end = start_byte.checked_add(want).ok_or_else(|| {
+            Box::<dyn Error + Send + Sync>::from(format!(
+                "ext4 read offset overflow: {start_byte} + {want}"
+            ))
+        })?;
         if end > self.partition_size {
             return Err(format!(
                 "ext4 read past partition end: {start_byte}..{end}, size={}",

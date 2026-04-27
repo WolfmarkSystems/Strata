@@ -90,11 +90,7 @@ impl AppState {
                 );
             }
             Err(e) => {
-                self.csam_status = format!(
-                    "Hash set import failed: {} — {:#}",
-                    path.display(),
-                    e
-                );
+                self.csam_status = format!("Hash set import failed: {} — {:#}", path.display(), e);
             }
         }
     }
@@ -268,8 +264,7 @@ impl AppState {
         let output = PluginOutput {
             plugin_name: "Strata CSAM Scanner".to_string(),
             plugin_version: env!("CARGO_PKG_VERSION").to_string(),
-            executed_at: chrono::Utc::now()
-                .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            executed_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             duration_ms: 0,
             artifacts: records,
             summary: PluginSummary {
@@ -294,7 +289,11 @@ impl AppState {
     /// spec-mandated rule. The actual viewing UI (if any) must be
     /// explicitly opened by the examiner from a separate action.
     pub fn csam_mark_reviewed(&mut self, hit_id: &str) {
-        if let Some(hit) = self.csam_hits.iter_mut().find(|h| h.hit_id.to_string() == hit_id) {
+        if let Some(hit) = self
+            .csam_hits
+            .iter_mut()
+            .find(|h| h.hit_id.to_string() == hit_id)
+        {
             hit.examiner_reviewed = true;
         }
         self.log_csam(CsamAuditAction::HitReviewed {
@@ -312,7 +311,11 @@ impl AppState {
             .get(hit_id)
             .cloned()
             .unwrap_or_default();
-        if let Some(hit) = self.csam_hits.iter_mut().find(|h| h.hit_id.to_string() == hit_id) {
+        if let Some(hit) = self
+            .csam_hits
+            .iter_mut()
+            .find(|h| h.hit_id.to_string() == hit_id)
+        {
             hit.examiner_confirmed = true;
             hit.examiner_reviewed = true;
             hit.examiner_notes = notes;

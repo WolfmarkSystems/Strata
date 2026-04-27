@@ -14,7 +14,6 @@ pub mod adapter;
 
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
 use ext4_view::{Ext4, Ext4Error, FileType as Ext4FileType, Metadata as Ext4Metadata};
 use strata_evidence::EvidenceImage;
 
@@ -85,8 +84,7 @@ impl Ext4Walker {
             self.partition_offset,
             self.partition_size,
         );
-        Ext4::load(Box::new(reader))
-            .map_err(|e| VfsError::Other(format!("ext4 open: {e:?}")))
+        Ext4::load(Box::new(reader)).map_err(|e| VfsError::Other(format!("ext4 open: {e:?}")))
     }
 }
 
@@ -178,10 +176,7 @@ impl VirtualFilesystem for Ext4Walker {
                 Err(_) => continue,
             };
             let is_dir_from_meta = meta.is_dir();
-            let is_dir_from_ft = entry
-                .file_type()
-                .map(file_type_is_dir)
-                .unwrap_or(false);
+            let is_dir_from_ft = entry.file_type().map(file_type_is_dir).unwrap_or(false);
             out.push(VfsEntry {
                 path: full_path,
                 name: file_name,
@@ -195,7 +190,7 @@ impl VirtualFilesystem for Ext4Walker {
                 inode_number: None,
                 has_alternate_streams: false,
                 fs_specific: VfsSpecific::Ext4 {
-                    inode: 0, // ext4-view v0.9 doesn't expose inode index on Metadata; TBD
+                    inode: 0,            // ext4-view v0.9 doesn't expose inode index on Metadata; TBD
                     extents_based: true, // safe default for ext4 (EXTENTS feature since 2.6.30)
                 },
             });
@@ -220,14 +215,6 @@ impl VirtualFilesystem for Ext4Walker {
         };
         fs.exists(path).unwrap_or(false)
     }
-}
-
-// `DateTime<Utc>` is reserved for future use when `ext4-view` exposes
-// per-entry ctime/mtime/atime through `Metadata`. Retaining the import
-// to avoid drift if that lands.
-#[allow(dead_code)]
-fn _reserved_timestamps() -> Option<DateTime<Utc>> {
-    None
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────

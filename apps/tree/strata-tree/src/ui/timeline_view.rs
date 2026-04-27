@@ -520,7 +520,11 @@ fn detect_activity_bursts(entries: &[crate::state::TimelineEntry]) -> Vec<Activi
                     start_time: start_ts.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                     event_count: count,
                     duration_secs: delta,
-                    events_per_sec: if delta > 0 { count as f64 / delta as f64 } else { count as f64 },
+                    events_per_sec: if delta > 0 {
+                        count as f64 / delta as f64
+                    } else {
+                        count as f64
+                    },
                 });
             }
             window_start = i;
@@ -538,12 +542,20 @@ fn detect_activity_bursts(entries: &[crate::state::TimelineEntry]) -> Vec<Activi
             start_time: start_ts.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             event_count: remaining,
             duration_secs: delta,
-            events_per_sec: if delta > 0 { remaining as f64 / delta as f64 } else { remaining as f64 },
+            events_per_sec: if delta > 0 {
+                remaining as f64 / delta as f64
+            } else {
+                remaining as f64
+            },
         });
     }
 
     // Sort by event density (events per second) descending
-    bursts.sort_by(|a, b| b.events_per_sec.partial_cmp(&a.events_per_sec).unwrap_or(std::cmp::Ordering::Equal));
+    bursts.sort_by(|a, b| {
+        b.events_per_sec
+            .partial_cmp(&a.events_per_sec)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     bursts.truncate(10);
     bursts
 }

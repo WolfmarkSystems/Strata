@@ -106,9 +106,7 @@ impl ArtifactParser for ExecutionCorrelationParser {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
 
-            let timestamp = artifact
-                .get("timestamp")
-                .and_then(|v| v.as_i64());
+            let timestamp = artifact.get("timestamp").and_then(|v| v.as_i64());
 
             let json_data = artifact
                 .get("jsonData")
@@ -119,14 +117,15 @@ impl ArtifactParser for ExecutionCorrelationParser {
             match artifact_type {
                 "prefetch" => {
                     if let Some(exe_name) = extract_exe_name(description) {
-                        evidence_map.entry(exe_name.clone()).or_default().push(
-                            ExecutionEvidence {
+                        evidence_map
+                            .entry(exe_name.clone())
+                            .or_default()
+                            .push(ExecutionEvidence {
                                 source_type: "Prefetch".to_string(),
                                 timestamp,
                                 detail: description.to_string(),
                                 confidence: 0.95,
-                            },
-                        );
+                            });
                     }
                 }
                 "jumplist_entry" | "jumplist" => {
@@ -135,14 +134,15 @@ impl ArtifactParser for ExecutionCorrelationParser {
                         .and_then(|v| v.as_str())
                         .map(String::from)
                     {
-                        evidence_map.entry(app.clone()).or_default().push(
-                            ExecutionEvidence {
+                        evidence_map
+                            .entry(app.clone())
+                            .or_default()
+                            .push(ExecutionEvidence {
                                 source_type: "JumpList".to_string(),
                                 timestamp,
                                 detail: description.to_string(),
                                 confidence: 0.8,
-                            },
-                        );
+                            });
                     }
                 }
                 "userassist_execution" => {
@@ -152,14 +152,15 @@ impl ArtifactParser for ExecutionCorrelationParser {
                         .map(String::from)
                     {
                         let name = exe.rsplit('\\').next().unwrap_or(&exe).to_lowercase();
-                        evidence_map.entry(name).or_default().push(
-                            ExecutionEvidence {
+                        evidence_map
+                            .entry(name)
+                            .or_default()
+                            .push(ExecutionEvidence {
                                 source_type: "UserAssist".to_string(),
                                 timestamp,
                                 detail: description.to_string(),
                                 confidence: 0.85,
-                            },
-                        );
+                            });
                     }
                 }
                 "srum_entry" => {
@@ -170,14 +171,15 @@ impl ArtifactParser for ExecutionCorrelationParser {
                         .map(String::from)
                     {
                         let name = app.rsplit('\\').next().unwrap_or(&app).to_lowercase();
-                        evidence_map.entry(name).or_default().push(
-                            ExecutionEvidence {
+                        evidence_map
+                            .entry(name)
+                            .or_default()
+                            .push(ExecutionEvidence {
                                 source_type: "SRUM".to_string(),
                                 timestamp,
                                 detail: description.to_string(),
                                 confidence: 0.7,
-                            },
-                        );
+                            });
                     }
                 }
                 "scheduled_task" => {
@@ -190,30 +192,29 @@ impl ArtifactParser for ExecutionCorrelationParser {
                         .map(String::from)
                     {
                         let name = cmd.rsplit('\\').next().unwrap_or(&cmd).to_lowercase();
-                        evidence_map.entry(name).or_default().push(
-                            ExecutionEvidence {
+                        evidence_map
+                            .entry(name)
+                            .or_default()
+                            .push(ExecutionEvidence {
                                 source_type: "ScheduledTask".to_string(),
                                 timestamp,
                                 detail: description.to_string(),
                                 confidence: 0.6,
-                            },
-                        );
+                            });
                     }
                 }
                 "bits_transfer" => {
-                    if let Some(url) = json_data
-                        .get("url")
-                        .and_then(|v| v.as_str())
-                    {
+                    if let Some(url) = json_data.get("url").and_then(|v| v.as_str()) {
                         let filename = url.rsplit('/').next().unwrap_or(url).to_lowercase();
-                        evidence_map.entry(filename).or_default().push(
-                            ExecutionEvidence {
+                        evidence_map
+                            .entry(filename)
+                            .or_default()
+                            .push(ExecutionEvidence {
                                 source_type: "BITS".to_string(),
                                 timestamp,
                                 detail: description.to_string(),
                                 confidence: 0.5,
-                            },
-                        );
+                            });
                     }
                 }
                 _ => {}
@@ -282,9 +283,19 @@ impl ArtifactParser for ExecutionCorrelationParser {
 
         // Sort by confidence descending
         artifacts.sort_by(|a, b| {
-            let conf_a = a.json_data.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let conf_b = b.json_data.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            conf_b.partial_cmp(&conf_a).unwrap_or(std::cmp::Ordering::Equal)
+            let conf_a = a
+                .json_data
+                .get("confidence")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            let conf_b = b
+                .json_data
+                .get("confidence")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            conf_b
+                .partial_cmp(&conf_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         Ok(artifacts)

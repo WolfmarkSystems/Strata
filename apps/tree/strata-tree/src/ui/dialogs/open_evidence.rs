@@ -40,7 +40,11 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
             ui.add_space(8.0);
 
             // ── Path field (vertical stack) ──
-            ui.label(egui::RichText::new("Evidence Path").color(TEXT_MUTED).size(9.5));
+            ui.label(
+                egui::RichText::new("Evidence Path")
+                    .color(TEXT_MUTED)
+                    .size(9.5),
+            );
             ui.add_space(2.0);
             ui.add(
                 egui::TextEdit::singleline(&mut state.open_ev_dlg.path)
@@ -58,7 +62,10 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     if let Some(p) = rfd::FileDialog::new()
                         .add_filter(
                             "Evidence",
-                            &["e01", "E01", "dd", "raw", "img", "vhd", "vmdk", "vhdx", "iso", "dmg", "qcow2", "vdi"],
+                            &[
+                                "e01", "E01", "dd", "raw", "img", "vhd", "vmdk", "vhdx", "iso",
+                                "dmg", "qcow2", "vdi",
+                            ],
                         )
                         .add_filter("All Files", &["*"])
                         .pick_file()
@@ -106,7 +113,11 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                 .map(|s| s.path.clone())
                 .collect();
             if !recent.is_empty() {
-                ui.label(egui::RichText::new("Recent Evidence").color(TEXT_MUTED).size(9.0));
+                ui.label(
+                    egui::RichText::new("Recent Evidence")
+                        .color(TEXT_MUTED)
+                        .size(9.0),
+                );
                 ui.add_space(2.0);
                 for path in &recent {
                     let display = std::path::Path::new(path)

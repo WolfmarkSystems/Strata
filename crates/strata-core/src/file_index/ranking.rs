@@ -40,15 +40,27 @@ pub fn rank_artifacts(artifacts: &[Artifact]) -> Vec<ScoredArtifact<'_>> {
                     score += 5.0;
                 }
             }
-            if a.data.get("suspicious").map(|s| s == "true").unwrap_or(false) {
+            if a.data
+                .get("suspicious")
+                .map(|s| s == "true")
+                .unwrap_or(false)
+            {
                 score += 25.0;
                 reasons.push("suspicious");
             }
-            if a.data.get("sigma_match").map(|s| s == "true").unwrap_or(false) {
+            if a.data
+                .get("sigma_match")
+                .map(|s| s == "true")
+                .unwrap_or(false)
+            {
                 score += 20.0;
                 reasons.push("sigma_match");
             }
-            if a.data.get("correlation_hit").map(|s| s == "true").unwrap_or(false) {
+            if a.data
+                .get("correlation_hit")
+                .map(|s| s == "true")
+                .unwrap_or(false)
+            {
                 score += 15.0;
                 reasons.push("correlation_hit");
             }
@@ -77,7 +89,11 @@ pub fn rank_artifacts(artifacts: &[Artifact]) -> Vec<ScoredArtifact<'_>> {
             }
         })
         .collect();
-    out.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    out.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     out
 }
 
@@ -106,7 +122,11 @@ mod tests {
         let arts = [low, high_sus];
         let scored = rank_artifacts(&arts);
         assert_eq!(
-            scored[0].artifact.data.get("forensic_value").map(|s| s.as_str()),
+            scored[0]
+                .artifact
+                .data
+                .get("forensic_value")
+                .map(|s| s.as_str()),
             Some("High")
         );
     }

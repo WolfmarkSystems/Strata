@@ -67,16 +67,20 @@ fn parse_generic(platform: &str, json: &str) -> Vec<SmartTVArtifact> {
                 .into(),
             platform: platform.into(),
             timestamp: ts,
-            device_name: entry.get("device").and_then(|x| x.as_str()).map(String::from),
-            content_title: entry.get("title").and_then(|x| x.as_str()).map(String::from),
-            content_platform: entry
-                .get("app")
+            device_name: entry
+                .get("device")
                 .and_then(|x| x.as_str())
                 .map(String::from),
-            watch_duration_seconds: entry
-                .get("durationSeconds")
-                .and_then(|x| x.as_u64()),
-            account: entry.get("account").and_then(|x| x.as_str()).map(String::from),
+            content_title: entry
+                .get("title")
+                .and_then(|x| x.as_str())
+                .map(String::from),
+            content_platform: entry.get("app").and_then(|x| x.as_str()).map(String::from),
+            watch_duration_seconds: entry.get("durationSeconds").and_then(|x| x.as_u64()),
+            account: entry
+                .get("account")
+                .and_then(|x| x.as_str())
+                .map(String::from),
         });
     }
     out

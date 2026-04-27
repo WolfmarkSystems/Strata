@@ -554,75 +554,6 @@ impl RawVfs {
         Ok(self.data[offset..end].to_vec())
     }
 
-    /// Apply USA (Update Sequence Array) fixup to NTFS MFT record
-    /// Standard NTFS USA algorithm: Replace last 2 bytes of each sector
-    /// covered by the USA with the Update Sequence Number from the USA array
-    #[allow(dead_code)]
-    fn apply_usa_fixup(record: &mut [u8], sector_size: usize) -> bool {
-        if record.len() < 8 || sector_size < 512 {
-            tracing::warn!("[USA] Record too small: {} bytes", record.len());
-            return false;
-        }
-
-        // NTFS FILE record header:
-        // USA offset at 0x04, USA count at 0x06
-        let usa_offset = u16::from_le_bytes([record[0x04], record[0x05]]);
-        let usa_size = u16::from_le_bytes([record[0x06], record[0x07]]);
-
-        if usa_offset < 8 || usa_offset as usize >= record.len() || usa_size < 2 {
-            tracing::warn!(
-                "[USA] Invalid USA: offset={}, size={}",
-                usa_offset,
-                usa_size
-            );
-            return false;
-        }
-
-        // Number of sectors covered (first 2 bytes of USA array)
-        let num_sectors =
-            u16::from_le_bytes([record[usa_offset as usize], record[usa_offset as usize + 1]]);
-
-        tracing::info!(
-            "[USA] Applying fixup: {} sectors at offset {}, record size {}",
-            num_sectors,
-            usa_offset,
-            record.len()
-        );
-
-        // Apply fixup to each sector
-        for i in 0..num_sectors {
-            let sector_num = i as usize;
-            let sector_end = (sector_num + 1) * sector_size;
-
-            if sector_end > record.len() {
-                break;
-            }
-
-            // Get fixup value from USA array (skip first 2 bytes = sector count)
-            let usa_entry_idx = (usa_offset as usize) + 2 + (i as usize) * 2;
-            if usa_entry_idx + 2 > record.len() {
-                break;
-            }
-
-            let fixup_value =
-                u16::from_le_bytes([record[usa_entry_idx], record[usa_entry_idx + 1]]);
-
-            // Apply to last 2 bytes of this sector
-            let target_offset = sector_end - 2;
-            record[target_offset] = fixup_value as u8;
-            record[target_offset + 1] = (fixup_value >> 8) as u8;
-
-            tracing::debug!(
-                "[USA] Sector {} fixed with 0x{:04X} at offset {}",
-                i,
-                fixup_value,
-                target_offset
-            );
-        }
-
-        true
-    }
-
     pub fn enumerate_fat32_directory(
         &self,
         vol_info: &VolumeInfo,
@@ -1310,7 +1241,9 @@ impl VirtualFileSystem for RawVfs {
 
             // If NTFS, try to find VSS (Volume Shadow Copy) snapshots
             if final_fs == FileSystemType::NTFS {
-                if let Ok(snaps) = crate::shadowcopy::enumerate_vss_snapshots(self, filesystem_offset) {
+                if let Ok(snaps) =
+                    crate::shadowcopy::enumerate_vss_snapshots(self, filesystem_offset)
+                {
                     for snap in &snaps {
                         let label = match snap.creation_time {
                             Some(ts) => {
@@ -1571,14 +1504,26 @@ impl EwfVfs {
 
         // Parse GPT header fields
         let partition_entry_lba = u64::from_le_bytes([
-            gpt_header[72], gpt_header[73], gpt_header[74], gpt_header[75],
-            gpt_header[76], gpt_header[77], gpt_header[78], gpt_header[79],
+            gpt_header[72],
+            gpt_header[73],
+            gpt_header[74],
+            gpt_header[75],
+            gpt_header[76],
+            gpt_header[77],
+            gpt_header[78],
+            gpt_header[79],
         ]);
         let num_partition_entries = u32::from_le_bytes([
-            gpt_header[80], gpt_header[81], gpt_header[82], gpt_header[83],
+            gpt_header[80],
+            gpt_header[81],
+            gpt_header[82],
+            gpt_header[83],
         ]);
         let partition_entry_size = u32::from_le_bytes([
-            gpt_header[84], gpt_header[85], gpt_header[86], gpt_header[87],
+            gpt_header[84],
+            gpt_header[85],
+            gpt_header[86],
+            gpt_header[87],
         ]);
 
         info!(
@@ -1614,12 +1559,12 @@ impl EwfVfs {
 
             // First LBA and Last LBA
             let first_lba = u64::from_le_bytes([
-                entry[32], entry[33], entry[34], entry[35],
-                entry[36], entry[37], entry[38], entry[39],
+                entry[32], entry[33], entry[34], entry[35], entry[36], entry[37], entry[38],
+                entry[39],
             ]);
             let last_lba = u64::from_le_bytes([
-                entry[40], entry[41], entry[42], entry[43],
-                entry[44], entry[45], entry[46], entry[47],
+                entry[40], entry[41], entry[42], entry[43], entry[44], entry[45], entry[46],
+                entry[47],
             ]);
 
             if first_lba == 0 || last_lba <= first_lba {
@@ -1671,7 +1616,6 @@ impl EwfVfs {
 
         Some(volumes)
     }
-
 }
 
 // ─── EwfSeekReader — adapts EwfVfs into Read + Seek for MftWalker ────────────
@@ -1701,9 +1645,10 @@ impl<'a> Read for EwfSeekReader<'a> {
             return Ok(0);
         }
         let abs_offset = self.base_offset + self.position;
-        let data = self.vfs.read_at(abs_offset, buf.len()).map_err(|e| {
-            std::io::Error::other(format!("EWF read failed: {}", e))
-        })?;
+        let data = self
+            .vfs
+            .read_at(abs_offset, buf.len())
+            .map_err(|e| std::io::Error::other(format!("EWF read failed: {}", e)))?;
         let n = data.len().min(buf.len());
         buf[..n].copy_from_slice(&data[..n]);
         self.position += n as u64;
@@ -1924,7 +1869,7 @@ impl EwfVfs {
         &self.volumes
     }
 
-    #[allow(dead_code)]
+    #[cfg(target_os = "windows")]
     fn volume_index_from_path(path: &Path) -> Option<usize> {
         let normalized = path.to_string_lossy().replace('\\', "/");
         // Paths from enumerate_ntfs_directory use "/ntfs_vol{N}/..." format.
@@ -1937,7 +1882,6 @@ impl EwfVfs {
         }
         None
     }
-
 }
 
 #[cfg(target_os = "windows")]
@@ -1996,7 +1940,6 @@ impl EwfVfs {
         runs
     }
 
-    #[allow(dead_code)]
     fn enumerate_ntfs_root_shallow(
         &self,
         vol_info: &VolumeInfo,
@@ -2780,21 +2723,6 @@ impl EwfVfs {
         }
         normalized
     }
-
-    #[allow(dead_code)]
-    fn enumerate_ntfs_mft_fallback(
-        &self,
-        vol_info: &VolumeInfo,
-    ) -> Result<Vec<VfsEntry>, ForensicError> {
-        let index = self.get_or_build_ntfs_index(vol_info)?;
-        let root_path = PathBuf::from(format!("/vol{}", vol_info.volume_index));
-        let root_norm = Self::normalize_virtual_path(root_path.as_path());
-        Ok(index
-            .children_by_dir
-            .get(&root_norm)
-            .cloned()
-            .unwrap_or_default())
-    }
 }
 
 // Cross-platform VirtualFileSystem for EwfVfs.
@@ -2838,9 +2766,7 @@ impl VirtualFileSystem for EwfVfs {
             .iter()
             .map(|e| {
                 let vfs_path = format!("/ntfs_vol{}{}", vol_info.volume_index, e.path);
-                let modified_dt = e.modified.and_then(|ts| {
-                    DateTime::from_timestamp(ts, 0)
-                });
+                let modified_dt = e.modified.and_then(|ts| DateTime::from_timestamp(ts, 0));
                 VfsEntry {
                     path: PathBuf::from(&vfs_path),
                     name: e.name.clone(),
@@ -2878,22 +2804,33 @@ impl VirtualFileSystem for EwfVfs {
 
         // Build or reuse MFT cache
         {
-            let mut cache_guard = self.mft_cache.lock().map_err(|_| {
-                ForensicError::Io(std::io::Error::other("MFT cache lock poisoned"))
-            })?;
+            let mut cache_guard = self
+                .mft_cache
+                .lock()
+                .map_err(|_| ForensicError::Io(std::io::Error::other("MFT cache lock poisoned")))?;
 
             if cache_guard.is_none() {
-                let vol = self.volumes.first().ok_or(ForensicError::InvalidImageFormat)?;
+                let vol = self
+                    .volumes
+                    .first()
+                    .ok_or(ForensicError::InvalidImageFormat)?;
                 let partition_offset = vol.offset;
 
-                info!("[EwfVfs] Building MFT cache for file reads (partition offset {})", partition_offset);
+                info!(
+                    "[EwfVfs] Building MFT cache for file reads (partition offset {})",
+                    partition_offset
+                );
                 let reader = EwfSeekReader::new(self, partition_offset);
                 let mut walker = crate::mft_walker::MftWalker::new(reader, 0)?;
                 let cluster_size = walker.boot_params().cluster_size as u64;
                 let entries = walker.enumerate(200_000)?;
                 let paths = crate::mft_walker::build_path_tree_public(&entries);
 
-                info!("[EwfVfs] MFT cache built: {} entries, {} paths", entries.len(), paths.len());
+                info!(
+                    "[EwfVfs] MFT cache built: {} entries, {} paths",
+                    entries.len(),
+                    paths.len()
+                );
                 *cache_guard = Some(MftCache {
                     cluster_size,
                     partition_offset,
@@ -2904,10 +2841,13 @@ impl VirtualFileSystem for EwfVfs {
         }
 
         // Use the cache to find the file
-        let cache_guard = self.mft_cache.lock().map_err(|_| {
-            ForensicError::Io(std::io::Error::other("MFT cache lock poisoned"))
-        })?;
-        let cache = cache_guard.as_ref().ok_or(ForensicError::InvalidImageFormat)?;
+        let cache_guard = self
+            .mft_cache
+            .lock()
+            .map_err(|_| ForensicError::Io(std::io::Error::other("MFT cache lock poisoned")))?;
+        let cache = cache_guard
+            .as_ref()
+            .ok_or(ForensicError::InvalidImageFormat)?;
 
         // Strip the /ntfs_vol0 prefix to match MFT paths
         let search_path = path_str
@@ -2921,7 +2861,8 @@ impl VirtualFileSystem for EwfVfs {
 
         // Find matching MFT entry by path suffix
         let mft_entry = cache.entries.iter().find(|e| {
-            let entry_path = cache.paths
+            let entry_path = cache
+                .paths
                 .iter()
                 .find(|pe| pe.inode == e.inode)
                 .map(|pe| pe.path.as_str())
@@ -2954,16 +2895,21 @@ impl VirtualFileSystem for EwfVfs {
             }
             if let Some(cluster_offset) = run.cluster_offset {
                 let byte_offset = partition_offset + (cluster_offset as u64) * cluster_size;
-                let byte_length = ((run.cluster_length * cluster_size) as usize).min(max_read - content.len());
+                let byte_length =
+                    ((run.cluster_length * cluster_size) as usize).min(max_read - content.len());
                 match self.read_at(byte_offset, byte_length) {
                     Ok(data) => content.extend_from_slice(&data),
                     Err(e) => {
-                        warn!("[EwfVfs] Failed to read data run at offset {}: {}", byte_offset, e);
+                        warn!(
+                            "[EwfVfs] Failed to read data run at offset {}: {}",
+                            byte_offset, e
+                        );
                         break;
                     }
                 }
             } else {
-                let zero_bytes = ((run.cluster_length * cluster_size) as usize).min(max_read - content.len());
+                let zero_bytes =
+                    ((run.cluster_length * cluster_size) as usize).min(max_read - content.len());
                 content.extend(std::iter::repeat_n(0u8, zero_bytes));
             }
         }
@@ -2988,7 +2934,8 @@ impl VirtualFileSystem for EwfVfs {
     }
 
     fn get_volumes(&self) -> Vec<VolumeInfo> {
-        let mut volumes: Vec<VolumeInfo> = self.volumes
+        let mut volumes: Vec<VolumeInfo> = self
+            .volumes
             .iter()
             .map(|v| {
                 let fs_type = v

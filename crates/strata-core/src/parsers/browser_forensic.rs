@@ -350,8 +350,7 @@ impl ArtifactParser for ChromiumForensicParser {
                     || path_str.contains("\\microsoft\\edge\\")
             }
             ChromiumBrand::Brave => {
-                path_str.contains("/brave")
-                    || path_str.contains("\\bravesoftware\\")
+                path_str.contains("/brave") || path_str.contains("\\bravesoftware\\")
             }
         };
         if !is_match {
@@ -390,18 +389,54 @@ impl ArtifactParser for ChromiumForensicParser {
 
             match file_name.as_str() {
                 "history" => {
-                    parse_chromium_history(conn, path, brand.name(), profile.as_deref(), &mut entries)?;
-                    parse_chromium_downloads(conn, path, brand.name(), profile.as_deref(), &mut entries)?;
-                    parse_chromium_searches(conn, path, brand.name(), profile.as_deref(), &mut entries)?;
+                    parse_chromium_history(
+                        conn,
+                        path,
+                        brand.name(),
+                        profile.as_deref(),
+                        &mut entries,
+                    )?;
+                    parse_chromium_downloads(
+                        conn,
+                        path,
+                        brand.name(),
+                        profile.as_deref(),
+                        &mut entries,
+                    )?;
+                    parse_chromium_searches(
+                        conn,
+                        path,
+                        brand.name(),
+                        profile.as_deref(),
+                        &mut entries,
+                    )?;
                 }
                 "cookies" => {
-                    parse_chromium_cookies(conn, path, brand.name(), profile.as_deref(), &mut entries)?;
+                    parse_chromium_cookies(
+                        conn,
+                        path,
+                        brand.name(),
+                        profile.as_deref(),
+                        &mut entries,
+                    )?;
                 }
                 "login data" => {
-                    parse_chromium_logins(conn, path, brand.name(), profile.as_deref(), &mut entries)?;
+                    parse_chromium_logins(
+                        conn,
+                        path,
+                        brand.name(),
+                        profile.as_deref(),
+                        &mut entries,
+                    )?;
                 }
                 "web data" => {
-                    parse_chromium_autofill(conn, path, brand.name(), profile.as_deref(), &mut entries)?;
+                    parse_chromium_autofill(
+                        conn,
+                        path,
+                        brand.name(),
+                        profile.as_deref(),
+                        &mut entries,
+                    )?;
                 }
                 _ => {}
             }
@@ -418,7 +453,13 @@ impl ArtifactParser for ChromiumForensicParser {
 
 fn extract_chromium_profile(path_lower: &str) -> Option<String> {
     // Look for "User Data/<Profile>/" or "Chrome/<Profile>/"
-    for marker in ["/user data/", "/google/chrome/", "/microsoft edge/", "/brave-browser/", "/google-chrome/"] {
+    for marker in [
+        "/user data/",
+        "/google/chrome/",
+        "/microsoft edge/",
+        "/brave-browser/",
+        "/google-chrome/",
+    ] {
         if let Some(idx) = path_lower.find(marker) {
             let tail = &path_lower[idx + marker.len()..];
             if let Some(slash) = tail.find('/') {
@@ -463,10 +504,7 @@ fn parse_chromium_history(
                 BrowserVisit {
                     url: row.get::<_, String>(0).unwrap_or_default(),
                     title: row.get(1).ok(),
-                    visit_time: row
-                        .get::<_, i64>(2)
-                        .ok()
-                        .map(chromium_ts_to_unix),
+                    visit_time: row.get::<_, i64>(2).ok().map(chromium_ts_to_unix),
                     visit_count: row.get::<_, i64>(3).unwrap_or(0),
                     typed_count: row.get::<_, i64>(4).unwrap_or(0),
                     transition: Some(decode_transition(transition_raw).to_string()),
@@ -781,10 +819,7 @@ fn walk_chromium_bookmark(
                 .and_then(|n| n.as_str())
                 .unwrap_or("untitled")
                 .to_string();
-            let url = node
-                .get("url")
-                .and_then(|u| u.as_str())
-                .map(String::from);
+            let url = node.get("url").and_then(|u| u.as_str()).map(String::from);
             let date_added = node
                 .get("date_added")
                 .and_then(|d| d.as_str())
@@ -820,7 +855,15 @@ fn walk_chromium_bookmark(
             let child_path = format!("{}/{}", folder_path, name);
             if let Some(children) = node.get("children").and_then(|c| c.as_array()) {
                 for child in children {
-                    walk_chromium_bookmark(child, path, browser, profile, &child_path, depth + 1, out);
+                    walk_chromium_bookmark(
+                        child,
+                        path,
+                        browser,
+                        profile,
+                        &child_path,
+                        depth + 1,
+                        out,
+                    );
                 }
             }
         }
@@ -828,7 +871,15 @@ fn walk_chromium_bookmark(
             // Root-level nodes may not have "type" — try children anyway.
             if let Some(children) = node.get("children").and_then(|c| c.as_array()) {
                 for child in children {
-                    walk_chromium_bookmark(child, path, browser, profile, folder_path, depth + 1, out);
+                    walk_chromium_bookmark(
+                        child,
+                        path,
+                        browser,
+                        profile,
+                        folder_path,
+                        depth + 1,
+                        out,
+                    );
                 }
             }
         }
@@ -1149,7 +1200,9 @@ fn parse_firefox_bookmarks(
     let rows = stmt
         .query_map([], |row| {
             Ok(BrowserBookmark {
-                title: row.get::<_, String>(0).unwrap_or_else(|_| "(untitled)".into()),
+                title: row
+                    .get::<_, String>(0)
+                    .unwrap_or_else(|_| "(untitled)".into()),
                 url: row.get(1).ok(),
                 date_added: row.get::<_, i64>(2).ok().map(firefox_us_to_unix),
                 folder_path: String::new(),
@@ -1232,9 +1285,7 @@ fn parse_firefox_formhistory(
     }
 
     let mut stmt = conn
-        .prepare(
-            "SELECT fieldname, value, timesUsed, firstUsed, lastUsed FROM moz_formhistory",
-        )
+        .prepare("SELECT fieldname, value, timesUsed, firstUsed, lastUsed FROM moz_formhistory")
         .map_err(|e| ParserError::Database(e.to_string()))?;
     let rows = stmt
         .query_map([], |row| {
@@ -1296,10 +1347,7 @@ fn parse_firefox_logins_json(
             .get("timeLastUsed")
             .and_then(|v| v.as_i64())
             .map(|ms| ms / 1000);
-        let times_used = login
-            .get("timesUsed")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(0);
+        let times_used = login.get("timesUsed").and_then(|v| v.as_i64()).unwrap_or(0);
 
         let entry = BrowserLogin {
             origin_url: hostname.clone(),
@@ -1374,21 +1422,14 @@ impl ArtifactParser for SafariForensicParser {
             .to_lowercase();
 
         match file_name.as_str() {
-            "history.db" if path_str.contains("/safari/") => {
-                parse_safari_history_db(path, data)
-            }
-            "cookies.binarycookies" => {
-                Ok(parse_safari_cookies_binary(path, data))
-            }
+            "history.db" if path_str.contains("/safari/") => parse_safari_history_db(path, data),
+            "cookies.binarycookies" => Ok(parse_safari_cookies_binary(path, data)),
             _ => Ok(Vec::new()),
         }
     }
 }
 
-fn parse_safari_history_db(
-    path: &Path,
-    data: &[u8],
-) -> Result<Vec<ParsedArtifact>, ParserError> {
+fn parse_safari_history_db(path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
     let mut artifacts = Vec::new();
     let result = with_sqlite_connection(path, data, |conn| {
         let mut entries = Vec::new();
@@ -1501,8 +1542,7 @@ fn parse_safari_cookie_page(page: &[u8], path: &Path, out: &mut Vec<ParsedArtifa
     if page.len() < 8 {
         return;
     }
-    let cookie_count =
-        u32::from_le_bytes([page[4], page[5], page[6], page[7]]) as usize;
+    let cookie_count = u32::from_le_bytes([page[4], page[5], page[6], page[7]]) as usize;
     if cookie_count == 0 || cookie_count > 10_000 {
         return;
     }
@@ -1515,9 +1555,12 @@ fn parse_safari_cookie_page(page: &[u8], path: &Path, out: &mut Vec<ParsedArtifa
 
     for i in 0..cookie_count {
         let off_pos = 8 + i * 4;
-        let cookie_offset =
-            u32::from_le_bytes([page[off_pos], page[off_pos + 1], page[off_pos + 2], page[off_pos + 3]])
-                as usize;
+        let cookie_offset = u32::from_le_bytes([
+            page[off_pos],
+            page[off_pos + 1],
+            page[off_pos + 2],
+            page[off_pos + 3],
+        ]) as usize;
         if cookie_offset + 48 > page.len() {
             continue;
         }
@@ -1537,9 +1580,12 @@ fn parse_safari_cookie_page(page: &[u8], path: &Path, out: &mut Vec<ParsedArtifa
         //   0x28: f64 LE expiry_date (Mac epoch)
         //   0x30: f64 LE creation_date (Mac epoch)
         let flags = u32::from_le_bytes([cookie[4], cookie[5], cookie[6], cookie[7]]);
-        let url_off = u32::from_le_bytes([cookie[0x10], cookie[0x11], cookie[0x12], cookie[0x13]]) as usize;
-        let name_off = u32::from_le_bytes([cookie[0x14], cookie[0x15], cookie[0x16], cookie[0x17]]) as usize;
-        let path_off = u32::from_le_bytes([cookie[0x18], cookie[0x19], cookie[0x1A], cookie[0x1B]]) as usize;
+        let url_off =
+            u32::from_le_bytes([cookie[0x10], cookie[0x11], cookie[0x12], cookie[0x13]]) as usize;
+        let name_off =
+            u32::from_le_bytes([cookie[0x14], cookie[0x15], cookie[0x16], cookie[0x17]]) as usize;
+        let path_off =
+            u32::from_le_bytes([cookie[0x18], cookie[0x19], cookie[0x1A], cookie[0x1B]]) as usize;
 
         let expiry_bytes: [u8; 8] = cookie[0x28..0x30].try_into().unwrap_or([0; 8]);
         let creation_bytes: [u8; 8] = cookie[0x30..0x38].try_into().unwrap_or([0; 8]);
@@ -1587,7 +1633,10 @@ fn read_cstring(data: &[u8], offset: usize) -> String {
         return String::new();
     }
     let slice = &data[offset..];
-    let end = slice.iter().position(|&b| b == 0).unwrap_or(slice.len().min(256));
+    let end = slice
+        .iter()
+        .position(|&b| b == 0)
+        .unwrap_or(slice.len().min(256));
     String::from_utf8_lossy(&slice[..end]).to_string()
 }
 
@@ -1663,7 +1712,12 @@ mod tests {
         assert_eq!(out.len(), 2);
         let titles: Vec<String> = out
             .iter()
-            .filter_map(|a| a.json_data.get("title").and_then(|v| v.as_str()).map(String::from))
+            .filter_map(|a| {
+                a.json_data
+                    .get("title")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            })
             .collect();
         assert!(titles.contains(&"Wolfmark Systems".to_string()));
         assert!(titles.contains(&"Strata".to_string()));
@@ -1713,9 +1767,8 @@ mod tests {
     #[test]
     fn edge_parser_matches_edge_paths() {
         let parser = ChromiumForensicParser::edge();
-        let path = PathBuf::from(
-            "C:/Users/test/AppData/Local/Microsoft/Edge/User Data/Default/Bookmarks",
-        );
+        let path =
+            PathBuf::from("C:/Users/test/AppData/Local/Microsoft/Edge/User Data/Default/Bookmarks");
         let json = r#"{"roots":{"bookmark_bar":{"children":[{"name":"test","type":"url","url":"https://example.com","date_added":"13321925725000000"}],"type":"folder"}}}"#;
         let out = parser.parse_file(&path, json.as_bytes()).unwrap();
         assert_eq!(out.len(), 1);

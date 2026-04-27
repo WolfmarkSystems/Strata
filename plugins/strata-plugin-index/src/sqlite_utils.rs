@@ -1,7 +1,7 @@
 use rusqlite::Connection;
 use std::path::Path;
-use uuid::Uuid;
 use strata_core::parser::ParserError;
+use uuid::Uuid;
 
 const SQLITE_MAGIC: &[u8] = b"SQLite format 3\0";
 

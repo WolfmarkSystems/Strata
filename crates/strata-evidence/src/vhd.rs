@@ -80,8 +80,14 @@ impl VhdImage {
                 });
             }
             let table_offset = u64::from_be_bytes([
-                dyn_hdr[16], dyn_hdr[17], dyn_hdr[18], dyn_hdr[19], dyn_hdr[20], dyn_hdr[21],
-                dyn_hdr[22], dyn_hdr[23],
+                dyn_hdr[16],
+                dyn_hdr[17],
+                dyn_hdr[18],
+                dyn_hdr[19],
+                dyn_hdr[20],
+                dyn_hdr[21],
+                dyn_hdr[22],
+                dyn_hdr[23],
             ]);
             let max_table_entries =
                 u32::from_be_bytes([dyn_hdr[28], dyn_hdr[29], dyn_hdr[30], dyn_hdr[31]]);
@@ -142,7 +148,9 @@ impl EvidenceImage for VhdImage {
                     .file
                     .lock()
                     .map_err(|e| EvidenceError::Other(format!("poisoned: {e}")))?;
-                guard.seek(SeekFrom::Start(offset)).map_err(EvidenceError::Io)?;
+                guard
+                    .seek(SeekFrom::Start(offset))
+                    .map_err(EvidenceError::Io)?;
                 let max_len = (self.size - offset).min(buf.len() as u64) as usize;
                 guard
                     .read_exact(&mut buf[..max_len])
@@ -246,7 +254,9 @@ impl EvidenceImage for VhdxImage {
             .file
             .lock()
             .map_err(|e| EvidenceError::Other(format!("poisoned: {e}")))?;
-        guard.seek(SeekFrom::Start(offset)).map_err(EvidenceError::Io)?;
+        guard
+            .seek(SeekFrom::Start(offset))
+            .map_err(EvidenceError::Io)?;
         let max_len = (self.size - offset).min(buf.len() as u64) as usize;
         guard
             .read_exact(&mut buf[..max_len])

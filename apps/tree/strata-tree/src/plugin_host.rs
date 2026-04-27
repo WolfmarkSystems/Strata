@@ -53,7 +53,10 @@ impl PluginHost {
     }
 
     #[allow(dead_code)]
-    pub fn run_all(&self, context: PluginContext) -> Vec<(String, Result<PluginOutput, PluginError>)> {
+    pub fn run_all(
+        &self,
+        context: PluginContext,
+    ) -> Vec<(String, Result<PluginOutput, PluginError>)> {
         self.plugins
             .iter()
             .map(|p| {

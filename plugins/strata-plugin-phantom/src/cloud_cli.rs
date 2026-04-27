@@ -27,7 +27,10 @@ pub struct CloudCliArtifact {
 }
 
 pub fn classify(path: &Path) -> Option<&'static str> {
-    let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let lower = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
     let name = lower.rsplit('/').next().unwrap_or("");
     if lower.contains("/.aws/credentials") || name == "credentials" && lower.contains("/.aws/") {
         return Some("AWSCredentials");
@@ -120,7 +123,10 @@ pub fn parse_aws_credentials(body: &str) -> Vec<CloudCliArtifact> {
 pub fn parse_aws_config(body: &str) -> Vec<CloudCliArtifact> {
     let mut out = Vec::new();
     for (profile, kvs) in parse_ini(body) {
-        let region = kvs.iter().find(|(k, _)| k == "region").map(|(_, v)| v.clone());
+        let region = kvs
+            .iter()
+            .find(|(k, _)| k == "region")
+            .map(|(_, v)| v.clone());
         let role = kvs
             .iter()
             .find(|(k, _)| k == "role_arn")
@@ -159,10 +165,7 @@ pub fn parse_azure_access_tokens(body: &str) -> Vec<CloudCliArtifact> {
                 .get("subscriptionId")
                 .and_then(|v| v.as_str())
                 .map(String::from),
-            tenant_id: t
-                .get("tenantId")
-                .and_then(|v| v.as_str())
-                .map(String::from),
+            tenant_id: t.get("tenantId").and_then(|v| v.as_str()).map(String::from),
             region: None,
             credentials_present: t.get("accessToken").is_some() || t.get("refreshToken").is_some(),
             aws_key_type: None,

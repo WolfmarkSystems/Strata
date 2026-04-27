@@ -55,7 +55,10 @@ impl ArtifactParser for HiberfilParser {
             return Ok(vec![ParsedArtifact {
                 timestamp: None,
                 artifact_type: "hiberfil".to_string(),
-                description: format!("Hibernation file detected (too small to parse): {}", file_name),
+                description: format!(
+                    "Hibernation file detected (too small to parse): {}",
+                    file_name
+                ),
                 source_path: path.to_string_lossy().to_string(),
                 json_data: serde_json::json!({
                     "file_name": file_name,

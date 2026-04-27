@@ -94,14 +94,8 @@ pub fn parse_intelligence_log_line(line: &str) -> Option<AppleIntelligenceReques
         .and_then(|x| x.as_str())
         .unwrap_or("unknown")
         .to_string();
-    let initiating_app = v
-        .get("app")
-        .and_then(|x| x.as_str())
-        .map(|s| s.to_string());
-    let processed_on_device = v
-        .get("on_device")
-        .and_then(|x| x.as_bool())
-        .unwrap_or(true);
+    let initiating_app = v.get("app").and_then(|x| x.as_str()).map(|s| s.to_string());
+    let processed_on_device = v.get("on_device").and_then(|x| x.as_bool()).unwrap_or(true);
     let private_cloud_compute = v
         .get("private_cloud_compute")
         .and_then(|x| x.as_bool())
@@ -125,7 +119,10 @@ mod tests {
     fn canonicalises_writing_tools() {
         assert_eq!(canonical_writing_tool("Summarize"), Some("Summarize"));
         assert_eq!(canonical_writing_tool("REWRITE"), Some("Rewrite"));
-        assert_eq!(canonical_writing_tool("make_professional"), Some("Make Professional"));
+        assert_eq!(
+            canonical_writing_tool("make_professional"),
+            Some("Make Professional")
+        );
         assert_eq!(canonical_writing_tool("unrecognised"), None);
     }
 

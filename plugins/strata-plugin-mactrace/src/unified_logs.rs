@@ -189,8 +189,7 @@ pub fn parse(path: &Path, bytes: &[u8]) -> Vec<UnifiedLogEntry> {
     if !has_tracev3_magic(bytes) {
         return Vec::new();
     }
-    let timestamp =
-        mtime_of(path).unwrap_or_else(|| DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_default());
+    let timestamp = mtime_of(path).unwrap_or_else(unix_epoch);
     let tokens = extract_ascii_tokens(bytes);
     let mut seen: Vec<(&'static str, bool)> = Vec::new();
     let mut out = Vec::new();
@@ -213,6 +212,10 @@ pub fn parse(path: &Path, bytes: &[u8]) -> Vec<UnifiedLogEntry> {
         }
     }
     out
+}
+
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
 }
 
 fn significance_label(entry: &UnifiedLogEntry) -> &'static str {

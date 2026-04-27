@@ -40,9 +40,7 @@ impl SetupapiParser {
                     current_section = section_text.to_string();
                     // Look for a USB device id
                     if let Some(dev_start) = section_text.find("USB") {
-                        let dev_id = section_text[dev_start..]
-                            .trim_end_matches(']')
-                            .to_string();
+                        let dev_id = section_text[dev_start..].trim_end_matches(']').to_string();
                         // Timestamp is captured on the next ">>>  Section start" line;
                         // commit once we see it.
                         out.push(SetupapiEntry {

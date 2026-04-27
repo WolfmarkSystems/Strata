@@ -56,11 +56,7 @@ impl ArtifactParser for WindowsNotificationsParser {
     }
 
     fn target_patterns(&self) -> Vec<&str> {
-        vec![
-            "wpndatabase.db",
-            "WpnDatabase.db",
-            "WPNDATABASE.DB",
-        ]
+        vec!["wpndatabase.db", "WpnDatabase.db", "WPNDATABASE.DB"]
     }
 
     fn parse_file(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
@@ -168,9 +164,7 @@ impl ArtifactParser for WindowsNotificationsParser {
                         Ok(NotificationHandlerEntry {
                             primary_id: row.get(0).ok(),
                             handler_type: row.get::<_, String>(1).ok().or_else(|| {
-                                row.get::<_, i32>(1)
-                                    .ok()
-                                    .map(|t| format!("type_{}", t))
+                                row.get::<_, i32>(1).ok().map(|t| format!("type_{}", t))
                             }),
                             display_name: row.get(2).ok(),
                             created_time: row.get(3).ok(),

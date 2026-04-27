@@ -105,9 +105,7 @@ fn nps_jean_real_ingestion_when_walkers_land() {
         return;
     }
     if !WALKERS_LANDED {
-        eprintln!(
-            "SKIP: v10 FS walkers have not landed; E01 ingestion still yields 0 artifacts"
-        );
+        eprintln!("SKIP: v10 FS walkers have not landed; E01 ingestion still yields 0 artifacts");
         return;
     }
     let (total, by_plugin) = run_and_count("nps-2008-jean.E01");

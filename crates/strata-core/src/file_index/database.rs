@@ -132,11 +132,9 @@ impl FileIndex {
              CREATE INDEX IF NOT EXISTS idx_file_threat   ON file_index(threat_intel_match);",
         )?;
         let existing: Option<i64> = conn
-            .query_row(
-                "SELECT version FROM schema_meta LIMIT 1",
-                [],
-                |row| row.get(0),
-            )
+            .query_row("SELECT version FROM schema_meta LIMIT 1", [], |row| {
+                row.get(0)
+            })
             .ok();
         match existing {
             Some(v) if v != SCHEMA_VERSION => {
@@ -205,13 +203,10 @@ impl FileIndex {
         Ok(inserted)
     }
 
-    pub fn query_by_filename(
-        &self,
-        filename: &str,
-    ) -> Result<Vec<FileIndexEntry>, FileIndexError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT * FROM file_index WHERE filename = ?1 COLLATE NOCASE",
-        )?;
+    pub fn query_by_filename(&self, filename: &str) -> Result<Vec<FileIndexEntry>, FileIndexError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM file_index WHERE filename = ?1 COLLATE NOCASE")?;
         let rows = stmt.query_map([filename], row_to_entry)?;
         let mut out = Vec::new();
         for r in rows {
@@ -236,10 +231,7 @@ impl FileIndex {
         Ok(out)
     }
 
-    pub fn query_by_sha256(
-        &self,
-        sha256: &str,
-    ) -> Result<Vec<FileIndexEntry>, FileIndexError> {
+    pub fn query_by_sha256(&self, sha256: &str) -> Result<Vec<FileIndexEntry>, FileIndexError> {
         let mut stmt = self
             .conn
             .prepare("SELECT * FROM file_index WHERE sha256 = ?1")?;
@@ -274,11 +266,7 @@ impl FileIndex {
         Ok(n)
     }
 
-    pub fn mark_threat_intel(
-        &mut self,
-        sha256: &str,
-        name: &str,
-    ) -> Result<usize, FileIndexError> {
+    pub fn mark_threat_intel(&mut self, sha256: &str, name: &str) -> Result<usize, FileIndexError> {
         let n = self.conn.execute(
             "UPDATE file_index SET threat_intel_match = 1, threat_intel_name = ?2 WHERE sha256 = ?1",
             [sha256, name],
@@ -303,9 +291,7 @@ impl FileIndex {
     }
 }
 
-pub(crate) fn database_row_to_entry(
-    row: &rusqlite::Row<'_>,
-) -> rusqlite::Result<FileIndexEntry> {
+pub(crate) fn database_row_to_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<FileIndexEntry> {
     row_to_entry(row)
 }
 
@@ -325,9 +311,7 @@ fn row_to_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<FileIndexEntry> {
         created_time: created.and_then(|s| DateTime::<Utc>::from_timestamp(s, 0)),
         modified_time: modified.and_then(|s| DateTime::<Utc>::from_timestamp(s, 0)),
         accessed_time: accessed.and_then(|s| DateTime::<Utc>::from_timestamp(s, 0)),
-        inode: row
-            .get::<_, Option<i64>>("inode")?
-            .map(|n| n.max(0) as u64),
+        inode: row.get::<_, Option<i64>>("inode")?.map(|n| n.max(0) as u64),
         mft_record: row
             .get::<_, Option<i64>>("mft_record")?
             .map(|n| n.max(0) as u64),
@@ -356,7 +340,11 @@ mod tests {
     fn sample(path: &str, ext: Option<&str>, size: u64) -> FileIndexEntry {
         FileIndexEntry {
             extension: ext.map(String::from),
-            ..FileIndexEntry::new(path.into(), path.rsplit('/').next().unwrap_or("").into(), size)
+            ..FileIndexEntry::new(
+                path.into(),
+                path.rsplit('/').next().unwrap_or("").into(),
+                size,
+            )
         }
     }
 
@@ -424,7 +412,8 @@ mod tests {
         let path = dir.path().join("file_index.db");
         {
             let mut idx = FileIndex::open(&path).expect("open");
-            idx.upsert_batch(&[sample("/e/p", Some("p"), 1)]).expect("ins");
+            idx.upsert_batch(&[sample("/e/p", Some("p"), 1)])
+                .expect("ins");
         }
         let idx = FileIndex::open(&path).expect("reopen");
         assert_eq!(idx.count().expect("c"), 1);

@@ -189,11 +189,16 @@ fn is_url(s: &str) -> bool {
 
 fn is_credential_pattern(s: &str) -> bool {
     let lower = s.to_lowercase();
-    lower.contains("password") || lower.contains("passwd")
-        || lower.contains("token=") || lower.contains("api_key")
-        || lower.contains("apikey") || lower.contains("secret=")
-        || lower.contains("session_id") || lower.contains("authorization:")
-        || lower.contains("bearer ") || lower.contains("basic ")
+    lower.contains("password")
+        || lower.contains("passwd")
+        || lower.contains("token=")
+        || lower.contains("api_key")
+        || lower.contains("apikey")
+        || lower.contains("secret=")
+        || lower.contains("session_id")
+        || lower.contains("authorization:")
+        || lower.contains("bearer ")
+        || lower.contains("basic ")
 }
 
 fn is_file_path(s: &str) -> bool {
@@ -250,7 +255,9 @@ mod tests {
         let urls = result[0].json_data["extracted_strings"]["urls"]
             .as_array()
             .unwrap();
-        assert!(urls.iter().any(|u| u.as_str().unwrap().contains("evil.example.com")));
+        assert!(urls
+            .iter()
+            .any(|u| u.as_str().unwrap().contains("evil.example.com")));
     }
 
     #[test]
@@ -274,7 +281,9 @@ mod tests {
         let paths = result[0].json_data["extracted_strings"]["file_paths"]
             .as_array()
             .unwrap();
-        assert!(paths.iter().any(|p| p.as_str().unwrap().contains("plan.docx")));
+        assert!(paths
+            .iter()
+            .any(|p| p.as_str().unwrap().contains("plan.docx")));
     }
 
     #[test]
@@ -286,7 +295,9 @@ mod tests {
         let creds = result[0].json_data["extracted_strings"]["credential_patterns"]
             .as_array()
             .unwrap();
-        assert!(creds.iter().any(|c| c.as_str().unwrap().contains("password=hunter2")));
+        assert!(creds
+            .iter()
+            .any(|c| c.as_str().unwrap().contains("password=hunter2")));
     }
 
     #[test]

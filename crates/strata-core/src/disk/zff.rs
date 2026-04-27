@@ -183,9 +183,7 @@ fn extract_key(body: &str, key: &str) -> Option<String> {
     for pattern in [format!("{}=", key), format!("{}:", key)] {
         if let Some(pos) = body.find(&pattern) {
             let tail = &body[pos + pattern.len()..];
-            let end = tail
-                .find(['\n', '\r', '\0'])
-                .unwrap_or(tail.len());
+            let end = tail.find(['\n', '\r', '\0']).unwrap_or(tail.len());
             let value = tail[..end].trim().trim_matches('"').to_string();
             if !value.is_empty() {
                 return Some(value);

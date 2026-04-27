@@ -54,9 +54,15 @@ impl ExpertWitnessReport {
              .finding{border-left:4px solid #444;padding-left:1em;margin:1em 0;page-break-inside:avoid;}\n\
              .timeline-item{margin:0.4em 0;}</style></head><body>\n",
         );
-        out.push_str(&format!("<h1>Expert Witness Report — Case {}</h1>\n", escape(&self.case_number)));
+        out.push_str(&format!(
+            "<h1>Expert Witness Report — Case {}</h1>\n",
+            escape(&self.case_number)
+        ));
         out.push_str("<section><h2>Executive Summary</h2>\n");
-        out.push_str(&format!("<p>{}</p>\n</section>\n", escape(&self.executive_summary)));
+        out.push_str(&format!(
+            "<p>{}</p>\n</section>\n",
+            escape(&self.executive_summary)
+        ));
         if !self.key_findings.is_empty() {
             out.push_str("<section><h2>Key Findings</h2>\n");
             for f in &self.key_findings {
@@ -188,7 +194,9 @@ pub fn glossary_from(
 }
 
 fn escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 #[cfg(test)]

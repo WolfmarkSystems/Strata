@@ -41,8 +41,11 @@ pub fn hfsplus_fast_scan(data: &[u8]) -> Result<HfsPlusFastScanResult, ForensicE
 
     // Volume header is at offset 1024
     let header = &data[1024..1536];
-    let signature =
-        u16::from_be_bytes(header[0..2].try_into().map_err(|_| ForensicError::InvalidImageFormat)?);
+    let signature = u16::from_be_bytes(
+        header[0..2]
+            .try_into()
+            .map_err(|_| ForensicError::InvalidImageFormat)?,
+    );
 
     if signature != HFSPLUS_MAGIC && signature != HFSX_MAGIC {
         return Err(ForensicError::UnsupportedFilesystem);
@@ -309,9 +312,7 @@ impl HfsPlusFilesystem {
         }
         let blocksize = self.volume_header.blocksize as u64;
         let logical = fork.logical_size;
-        let mut out = Vec::with_capacity(
-            usize::try_from(logical).unwrap_or(usize::MAX),
-        );
+        let mut out = Vec::with_capacity(usize::try_from(logical).unwrap_or(usize::MAX));
         let mut remaining = logical;
         let mut used_extents = 0u32;
         for ext in &fork.extents {
@@ -402,9 +403,7 @@ impl HfsPlusFilesystem {
             }
             let offsets = parse_record_offsets(&node, desc.num_records)?;
             for i in 0..(desc.num_records as usize) {
-                let start = *offsets
-                    .get(i)
-                    .ok_or(ForensicError::InvalidImageFormat)? as usize;
+                let start = *offsets.get(i).ok_or(ForensicError::InvalidImageFormat)? as usize;
                 let end = *offsets
                     .get(i + 1)
                     .ok_or(ForensicError::InvalidImageFormat)? as usize;
@@ -452,9 +451,8 @@ impl HfsPlusFilesystem {
             // wrong data.
             return Err(ForensicError::InvalidImageFormat);
         }
-        let absolute = self.base_offset
-            + first_block.saturating_mul(block_size)
-            + node_offset_in_file;
+        let absolute =
+            self.base_offset + first_block.saturating_mul(block_size) + node_offset_in_file;
         self.reader.seek(SeekFrom::Start(absolute))?;
         let mut buf = vec![0u8; node_size as usize];
         self.reader.read_exact(&mut buf)?;
@@ -474,18 +472,14 @@ const NODE_KIND_MAP: i8 = 2;
 #[derive(Debug, Clone, Copy)]
 struct BtNodeDescriptor {
     flink: u32,
-    #[allow(dead_code)]
-    blink: u32,
+    _blink: u32,
     kind: i8,
-    #[allow(dead_code)]
-    height: u8,
+    _height: u8,
     num_records: u16,
 }
 
 fn parse_node_descriptor(node: &[u8]) -> Result<BtNodeDescriptor, ForensicError> {
-    let head = node
-        .get(0..14)
-        .ok_or(ForensicError::InvalidImageFormat)?;
+    let head = node.get(0..14).ok_or(ForensicError::InvalidImageFormat)?;
     let flink = u32::from_be_bytes(
         head[0..4]
             .try_into()
@@ -514,9 +508,9 @@ fn parse_node_descriptor(node: &[u8]) -> Result<BtNodeDescriptor, ForensicError>
     }
     Ok(BtNodeDescriptor {
         flink,
-        blink,
+        _blink: blink,
         kind,
-        height,
+        _height: height,
         num_records,
     })
 }
@@ -988,7 +982,10 @@ mod tests {
             .expect("open_reader must succeed on synthesized volume");
         assert_eq!(fs.volume_header.signature, HFSPLUS_MAGIC);
         assert_eq!(fs.volume_header.blocksize, 512);
-        assert_eq!(fs.base_offset, 0, "reader-based constructor → base_offset=0");
+        assert_eq!(
+            fs.base_offset, 0,
+            "reader-based constructor → base_offset=0"
+        );
     }
 
     #[test]
@@ -1221,7 +1218,10 @@ mod tests {
         assert_eq!(entry.cnid, 42);
         assert_eq!(entry.name, "MyFolder");
         assert!(matches!(entry.entry_type, HfsPlusEntryType::Directory));
-        assert!(matches!(entry.record_type, HfsPlusRecordType::CatalogFolder));
+        assert!(matches!(
+            entry.record_type,
+            HfsPlusRecordType::CatalogFolder
+        ));
     }
 
     #[test]
@@ -1351,12 +1351,9 @@ mod tests {
         //   bytes leaf+510..512  → offset of record 0
         //   bytes leaf+508..510  → offset of record 1
         //   bytes leaf+506..508  → free-space sentinel
-        v[leaf_off + 510..leaf_off + 512]
-            .copy_from_slice(&(rec0_start as u16).to_be_bytes());
-        v[leaf_off + 508..leaf_off + 510]
-            .copy_from_slice(&(rec1_start as u16).to_be_bytes());
-        v[leaf_off + 506..leaf_off + 508]
-            .copy_from_slice(&(rec1_end as u16).to_be_bytes());
+        v[leaf_off + 510..leaf_off + 512].copy_from_slice(&(rec0_start as u16).to_be_bytes());
+        v[leaf_off + 508..leaf_off + 510].copy_from_slice(&(rec1_start as u16).to_be_bytes());
+        v[leaf_off + 506..leaf_off + 508].copy_from_slice(&(rec1_end as u16).to_be_bytes());
 
         v
     }
@@ -1415,8 +1412,7 @@ mod tests {
 
             let hdr_node_off = 4096;
             v[hdr_node_off + 8] = 1;
-            v[hdr_node_off + 10..hdr_node_off + 12]
-                .copy_from_slice(&3u16.to_be_bytes());
+            v[hdr_node_off + 10..hdr_node_off + 12].copy_from_slice(&3u16.to_be_bytes());
             let rec_off = hdr_node_off + 14;
             v[rec_off + 18..rec_off + 20].copy_from_slice(&node_size.to_be_bytes());
             v[rec_off + 2..rec_off + 6].copy_from_slice(&1u32.to_be_bytes());
@@ -1439,14 +1435,10 @@ mod tests {
             v[leaf_off + r1..leaf_off + r2].copy_from_slice(&thread_rec);
             v[leaf_off + r2..leaf_off + r3].copy_from_slice(&file_rec);
 
-            v[leaf_off + 510..leaf_off + 512]
-                .copy_from_slice(&(r0 as u16).to_be_bytes());
-            v[leaf_off + 508..leaf_off + 510]
-                .copy_from_slice(&(r1 as u16).to_be_bytes());
-            v[leaf_off + 506..leaf_off + 508]
-                .copy_from_slice(&(r2 as u16).to_be_bytes());
-            v[leaf_off + 504..leaf_off + 506]
-                .copy_from_slice(&(r3 as u16).to_be_bytes());
+            v[leaf_off + 510..leaf_off + 512].copy_from_slice(&(r0 as u16).to_be_bytes());
+            v[leaf_off + 508..leaf_off + 510].copy_from_slice(&(r1 as u16).to_be_bytes());
+            v[leaf_off + 506..leaf_off + 508].copy_from_slice(&(r2 as u16).to_be_bytes());
+            v[leaf_off + 504..leaf_off + 506].copy_from_slice(&(r3 as u16).to_be_bytes());
             v
         };
         let cursor = Cursor::new(bytes);

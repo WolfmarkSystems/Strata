@@ -158,10 +158,7 @@ fn temporal<'a>(
                 out.push(CorrelationFinding {
                     correlation_type: "TemporalCoincidence".into(),
                     confidence: 0.5,
-                    description: format!(
-                        "Events within {} seconds on separate devices",
-                        delta
-                    ),
+                    description: format!("Events within {} seconds on separate devices", delta),
                     artifact_a: describe(art_a),
                     artifact_b: describe(art_b),
                     image_a_path: a.image_path.clone(),
@@ -176,10 +173,7 @@ fn temporal<'a>(
     out
 }
 
-fn index_field<'a>(
-    artifacts: &'a [Artifact],
-    key: &str,
-) -> BTreeMap<String, Vec<&'a Artifact>> {
+fn index_field<'a>(artifacts: &'a [Artifact], key: &str) -> BTreeMap<String, Vec<&'a Artifact>> {
     let mut out: BTreeMap<String, Vec<&Artifact>> = BTreeMap::new();
     for a in artifacts {
         if let Some(v) = a.data.get(key) {
@@ -192,7 +186,10 @@ fn index_field<'a>(
 }
 
 fn describe(a: &Artifact) -> String {
-    a.data.get("title").cloned().unwrap_or_else(|| a.source.clone())
+    a.data
+        .get("title")
+        .cloned()
+        .unwrap_or_else(|| a.source.clone())
 }
 
 fn ts_of(a: &Artifact) -> Option<DateTime<Utc>> {
@@ -218,8 +215,14 @@ mod tests {
     fn shared_hash_detected_across_images() {
         let arts_a = vec![art("File", 1, &[("sha256", "DEADBEEF")])];
         let arts_b = vec![art("File", 2, &[("sha256", "DEADBEEF")])];
-        let a = ImageArtifacts { image_path: "A".into(), artifacts: &arts_a };
-        let b = ImageArtifacts { image_path: "B".into(), artifacts: &arts_b };
+        let a = ImageArtifacts {
+            image_path: "A".into(),
+            artifacts: &arts_a,
+        };
+        let b = ImageArtifacts {
+            image_path: "B".into(),
+            artifacts: &arts_b,
+        };
         let hits = correlate(&a, &b, Duration::seconds(0));
         assert!(hits.iter().any(|h| h.correlation_type == "SharedHash"));
     }
@@ -228,18 +231,32 @@ mod tests {
     fn shared_account_detected_via_email() {
         let arts_a = vec![art("Login", 1, &[("email", "alice@example.com")])];
         let arts_b = vec![art("Login", 2, &[("email", "alice@example.com")])];
-        let a = ImageArtifacts { image_path: "A".into(), artifacts: &arts_a };
-        let b = ImageArtifacts { image_path: "B".into(), artifacts: &arts_b };
+        let a = ImageArtifacts {
+            image_path: "A".into(),
+            artifacts: &arts_a,
+        };
+        let b = ImageArtifacts {
+            image_path: "B".into(),
+            artifacts: &arts_b,
+        };
         let hits = correlate(&a, &b, Duration::seconds(0));
-        assert!(hits.iter().any(|h| h.correlation_type.contains("SharedAccount")));
+        assert!(hits
+            .iter()
+            .any(|h| h.correlation_type.contains("SharedAccount")));
     }
 
     #[test]
     fn temporal_window_enforced() {
         let arts_a = vec![art("X", 100, &[])];
         let arts_b = vec![art("Y", 150, &[]), art("Z", 500, &[])];
-        let a = ImageArtifacts { image_path: "A".into(), artifacts: &arts_a };
-        let b = ImageArtifacts { image_path: "B".into(), artifacts: &arts_b };
+        let a = ImageArtifacts {
+            image_path: "A".into(),
+            artifacts: &arts_a,
+        };
+        let b = ImageArtifacts {
+            image_path: "B".into(),
+            artifacts: &arts_b,
+        };
         let hits = correlate(&a, &b, Duration::seconds(60));
         let temporal = hits
             .iter()
@@ -252,12 +269,21 @@ mod tests {
     fn shared_ip_detected_across_interfaces() {
         let arts_a = vec![art("Conn", 1, &[("src_ip", "10.0.0.5")])];
         let arts_b = vec![art("Conn", 2, &[("ip", "10.0.0.5")])];
-        let a = ImageArtifacts { image_path: "A".into(), artifacts: &arts_a };
-        let b = ImageArtifacts { image_path: "B".into(), artifacts: &arts_b };
+        let a = ImageArtifacts {
+            image_path: "A".into(),
+            artifacts: &arts_a,
+        };
+        let b = ImageArtifacts {
+            image_path: "B".into(),
+            artifacts: &arts_b,
+        };
         // Both key values share 10.0.0.5 but under different keys; use
         // the ip_keys loop by aligning both sides on the same key.
         let arts_a2 = vec![art("Conn", 1, &[("ip", "10.0.0.5")])];
-        let a2 = ImageArtifacts { image_path: "A".into(), artifacts: &arts_a2 };
+        let a2 = ImageArtifacts {
+            image_path: "A".into(),
+            artifacts: &arts_a2,
+        };
         let hits = correlate(&a2, &b, Duration::seconds(0));
         assert!(hits.iter().any(|h| h.correlation_type == "SharedIp"));
         let _ = a;
@@ -267,8 +293,14 @@ mod tests {
     fn no_correlations_when_nothing_shared() {
         let arts_a = vec![art("X", 1, &[("sha256", "AAA")])];
         let arts_b = vec![art("Y", 100_000_000, &[("sha256", "BBB")])];
-        let a = ImageArtifacts { image_path: "A".into(), artifacts: &arts_a };
-        let b = ImageArtifacts { image_path: "B".into(), artifacts: &arts_b };
+        let a = ImageArtifacts {
+            image_path: "A".into(),
+            artifacts: &arts_a,
+        };
+        let b = ImageArtifacts {
+            image_path: "B".into(),
+            artifacts: &arts_b,
+        };
         let hits = correlate(&a, &b, Duration::seconds(10));
         assert!(hits.is_empty());
     }

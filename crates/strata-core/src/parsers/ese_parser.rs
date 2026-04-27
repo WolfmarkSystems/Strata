@@ -112,13 +112,17 @@ impl ArtifactParser for EseParser {
         }
 
         let page_size = if data.len() > 240 {
-            Some(u32::from_le_bytes([data[236], data[237], data[238], data[239]]))
+            Some(u32::from_le_bytes([
+                data[236], data[237], data[238], data[239],
+            ]))
         } else {
             None
         };
 
         let db_state_code = if data.len() > 348 {
-            Some(u32::from_le_bytes([data[344], data[345], data[346], data[347]]))
+            Some(u32::from_le_bytes([
+                data[344], data[345], data[346], data[347],
+            ]))
         } else {
             None
         };
@@ -225,11 +229,7 @@ impl ArtifactParser for EseParser {
                 artifacts.push(ParsedArtifact {
                     timestamp: None,
                     artifact_type: "ese_tables".to_string(),
-                    description: format!(
-                        "ESE Tables [{}]: {}",
-                        database_type,
-                        tables.join(", "),
-                    ),
+                    description: format!("ESE Tables [{}]: {}", database_type, tables.join(", "),),
                     source_path: source,
                     json_data: serde_json::json!({
                         "tables": tables,

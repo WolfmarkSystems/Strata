@@ -127,8 +127,16 @@ pub fn render_html(analysis: &FactAnalysis) -> String {
         }
         out.push_str("</ul>\n");
     }
-    render_list(&mut out, "Supporting Artifacts", &analysis.supporting_artifacts);
-    render_list(&mut out, "Contradicting Artifacts", &analysis.contradicting_artifacts);
+    render_list(
+        &mut out,
+        "Supporting Artifacts",
+        &analysis.supporting_artifacts,
+    );
+    render_list(
+        &mut out,
+        "Contradicting Artifacts",
+        &analysis.contradicting_artifacts,
+    );
     render_list(&mut out, "Limitations and Caveats", &analysis.limitations);
     render_list(&mut out, "Evidence Gaps", &analysis.evidence_gaps);
     out.push_str(&format!(

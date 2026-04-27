@@ -192,8 +192,16 @@ mod tests {
     #[test]
     fn edge_weight_accumulates_across_calls() {
         let mut b = EntityGraphBuilder::new();
-        b.add_edge(Entity::Username("a".into()), Entity::IpAddress("10.0.0.1".into()), 1.0);
-        b.add_edge(Entity::Username("a".into()), Entity::IpAddress("10.0.0.1".into()), 2.0);
+        b.add_edge(
+            Entity::Username("a".into()),
+            Entity::IpAddress("10.0.0.1".into()),
+            1.0,
+        );
+        b.add_edge(
+            Entity::Username("a".into()),
+            Entity::IpAddress("10.0.0.1".into()),
+            2.0,
+        );
         let graph = b.build();
         assert_eq!(graph.edges.len(), 1);
         assert!((graph.edges[0].2 - 3.0).abs() < 1e-6);

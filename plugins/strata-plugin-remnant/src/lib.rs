@@ -42,9 +42,7 @@ impl RemnantPlugin {
         }
 
         // Read e_lfanew — offset to PE signature
-        let e_lfanew = u32::from_le_bytes(
-            data[0x3C..0x40].try_into().unwrap_or([0; 4]),
-        ) as usize;
+        let e_lfanew = u32::from_le_bytes(data[0x3C..0x40].try_into().unwrap_or([0; 4])) as usize;
 
         if e_lfanew + 8 > data.len() || data.get(e_lfanew..e_lfanew + 4) != Some(b"PE\x00\x00") {
             return json!({"error": "Invalid PE signature", "e_lfanew": e_lfanew});
@@ -86,10 +84,7 @@ impl RemnantPlugin {
         // Scan for suspicious API imports
         for &api in SUSPICIOUS_IMPORTS {
             let api_bytes = api.as_bytes();
-            if data
-                .windows(api_bytes.len())
-                .any(|w| w == api_bytes)
-            {
+            if data.windows(api_bytes.len()).any(|w| w == api_bytes) {
                 suspicious_found.push(api.to_string());
             }
         }
@@ -324,10 +319,7 @@ impl RemnantPlugin {
             .collect();
         let original_path = String::from_utf16_lossy(&utf16_units);
 
-        let original_filename = original_path
-            .rsplit('\\')
-            .next()
-            .unwrap_or(&original_path);
+        let original_filename = original_path.rsplit('\\').next().unwrap_or(&original_path);
 
         let detail = format!(
             "Original: {} | Deleted: {} | Size: {} bytes",
@@ -442,14 +434,11 @@ impl RemnantPlugin {
         let has_target_id_list = (flags & 0x01) != 0;
 
         // Creation time FILETIME at 0x1C (u64 LE)
-        let creation_ft =
-            u64::from_le_bytes(data[0x1C..0x24].try_into().unwrap_or([0; 8]));
+        let creation_ft = u64::from_le_bytes(data[0x1C..0x24].try_into().unwrap_or([0; 8]));
         // Modification time FILETIME at 0x24
-        let modification_ft =
-            u64::from_le_bytes(data[0x24..0x2C].try_into().unwrap_or([0; 8]));
+        let modification_ft = u64::from_le_bytes(data[0x24..0x2C].try_into().unwrap_or([0; 8]));
         // Target file size at 0x34
-        let target_size =
-            u32::from_le_bytes(data[0x34..0x38].try_into().unwrap_or([0; 4]));
+        let target_size = u32::from_le_bytes(data[0x34..0x38].try_into().unwrap_or([0; 4]));
 
         let creation_unix = filetime_to_unix(creation_ft);
         let modification_unix = filetime_to_unix(modification_ft);
@@ -502,7 +491,10 @@ impl RemnantPlugin {
         let mut results = Vec::new();
         let lower_name = name.to_lowercase();
 
-        if lower_name == "$usnjrnl" || path_str.to_lowercase().contains("$extend/$usnjrnl") || lower_name == "$j" {
+        if lower_name == "$usnjrnl"
+            || path_str.to_lowercase().contains("$extend/$usnjrnl")
+            || lower_name == "$j"
+        {
             let mut artifact = Artifact::new("NTFS Artifact", &path.to_string_lossy());
             artifact.add_field("category", "$UsnJrnl Change Journal");
             artifact.add_field("file_type", "$UsnJrnl Change Journal");
@@ -532,18 +524,16 @@ impl RemnantPlugin {
                 continue;
             }
 
-            let record_len = u32::from_le_bytes(
-                data[offset..offset + 4].try_into().unwrap_or([0; 4]),
-            ) as usize;
+            let record_len =
+                u32::from_le_bytes(data[offset..offset + 4].try_into().unwrap_or([0; 4])) as usize;
 
             if !(60..=4096).contains(&record_len) || offset + record_len > data.len() {
                 offset += 8;
                 continue;
             }
 
-            let major = u16::from_le_bytes(
-                data[offset + 4..offset + 6].try_into().unwrap_or([0; 2]),
-            );
+            let major =
+                u16::from_le_bytes(data[offset + 4..offset + 6].try_into().unwrap_or([0; 2]));
             if major != 2 {
                 offset += record_len.max(8);
                 continue;
@@ -557,28 +547,26 @@ impl RemnantPlugin {
                 u64::from_le_bytes(data[offset + 32..offset + 40].try_into().unwrap_or([0; 8]));
             let reason =
                 u32::from_le_bytes(data[offset + 40..offset + 44].try_into().unwrap_or([0; 4]));
-            let name_len = u16::from_le_bytes(
-                data[offset + 56..offset + 58].try_into().unwrap_or([0; 2]),
-            ) as usize;
-            let name_off = u16::from_le_bytes(
-                data[offset + 58..offset + 60].try_into().unwrap_or([0; 2]),
-            ) as usize;
+            let name_len =
+                u16::from_le_bytes(data[offset + 56..offset + 58].try_into().unwrap_or([0; 2]))
+                    as usize;
+            let name_off =
+                u16::from_le_bytes(data[offset + 58..offset + 60].try_into().unwrap_or([0; 2]))
+                    as usize;
 
             // Extract filename (UTF-16LE)
-            let filename = if name_len > 0
-                && name_off > 0
-                && offset + name_off + name_len <= data.len()
-            {
-                let name_bytes = &data[offset + name_off..offset + name_off + name_len];
-                String::from_utf16_lossy(
-                    &name_bytes
-                        .chunks_exact(2)
-                        .map(|c| u16::from_le_bytes([c[0], c[1]]))
-                        .collect::<Vec<_>>(),
-                )
-            } else {
-                String::new()
-            };
+            let filename =
+                if name_len > 0 && name_off > 0 && offset + name_off + name_len <= data.len() {
+                    let name_bytes = &data[offset + name_off..offset + name_off + name_len];
+                    String::from_utf16_lossy(
+                        &name_bytes
+                            .chunks_exact(2)
+                            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                            .collect::<Vec<_>>(),
+                    )
+                } else {
+                    String::new()
+                };
 
             if filename.is_empty() {
                 offset += record_len;
@@ -776,7 +764,10 @@ impl RemnantPlugin {
                 };
                 let mut a = Artifact::new("Notepad++ Session", path_str);
                 a.add_field("title", &format!("Notepad++ recent: {}", filename));
-                a.add_field("detail", "Notepad++ session.xml — recently opened text file");
+                a.add_field(
+                    "detail",
+                    "Notepad++ session.xml — recently opened text file",
+                );
                 a.add_field("file_type", "Notepad++ Session");
                 a.add_field("forensic_value", severity);
                 a.add_field("mitre", "T1083");
@@ -857,21 +848,36 @@ fn extract_ascii(data: &[u8], offset: usize, max_len: usize) -> String {
     let end = (offset + max_len).min(data.len());
     let slice = &data[offset..end];
     let null_pos = slice.iter().position(|&b| b == 0).unwrap_or(slice.len());
-    String::from_utf8_lossy(&slice[..null_pos]).trim().to_string()
+    String::from_utf8_lossy(&slice[..null_pos])
+        .trim()
+        .to_string()
 }
 
 /// Build a human-readable summary from analysis JSON.
 fn build_analysis_summary(sig_name: &str, analysis: &serde_json::Value) -> String {
     match sig_name {
         "PE Executable" => {
-            let ts = analysis.get("compilation_utc").and_then(|v| v.as_str()).unwrap_or("unknown");
-            let imports = analysis.get("import_count").and_then(|v| v.as_u64()).unwrap_or(0);
+            let ts = analysis
+                .get("compilation_utc")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            let imports = analysis
+                .get("import_count")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let suspicious: Vec<String> = analysis
                 .get("suspicious_imports")
                 .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
-            let future = analysis.get("future_timestamp").and_then(|v| v.as_bool()).unwrap_or(false);
+            let future = analysis
+                .get("future_timestamp")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let mut s = format!("PE compiled {} | {} DLL refs", ts, imports);
             if !suspicious.is_empty() {
                 s.push_str(&format!(" | SUSPICIOUS IMPORTS: {}", suspicious.join(", ")));
@@ -882,19 +888,37 @@ fn build_analysis_summary(sig_name: &str, analysis: &serde_json::Value) -> Strin
             s
         }
         "SQLite Database" => {
-            let db_type = analysis.get("db_type").and_then(|v| v.as_str()).unwrap_or("Unknown");
+            let db_type = analysis
+                .get("db_type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown");
             let tables: Vec<String> = analysis
                 .get("tables")
                 .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
-            format!("{} | {} tables: {}", db_type, tables.len(), tables.join(", "))
+            format!(
+                "{} | {} tables: {}",
+                db_type,
+                tables.len(),
+                tables.join(", ")
+            )
         }
         "JPEG" | "TIFF LE" | "TIFF BE" => {
             let make = analysis.get("make").and_then(|v| v.as_str()).unwrap_or("");
             let model = analysis.get("model").and_then(|v| v.as_str()).unwrap_or("");
-            let dt = analysis.get("datetime").and_then(|v| v.as_str()).unwrap_or("");
-            let gps = analysis.get("has_gps").and_then(|v| v.as_bool()).unwrap_or(false);
+            let dt = analysis
+                .get("datetime")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let gps = analysis
+                .get("has_gps")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let mut s = String::new();
             if !make.is_empty() || !model.is_empty() {
                 s.push_str(format!("Camera: {} {} ", make, model).trim());
@@ -912,10 +936,22 @@ fn build_analysis_summary(sig_name: &str, analysis: &serde_json::Value) -> Strin
             }
         }
         "LNK Shortcut" => {
-            let target = analysis.get("target_path").and_then(|v| v.as_str()).unwrap_or("");
-            let created = analysis.get("creation_time_utc").and_then(|v| v.as_str()).unwrap_or("");
-            let modified = analysis.get("modification_time_utc").and_then(|v| v.as_str()).unwrap_or("");
-            let size = analysis.get("target_size").and_then(|v| v.as_u64()).unwrap_or(0);
+            let target = analysis
+                .get("target_path")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let created = analysis
+                .get("creation_time_utc")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let modified = analysis
+                .get("modification_time_utc")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let size = analysis
+                .get("target_size")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let mut s = String::new();
             if !target.is_empty() {
                 s.push_str(&format!("Target: {}", target));
@@ -982,123 +1018,105 @@ impl StrataPlugin for RemnantPlugin {
                         // metadata — never load the full file (OOM on multi-GB
                         // evidence images sitting in the root directory).
                         let file_size = path.metadata().map(|m| m.len()).unwrap_or(0);
-                        let Ok(mut f) = std::fs::File::open(&path) else { continue };
+                        let Ok(mut f) = std::fs::File::open(&path) else {
+                            continue;
+                        };
                         use std::io::Read;
                         let cap = (file_size as usize).min(65536);
                         let mut buf = vec![0u8; cap];
                         let n = f.read(&mut buf).unwrap_or(0);
                         let data = &buf[..n];
                         if data.len() >= 4 {
-                                for sig in &signatures::get_default_signatures() {
-                                    if data.starts_with(&sig.header) {
-                                        let mut artifact =
-                                            Artifact::new("Carved Files", &path.to_string_lossy());
-                                        artifact.add_field("file_type", &sig.name);
-                                        artifact.add_field("extension", &sig.extension);
-                                        artifact.add_field("size", &file_size.to_string());
-                                        artifact.add_field(
-                                            "title",
-                                            &format!("Carved: {} ({})", sig.name, sig.extension),
-                                        );
+                            for sig in &signatures::get_default_signatures() {
+                                if data.starts_with(&sig.header) {
+                                    let mut artifact =
+                                        Artifact::new("Carved Files", &path.to_string_lossy());
+                                    artifact.add_field("file_type", &sig.name);
+                                    artifact.add_field("extension", &sig.extension);
+                                    artifact.add_field("size", &file_size.to_string());
+                                    artifact.add_field(
+                                        "title",
+                                        &format!("Carved: {} ({})", sig.name, sig.extension),
+                                    );
 
-                                        // ── Content analysis based on file type ──
-                                        let analysis = match sig.name.as_str() {
-                                            "PE Executable" => {
-                                                Self::analyze_pe(data)
-                                            }
-                                            "SQLite Database" => {
-                                                Self::analyze_sqlite(
-                                                    data,
-                                                    &path.to_string_lossy(),
-                                                )
-                                            }
-                                            "JPEG" | "TIFF LE" | "TIFF BE" => {
-                                                Self::analyze_image_exif(data)
-                                            }
-                                            "LNK Shortcut" => {
-                                                Self::analyze_lnk(data)
-                                            }
-                                            _ => serde_json::Value::Null,
-                                        };
-
-                                        if !analysis.is_null() {
-                                            artifact.add_field(
-                                                "analysis",
-                                                &analysis.to_string(),
-                                            );
-                                            let summary = build_analysis_summary(
-                                                &sig.name,
-                                                &analysis,
-                                            );
-                                            if !summary.is_empty() {
-                                                artifact.add_field("detail", &summary);
-                                            }
+                                    // ── Content analysis based on file type ──
+                                    let analysis = match sig.name.as_str() {
+                                        "PE Executable" => Self::analyze_pe(data),
+                                        "SQLite Database" => {
+                                            Self::analyze_sqlite(data, &path.to_string_lossy())
                                         }
+                                        "JPEG" | "TIFF LE" | "TIFF BE" => {
+                                            Self::analyze_image_exif(data)
+                                        }
+                                        "LNK Shortcut" => Self::analyze_lnk(data),
+                                        _ => serde_json::Value::Null,
+                                    };
 
-                                        results.push(artifact);
-                                        break;
+                                    if !analysis.is_null() {
+                                        artifact.add_field("analysis", &analysis.to_string());
+                                        let summary = build_analysis_summary(&sig.name, &analysis);
+                                        if !summary.is_empty() {
+                                            artifact.add_field("detail", &summary);
+                                        }
                                     }
-                                }
 
-                                // ── v2.0 detections ─────────────────────────
-                                let path_str = path.to_string_lossy();
-                                let file_name = path
-                                    .file_name()
-                                    .map(|n| n.to_string_lossy().to_string())
-                                    .unwrap_or_default();
-
-                                // Recycle Bin $I file parsing
-                                if path_str.contains("$Recycle.Bin")
-                                    && file_name.starts_with("$I")
-                                {
-                                    results
-                                        .extend(Self::parse_recycle_bin_entry(&path_str, data));
-                                }
-
-                                // Anti-forensic tool detection
-                                let af_artifacts =
-                                    Self::detect_anti_forensic_tools(&path_str, &file_name);
-                                if !af_artifacts.is_empty() {
-                                    results.extend(af_artifacts);
-                                }
-
-                                // SQLite WAL recovery
-                                if file_name.ends_with("-wal") {
-                                    if let Some(wal_artifact) =
-                                        Self::detect_sqlite_wal(&path_str, &file_name, data)
-                                    {
-                                        results.push(wal_artifact);
-                                    }
-                                }
-
-                                // $UsnJrnl Change Journal detection
-                                results.extend(Self::detect_usnjrnl(&path, &file_name, &path_str));
-
-                                // $UsnJrnl binary record parsing
-                                let lower_file_name = file_name.to_lowercase();
-                                if lower_file_name == "$j"
-                                    || lower_file_name == "$usnjrnl"
-                                    || path_str.to_lowercase().contains("$extend/$usnjrnl")
-                                {
-                                    results.extend(Self::parse_usnjrnl_records(data));
-                                }
-
-                                // ── v1.1.0: Windows Search index (ESE) ────
-                                if lower_file_name == "windows.edb" {
-                                    results.extend(Self::detect_windows_search_edb(
-                                        &path_str, data,
-                                    ));
-                                }
-
-                                // ── v1.1.0: Notepad++ session.xml ──────────
-                                if lower_file_name == "session.xml"
-                                    && path_str.to_lowercase().contains("notepad++")
-                                {
-                                    results.extend(Self::parse_notepadpp_session(
-                                        &path_str, data,
-                                    ));
+                                    results.push(artifact);
+                                    break;
                                 }
                             }
+
+                            // ── v2.0 detections ─────────────────────────
+                            let path_str = path.to_string_lossy();
+                            let file_name = path
+                                .file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_default();
+
+                            // Recycle Bin $I file parsing
+                            if path_str.contains("$Recycle.Bin") && file_name.starts_with("$I") {
+                                results.extend(Self::parse_recycle_bin_entry(&path_str, data));
+                            }
+
+                            // Anti-forensic tool detection
+                            let af_artifacts =
+                                Self::detect_anti_forensic_tools(&path_str, &file_name);
+                            if !af_artifacts.is_empty() {
+                                results.extend(af_artifacts);
+                            }
+
+                            // SQLite WAL recovery
+                            if file_name.ends_with("-wal") {
+                                if let Some(wal_artifact) =
+                                    Self::detect_sqlite_wal(&path_str, &file_name, data)
+                                {
+                                    results.push(wal_artifact);
+                                }
+                            }
+
+                            // $UsnJrnl Change Journal detection
+                            results.extend(Self::detect_usnjrnl(&path, &file_name, &path_str));
+
+                            // $UsnJrnl binary record parsing
+                            let lower_file_name = file_name.to_lowercase();
+                            if lower_file_name == "$j"
+                                || lower_file_name == "$usnjrnl"
+                                || path_str.to_lowercase().contains("$extend/$usnjrnl")
+                            {
+                                results.extend(Self::parse_usnjrnl_records(data));
+                            }
+
+                            // ── v1.1.0: Windows Search index (ESE) ────
+                            if lower_file_name == "windows.edb" {
+                                results.extend(Self::detect_windows_search_edb(&path_str, data));
+                            }
+
+                            // ── v1.1.0: Notepad++ session.xml ──────────
+                            if lower_file_name == "session.xml"
+                                && path_str.to_lowercase().contains("notepad++")
+                            {
+                                results.extend(Self::parse_notepadpp_session(&path_str, data));
+                            }
+                        }
                     }
                 }
             }
@@ -1137,11 +1155,7 @@ impl StrataPlugin for RemnantPlugin {
                         .get("title")
                         .cloned()
                         .unwrap_or_else(|| artifact.source.clone()),
-                    detail: artifact
-                        .data
-                        .get("detail")
-                        .cloned()
-                        .unwrap_or_default(),
+                    detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                     source_path: artifact.source.clone(),
                     forensic_value: ForensicValue::High,
                     mitre_technique: mitre,
@@ -1163,11 +1177,7 @@ impl StrataPlugin for RemnantPlugin {
                         .get("title")
                         .cloned()
                         .unwrap_or_else(|| artifact.source.clone()),
-                    detail: artifact
-                        .data
-                        .get("detail")
-                        .cloned()
-                        .unwrap_or_default(),
+                    detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                     source_path: artifact.source.clone(),
                     forensic_value: ForensicValue::Critical,
                     mitre_technique: mitre,
@@ -1188,11 +1198,7 @@ impl StrataPlugin for RemnantPlugin {
                         .get("title")
                         .cloned()
                         .unwrap_or_else(|| artifact.source.clone()),
-                    detail: artifact
-                        .data
-                        .get("detail")
-                        .cloned()
-                        .unwrap_or_default(),
+                    detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                     source_path: artifact.source.clone(),
                     forensic_value: ForensicValue::High,
                     mitre_technique: None,
@@ -1213,11 +1219,7 @@ impl StrataPlugin for RemnantPlugin {
                         .get("title")
                         .cloned()
                         .unwrap_or_else(|| artifact.source.clone()),
-                    detail: artifact
-                        .data
-                        .get("detail")
-                        .cloned()
-                        .unwrap_or_default(),
+                    detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                     source_path: artifact.source.clone(),
                     forensic_value: ForensicValue::Critical,
                     mitre_technique: None,
@@ -1229,7 +1231,11 @@ impl StrataPlugin for RemnantPlugin {
             }
 
             if artifact_category == "$UsnJrnl Entry" {
-                let is_suspicious = artifact.data.get("suspicious").map(|v| v == "true").unwrap_or(false);
+                let is_suspicious = artifact
+                    .data
+                    .get("suspicious")
+                    .map(|v| v == "true")
+                    .unwrap_or(false);
                 let mitre = artifact.data.get("mitre").cloned();
                 records.push(ArtifactRecord {
                     category: ArtifactCategory::DeletedRecovered,
@@ -1240,11 +1246,7 @@ impl StrataPlugin for RemnantPlugin {
                         .get("title")
                         .cloned()
                         .unwrap_or_else(|| artifact.source.clone()),
-                    detail: artifact
-                        .data
-                        .get("detail")
-                        .cloned()
-                        .unwrap_or_default(),
+                    detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                     source_path: artifact.source.clone(),
                     forensic_value: if is_suspicious {
                         ForensicValue::Critical
@@ -1302,17 +1304,13 @@ impl StrataPlugin for RemnantPlugin {
                 ForensicValue::Medium
             };
 
-            let detail = artifact
-                .data
-                .get("detail")
-                .cloned()
-                .unwrap_or_else(|| {
-                    format!(
-                        "Type: {} Size: {}",
-                        file_type,
-                        artifact.data.get("size").cloned().unwrap_or_default()
-                    )
-                });
+            let detail = artifact.data.get("detail").cloned().unwrap_or_else(|| {
+                format!(
+                    "Type: {} Size: {}",
+                    file_type,
+                    artifact.data.get("size").cloned().unwrap_or_default()
+                )
+            });
 
             let mitre = if has_suspicious_imports {
                 Some("T1055".to_string()) // Process Injection
@@ -1425,7 +1423,8 @@ mod sprint5_remnant_tests {
         // in ad-hoc examiner searches too.
         assert_eq!(carved_subcategory(""), "Carved");
         assert_ne!(
-            carved_subcategory(""), "Carved ",
+            carved_subcategory(""),
+            "Carved ",
             "Remnant must not emit trailing-space 'Carved ' subcategory — \
              the Sprint 5 trim fix has regressed."
         );
@@ -1439,7 +1438,10 @@ mod sprint5_remnant_tests {
         // empty-file_type path.
         assert_eq!(carved_subcategory("JPEG"), "Carved JPEG");
         assert_eq!(carved_subcategory("PDF"), "Carved PDF");
-        assert_eq!(carved_subcategory("Microsoft Office Document"), "Carved Microsoft Office Document");
+        assert_eq!(
+            carved_subcategory("Microsoft Office Document"),
+            "Carved Microsoft Office Document"
+        );
     }
 
     #[test]

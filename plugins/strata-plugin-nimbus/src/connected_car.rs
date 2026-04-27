@@ -31,7 +31,12 @@ pub struct ConnectedCarArtifact {
     pub event_data: HashMap<String, String>,
 }
 
-pub fn parse_events(make: &str, model: &str, vin: Option<&str>, json: &str) -> Vec<ConnectedCarArtifact> {
+pub fn parse_events(
+    make: &str,
+    model: &str,
+    vin: Option<&str>,
+    json: &str,
+) -> Vec<ConnectedCarArtifact> {
     let v: serde_json::Value = match serde_json::from_str(json) {
         Ok(v) => v,
         Err(_) => return Vec::new(),
@@ -76,7 +81,10 @@ pub fn parse_events(make: &str, model: &str, vin: Option<&str>, json: &str) -> V
                 .into(),
             timestamp: ts,
             location,
-            odometer: entry.get("odometer").and_then(|x| x.as_u64()).map(|v| v as u32),
+            odometer: entry
+                .get("odometer")
+                .and_then(|x| x.as_u64())
+                .map(|v| v as u32),
             fuel_or_battery_level: entry.get("level").and_then(|x| x.as_f64()),
             event_data,
         });
@@ -121,6 +129,9 @@ mod tests {
         let json = r#"[{"timestamp":"2026-04-10T09:00:00Z","type":"Service",
             "extra":{"code":"MIL","message":"Check engine light"}}]"#;
         let evts = parse_events("Chevrolet", "Tahoe", None, json);
-        assert_eq!(evts[0].event_data.get("code").map(String::as_str), Some("MIL"));
+        assert_eq!(
+            evts[0].event_data.get("code").map(String::as_str),
+            Some("MIL")
+        );
     }
 }

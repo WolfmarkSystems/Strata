@@ -94,10 +94,7 @@ impl StrataPlugin for GuardianPlugin {
             // forward-slash normalization is the minimum-surface
             // fix: one normalized lc_path variable used by every
             // predicate; all needles flipped from `\\` to `/`.
-            let lc_path = path
-                .to_string_lossy()
-                .replace('\\', "/")
-                .to_lowercase();
+            let lc_path = path.to_string_lossy().replace('\\', "/").to_lowercase();
             let name = path
                 .file_name()
                 .and_then(|n| n.to_str())
@@ -105,8 +102,7 @@ impl StrataPlugin for GuardianPlugin {
                 .to_lowercase();
 
             // ── Windows Defender event log ──────────────────────────────
-            if name == "mpeventlog.evtx" || lc_path.contains("/windows defender/support/")
-            {
+            if name == "mpeventlog.evtx" || lc_path.contains("/windows defender/support/") {
                 let mut a = Artifact::new("Defender Log", &path.to_string_lossy());
                 a.add_field("title", "Windows Defender event log present");
                 a.add_field(
@@ -122,8 +118,7 @@ impl StrataPlugin for GuardianPlugin {
 
             // ── Defender quarantine directory ──────────────────────────
             if lc_path.contains("/windows defender/quarantine/")
-                && (lc_path.contains("/entries/")
-                    || lc_path.contains("/resourcedata/"))
+                && (lc_path.contains("/entries/") || lc_path.contains("/resourcedata/"))
             {
                 let mut a = Artifact::new("Defender Quarantine", &path.to_string_lossy());
                 a.add_field("title", "Defender quarantined item");
@@ -157,10 +152,7 @@ impl StrataPlugin for GuardianPlugin {
                         {
                             let mut a = Artifact::new("Avast Log", &path.to_string_lossy());
                             a.add_field("title", "Avast detection");
-                            a.add_field(
-                                "detail",
-                                &line.chars().take(240).collect::<String>(),
-                            );
+                            a.add_field("detail", &line.chars().take(240).collect::<String>());
                             a.add_field("file_type", "Avast Log");
                             a.add_field("forensic_value", "High");
                             a.add_field("suspicious", "true");
@@ -211,7 +203,11 @@ impl StrataPlugin for GuardianPlugin {
                         "title",
                         &format!(
                             "WER: {} ({})",
-                            if app_name.is_empty() { "(unknown)" } else { &app_name },
+                            if app_name.is_empty() {
+                                "(unknown)"
+                            } else {
+                                &app_name
+                            },
                             event_name
                         ),
                     );
@@ -242,7 +238,11 @@ impl StrataPlugin for GuardianPlugin {
 
         for a in &artifacts {
             let file_type = a.data.get("file_type").cloned().unwrap_or_default();
-            let suspicious = a.data.get("suspicious").map(|s| s == "true").unwrap_or(false);
+            let suspicious = a
+                .data
+                .get("suspicious")
+                .map(|s| s == "true")
+                .unwrap_or(false);
             if suspicious {
                 suspicious_count += 1;
             }
@@ -278,7 +278,11 @@ impl StrataPlugin for GuardianPlugin {
                 category,
                 subcategory: file_type,
                 timestamp: a.timestamp.map(|t| t as i64),
-                title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
+                title: a
+                    .data
+                    .get("title")
+                    .cloned()
+                    .unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
                 source_path: a.source.clone(),
                 forensic_value,
@@ -456,9 +460,7 @@ mod sprint4_path_sep_tests {
         // `\\malwarebytes\\mbamservice\\logs\\` needle missed
         // extracted paths. Normalization handles both.
         let dir = tempdir().expect("tempdir");
-        let mb_dir = dir
-            .path()
-            .join("ProgramData/Malwarebytes/MBAMService/logs");
+        let mb_dir = dir.path().join("ProgramData/Malwarebytes/MBAMService/logs");
         fs::create_dir_all(&mb_dir).expect("mk");
         fs::write(mb_dir.join("mbamservice.log"), b"log content").expect("w");
 

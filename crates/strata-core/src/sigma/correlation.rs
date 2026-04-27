@@ -70,17 +70,15 @@ pub fn run_rules(
 ) -> Vec<SigmaMatch> {
     let mut out = Vec::new();
     for rule in rules {
-        let multi_selection = rule.selections.len() > 1
-            && rule.condition.as_deref() != Some("selection");
+        let multi_selection =
+            rule.selections.len() > 1 && rule.condition.as_deref() != Some("selection");
         // Map each selection block to the artifacts it matches.
         let mut selection_hits: HashMap<String, Vec<&Artifact>> = HashMap::new();
         for (name, selection) in &rule.selections {
             let hits: Vec<&Artifact> = artifacts
                 .iter()
                 .filter(|a| product_category_matches(rule, a))
-                .filter(|a| {
-                    super::rules::selection_match_helper(selection, &artifact_field_map(a))
-                })
+                .filter(|a| super::rules::selection_match_helper(selection, &artifact_field_map(a)))
                 .collect();
             selection_hits.insert(name.clone(), hits);
         }
@@ -125,9 +123,7 @@ pub fn run_rules(
             })
             .collect();
         if multi_selection {
-            if let (Some(first), Some(last)) =
-                (timestamps.iter().min(), timestamps.iter().max())
-            {
+            if let (Some(first), Some(last)) = (timestamps.iter().min(), timestamps.iter().max()) {
                 if *last - *first > correlation_window {
                     continue;
                 }
@@ -191,8 +187,8 @@ fn artifact_field_map(a: &Artifact) -> HashMap<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::rules::parse_yaml;
+    use super::*;
 
     fn artifact(ty: &str, title: &str, fields: &[(&str, &str)], ts: u64) -> Artifact {
         let mut a = Artifact::new(ty, "/evidence/x");
@@ -229,7 +225,10 @@ mod tests {
         );
         let matches = run_rules(&[rule], &[a], Duration::seconds(60));
         assert_eq!(matches.len(), 1);
-        assert!(matches[0].mitre_techniques.iter().any(|t| t.contains("T1059.001")));
+        assert!(matches[0]
+            .mitre_techniques
+            .iter()
+            .any(|t| t.contains("T1059.001")));
     }
 
     #[test]

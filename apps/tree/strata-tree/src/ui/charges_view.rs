@@ -42,10 +42,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
     // ── Search results ──
     if !state.charge_search_results.is_empty() {
         ui.separator();
-        ui.label(format!(
-            "Results ({})",
-            state.charge_search_results.len()
-        ));
+        ui.label(format!("Results ({})", state.charge_search_results.len()));
         let results = state.charge_search_results.clone();
         egui::ScrollArea::vertical()
             .max_height(200.0)
@@ -62,9 +59,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                         } else if ui.small_button("+").clicked() {
                             state.add_charge(entry.clone());
                         }
-                        ui.label(
-                            egui::RichText::new(&entry.citation).strong(),
-                        );
+                        ui.label(egui::RichText::new(&entry.citation).strong());
                         ui.label(&entry.short_title);
                     });
                 }
@@ -84,9 +79,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
             if ui.small_button("×").clicked() {
                 to_remove.push(charge.citation.clone());
             }
-            ui.label(
-                egui::RichText::new(&charge.citation).strong(),
-            );
+            ui.label(egui::RichText::new(&charge.citation).strong());
             ui.label(&charge.short_title);
         });
     }

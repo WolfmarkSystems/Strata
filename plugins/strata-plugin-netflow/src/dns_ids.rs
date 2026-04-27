@@ -299,8 +299,7 @@ pub fn parse_snort_fast_line(line: &str) -> Option<IdsAlert> {
     let mut cursor = line.trim();
     let (ts_tok, rest) = cursor.split_once(char::is_whitespace)?;
     cursor = rest.trim_start();
-    let timestamp = parse_snort_ts(ts_tok).unwrap_or_else(|| Utc.timestamp_opt(0, 0).single()
-        .unwrap_or_else(|| DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_default()));
+    let timestamp = parse_snort_ts(ts_tok).unwrap_or_else(unix_epoch);
     // Expect leading [**].
     let cursor = cursor.strip_prefix("[**]")?.trim_start();
     // Rule id in [gid:sid:rev].
@@ -372,6 +371,10 @@ pub fn parse_snort_fast_line(line: &str) -> Option<IdsAlert> {
     })
 }
 
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
+}
+
 fn take_bracketed(s: &str) -> Option<(String, &str)> {
     let s = s.trim_start();
     let rest = s.strip_prefix('[')?;
@@ -415,7 +418,7 @@ pub fn parse_suricata_eve_line(line: &str) -> Option<IdsAlert> {
                 .map(|dt| dt.with_timezone(&Utc))
                 .ok()
         })
-        .unwrap_or_else(|| DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_default());
+        .unwrap_or_else(unix_epoch);
     let alert = v.get("alert")?;
     let signature = alert
         .get("signature")
@@ -428,7 +431,10 @@ pub fn parse_suricata_eve_line(line: &str) -> Option<IdsAlert> {
         .map(|s| s.to_string());
     let priority = alert.get("severity").and_then(|x| x.as_i64());
     let gid = alert.get("gid").and_then(|x| x.as_i64()).unwrap_or(0);
-    let sid = alert.get("signature_id").and_then(|x| x.as_i64()).unwrap_or(0);
+    let sid = alert
+        .get("signature_id")
+        .and_then(|x| x.as_i64())
+        .unwrap_or(0);
     let rev = alert.get("rev").and_then(|x| x.as_i64()).unwrap_or(0);
     let rule_id = Some(format!("{}:{}:{}", gid, sid, rev));
     Some(IdsAlert {
@@ -437,11 +443,23 @@ pub fn parse_suricata_eve_line(line: &str) -> Option<IdsAlert> {
         classification,
         priority,
         rule_id,
-        protocol: v.get("proto").and_then(|x| x.as_str()).map(|s| s.to_string()),
-        src_ip: v.get("src_ip").and_then(|x| x.as_str()).map(|s| s.to_string()),
+        protocol: v
+            .get("proto")
+            .and_then(|x| x.as_str())
+            .map(|s| s.to_string()),
+        src_ip: v
+            .get("src_ip")
+            .and_then(|x| x.as_str())
+            .map(|s| s.to_string()),
         src_port: v.get("src_port").and_then(|x| x.as_u64()).map(|n| n as u16),
-        dst_ip: v.get("dest_ip").and_then(|x| x.as_str()).map(|s| s.to_string()),
-        dst_port: v.get("dest_port").and_then(|x| x.as_u64()).map(|n| n as u16),
+        dst_ip: v
+            .get("dest_ip")
+            .and_then(|x| x.as_str())
+            .map(|s| s.to_string()),
+        dst_port: v
+            .get("dest_port")
+            .and_then(|x| x.as_u64())
+            .map(|n| n as u16),
         format: IdsAlertFormat::SuricataEve,
     })
 }
@@ -551,10 +569,16 @@ mod tests {
     fn parse_snort_fast_alert() {
         let line = "06/01-12:00:00.000000  [**] [1:2001:1] ET SCAN Nmap Scripting Engine User-Agent Detected [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.0.0.5:54321 -> 93.184.216.34:443";
         let a = parse_snort_fast_line(line).expect("snort parses");
-        assert_eq!(a.signature, "ET SCAN Nmap Scripting Engine User-Agent Detected");
+        assert_eq!(
+            a.signature,
+            "ET SCAN Nmap Scripting Engine User-Agent Detected"
+        );
         assert_eq!(a.rule_id.as_deref(), Some("1:2001:1"));
         assert_eq!(a.priority, Some(2));
-        assert_eq!(a.classification.as_deref(), Some("Attempted Information Leak"));
+        assert_eq!(
+            a.classification.as_deref(),
+            Some("Attempted Information Leak")
+        );
         assert_eq!(a.protocol.as_deref(), Some("TCP"));
         assert_eq!(a.src_ip.as_deref(), Some("10.0.0.5"));
         assert_eq!(a.src_port, Some(54321));
@@ -586,8 +610,12 @@ mod tests {
         );
         let records = parse_ids_log(body);
         assert_eq!(records.len(), 2);
-        assert!(records.iter().any(|a| a.format == IdsAlertFormat::SnortFast));
-        assert!(records.iter().any(|a| a.format == IdsAlertFormat::SuricataEve));
+        assert!(records
+            .iter()
+            .any(|a| a.format == IdsAlertFormat::SnortFast));
+        assert!(records
+            .iter()
+            .any(|a| a.format == IdsAlertFormat::SuricataEve));
     }
 
     #[test]

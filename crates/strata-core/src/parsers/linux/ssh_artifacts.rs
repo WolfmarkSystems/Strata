@@ -136,9 +136,9 @@ impl SshArtifactsParser {
                 "sk-ecdsa-sha2-nistp256@openssh.com",
             ];
 
-            let key_type_start = key_types.iter().find_map(|&kt| {
-                remaining.find(kt).map(|pos| (pos, kt))
-            });
+            let key_type_start = key_types
+                .iter()
+                .find_map(|&kt| remaining.find(kt).map(|pos| (pos, kt)));
 
             if let Some((pos, _)) = key_type_start {
                 if pos > 0 {
@@ -147,13 +147,16 @@ impl SshArtifactsParser {
 
                     // Flag suspicious options
                     if opt_str.contains("command=") {
-                        forensic_flags.push("FORCED_COMMAND — key restricted to specific command".to_string());
+                        forensic_flags.push(
+                            "FORCED_COMMAND — key restricted to specific command".to_string(),
+                        );
                     }
                     if opt_str.contains("no-pty") {
                         forensic_flags.push("NO_PTY — no terminal allocated".to_string());
                     }
                     if opt_str.contains("from=") {
-                        forensic_flags.push("SOURCE_RESTRICTED — key limited to specific IPs".to_string());
+                        forensic_flags
+                            .push("SOURCE_RESTRICTED — key limited to specific IPs".to_string());
                     }
                 }
                 remaining = &remaining[pos..];
@@ -172,7 +175,10 @@ impl SshArtifactsParser {
             } else {
                 key_data.to_string()
             };
-            let comment = parts.get(2..).map(|p| p.join(" ")).filter(|s| !s.is_empty());
+            let comment = parts
+                .get(2..)
+                .map(|p| p.join(" "))
+                .filter(|s| !s.is_empty());
 
             let entry = AuthorizedKeyEntry {
                 key_type: key_type.clone(),
@@ -316,23 +322,33 @@ impl SshArtifactsParser {
                     "identityfile" => entry.identity_file = Some(value),
                     "proxycommand" => {
                         entry.proxy_command = Some(value);
-                        entry.forensic_flags.push("PROXY_COMMAND — traffic may be tunneled".to_string());
+                        entry
+                            .forensic_flags
+                            .push("PROXY_COMMAND — traffic may be tunneled".to_string());
                     }
                     "proxyjump" => {
                         entry.proxy_jump = Some(value);
-                        entry.forensic_flags.push("PROXY_JUMP — multi-hop SSH connection".to_string());
+                        entry
+                            .forensic_flags
+                            .push("PROXY_JUMP — multi-hop SSH connection".to_string());
                     }
                     "localforward" => {
                         entry.local_forward = Some(value);
-                        entry.forensic_flags.push("LOCAL_FORWARD — port forwarding configured".to_string());
+                        entry
+                            .forensic_flags
+                            .push("LOCAL_FORWARD — port forwarding configured".to_string());
                     }
                     "remoteforward" => {
                         entry.remote_forward = Some(value);
-                        entry.forensic_flags.push("REMOTE_FORWARD — reverse tunnel configured".to_string());
+                        entry
+                            .forensic_flags
+                            .push("REMOTE_FORWARD — reverse tunnel configured".to_string());
                     }
                     "dynamicforward" => {
                         entry.dynamic_forward = Some(value);
-                        entry.forensic_flags.push("DYNAMIC_FORWARD — SOCKS proxy configured".to_string());
+                        entry
+                            .forensic_flags
+                            .push("DYNAMIC_FORWARD — SOCKS proxy configured".to_string());
                     }
                     _ => {}
                 }
@@ -402,8 +418,7 @@ impl SshArtifactsParser {
             // Flag security-relevant settings
             match key.as_str() {
                 "permitrootlogin" if value == "yes" => {
-                    forensic_flags
-                        .push("ROOT_LOGIN_ENABLED — root can SSH directly".to_string());
+                    forensic_flags.push("ROOT_LOGIN_ENABLED — root can SSH directly".to_string());
                 }
                 "passwordauthentication" if value == "yes" => {
                     forensic_flags.push(
@@ -412,12 +427,10 @@ impl SshArtifactsParser {
                     );
                 }
                 "permitemptypasswords" if value == "yes" => {
-                    forensic_flags
-                        .push("EMPTY_PASSWORDS — empty passwords allowed".to_string());
+                    forensic_flags.push("EMPTY_PASSWORDS — empty passwords allowed".to_string());
                 }
                 "x11forwarding" if value == "yes" => {
-                    forensic_flags
-                        .push("X11_FORWARDING — GUI forwarding enabled".to_string());
+                    forensic_flags.push("X11_FORWARDING — GUI forwarding enabled".to_string());
                 }
                 "gatewayports" if value == "yes" => {
                     forensic_flags.push(
@@ -425,14 +438,17 @@ impl SshArtifactsParser {
                     );
                 }
                 "allowtcpforwarding" if value == "yes" => {
-                    forensic_flags
-                        .push("TCP_FORWARDING — port forwarding allowed".to_string());
+                    forensic_flags.push("TCP_FORWARDING — port forwarding allowed".to_string());
                 }
                 _ => {}
             }
         }
 
-        let config_type = if is_server { "sshd_config" } else { "ssh_config" };
+        let config_type = if is_server {
+            "sshd_config"
+        } else {
+            "ssh_config"
+        };
         let mut desc = format!(
             "SSH {} Configuration: {}",
             if is_server { "Server" } else { "Client" },

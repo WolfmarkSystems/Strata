@@ -393,10 +393,7 @@ mod tests {
         assert_eq!(IosBiomeStream::LocationSignificant.mitre(), "T1430");
         assert_eq!(IosBiomeStream::MessagingSent.mitre(), "T1636.002");
         assert_eq!(IosBiomeStream::Shared.mitre(), "T1217");
-        assert_eq!(
-            IosBiomeStream::LocationSignificant.forensic_value(),
-            "High"
-        );
+        assert_eq!(IosBiomeStream::LocationSignificant.forensic_value(), "High");
     }
 
     #[test]

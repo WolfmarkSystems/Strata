@@ -29,21 +29,30 @@ fn open_ro(path: &Path) -> Option<Connection> {
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )
     .ok()?;
-    c.pragma_query_value(None, "schema_version", |_| Ok(())).ok()?;
+    c.pragma_query_value(None, "schema_version", |_| Ok(()))
+        .ok()?;
     Some(c)
 }
 
 fn decode_ms(ms: i64) -> Option<DateTime<Utc>> {
-    DateTime::<Utc>::from_timestamp(ms.div_euclid(1000), (ms.rem_euclid(1000) as u32) * 1_000_000)
+    DateTime::<Utc>::from_timestamp(
+        ms.div_euclid(1000),
+        (ms.rem_euclid(1000) as u32) * 1_000_000,
+    )
 }
 
 pub fn classify(path: &Path) -> Option<&'static str> {
-    let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let lower = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
     let name = lower.rsplit('/').next().unwrap_or("");
     if lower.contains("com.sec.android.app.shealth/databases/") && name == "healthdatashare.db" {
         return Some("Health");
     }
-    if lower.contains("com.samsung.android.locationsharing/databases/") && name == "locationhistory.db" {
+    if lower.contains("com.samsung.android.locationsharing/databases/")
+        && name == "locationhistory.db"
+    {
         return Some("Location");
     }
     if lower.contains("com.samsung.android.messaging/databases/") && name == "message.db" {
@@ -134,9 +143,9 @@ pub fn parse_messages(path: &Path) -> Vec<SamsungArtifact> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    if let Ok(mut stmt) = conn.prepare(
-        "SELECT address, body, date, type FROM message ORDER BY date ASC",
-    ) {
+    if let Ok(mut stmt) =
+        conn.prepare("SELECT address, body, date, type FROM message ORDER BY date ASC")
+    {
         let rows = stmt.query_map([], |row| {
             let address: Option<String> = row.get(0)?;
             let body: Option<String> = row.get(1)?;
@@ -175,10 +184,7 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
         .map(|r| {
             let mut a = Artifact::new(&format!("Samsung {}", r.category), &r.source_path);
             a.timestamp = r.timestamp.map(|d| d.timestamp() as u64);
-            a.add_field(
-                "title",
-                &format!("Samsung {}: {}", r.category, r.value),
-            );
+            a.add_field("title", &format!("Samsung {}: {}", r.category, r.value));
             a.add_field(
                 "detail",
                 &format!(

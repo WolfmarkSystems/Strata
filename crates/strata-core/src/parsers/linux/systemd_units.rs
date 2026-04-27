@@ -61,12 +61,7 @@ impl ArtifactParser for SystemdUnitParser {
     }
 
     fn target_patterns(&self) -> Vec<&str> {
-        vec![
-            "*.service",
-            "*.timer",
-            "*.socket",
-            "*.path",
-        ]
+        vec!["*.service", "*.timer", "*.socket", "*.path"]
     }
 
     fn parse_file(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
@@ -75,8 +70,11 @@ impl ArtifactParser for SystemdUnitParser {
         let text = String::from_utf8_lossy(data);
 
         // Verify this is a systemd unit file
-        if !text.contains("[Unit]") && !text.contains("[Service]") && !text.contains("[Timer]")
-            && !text.contains("[Socket]") && !text.contains("[Path]")
+        if !text.contains("[Unit]")
+            && !text.contains("[Service]")
+            && !text.contains("[Timer]")
+            && !text.contains("[Socket]")
+            && !text.contains("[Path]")
         {
             return Ok(artifacts);
         }
@@ -173,7 +171,9 @@ impl ArtifactParser for SystemdUnitParser {
                 || exec_lower.contains("/dev/shm/")
                 || exec_lower.contains("/var/tmp/")
             {
-                entry.forensic_flags.push("SUSPICIOUS_PATH — Execution from temp directory".to_string());
+                entry
+                    .forensic_flags
+                    .push("SUSPICIOUS_PATH — Execution from temp directory".to_string());
             }
             if exec_lower.contains("curl")
                 || exec_lower.contains("wget")
@@ -182,28 +182,40 @@ impl ArtifactParser for SystemdUnitParser {
                 || exec_lower.contains("nc ")
                 || exec_lower.contains("ncat")
             {
-                entry.forensic_flags.push(format!("SUSPICIOUS_COMMAND: {}", exec));
+                entry
+                    .forensic_flags
+                    .push(format!("SUSPICIOUS_COMMAND: {}", exec));
             }
             if exec_lower.contains("base64") || exec_lower.contains("eval") {
-                entry.forensic_flags.push("ENCODED_EXECUTION — Possible obfuscated command".to_string());
+                entry
+                    .forensic_flags
+                    .push("ENCODED_EXECUTION — Possible obfuscated command".to_string());
             }
         }
 
         if entry.user.as_deref() == Some("root") {
-            entry.forensic_flags.push("ROOT_EXECUTION — Runs as root".to_string());
+            entry
+                .forensic_flags
+                .push("ROOT_EXECUTION — Runs as root".to_string());
         }
 
         if entry.restart_policy.as_deref() == Some("always") {
-            entry.forensic_flags.push("RESTART_ALWAYS — Auto-restart on failure (persistence)".to_string());
+            entry
+                .forensic_flags
+                .push("RESTART_ALWAYS — Auto-restart on failure (persistence)".to_string());
         }
 
         // Check install path for user-created vs system
         let path_lower = source.to_lowercase();
         if path_lower.contains("/etc/systemd/") {
-            entry.forensic_flags.push("ADMIN_CREATED — In /etc/systemd/ (manual installation)".to_string());
+            entry
+                .forensic_flags
+                .push("ADMIN_CREATED — In /etc/systemd/ (manual installation)".to_string());
         }
         if path_lower.contains("/.config/systemd/user/") {
-            entry.forensic_flags.push("USER_SERVICE — User-level persistence".to_string());
+            entry
+                .forensic_flags
+                .push("USER_SERVICE — User-level persistence".to_string());
         }
 
         let unit_name = &filename;

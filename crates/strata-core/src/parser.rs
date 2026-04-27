@@ -427,9 +427,7 @@ impl ParserRegistry {
         ));
 
         // Windows Thumbcache
-        self.register(Box::new(
-            crate::parsers::thumbcache::ThumbcacheParser::new(),
-        ));
+        self.register(Box::new(crate::parsers::thumbcache::ThumbcacheParser::new()));
 
         // MFT Timestomp Detection
         self.register(Box::new(
@@ -469,9 +467,7 @@ impl ParserRegistry {
         ));
 
         // UserAssist ROT13
-        self.register(Box::new(
-            crate::parsers::userassist::UserAssistParser::new(),
-        ));
+        self.register(Box::new(crate::parsers::userassist::UserAssistParser::new()));
 
         // Windows Scheduled Tasks XML
         self.register(Box::new(
@@ -479,9 +475,7 @@ impl ParserRegistry {
         ));
 
         // BITS Transfer Parser
-        self.register(Box::new(
-            crate::parsers::bits_parser::BitsParser::new(),
-        ));
+        self.register(Box::new(crate::parsers::bits_parser::BitsParser::new()));
 
         // Browser IndexedDB/LocalStorage
         self.register(Box::new(
@@ -499,9 +493,7 @@ impl ParserRegistry {
         ));
 
         // ADB Backup Parser
-        self.register(Box::new(
-            crate::parsers::adb_backup::AdbBackupParser::new(),
-        ));
+        self.register(Box::new(crate::parsers::adb_backup::AdbBackupParser::new()));
 
         // Tor Browser Artifacts
         self.register(Box::new(
@@ -519,9 +511,7 @@ impl ParserRegistry {
         ));
 
         // ESE Database Parser
-        self.register(Box::new(
-            crate::parsers::ese_parser::EseParser::new(),
-        ));
+        self.register(Box::new(crate::parsers::ese_parser::EseParser::new()));
 
         // Volume Shadow Copy Parser
         self.register(Box::new(
@@ -549,9 +539,7 @@ impl ParserRegistry {
         self.register(Box::new(
             crate::parsers::macos::spotlight_metadata::SpotlightMetadataParser::new(),
         ));
-        self.register(Box::new(
-            crate::parsers::macos::dock::MacosDockParser::new(),
-        ));
+        self.register(Box::new(crate::parsers::macos::dock::MacosDockParser::new()));
         self.register(Box::new(
             crate::parsers::macos::document_revisions::MacosDocumentRevisionsParser::new(),
         ));
@@ -586,12 +574,8 @@ impl ParserRegistry {
         ));
 
         // Memory forensics
-        self.register(Box::new(
-            crate::parsers::memory::HiberfilParser::new(),
-        ));
-        self.register(Box::new(
-            crate::parsers::memory::PagefileParser::new(),
-        ));
+        self.register(Box::new(crate::parsers::memory::HiberfilParser::new()));
+        self.register(Box::new(crate::parsers::memory::PagefileParser::new()));
     }
 
     pub fn parsers(&self) -> &[Box<dyn ArtifactParser>] {

@@ -79,10 +79,7 @@ pub struct XPIndexDatEntry {
 /// at an XP disk image. Conservative: returns false on ambiguous
 /// layouts so Windows 7/10/11 parsers don't get double-called.
 pub fn is_windows_xp(root: &Path) -> bool {
-    let markers = [
-        "Documents and Settings",
-        "RECYCLER",
-    ];
+    let markers = ["Documents and Settings", "RECYCLER"];
     let hit = markers
         .iter()
         .any(|m| root.join(m).exists() || root.join(m.to_ascii_lowercase()).exists());
@@ -191,7 +188,10 @@ mod tests {
 
     #[test]
     fn rot13_round_trips_letters() {
-        assert_eq!(rot13_decode("UEME_RUNPATH:chrome.exe"), "HRZR_EHACNGU:puebzr.rkr");
+        assert_eq!(
+            rot13_decode("UEME_RUNPATH:chrome.exe"),
+            "HRZR_EHACNGU:puebzr.rkr"
+        );
         assert_eq!(rot13_decode(&rot13_decode("Hello")), "Hello");
     }
 

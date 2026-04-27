@@ -258,12 +258,7 @@ mod tests {
             .unwrap();
         let strata = out
             .iter()
-            .find(|a| {
-                a.json_data
-                    .get("label")
-                    .and_then(|v| v.as_str())
-                    == Some("Strata")
-            })
+            .find(|a| a.json_data.get("label").and_then(|v| v.as_str()) == Some("Strata"))
             .unwrap();
         let path = strata
             .json_data
@@ -303,12 +298,7 @@ mod tests {
             .unwrap();
         let safari = out
             .iter()
-            .find(|a| {
-                a.json_data
-                    .get("label")
-                    .and_then(|v| v.as_str())
-                    == Some("Safari")
-            })
+            .find(|a| a.json_data.get("label").and_then(|v| v.as_str()) == Some("Safari"))
             .unwrap();
         assert_eq!(
             safari.json_data.get("bundle_id").and_then(|v| v.as_str()),

@@ -29,7 +29,10 @@ pub struct ContainerArtifact {
 }
 
 pub fn is_container_path(path: &Path) -> bool {
-    let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let lower = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
     let name = lower.rsplit('/').next().unwrap_or("");
     lower.contains("/var/lib/docker/containers/")
         && (name == "config.v2.json" || name == "hostconfig.json")
@@ -52,9 +55,18 @@ pub fn parse_config_v2(body: &str) -> Option<ContainerArtifact> {
         .and_then(|x| x.as_str())
         .map(|s| s.chars().take(12).collect::<String>())
         .unwrap_or_else(|| "unknown".to_string());
-    let name = v.get("Name").and_then(|x| x.as_str()).map(|s| s.to_string());
-    let image = v.get("Image").and_then(|x| x.as_str()).map(|s| s.to_string());
-    let image_sha256 = v.get("ImageID").and_then(|x| x.as_str()).map(|s| s.to_string());
+    let name = v
+        .get("Name")
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+    let image = v
+        .get("Image")
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+    let image_sha256 = v
+        .get("ImageID")
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
     let created = v
         .get("Created")
         .and_then(|x| x.as_str())
@@ -122,7 +134,10 @@ pub fn parse_hostconfig(body: &str) -> Option<(bool, Vec<String>, Vec<String>)> 
         let Some(s) = entry.as_str() else { continue };
         mounts.push(s.to_string());
         let host = s.split(':').next().unwrap_or(s);
-        if SENSITIVE_MOUNT_PREFIXES.iter().any(|p| host == *p || host.starts_with(&format!("{}/", p))) {
+        if SENSITIVE_MOUNT_PREFIXES
+            .iter()
+            .any(|p| host == *p || host.starts_with(&format!("{}/", p)))
+        {
             sensitive.push(s.to_string());
         }
     }
@@ -248,7 +263,11 @@ mod tests {
         }"#;
         let art = parse_config_v2(body).expect("parsed");
         assert_eq!(art.container_id, "abc123def456");
-        assert!(art.entrypoint.as_deref().unwrap_or("").contains("docker-entrypoint"));
+        assert!(art
+            .entrypoint
+            .as_deref()
+            .unwrap_or("")
+            .contains("docker-entrypoint"));
         assert!(art.suspicious_env_vars.iter().any(|e| e.contains("SECRET")));
         assert!(art.suspicious_env_vars.iter().any(|e| e.contains("TOKEN")));
     }
@@ -283,9 +302,11 @@ mod tests {
         assert!(arts
             .iter()
             .any(|a| a.data.get("file_type").map(|s| s.as_str()) == Some("Docker Container")));
-        assert!(arts
-            .iter()
-            .any(|a| a.data.get("suspicious_env_var").map(|s| s.contains("TOKEN")).unwrap_or(false)));
+        assert!(arts.iter().any(|a| a
+            .data
+            .get("suspicious_env_var")
+            .map(|s| s.contains("TOKEN"))
+            .unwrap_or(false)));
     }
 
     #[test]
@@ -300,11 +321,7 @@ mod tests {
             .join("privileged1234");
         std::fs::create_dir_all(&container).expect("mkdirs");
         let path = container.join("hostconfig.json");
-        std::fs::write(
-            &path,
-            r#"{"Privileged":true,"Binds":["/etc:/host-etc"]}"#,
-        )
-        .expect("w");
+        std::fs::write(&path, r#"{"Privileged":true,"Binds":["/etc:/host-etc"]}"#).expect("w");
         let arts = scan(&path);
         assert!(arts
             .iter()

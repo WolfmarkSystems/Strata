@@ -44,7 +44,11 @@ pub fn to_csv(artifacts: &[Artifact]) -> String {
             .unwrap_or_default();
         let mitre = a.data.get("mitre").cloned().unwrap_or_default();
         let fv = a.data.get("forensic_value").cloned().unwrap_or_default();
-        let sus = a.data.get("suspicious").cloned().unwrap_or_else(|| "false".into());
+        let sus = a
+            .data
+            .get("suspicious")
+            .cloned()
+            .unwrap_or_else(|| "false".into());
         let confidence = a.data.get("confidence").cloned().unwrap_or_default();
         let notes = a.data.get("examiner_notes").cloned().unwrap_or_default();
         let row = [
@@ -117,13 +121,20 @@ fn artifact_to_json(a: &Artifact) -> serde_json::Value {
     })
 }
 
-pub fn to_attack_navigator(case_number: &str, artifacts: &[Artifact]) -> Result<String, serde_json::Error> {
+pub fn to_attack_navigator(
+    case_number: &str,
+    artifacts: &[Artifact],
+) -> Result<String, serde_json::Error> {
     let mut tally: BTreeMap<String, (u32, bool, bool)> = BTreeMap::new();
     for a in artifacts {
         let Some(technique) = a.data.get("mitre").filter(|s| !s.is_empty()) else {
             continue;
         };
-        let suspicious = a.data.get("suspicious").map(|s| s == "true").unwrap_or(false);
+        let suspicious = a
+            .data
+            .get("suspicious")
+            .map(|s| s == "true")
+            .unwrap_or(false);
         let high = matches!(
             a.data.get("forensic_value").map(|s| s.as_str()),
             Some("High") | Some("Critical")

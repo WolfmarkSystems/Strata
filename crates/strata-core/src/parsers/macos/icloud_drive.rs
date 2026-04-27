@@ -143,10 +143,7 @@ impl ArtifactParser for ICloudDriveParser {
                                     item_filename: row.get(0).ok(),
                                     item_parent_id: row.get(1).ok(),
                                     item_birthtime: row.get::<_, f64>(2).ok().map(|d| d as i64),
-                                    item_lastusedtime: row
-                                        .get::<_, f64>(3)
-                                        .ok()
-                                        .map(|d| d as i64),
+                                    item_lastusedtime: row.get::<_, f64>(3).ok().map(|d| d as i64),
                                     item_size: row.get(4).ok(),
                                     item_state: row.get(5).ok(),
                                 })
@@ -288,9 +285,7 @@ mod tests {
 </dict>
 </plist>"#;
         let parser = ICloudDriveParser::new();
-        let path = PathBuf::from(
-            "/Users/test/Library/Preferences/com.apple.bird.plist",
-        );
+        let path = PathBuf::from("/Users/test/Library/Preferences/com.apple.bird.plist");
         let out = parser.parse_file(&path, xml.as_bytes()).unwrap();
         assert_eq!(out.len(), 1);
         let json = &out[0].json_data;
@@ -307,9 +302,8 @@ mod tests {
     #[test]
     fn emits_presence_record_for_mobile_documents_file() {
         let parser = ICloudDriveParser::new();
-        let path = PathBuf::from(
-            "/Users/test/Library/Mobile Documents/com~apple~CloudDocs/Notes.txt",
-        );
+        let path =
+            PathBuf::from("/Users/test/Library/Mobile Documents/com~apple~CloudDocs/Notes.txt");
         let out = parser.parse_file(&path, b"some content here").unwrap();
         assert_eq!(out.len(), 1);
         assert_eq!(

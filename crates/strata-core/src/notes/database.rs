@@ -140,11 +140,7 @@ impl NotesDatabase {
         Ok(out)
     }
 
-    pub fn add_tag(
-        &mut self,
-        artifact_id: &str,
-        tag: &str,
-    ) -> Result<(), NotesError> {
+    pub fn add_tag(&mut self, artifact_id: &str, tag: &str) -> Result<(), NotesError> {
         let current: String = self
             .conn
             .query_row(
@@ -227,7 +223,12 @@ mod tests {
     fn open_creates_schema_and_add_note_returns_id() {
         let (_dir, mut db) = open_tmp();
         let id = db
-            .add_note("art-1", "Prefetch", "examiner.doe", "notepad was opened at 12:00")
+            .add_note(
+                "art-1",
+                "Prefetch",
+                "examiner.doe",
+                "notepad was opened at 12:00",
+            )
             .expect("add");
         assert!(id > 0);
     }
@@ -236,7 +237,8 @@ mod tests {
     fn get_notes_returns_entries_for_artifact() {
         let (_dir, mut db) = open_tmp();
         db.add_note("art-2", "MRU", "examiner", "first").expect("1");
-        db.add_note("art-2", "MRU", "examiner", "second").expect("2");
+        db.add_note("art-2", "MRU", "examiner", "second")
+            .expect("2");
         db.add_note("art-3", "MRU", "examiner", "other").expect("3");
         let notes = db.get_notes("art-2").expect("get");
         assert_eq!(notes.len(), 2);
@@ -256,7 +258,8 @@ mod tests {
     #[test]
     fn search_notes_matches_substring() {
         let (_dir, mut db) = open_tmp();
-        db.add_note("a", "T", "examiner", "contains password").expect("1");
+        db.add_note("a", "T", "examiner", "contains password")
+            .expect("1");
         db.add_note("b", "T", "examiner", "benign").expect("2");
         let matches = db.search_notes("password").expect("search");
         assert_eq!(matches.len(), 1);

@@ -45,10 +45,7 @@ pub fn matches(path: &Path) -> bool {
 /// Vec if the database is missing expected tables rather than erroring
 /// so plugin callers can chain.
 pub fn parse(path: &Path) -> Vec<ClipboardEntry> {
-    let conn = match Connection::open_with_flags(
-        path,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    ) {
+    let conn = match Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY) {
         Ok(c) => c,
         Err(_) => return Vec::new(),
     };
@@ -61,7 +58,8 @@ pub fn parse_conn(conn: &Connection) -> Vec<ClipboardEntry> {
     };
     let cols = column_names(conn, &table);
     let ts_col = pick_col(&cols, &["timestamp", "copied_at", "date"]).unwrap_or("timestamp".into());
-    let type_col = pick_col(&cols, &["content_type", "type", "kind"]).unwrap_or("content_type".into());
+    let type_col =
+        pick_col(&cols, &["content_type", "type", "kind"]).unwrap_or("content_type".into());
     let text_col = pick_col(&cols, &["content_text", "content", "text"]);
     let app_col = pick_col(&cols, &["source_app", "app", "application"]);
     let ctx_col = pick_col(&cols, &["source_context", "context", "document"]);
@@ -97,11 +95,8 @@ pub fn parse_conn(conn: &Connection) -> Vec<ClipboardEntry> {
     };
     let mut out = Vec::new();
     for (ts, ctype, text, app, ctx, size) in rows.flatten() {
-        let timestamp = cocoa_or_unix(ts).unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap());
-        let sensitive = text
-            .as_deref()
-            .map(is_sensitive)
-            .unwrap_or(false);
+        let timestamp = cocoa_or_unix(ts).unwrap_or_else(unix_epoch);
+        let sensitive = text.as_deref().map(is_sensitive).unwrap_or(false);
         out.push(ClipboardEntry {
             timestamp,
             content_type: ctype,
@@ -115,14 +110,20 @@ pub fn parse_conn(conn: &Connection) -> Vec<ClipboardEntry> {
     out
 }
 
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
+}
+
 fn detect_table(conn: &Connection) -> Option<String> {
-    for t in ["clipboard_entries", "entries", "ClipboardHistory", "pboard_items"] {
+    for t in [
+        "clipboard_entries",
+        "entries",
+        "ClipboardHistory",
+        "pboard_items",
+    ] {
         let sql =
             format!("SELECT name FROM sqlite_master WHERE type='table' AND name='{t}' LIMIT 1");
-        if conn
-            .query_row(&sql, [], |r| r.get::<_, String>(0))
-            .is_ok()
-        {
+        if conn.query_row(&sql, [], |r| r.get::<_, String>(0)).is_ok() {
             return Some(t.into());
         }
     }
@@ -188,7 +189,10 @@ fn has_api_key_prefix(t: &str) -> bool {
 
 fn has_credentials_url(t: &str) -> bool {
     // https://user:pass@host/...
-    if let Some(rest) = t.strip_prefix("http://").or_else(|| t.strip_prefix("https://")) {
+    if let Some(rest) = t
+        .strip_prefix("http://")
+        .or_else(|| t.strip_prefix("https://"))
+    {
         if let Some(at_idx) = rest.find('@') {
             let userinfo = &rest[..at_idx];
             if userinfo.contains(':') && !userinfo.contains('/') {
@@ -262,7 +266,9 @@ fn luhn_valid(digits: &str) -> bool {
     let mut sum = 0u32;
     let mut alt = false;
     for c in digits.chars().rev() {
-        let Some(d) = c.to_digit(10) else { return false };
+        let Some(d) = c.to_digit(10) else {
+            return false;
+        };
         let v = if alt { d * 2 } else { d };
         sum += if v > 9 { v - 9 } else { v };
         alt = !alt;

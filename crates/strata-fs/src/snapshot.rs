@@ -175,8 +175,7 @@ impl VolumeSnapshot {
                     queue.push((entry.path.clone(), depth + 1));
                 } else {
                     snap.stats.file_count += 1;
-                    snap.stats.total_bytes =
-                        snap.stats.total_bytes.saturating_add(entry.size);
+                    snap.stats.total_bytes = snap.stats.total_bytes.saturating_add(entry.size);
                 }
                 snap.entries.insert(key, snap_entry);
 

@@ -13,11 +13,11 @@ use std::sync::Arc;
 use strata_evidence::EvidenceImage;
 
 use crate::apfs_walker::{ApfsMultiWalker, ApfsSingleWalker};
-use crate::ntfs_walker::PartitionReader;
 use crate::ext4_walker::Ext4Walker;
 use crate::fat_walker::FatWalker;
 use crate::hfsplus_walker::HfsPlusWalker;
 use crate::ntfs_walker::NtfsWalker;
+use crate::ntfs_walker::PartitionReader;
 use crate::vfs::{VfsError, VfsResult, VirtualFilesystem};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,10 +60,7 @@ impl FsType {
     }
 }
 
-pub fn detect_filesystem(
-    image: &dyn EvidenceImage,
-    partition_offset: u64,
-) -> VfsResult<FsType> {
+pub fn detect_filesystem(image: &dyn EvidenceImage, partition_offset: u64) -> VfsResult<FsType> {
     // Read first 1024 bytes of partition for boot-sector signatures.
     let mut boot = vec![0u8; 1024];
     let n = image
@@ -189,13 +186,11 @@ pub fn open_filesystem(
             Ok(Box::new(walker))
         }
         FsType::HfsPlus => {
-            let walker =
-                HfsPlusWalker::open_on_partition(image, partition_offset, partition_size)?;
+            let walker = HfsPlusWalker::open_on_partition(image, partition_offset, partition_size)?;
             Ok(Box::new(walker))
         }
         FsType::Fat12 | FsType::Fat16 | FsType::Fat32 => {
-            let walker =
-                FatWalker::open_on_partition(image, partition_offset, partition_size)?;
+            let walker = FatWalker::open_on_partition(image, partition_offset, partition_size)?;
             Ok(Box::new(walker))
         }
         FsType::ExFat => Err(VfsError::Other(
@@ -208,9 +203,7 @@ pub fn open_filesystem(
              decryption tooling."
                 .into(),
         )),
-        FsType::Apfs => {
-            open_apfs(image, partition_offset, partition_size)
-        }
+        FsType::Apfs => open_apfs(image, partition_offset, partition_size),
         FsType::Unknown => Err(VfsError::Other(format!(
             "unknown filesystem at partition offset {partition_offset}"
         ))),
@@ -239,37 +232,28 @@ fn open_apfs(
 ) -> VfsResult<Box<dyn VirtualFilesystem>> {
     use std::io::Seek;
 
-    use crate::apfs_walker::{
-        enumerate_volume_oids, read_container_superblock,
-    };
+    use crate::apfs_walker::{enumerate_volume_oids, read_container_superblock};
 
     let sector_size = image.sector_size().max(512) as usize;
-    let mut reader = PartitionReader::new(
-        image.clone(),
-        partition_offset,
-        partition_size,
-        sector_size,
-    );
+    let mut reader =
+        PartitionReader::new(image.clone(), partition_offset, partition_size, sector_size);
     reader
         .seek(std::io::SeekFrom::Start(0))
         .map_err(VfsError::Io)?;
-    let nxsb = read_container_superblock(&mut reader).map_err(|e| {
-        VfsError::Other(format!("apfs dispatcher: {e}"))
-    })?;
+    let nxsb = read_container_superblock(&mut reader)
+        .map_err(|e| VfsError::Other(format!("apfs dispatcher: {e}")))?;
     let volume_count = enumerate_volume_oids(&nxsb).len();
     drop(reader);
 
     if volume_count >= 2 {
-        let walker =
-            ApfsMultiWalker::open_on_partition(image, partition_offset, partition_size)?;
+        let walker = ApfsMultiWalker::open_on_partition(image, partition_offset, partition_size)?;
         Ok(Box::new(walker))
     } else {
         // Zero or one volume — route through single walker. An
         // empty-fs_oids container (legitimate but rare) surfaces
         // the apfs crate's NoVolume error through the single
         // walker's open, which is the right forensic signal.
-        let walker =
-            ApfsSingleWalker::open_on_partition(image, partition_offset, partition_size)?;
+        let walker = ApfsSingleWalker::open_on_partition(image, partition_offset, partition_size)?;
         Ok(Box::new(walker))
     }
 }
@@ -665,8 +649,7 @@ mod tests {
             eprintln!("SKIP: apfs_small.img not committed");
             return;
         }
-        let image: Arc<dyn EvidenceImage> =
-            Arc::new(RawImage::open(&path).expect("open fixture"));
+        let image: Arc<dyn EvidenceImage> = Arc::new(RawImage::open(&path).expect("open fixture"));
         let size = image.size();
         let vfs = open_filesystem(image, 0, size).expect("dispatch single");
         assert_eq!(vfs.fs_type(), "apfs");
@@ -726,7 +709,9 @@ mod tests {
         // the routing bug signal.
         let entries = vfs.list_dir("/").expect("list root");
         assert!(
-            entries.iter().all(|e| e.name.starts_with("vol") && e.name.ends_with(':')),
+            entries
+                .iter()
+                .all(|e| e.name.starts_with("vol") && e.name.ends_with(':')),
             "multi walker must expose /vol{{N}}: scopes at root; got entries: {:?}. \
              Unscoped entries here mean the dispatcher routed a multi-volume \
              container to ApfsSingleWalker — the routing bug this test catches.",

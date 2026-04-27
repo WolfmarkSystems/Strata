@@ -37,10 +37,7 @@ pub fn matches(path: &Path) -> bool {
 }
 
 pub fn parse(path: &Path) -> Vec<TurboUsageEvent> {
-    let conn = match Connection::open_with_flags(
-        path,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    ) {
+    let conn = match Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY) {
         Ok(c) => c,
         Err(_) => return Vec::new(),
     };
@@ -76,8 +73,12 @@ pub fn parse_conn(conn: &Connection) -> Vec<TurboUsageEvent> {
     };
     let rows = stmt.query_map([], |r| {
         Ok((
-            r.get::<_, Option<String>>(0).unwrap_or(None).unwrap_or_default(),
-            r.get::<_, Option<String>>(1).unwrap_or(None).unwrap_or_default(),
+            r.get::<_, Option<String>>(0)
+                .unwrap_or(None)
+                .unwrap_or_default(),
+            r.get::<_, Option<String>>(1)
+                .unwrap_or(None)
+                .unwrap_or_default(),
             r.get::<_, i64>(2).unwrap_or(0),
             r.get::<_, Option<i64>>(3).unwrap_or(None),
             r.get::<_, Option<i64>>(4).unwrap_or(None),
@@ -90,7 +91,10 @@ pub fn parse_conn(conn: &Connection) -> Vec<TurboUsageEvent> {
     let mut out = Vec::new();
     for (pkg, ev, ts_ms, dur_ms, fg_ms, ic) in rows.flatten() {
         let secs = ts_ms / 1000;
-        let timestamp = Utc.timestamp_opt(secs, 0).single().unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap());
+        let timestamp = Utc
+            .timestamp_opt(secs, 0)
+            .single()
+            .unwrap_or_else(unix_epoch);
         out.push(TurboUsageEvent {
             package_name: pkg,
             event_type: ev,
@@ -101,6 +105,10 @@ pub fn parse_conn(conn: &Connection) -> Vec<TurboUsageEvent> {
         });
     }
     out
+}
+
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
 }
 
 fn first_known_table(conn: &Connection, candidates: &[&str]) -> Option<String> {
@@ -179,7 +187,9 @@ mod tests {
     #[test]
     fn matches_common_filenames() {
         use std::path::PathBuf;
-        assert!(matches(&PathBuf::from("/data/com.google.android.as/databases/reflection_gel_events.db")));
+        assert!(matches(&PathBuf::from(
+            "/data/com.google.android.as/databases/reflection_gel_events.db"
+        )));
         assert!(matches(&PathBuf::from("/x/SimpleStorage")));
         assert!(!matches(&PathBuf::from("/x/unrelated.db")));
     }
@@ -187,7 +197,8 @@ mod tests {
     #[test]
     fn unknown_table_returns_empty() {
         let c = Connection::open_in_memory().expect("open");
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").expect("s");
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .expect("s");
         assert!(parse_conn(&c).is_empty());
     }
 

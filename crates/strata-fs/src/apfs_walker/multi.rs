@@ -136,20 +136,14 @@ impl ApfsMultiWalker {
         }
 
         let block_size = nxsb.block_size;
-        let container_omap_root =
-            read_omap_tree_root(&mut reader, nxsb.omap_oid, block_size)
-                .map_err(apfs_error_to_forensic)
-                .map_err(|e| VfsError::Other(format!("apfs container omap: {e}")))?;
+        let container_omap_root = read_omap_tree_root(&mut reader, nxsb.omap_oid, block_size)
+            .map_err(apfs_error_to_forensic)
+            .map_err(|e| VfsError::Other(format!("apfs container omap: {e}")))?;
 
         let mut volumes = Vec::new();
         for &oid in nxsb.fs_oids.iter().filter(|&&o| o != 0) {
-            let state = resolve_volume_state(
-                &mut reader,
-                container_omap_root,
-                block_size,
-                oid,
-            )
-            .map_err(|e| VfsError::Other(format!("apfs volume oid={oid}: {e}")))?;
+            let state = resolve_volume_state(&mut reader, container_omap_root, block_size, oid)
+                .map_err(|e| VfsError::Other(format!("apfs volume oid={oid}: {e}")))?;
             volumes.push(state);
         }
 
@@ -293,11 +287,7 @@ fn ts_to_datetime(unix_secs: i64) -> Option<chrono::DateTime<chrono::Utc>> {
     }
 }
 
-fn apfs_dir_entry_to_vfs(
-    e: &ApfsDirEntry,
-    full_path: String,
-    attrs: &VfsAttributes,
-) -> VfsEntry {
+fn apfs_dir_entry_to_vfs(e: &ApfsDirEntry, full_path: String, attrs: &VfsAttributes) -> VfsEntry {
     VfsEntry {
         path: full_path,
         name: e.name.clone(),
@@ -348,11 +338,7 @@ fn volume_scope_entry(index: usize, _label: &str, is_encrypted: bool) -> VfsEntr
 impl ApfsMultiWalker {
     /// Resolve a path-scoped inode via the external crate's
     /// catalog resolver. Inner `inner_path` MUST start with `/`.
-    fn resolve_inode(
-        &self,
-        index: usize,
-        inner_path: &str,
-    ) -> VfsResult<(u64, InodeVal)> {
+    fn resolve_inode(&self, index: usize, inner_path: &str) -> VfsResult<(u64, InodeVal)> {
         let vol = self
             .volumes
             .get(index)
@@ -368,11 +354,7 @@ impl ApfsMultiWalker {
             self.block_size,
             inner_path,
         )
-        .map_err(|e| {
-            VfsError::Other(format!(
-                "apfs resolve_path(vol{index},{inner_path}): {e:?}"
-            ))
-        })
+        .map_err(|e| VfsError::Other(format!("apfs resolve_path(vol{index},{inner_path}): {e:?}")))
     }
 }
 
@@ -428,9 +410,7 @@ impl VirtualFilesystem for ApfsMultiWalker {
             self.block_size,
             parent_oid,
         )
-        .map_err(|e| {
-            VfsError::Other(format!("apfs list_dir(/vol{index}:{inner}): {e:?}"))
-        })?;
+        .map_err(|e| VfsError::Other(format!("apfs list_dir(/vol{index}:{inner}): {e:?}")))?;
 
         let attrs = build_vfs_attributes(vol.is_encrypted);
         let inner_parent = inner.trim_end_matches('/');
@@ -476,9 +456,7 @@ impl VirtualFilesystem for ApfsMultiWalker {
             self.block_size,
             &inner,
         )
-        .map_err(|e| {
-            VfsError::Other(format!("apfs resolve_path(vol{index},{inner}): {e:?}"))
-        })?;
+        .map_err(|e| VfsError::Other(format!("apfs resolve_path(vol{index},{inner}): {e:?}")))?;
         let extents = lookup_extents(
             &mut *reader,
             vol.catalog_root_block,
@@ -486,11 +464,7 @@ impl VirtualFilesystem for ApfsMultiWalker {
             self.block_size,
             inode.private_id,
         )
-        .map_err(|e| {
-            VfsError::Other(format!(
-                "apfs lookup_extents(vol{index},{inner}): {e:?}"
-            ))
-        })?;
+        .map_err(|e| VfsError::Other(format!("apfs lookup_extents(vol{index},{inner}): {e:?}")))?;
         let mut out = Vec::with_capacity(inode.size() as usize);
         read_file_data(
             &mut *reader,
@@ -499,9 +473,7 @@ impl VirtualFilesystem for ApfsMultiWalker {
             inode.size(),
             &mut out,
         )
-        .map_err(|e| {
-            VfsError::Other(format!("apfs read_file_data(vol{index},{inner}): {e:?}"))
-        })?;
+        .map_err(|e| VfsError::Other(format!("apfs read_file_data(vol{index},{inner}): {e:?}")))?;
         Ok(out)
     }
 
@@ -856,7 +828,10 @@ mod tests {
         let entries = walker.list_dir("/vol0:/").expect("list vol0");
         for e in &entries {
             match &e.fs_specific {
-                VfsSpecific::Apfs { object_id, snapshot } => {
+                VfsSpecific::Apfs {
+                    object_id,
+                    snapshot,
+                } => {
                     assert!(*object_id > 0, "real entry must have nonzero OID");
                     assert!(
                         snapshot.is_none(),
@@ -908,10 +883,7 @@ mod tests {
         // pickup-signal message — never silently treated as "volume 0."
         match walker.list_dir("/etc") {
             Err(VfsError::Other(msg)) => {
-                assert!(
-                    msg.contains("vol"),
-                    "expected scope-error text; got {msg}"
-                );
+                assert!(msg.contains("vol"), "expected scope-error text; got {msg}");
             }
             other => panic!("expected scope error, got {other:?}"),
         }

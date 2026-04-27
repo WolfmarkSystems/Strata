@@ -56,7 +56,10 @@ pub fn parse_assistant_activity(json: &str, user_email: Option<&str>) -> Vec<Goo
         out.push(GoogleHomeArtifact {
             artifact_type: "AssistantInteraction".into(),
             timestamp: ts,
-            device_name: entry.get("device").and_then(|x| x.as_str()).map(String::from),
+            device_name: entry
+                .get("device")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             device_type: None,
             event_data: event,
             home_name: entry.get("home").and_then(|x| x.as_str()).map(String::from),
@@ -92,7 +95,10 @@ pub fn parse_nest_thermostat(json: &str) -> Vec<GoogleHomeArtifact> {
         out.push(GoogleHomeArtifact {
             artifact_type: "ThermostatSetpoint".into(),
             timestamp: ts,
-            device_name: entry.get("device").and_then(|x| x.as_str()).map(String::from),
+            device_name: entry
+                .get("device")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             device_type: Some("NestThermostat".into()),
             event_data: event,
             home_name: None,
@@ -125,7 +131,10 @@ pub fn parse_nest_camera_events(json: &str) -> Vec<GoogleHomeArtifact> {
         out.push(GoogleHomeArtifact {
             artifact_type: "CameraMotionEvent".into(),
             timestamp: ts,
-            device_name: entry.get("device").and_then(|x| x.as_str()).map(String::from),
+            device_name: entry
+                .get("device")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             device_type: Some("NestCamera".into()),
             event_data: event,
             home_name: None,
@@ -149,7 +158,10 @@ mod tests {
         let a = parse_assistant_activity(json, Some("alice@gmail.com"));
         assert_eq!(a.len(), 1);
         assert_eq!(a[0].device_name.as_deref(), Some("Living Room"));
-        assert_eq!(a[0].event_data.get("query").map(String::as_str), Some("weather"));
+        assert_eq!(
+            a[0].event_data.get("query").map(String::as_str),
+            Some("weather")
+        );
     }
 
     #[test]
@@ -160,15 +172,22 @@ mod tests {
         ]"#;
         let a = parse_nest_thermostat(json);
         assert_eq!(a.len(), 2);
-        assert_eq!(a[0].event_data.get("mode").map(String::as_str), Some("Heat"));
+        assert_eq!(
+            a[0].event_data.get("mode").map(String::as_str),
+            Some("Heat")
+        );
     }
 
     #[test]
     fn parses_camera_events() {
-        let json = r#"[{"timestamp":"2026-04-10T20:00:00Z","device":"Front Door","detected":"person"}]"#;
+        let json =
+            r#"[{"timestamp":"2026-04-10T20:00:00Z","device":"Front Door","detected":"person"}]"#;
         let a = parse_nest_camera_events(json);
         assert_eq!(a[0].device_type.as_deref(), Some("NestCamera"));
-        assert_eq!(a[0].event_data.get("detected").map(String::as_str), Some("person"));
+        assert_eq!(
+            a[0].event_data.get("detected").map(String::as_str),
+            Some("person")
+        );
     }
 
     #[test]

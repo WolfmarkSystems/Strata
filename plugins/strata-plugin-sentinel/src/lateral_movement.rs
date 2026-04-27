@@ -309,11 +309,16 @@ fn correlate_pair(a: &EventRecord, b: &EventRecord) -> Option<LateralMovementKin
 mod tests {
     use super::*;
 
-    fn evt(event_id: u32, ts: i64, account: &str, lt: Option<i64>, ip: Option<&str>) -> EventRecord {
+    fn evt(
+        event_id: u32,
+        ts: i64,
+        account: &str,
+        lt: Option<i64>,
+        ip: Option<&str>,
+    ) -> EventRecord {
         EventRecord {
             event_id,
-            timestamp: DateTime::<Utc>::from_timestamp(ts, 0)
-                .expect("timestamp"),
+            timestamp: DateTime::<Utc>::from_timestamp(ts, 0).expect("timestamp"),
             target_account: Some(account.to_string()),
             source_ip: ip.map(|s| s.to_string()),
             logon_type: lt,
@@ -328,8 +333,10 @@ mod tests {
             evt(4624, 1_020, "alice", Some(10), Some("10.0.0.9")),
         ];
         let hits = d.detect(&events);
-        let high: Vec<&LateralMovement> =
-            hits.iter().filter(|m| m.confidence == Confidence::High).collect();
+        let high: Vec<&LateralMovement> = hits
+            .iter()
+            .filter(|m| m.confidence == Confidence::High)
+            .collect();
         assert_eq!(high.len(), 1);
         assert_eq!(high[0].kind, LateralMovementKind::Rdp);
         assert_eq!(high[0].correlated_events, "4624|4648");
@@ -344,8 +351,9 @@ mod tests {
             evt(5140, 2_010, "svc-backup", None, Some("10.0.0.50")),
         ];
         let hits = d.detect(&events);
-        assert!(hits.iter().any(|m| m.kind == LateralMovementKind::Smb
-            && m.confidence == Confidence::High));
+        assert!(hits
+            .iter()
+            .any(|m| m.kind == LateralMovementKind::Smb && m.confidence == Confidence::High));
     }
 
     #[test]
@@ -356,8 +364,9 @@ mod tests {
             evt(7045, 3_030, "admin", None, Some("10.0.0.77")),
         ];
         let hits = d.detect(&events);
-        assert!(hits.iter().any(|m| m.kind == LateralMovementKind::Service
-            && m.confidence == Confidence::High));
+        assert!(hits
+            .iter()
+            .any(|m| m.kind == LateralMovementKind::Service && m.confidence == Confidence::High));
     }
 
     #[test]

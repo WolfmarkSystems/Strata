@@ -309,7 +309,13 @@ mod tests {
     use super::*;
     use std::path::Path;
 
-    fn build_cmmm_header(version: u32, cache_type: u32, first_entry: u32, first_avail: u32, count: u32) -> Vec<u8> {
+    fn build_cmmm_header(
+        version: u32,
+        cache_type: u32,
+        first_entry: u32,
+        first_avail: u32,
+        count: u32,
+    ) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.extend_from_slice(&CMMM_MAGIC);
         buf.extend_from_slice(&version.to_le_bytes());
@@ -320,7 +326,12 @@ mod tests {
         buf
     }
 
-    fn build_cmmm_entry(hash: u64, identifier_size: u32, padding_size: u32, data_size: u32) -> Vec<u8> {
+    fn build_cmmm_entry(
+        hash: u64,
+        identifier_size: u32,
+        padding_size: u32,
+        data_size: u32,
+    ) -> Vec<u8> {
         let entry_total = 48 + identifier_size + padding_size + data_size;
         let mut buf = Vec::new();
         buf.extend_from_slice(&CMMM_MAGIC);
@@ -335,7 +346,9 @@ mod tests {
         buf.resize(buf.len() + identifier_size as usize, 0);
         buf.resize(buf.len() + padding_size as usize, 0);
         if data_size >= 3 {
-            buf.push(0xFF); buf.push(0xD8); buf.push(0xFF);
+            buf.push(0xFF);
+            buf.push(0xD8);
+            buf.push(0xFF);
             buf.resize(buf.len() + (data_size as usize - 3), 0);
         } else {
             buf.resize(buf.len() + data_size as usize, 0);
@@ -349,22 +362,33 @@ mod tests {
         let entry = build_cmmm_entry(0xDEADBEEF_CAFEBABE, 0, 0, 10);
         data.extend_from_slice(&entry);
         let parser = ThumbcacheParser::new();
-        let artifacts = parser.parse_file(Path::new("thumbcache_256.db"), &data).unwrap();
-        let header_art = artifacts.iter().find(|a| a.artifact_type == "thumbnail_cache_header").unwrap();
+        let artifacts = parser
+            .parse_file(Path::new("thumbcache_256.db"), &data)
+            .unwrap();
+        let header_art = artifacts
+            .iter()
+            .find(|a| a.artifact_type == "thumbnail_cache_header")
+            .unwrap();
         assert!(header_art.description.contains("v21"));
         assert!(header_art.description.contains("1 entries"));
-        let entry_art = artifacts.iter().find(|a| a.artifact_type == "thumbnail_entry").unwrap();
+        let entry_art = artifacts
+            .iter()
+            .find(|a| a.artifact_type == "thumbnail_entry")
+            .unwrap();
         assert!(entry_art.description.contains("DEADBEEFCAFEBABE"));
         assert!(entry_art.description.contains("JPEG"));
     }
 
     #[test]
     fn handles_invalid_magic() {
-        let data = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                        0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
-                        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17];
+        let data = vec![
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
+            0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        ];
         let parser = ThumbcacheParser::new();
-        let artifacts = parser.parse_file(Path::new("thumbcache_96.db"), &data).unwrap();
+        let artifacts = parser
+            .parse_file(Path::new("thumbcache_96.db"), &data)
+            .unwrap();
         assert_eq!(artifacts.len(), 1);
         assert!(artifacts[0].description.contains("no CMMM header"));
     }
@@ -372,16 +396,30 @@ mod tests {
     #[test]
     fn handles_empty_data() {
         let parser = ThumbcacheParser::new();
-        let artifacts = parser.parse_file(Path::new("thumbcache_32.db"), &[]).unwrap();
+        let artifacts = parser
+            .parse_file(Path::new("thumbcache_32.db"), &[])
+            .unwrap();
         assert!(artifacts.is_empty());
     }
 
     #[test]
     fn detect_image_format_works() {
-        assert_eq!(detect_image_format(&[0xFF, 0xD8, 0xFF, 0xE0]), Some("JPEG".to_string()));
-        assert_eq!(detect_image_format(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), Some("PNG".to_string()));
-        assert_eq!(detect_image_format(&[0x42, 0x4D, 0x00, 0x00]), Some("BMP".to_string()));
-        assert_eq!(detect_image_format(&[0x47, 0x49, 0x46, 0x38, 0x39, 0x61]), Some("GIF".to_string()));
+        assert_eq!(
+            detect_image_format(&[0xFF, 0xD8, 0xFF, 0xE0]),
+            Some("JPEG".to_string())
+        );
+        assert_eq!(
+            detect_image_format(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+            Some("PNG".to_string())
+        );
+        assert_eq!(
+            detect_image_format(&[0x42, 0x4D, 0x00, 0x00]),
+            Some("BMP".to_string())
+        );
+        assert_eq!(
+            detect_image_format(&[0x47, 0x49, 0x46, 0x38, 0x39, 0x61]),
+            Some("GIF".to_string())
+        );
         assert_eq!(detect_image_format(&[0x00, 0x00]), None);
     }
 

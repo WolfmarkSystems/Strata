@@ -39,17 +39,16 @@ pub fn is_system_drive(path: &Path) -> bool {
     #[cfg(target_os = "macos")]
     {
         // On macOS, check if same device as root
-        if let (Ok(root_meta), Ok(path_meta)) = (
-            std::fs::metadata("/"),
-            std::fs::metadata(path),
-        ) {
+        if let (Ok(root_meta), Ok(path_meta)) = (std::fs::metadata("/"), std::fs::metadata(path)) {
             use std::os::unix::fs::MetadataExt;
             if root_meta.dev() == path_meta.dev() {
                 return true;
             }
         }
         // Also block well-known system paths
-        let blocked = ["/System", "/Library", "/Users", "/private", "/var", "/usr", "/etc", "/bin", "/sbin"];
+        let blocked = [
+            "/System", "/Library", "/Users", "/private", "/var", "/usr", "/etc", "/bin", "/sbin",
+        ];
         for b in &blocked {
             if path_str.starts_with(b) {
                 return true;
@@ -67,7 +66,10 @@ pub fn is_system_drive(path: &Path) -> bool {
     #[cfg(target_os = "windows")]
     {
         let sys_drive = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
-        if path_str.to_uppercase().starts_with(&sys_drive.to_uppercase()) {
+        if path_str
+            .to_uppercase()
+            .starts_with(&sys_drive.to_uppercase())
+        {
             return true;
         }
         let blocked = ["C:\\", "C:\\Windows", "C:\\Program Files", "C:\\Users"];
@@ -81,16 +83,15 @@ pub fn is_system_drive(path: &Path) -> bool {
 
     #[cfg(target_os = "linux")]
     {
-        if let (Ok(root_meta), Ok(path_meta)) = (
-            std::fs::metadata("/"),
-            std::fs::metadata(path),
-        ) {
+        if let (Ok(root_meta), Ok(path_meta)) = (std::fs::metadata("/"), std::fs::metadata(path)) {
             use std::os::unix::fs::MetadataExt;
             if root_meta.dev() == path_meta.dev() {
                 return true;
             }
         }
-        let blocked = ["/home", "/root", "/var", "/usr", "/etc", "/bin", "/sbin", "/tmp"];
+        let blocked = [
+            "/home", "/root", "/var", "/usr", "/etc", "/bin", "/sbin", "/tmp",
+        ];
         for b in &blocked {
             if path_str.starts_with(b) {
                 return true;
@@ -248,7 +249,11 @@ fn add_linux_drive(drives: &mut Vec<DriveInfo>, path: PathBuf) {
     drives.push(DriveInfo {
         path,
         label,
-        drive_type: if is_system { DriveType::System } else { DriveType::External },
+        drive_type: if is_system {
+            DriveType::System
+        } else {
+            DriveType::External
+        },
         total_bytes: total,
         free_bytes: free,
         is_permitted,
@@ -296,9 +301,17 @@ fn disk_space(path: &Path) -> (u64, u64) {
 /// Create the evidence directory structure on the selected drive.
 pub fn create_evidence_structure(base_path: &Path, case_number: &str) -> Result<PathBuf, String> {
     let case_dir = base_path.join("Cases").join(case_number);
-    let subdirs = ["evidence", "exports", "carved", "bookmarks", "timeline", "audit"];
+    let subdirs = [
+        "evidence",
+        "exports",
+        "carved",
+        "bookmarks",
+        "timeline",
+        "audit",
+    ];
 
-    std::fs::create_dir_all(&case_dir).map_err(|e| format!("Failed to create case directory: {}", e))?;
+    std::fs::create_dir_all(&case_dir)
+        .map_err(|e| format!("Failed to create case directory: {}", e))?;
 
     for sub in &subdirs {
         let sub_path = case_dir.join(sub);

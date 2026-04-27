@@ -39,8 +39,7 @@ impl AntiForensicDetector {
     fn detect_vss_deletion(output: &PluginOutput, out: &mut Vec<DetectedBehavior>) {
         for record in &output.artifacts {
             if record.subcategory == "VSS Deletion"
-                || (record.detail.contains("vssadmin")
-                    && record.detail.contains("delete shadows"))
+                || (record.detail.contains("vssadmin") && record.detail.contains("delete shadows"))
             {
                 out.push(DetectedBehavior {
                     factor_id: "VSS_DELETION",
@@ -56,13 +55,10 @@ impl AntiForensicDetector {
     fn detect_evtx_clearing(output: &PluginOutput, out: &mut Vec<DetectedBehavior>) {
         for record in &output.artifacts {
             let detail_lower = record.detail.to_lowercase();
-            if record.subcategory.contains("EVTX")
-                || record.subcategory.contains("Event Log")
-            {
+            if record.subcategory.contains("EVTX") || record.subcategory.contains("Event Log") {
                 if detail_lower.contains("event id: 1102")
                     || detail_lower.contains("eventid=1102")
-                    || (detail_lower.contains("1102")
-                        && detail_lower.contains("audit log cleared"))
+                    || (detail_lower.contains("1102") && detail_lower.contains("audit log cleared"))
                 {
                     out.push(DetectedBehavior {
                         factor_id: "EVTX_SECURITY_CLEAR",
@@ -74,8 +70,7 @@ impl AntiForensicDetector {
                 }
                 if detail_lower.contains("event id: 104")
                     || detail_lower.contains("eventid=104")
-                    || (detail_lower.contains("104")
-                        && detail_lower.contains("system log cleared"))
+                    || (detail_lower.contains("104") && detail_lower.contains("system log cleared"))
                 {
                     out.push(DetectedBehavior {
                         factor_id: "EVTX_SYSTEM_CLEAR",
@@ -91,8 +86,13 @@ impl AntiForensicDetector {
 
     fn detect_secure_delete_tools(output: &PluginOutput, out: &mut Vec<DetectedBehavior>) {
         const TOOLS: &[&str] = &[
-            "ccleaner", "eraser", "sdelete", "cipher.exe /w",
-            "bleachbit", "privazer", "secure eraser",
+            "ccleaner",
+            "eraser",
+            "sdelete",
+            "cipher.exe /w",
+            "bleachbit",
+            "privazer",
+            "secure eraser",
         ];
         for record in &output.artifacts {
             let lower = record.detail.to_lowercase();
@@ -192,7 +192,8 @@ impl AntiForensicDetector {
     fn detect_hibernate_pagefile(output: &PluginOutput, out: &mut Vec<DetectedBehavior>) {
         for record in &output.artifacts {
             let lower = record.detail.to_lowercase();
-            if lower.contains("hiberfil") && (lower.contains("disabled") || lower.contains("deleted"))
+            if lower.contains("hiberfil")
+                && (lower.contains("disabled") || lower.contains("deleted"))
             {
                 out.push(DetectedBehavior {
                     factor_id: "HIBERNATE_DISABLED",
@@ -250,9 +251,16 @@ impl AntiForensicDetector {
 
     fn detect_antiforensic_search(output: &PluginOutput, out: &mut Vec<DetectedBehavior>) {
         const TERMS: &[&str] = &[
-            "how to delete", "undetectable", "wipe evidence", "forensics",
-            "hide files", "encrypt evidence", "cover tracks",
-            "anti-forensic", "antiforensic", "destroy evidence",
+            "how to delete",
+            "undetectable",
+            "wipe evidence",
+            "forensics",
+            "hide files",
+            "encrypt evidence",
+            "cover tracks",
+            "anti-forensic",
+            "antiforensic",
+            "destroy evidence",
         ];
         for record in &output.artifacts {
             if !record.subcategory.contains("Browser")

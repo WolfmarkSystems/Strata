@@ -8,8 +8,6 @@ type NtfsVolumeInfo = VolumeInfo;
 const ATTR_STANDARD_INFORMATION: u32 = 0x10;
 const ATTR_FILE_NAME: u32 = 0x30;
 const ATTR_DATA: u32 = 0x80;
-#[allow(dead_code)]
-const ATTR_DATA_NAME: u32 = 0x80;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

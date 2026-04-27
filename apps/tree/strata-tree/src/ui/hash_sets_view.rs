@@ -59,12 +59,8 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         }
         if ui
             .add(
-                egui::Button::new(
-                    egui::RichText::new("+ IMPORT NOTABLE")
-                        .size(10.0)
-                        .strong(),
-                )
-                .rounding(4.0),
+                egui::Button::new(egui::RichText::new("+ IMPORT NOTABLE").size(10.0).strong())
+                    .rounding(4.0),
             )
             .clicked()
         {
@@ -73,12 +69,8 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         ui.add_space(12.0);
         if ui
             .add(
-                egui::Button::new(
-                    egui::RichText::new("CLEAR ALL")
-                        .color(t.flagged)
-                        .size(10.0),
-                )
-                .rounding(4.0),
+                egui::Button::new(egui::RichText::new("CLEAR ALL").color(t.flagged).size(10.0))
+                    .rounding(4.0),
             )
             .clicked()
         {
@@ -167,9 +159,11 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         if state.hash_sets.is_empty() {
             ui.add_space(20.0);
             ui.label(
-                egui::RichText::new("No hash sets loaded. Import NSRL RDS or custom hash lists above.")
-                    .color(TEXT_MUTED)
-                    .size(9.5),
+                egui::RichText::new(
+                    "No hash sets loaded. Import NSRL RDS or custom hash lists above.",
+                )
+                .color(TEXT_MUTED)
+                .size(9.5),
             );
             return;
         }
@@ -201,9 +195,8 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                     egui::vec2(180.0, 14.0),
                     egui::Layout::left_to_right(egui::Align::Center),
                     |ui| {
-                        let resp = ui.label(
-                            egui::RichText::new(&hs.name).color(name_color).size(9.5),
-                        );
+                        let resp =
+                            ui.label(egui::RichText::new(&hs.name).color(name_color).size(9.5));
                         resp.context_menu(|ui| {
                             if ui.button("Copy Name").clicked() {
                                 ui.ctx().copy_text(hs.name.clone());
@@ -220,11 +213,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                     egui::vec2(80.0, 14.0),
                     egui::Layout::left_to_right(egui::Align::Center),
                     |ui| {
-                        ui.label(
-                            egui::RichText::new(&hs.category)
-                                .color(cat_color)
-                                .size(9.0),
-                        );
+                        ui.label(egui::RichText::new(&hs.category).color(cat_color).size(9.0));
                     },
                 );
                 ui.allocate_ui_with_layout(
@@ -241,11 +230,9 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                 );
                 ui.add_space(12.0);
                 ui.label(
-                    egui::RichText::new(
-                        hs.last_updated.as_deref().unwrap_or("—"),
-                    )
-                    .color(TEXT_MUTED)
-                    .size(9.0),
+                    egui::RichText::new(hs.last_updated.as_deref().unwrap_or("—"))
+                        .color(TEXT_MUTED)
+                        .size(9.0),
                 );
                 ui.add_space(8.0);
                 if ui.small_button("Remove").clicked() {
@@ -329,15 +316,12 @@ fn import_hash_set(state: &mut AppState, category: &str) {
         Ok(count) => {
             let source = path.to_string_lossy().to_string();
             if state.hash_sets.iter().any(|s| {
-                s.source.eq_ignore_ascii_case(&source)
-                    && s.category.eq_ignore_ascii_case(category)
+                s.source.eq_ignore_ascii_case(&source) && s.category.eq_ignore_ascii_case(category)
             }) {
                 state.hash_set_status = format!("Already loaded: {}", file_name);
                 return;
             }
-            let now = chrono::Utc::now()
-                .format("%Y-%m-%d %H:%M UTC")
-                .to_string();
+            let now = chrono::Utc::now().format("%Y-%m-%d %H:%M UTC").to_string();
             state.hash_sets.push(HashSetListItem {
                 name: file_name.clone(),
                 category: category.to_string(),

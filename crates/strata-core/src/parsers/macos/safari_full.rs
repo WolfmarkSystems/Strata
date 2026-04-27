@@ -62,7 +62,6 @@ impl SafariFullKind {
             _ => None,
         }
     }
-
 }
 
 pub struct SafariFullParser;
@@ -493,10 +492,7 @@ mod tests {
     use std::path::PathBuf;
 
     fn safari_path(name: &str) -> PathBuf {
-        PathBuf::from(format!(
-            "/Users/test/Library/Safari/{}",
-            name
-        ))
+        PathBuf::from(format!("/Users/test/Library/Safari/{}", name))
     }
 
     #[test]
@@ -554,7 +550,12 @@ mod tests {
         assert_eq!(out.len(), 2, "expected two leaf bookmarks");
         let titles: Vec<String> = out
             .iter()
-            .filter_map(|a| a.json_data.get("title").and_then(|v| v.as_str()).map(String::from))
+            .filter_map(|a| {
+                a.json_data
+                    .get("title")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            })
             .collect();
         assert!(titles.contains(&"Wolfmark Systems".to_string()));
         assert!(titles.contains(&"Strata".to_string()));
@@ -591,12 +592,7 @@ mod tests {
         assert_eq!(out.len(), 2);
         let pinned = out
             .iter()
-            .find(|a| {
-                a.json_data
-                    .get("title")
-                    .and_then(|v| v.as_str())
-                    == Some("Apple")
-            })
+            .find(|a| a.json_data.get("title").and_then(|v| v.as_str()) == Some("Apple"))
             .unwrap();
         assert_eq!(
             pinned.json_data.get("pinned").and_then(|v| v.as_bool()),

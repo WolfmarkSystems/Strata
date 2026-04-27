@@ -54,10 +54,7 @@ const CORRELATED_KEYS: &[(&str, &str, &str)] = &[
     ("Domain", "query_name", "T1071.004"),
 ];
 
-pub fn correlate(
-    artifacts: &[Artifact],
-    config: &CorrelatorConfig,
-) -> Vec<CrossPluginFinding> {
+pub fn correlate(artifacts: &[Artifact], config: &CorrelatorConfig) -> Vec<CrossPluginFinding> {
     let mut findings = Vec::new();
     for (correlation_type, field, mitre) in CORRELATED_KEYS {
         let mut buckets: BTreeMap<String, Vec<&Artifact>> = BTreeMap::new();
@@ -72,15 +69,16 @@ pub fn correlate(
             if arts.len() < config.min_artifacts {
                 continue;
             }
-            let plugins: Vec<String> = unique(arts
-                .iter()
-                .map(|a| {
-                    a.data
-                        .get("plugin")
-                        .cloned()
-                        .unwrap_or_else(|| "unknown".to_string())
-                })
-                .collect());
+            let plugins: Vec<String> = unique(
+                arts.iter()
+                    .map(|a| {
+                        a.data
+                            .get("plugin")
+                            .cloned()
+                            .unwrap_or_else(|| "unknown".to_string())
+                    })
+                    .collect(),
+            );
             if plugins.len() < 2 {
                 continue;
             }
@@ -91,7 +89,10 @@ pub fn correlate(
                         .and_then(|s| DateTime::<Utc>::from_timestamp(s as i64, 0))
                 })
                 .collect();
-            let (earliest, latest) = (timestamps.iter().min().copied(), timestamps.iter().max().copied());
+            let (earliest, latest) = (
+                timestamps.iter().min().copied(),
+                timestamps.iter().max().copied(),
+            );
             let window_ok = match (earliest, latest) {
                 (Some(a), Some(b)) => b - a <= config.time_window,
                 _ => true,

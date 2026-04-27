@@ -450,7 +450,10 @@ mod tests {
         let p = extract_4688(&rec);
         assert_eq!(p.new_process_name, r"C:\Windows\System32\cmd.exe");
         assert_eq!(p.cmdline, "");
-        assert_eq!(p.parent_process_name, r"C:\Program Files\Microsoft Office\winword.exe");
+        assert_eq!(
+            p.parent_process_name,
+            r"C:\Program Files\Microsoft Office\winword.exe"
+        );
         assert_eq!(p.token_elevation_type, "%%1937");
         assert_eq!(p.subject_username, "alice");
     }

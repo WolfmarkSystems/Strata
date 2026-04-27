@@ -150,8 +150,7 @@ impl FatFilesystem {
         let (fat_size_sectors, root_cluster) = if sectors_per_fat_16 != 0 {
             (sectors_per_fat_16 as u32, 0u32)
         } else {
-            let sectors_per_fat_32 =
-                u32::from_le_bytes([boot[36], boot[37], boot[38], boot[39]]);
+            let sectors_per_fat_32 = u32::from_le_bytes([boot[36], boot[37], boot[38], boot[39]]);
             let rc = u32::from_le_bytes([boot[44], boot[45], boot[46], boot[47]]);
             (sectors_per_fat_32, rc)
         };
@@ -171,11 +170,9 @@ impl FatFilesystem {
 
         // Canonical FAT-variant discrimination by cluster count.
         let root_dir_bytes = (root_entries as u32) * 32;
-        let root_dir_sectors =
-            root_dir_bytes.div_ceil(bytes_per_sector as u32);
+        let root_dir_sectors = root_dir_bytes.div_ceil(bytes_per_sector as u32);
         let fat_start_sector = reserved_sectors as u32;
-        let root_dir_start_sector =
-            fat_start_sector + (num_fats as u32) * fat_size_sectors;
+        let root_dir_start_sector = fat_start_sector + (num_fats as u32) * fat_size_sectors;
         let data_start_sector = root_dir_start_sector + root_dir_sectors;
         let data_sectors = total_sectors.saturating_sub(data_start_sector);
         let cluster_count = data_sectors / (sectors_per_cluster as u32);
@@ -232,8 +229,7 @@ impl FatFilesystem {
     /// Callers must compare against EOC / bad sentinels appropriate
     /// for `self.bpb.variant`.
     fn read_fat_entry(&mut self, cluster: u32) -> Result<u32, FatError> {
-        let fat_bytes_abs =
-            (self.bpb.fat_start_sector as u64) * (self.bpb.bytes_per_sector as u64);
+        let fat_bytes_abs = (self.bpb.fat_start_sector as u64) * (self.bpb.bytes_per_sector as u64);
         match self.bpb.variant {
             FatVariant::Fat12 => {
                 let byte_offset = (cluster as u64 * 3) / 2;
@@ -323,8 +319,7 @@ impl FatFilesystem {
                     "FAT32 directory must have a first_cluster".into(),
                 ));
             }
-            let abs = (self.bpb.root_dir_start_sector as u64)
-                * (self.bpb.bytes_per_sector as u64);
+            let abs = (self.bpb.root_dir_start_sector as u64) * (self.bpb.bytes_per_sector as u64);
             let len = (self.bpb.root_entries as usize) * 32;
             return self.read_at(abs, len);
         }
@@ -557,11 +552,7 @@ impl FatWalker {
     /// Resolve a path to (first_cluster, is_directory, size). Root
     /// returns (0, true, 0) — callers treat first_cluster==0 as "FAT12/16
     /// fixed root" or "FAT32 bpb.root_cluster".
-    fn resolve_path(
-        &self,
-        fs: &mut FatFilesystem,
-        path: &str,
-    ) -> VfsResult<(u32, bool, u32)> {
+    fn resolve_path(&self, fs: &mut FatFilesystem, path: &str) -> VfsResult<(u32, bool, u32)> {
         let trimmed = path.trim_start_matches('/');
         if trimmed.is_empty() {
             return Ok((0, true, 0));
@@ -583,9 +574,7 @@ impl FatWalker {
                 .map_err(VfsError::from)?;
             let entries = decode_directory(&buf);
             let found = entries.iter().find(|e| {
-                !e.is_deleted
-                    && !e.is_volume_label
-                    && e.name.eq_ignore_ascii_case(component)
+                !e.is_deleted && !e.is_volume_label && e.name.eq_ignore_ascii_case(component)
             });
             match found {
                 Some(e) => {
@@ -757,10 +746,7 @@ mod tests {
         let a = short_name_checksum(&raw);
         let b = short_name_checksum(&raw);
         assert_eq!(a, b, "checksum must be deterministic");
-        assert_ne!(
-            a, 0,
-            "nontrivial input must yield nontrivial checksum"
-        );
+        assert_ne!(a, 0, "nontrivial input must yield nontrivial checksum");
     }
 
     #[test]
@@ -806,12 +792,7 @@ mod tests {
         assert_eq!(format_short_name(&raw, 0x08 | 0x10), "readme.txt");
     }
 
-    fn mk_dir_entry_bytes(
-        name: &[u8; 11],
-        attr: u8,
-        first_cluster: u32,
-        size: u32,
-    ) -> [u8; 32] {
+    fn mk_dir_entry_bytes(name: &[u8; 11], attr: u8, first_cluster: u32, size: u32) -> [u8; 32] {
         let mut e = [0u8; 32];
         e[..11].copy_from_slice(name);
         e[11] = attr;
@@ -827,12 +808,7 @@ mod tests {
     fn decode_directory_parses_simple_file_entry() {
         let buf: Vec<u8> = {
             let mut v = Vec::new();
-            let entry = mk_dir_entry_bytes(
-                b"README  TXT",
-                ATTR_ARCHIVE,
-                5,
-                1234,
-            );
+            let entry = mk_dir_entry_bytes(b"README  TXT", ATTR_ARCHIVE, 5, 1234);
             v.extend_from_slice(&entry);
             v
         };
@@ -851,12 +827,7 @@ mod tests {
     fn decode_directory_flags_directory_attribute() {
         let buf: Vec<u8> = {
             let mut v = Vec::new();
-            let entry = mk_dir_entry_bytes(
-                b"DIR1       ",
-                ATTR_DIRECTORY,
-                7,
-                0,
-            );
+            let entry = mk_dir_entry_bytes(b"DIR1       ", ATTR_DIRECTORY, 7, 0);
             v.extend_from_slice(&entry);
             v
         };
@@ -868,12 +839,7 @@ mod tests {
     fn decode_directory_surfaces_deleted_entry_with_flag() {
         let buf: Vec<u8> = {
             let mut v = Vec::new();
-            let mut entry = mk_dir_entry_bytes(
-                b"GONE    TXT",
-                ATTR_ARCHIVE,
-                9,
-                100,
-            );
+            let mut entry = mk_dir_entry_bytes(b"GONE    TXT", ATTR_ARCHIVE, 9, 100);
             entry[0] = 0xE5; // deleted marker
             v.extend_from_slice(&entry);
             v
@@ -889,12 +855,7 @@ mod tests {
         // walker's list_dir filters it out. Verify both properties.
         let buf: Vec<u8> = {
             let mut v = Vec::new();
-            let entry = mk_dir_entry_bytes(
-                b"STRATAFAT  ",
-                ATTR_VOLUME_LABEL,
-                0,
-                0,
-            );
+            let entry = mk_dir_entry_bytes(b"STRATAFAT  ", ATTR_VOLUME_LABEL, 0, 0);
             v.extend_from_slice(&entry);
             v
         };
@@ -907,22 +868,12 @@ mod tests {
     fn decode_directory_stops_at_end_of_dir_marker() {
         let buf: Vec<u8> = {
             let mut v = Vec::new();
-            let e1 = mk_dir_entry_bytes(
-                b"FIRST   TXT",
-                ATTR_ARCHIVE,
-                5,
-                10,
-            );
+            let e1 = mk_dir_entry_bytes(b"FIRST   TXT", ATTR_ARCHIVE, 5, 10);
             v.extend_from_slice(&e1);
             // End-of-directory marker: first byte 0x00.
             v.extend_from_slice(&[0u8; 32]);
             // Any entry after the marker must be ignored.
-            let e3 = mk_dir_entry_bytes(
-                b"IGNORED TXT",
-                ATTR_ARCHIVE,
-                6,
-                20,
-            );
+            let e3 = mk_dir_entry_bytes(b"IGNORED TXT", ATTR_ARCHIVE, 6, 20);
             v.extend_from_slice(&e3);
             v
         };

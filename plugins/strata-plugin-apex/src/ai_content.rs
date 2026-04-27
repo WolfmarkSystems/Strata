@@ -190,7 +190,10 @@ pub fn parse_interaction_log(platform: &str, line: &str, source: &str) -> Option
     Some(AIInteractionLog {
         platform: platform.into(),
         timestamp,
-        user_query: v.get("user_query").and_then(|x| x.as_str()).map(String::from),
+        user_query: v
+            .get("user_query")
+            .and_then(|x| x.as_str())
+            .map(String::from),
         ai_response_summary: v
             .get("ai_response_summary")
             .and_then(|x| x.as_str())

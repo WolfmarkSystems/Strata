@@ -66,7 +66,7 @@ pub fn parse_interaction_history(json: &str, account_email: Option<&str>) -> Vec
         let timestamp = Utc
             .timestamp_opt(ts_ms / 1000, 0)
             .single()
-            .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap());
+            .unwrap_or_else(unix_epoch);
         out.push(AlexaArtifact {
             artifact_type: entry
                 .get("activityType")
@@ -100,14 +100,15 @@ pub fn parse_interaction_history(json: &str, account_email: Option<&str>) -> Vec
                 .get("recognizedSpeaker")
                 .and_then(|x| x.as_str())
                 .map(String::from),
-            device_location: entry
-                .get("room")
-                .and_then(|x| x.as_str())
-                .map(String::from),
+            device_location: entry.get("room").and_then(|x| x.as_str()).map(String::from),
             account_email: account_email.map(String::from),
         });
     }
     out
+}
+
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
 }
 
 /// Parse the device-inventory SQLite cache. Schema probe-based so it
@@ -117,7 +118,8 @@ pub fn parse_device_inventory(conn: &Connection) -> Vec<AlexaDevice> {
         return Vec::new();
     };
     let cols = col_names(conn, &table);
-    let name = pick(&cols, &["name", "device_name", "account_name"]).unwrap_or_else(|| "name".into());
+    let name =
+        pick(&cols, &["name", "device_name", "account_name"]).unwrap_or_else(|| "name".into());
     let kind = pick(&cols, &["device_type", "type"]).unwrap_or_else(|| "device_type".into());
     let room = pick(&cols, &["room", "location"]);
     let serial = pick(&cols, &["serial_number", "serial", "dsn"]);
@@ -135,8 +137,12 @@ pub fn parse_device_inventory(conn: &Connection) -> Vec<AlexaDevice> {
     };
     let rows = stmt.query_map([], |r| {
         Ok((
-            r.get::<_, Option<String>>(0).unwrap_or(None).unwrap_or_default(),
-            r.get::<_, Option<String>>(1).unwrap_or(None).unwrap_or_default(),
+            r.get::<_, Option<String>>(0)
+                .unwrap_or(None)
+                .unwrap_or_default(),
+            r.get::<_, Option<String>>(1)
+                .unwrap_or(None)
+                .unwrap_or_default(),
             r.get::<_, Option<String>>(2).unwrap_or(None),
             r.get::<_, Option<String>>(3).unwrap_or(None),
         ))
@@ -163,17 +169,16 @@ pub fn parse_enabled_skills(json: &str) -> Vec<AlexaSkill> {
     };
     arr.iter()
         .map(|s| AlexaSkill {
-            skill_name: s
-                .get("name")
-                .and_then(|x| x.as_str())
-                .unwrap_or("")
-                .into(),
+            skill_name: s.get("name").and_then(|x| x.as_str()).unwrap_or("").into(),
             enabled_at: s
                 .get("enabledAt")
                 .and_then(|x| x.as_str())
                 .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
                 .map(|d| d.with_timezone(&Utc)),
-            vendor: s.get("vendorName").and_then(|x| x.as_str()).map(String::from),
+            vendor: s
+                .get("vendorName")
+                .and_then(|x| x.as_str())
+                .map(String::from),
         })
         .collect()
 }

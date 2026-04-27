@@ -122,10 +122,7 @@ fn find_hardcoded_hits(subtree_rel: &str) -> Vec<(PathBuf, &'static str, usize)>
     if !root.exists() {
         // Subtree absent — not a regression, just nothing to
         // audit. Callers treat empty result as pass.
-        eprintln!(
-            "audit: subtree {} not present, skipping",
-            root.display()
-        );
+        eprintln!("audit: subtree {} not present, skipping", root.display());
         return Vec::new();
     }
     let mut hits = Vec::new();
@@ -160,7 +157,9 @@ fn report_generators_consume_subcategories_dynamically() {
     // must consume subcategories dynamically from the artifact
     // record stream.
     let mut all_hits = Vec::new();
-    all_hits.extend(find_hardcoded_hits("crates/strata-shield-engine/src/report"));
+    all_hits.extend(find_hardcoded_hits(
+        "crates/strata-shield-engine/src/report",
+    ));
     all_hits.extend(find_hardcoded_hits("crates/strata-core/src/report"));
     assert!(
         all_hits.is_empty(),

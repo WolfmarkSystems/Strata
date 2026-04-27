@@ -22,18 +22,37 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ImageType {
-    WindowsWorkstation { version: Option<String> },
-    WindowsServer { version: Option<String> },
-    MacOS { version: Option<String> },
-    IOS { version: Option<String> },
-    IPadOS { version: Option<String> },
-    Android { version: Option<String>, oem: Option<String> },
+    WindowsWorkstation {
+        version: Option<String>,
+    },
+    WindowsServer {
+        version: Option<String>,
+    },
+    MacOS {
+        version: Option<String>,
+    },
+    IOS {
+        version: Option<String>,
+    },
+    IPadOS {
+        version: Option<String>,
+    },
+    Android {
+        version: Option<String>,
+        oem: Option<String>,
+    },
     ChromeOS,
-    Linux { distribution: Option<String> },
+    Linux {
+        distribution: Option<String>,
+    },
     Unix,
-    MemoryDump { host_os: Option<String> },
+    MemoryDump {
+        host_os: Option<String>,
+    },
     NetworkCapture,
-    CloudExport { provider: String },
+    CloudExport {
+        provider: String,
+    },
     CellebriteReport,
     UnknownFilesystem,
     Mixed(Vec<ImageType>),
@@ -150,7 +169,10 @@ impl ImageClassification {
             .map(|e| e.marker.clone())
             .collect();
         if self.evidence.len() > out.len() {
-            out.push(format!("(+{} more markers)", self.evidence.len() - out.len()));
+            out.push(format!(
+                "(+{} more markers)",
+                self.evidence.len() - out.len()
+            ));
         }
         out
     }
@@ -186,36 +208,192 @@ struct Marker {
 /// per matching path discovered during the scan.
 const MARKERS: &[Marker] = &[
     // Windows
-    Marker { needle: "/windows/system32/config/system", is_file: Some(true), weight: 0.9, kind: ImageKind::WindowsWorkstation, note: "SYSTEM hive" },
-    Marker { needle: "/windows/system32/ntoskrnl.exe", is_file: Some(true), weight: 0.9, kind: ImageKind::WindowsWorkstation, note: "NT kernel" },
-    Marker { needle: "/users/", is_file: Some(false), weight: 0.5, kind: ImageKind::WindowsWorkstation, note: "Users dir" },
-    Marker { needle: "/pagefile.sys", is_file: Some(true), weight: 0.3, kind: ImageKind::WindowsWorkstation, note: "pagefile.sys" },
-    Marker { needle: "/hiberfil.sys", is_file: Some(true), weight: 0.3, kind: ImageKind::WindowsWorkstation, note: "hiberfil.sys" },
-    Marker { needle: "/program files/", is_file: Some(false), weight: 0.2, kind: ImageKind::WindowsWorkstation, note: "Program Files" },
-    Marker { needle: "/windows/servicing/", is_file: None, weight: 0.2, kind: ImageKind::WindowsServer, note: "Windows Server servicing" },
-    Marker { needle: "/windows/sysvol/", is_file: None, weight: 0.6, kind: ImageKind::WindowsServer, note: "AD SYSVOL" },
+    Marker {
+        needle: "/windows/system32/config/system",
+        is_file: Some(true),
+        weight: 0.9,
+        kind: ImageKind::WindowsWorkstation,
+        note: "SYSTEM hive",
+    },
+    Marker {
+        needle: "/windows/system32/ntoskrnl.exe",
+        is_file: Some(true),
+        weight: 0.9,
+        kind: ImageKind::WindowsWorkstation,
+        note: "NT kernel",
+    },
+    Marker {
+        needle: "/users/",
+        is_file: Some(false),
+        weight: 0.5,
+        kind: ImageKind::WindowsWorkstation,
+        note: "Users dir",
+    },
+    Marker {
+        needle: "/pagefile.sys",
+        is_file: Some(true),
+        weight: 0.3,
+        kind: ImageKind::WindowsWorkstation,
+        note: "pagefile.sys",
+    },
+    Marker {
+        needle: "/hiberfil.sys",
+        is_file: Some(true),
+        weight: 0.3,
+        kind: ImageKind::WindowsWorkstation,
+        note: "hiberfil.sys",
+    },
+    Marker {
+        needle: "/program files/",
+        is_file: Some(false),
+        weight: 0.2,
+        kind: ImageKind::WindowsWorkstation,
+        note: "Program Files",
+    },
+    Marker {
+        needle: "/windows/servicing/",
+        is_file: None,
+        weight: 0.2,
+        kind: ImageKind::WindowsServer,
+        note: "Windows Server servicing",
+    },
+    Marker {
+        needle: "/windows/sysvol/",
+        is_file: None,
+        weight: 0.6,
+        kind: ImageKind::WindowsServer,
+        note: "AD SYSVOL",
+    },
     // macOS
-    Marker { needle: "/system/library/coreservices/systemversion.plist", is_file: Some(true), weight: 0.9, kind: ImageKind::MacOS, note: "SystemVersion.plist" },
-    Marker { needle: "/library/preferences/", is_file: Some(false), weight: 0.5, kind: ImageKind::MacOS, note: "/Library/Preferences" },
-    Marker { needle: "/private/var/db/", is_file: None, weight: 0.3, kind: ImageKind::MacOS, note: "macOS /private/var/db" },
-    Marker { needle: "/.ds_store", is_file: Some(true), weight: 0.15, kind: ImageKind::MacOS, note: ".DS_Store" },
+    Marker {
+        needle: "/system/library/coreservices/systemversion.plist",
+        is_file: Some(true),
+        weight: 0.9,
+        kind: ImageKind::MacOS,
+        note: "SystemVersion.plist",
+    },
+    Marker {
+        needle: "/library/preferences/",
+        is_file: Some(false),
+        weight: 0.5,
+        kind: ImageKind::MacOS,
+        note: "/Library/Preferences",
+    },
+    Marker {
+        needle: "/private/var/db/",
+        is_file: None,
+        weight: 0.3,
+        kind: ImageKind::MacOS,
+        note: "macOS /private/var/db",
+    },
+    Marker {
+        needle: "/.ds_store",
+        is_file: Some(true),
+        weight: 0.15,
+        kind: ImageKind::MacOS,
+        note: ".DS_Store",
+    },
     // iOS
-    Marker { needle: "/private/var/mobile/", is_file: None, weight: 0.9, kind: ImageKind::IOS, note: "iOS /private/var/mobile" },
-    Marker { needle: "/containers/shared/appgroup/", is_file: None, weight: 0.4, kind: ImageKind::IOS, note: "iOS app groups" },
-    Marker { needle: "/mobile/containers/data/application/", is_file: None, weight: 0.5, kind: ImageKind::IOS, note: "iOS application containers" },
-    Marker { needle: "/library/sms/sms.db", is_file: Some(true), weight: 0.7, kind: ImageKind::IOS, note: "iOS SMS db" },
+    Marker {
+        needle: "/private/var/mobile/",
+        is_file: None,
+        weight: 0.9,
+        kind: ImageKind::IOS,
+        note: "iOS /private/var/mobile",
+    },
+    Marker {
+        needle: "/containers/shared/appgroup/",
+        is_file: None,
+        weight: 0.4,
+        kind: ImageKind::IOS,
+        note: "iOS app groups",
+    },
+    Marker {
+        needle: "/mobile/containers/data/application/",
+        is_file: None,
+        weight: 0.5,
+        kind: ImageKind::IOS,
+        note: "iOS application containers",
+    },
+    Marker {
+        needle: "/library/sms/sms.db",
+        is_file: Some(true),
+        weight: 0.7,
+        kind: ImageKind::IOS,
+        note: "iOS SMS db",
+    },
     // Android
-    Marker { needle: "/data/data/", is_file: Some(false), weight: 0.9, kind: ImageKind::Android, note: "Android /data/data" },
-    Marker { needle: "/data/app/", is_file: Some(false), weight: 0.7, kind: ImageKind::Android, note: "Android /data/app" },
-    Marker { needle: "/system/build.prop", is_file: Some(true), weight: 0.8, kind: ImageKind::Android, note: "build.prop" },
-    Marker { needle: "/sdcard/", is_file: None, weight: 0.3, kind: ImageKind::Android, note: "sdcard" },
-    Marker { needle: "/data/misc/bootstat/", is_file: None, weight: 0.5, kind: ImageKind::Android, note: "bootstat" },
+    Marker {
+        needle: "/data/data/",
+        is_file: Some(false),
+        weight: 0.9,
+        kind: ImageKind::Android,
+        note: "Android /data/data",
+    },
+    Marker {
+        needle: "/data/app/",
+        is_file: Some(false),
+        weight: 0.7,
+        kind: ImageKind::Android,
+        note: "Android /data/app",
+    },
+    Marker {
+        needle: "/system/build.prop",
+        is_file: Some(true),
+        weight: 0.8,
+        kind: ImageKind::Android,
+        note: "build.prop",
+    },
+    Marker {
+        needle: "/sdcard/",
+        is_file: None,
+        weight: 0.3,
+        kind: ImageKind::Android,
+        note: "sdcard",
+    },
+    Marker {
+        needle: "/data/misc/bootstat/",
+        is_file: None,
+        weight: 0.5,
+        kind: ImageKind::Android,
+        note: "bootstat",
+    },
     // Linux
-    Marker { needle: "/etc/os-release", is_file: Some(true), weight: 0.9, kind: ImageKind::Linux, note: "os-release" },
-    Marker { needle: "/etc/passwd", is_file: Some(true), weight: 0.4, kind: ImageKind::Linux, note: "/etc/passwd" },
-    Marker { needle: "/etc/shadow", is_file: Some(true), weight: 0.3, kind: ImageKind::Linux, note: "/etc/shadow" },
-    Marker { needle: "/var/log/syslog", is_file: Some(true), weight: 0.4, kind: ImageKind::Linux, note: "syslog" },
-    Marker { needle: "/home/", is_file: Some(false), weight: 0.3, kind: ImageKind::Linux, note: "/home" },
+    Marker {
+        needle: "/etc/os-release",
+        is_file: Some(true),
+        weight: 0.9,
+        kind: ImageKind::Linux,
+        note: "os-release",
+    },
+    Marker {
+        needle: "/etc/passwd",
+        is_file: Some(true),
+        weight: 0.4,
+        kind: ImageKind::Linux,
+        note: "/etc/passwd",
+    },
+    Marker {
+        needle: "/etc/shadow",
+        is_file: Some(true),
+        weight: 0.3,
+        kind: ImageKind::Linux,
+        note: "/etc/shadow",
+    },
+    Marker {
+        needle: "/var/log/syslog",
+        is_file: Some(true),
+        weight: 0.4,
+        kind: ImageKind::Linux,
+        note: "syslog",
+    },
+    Marker {
+        needle: "/home/",
+        is_file: Some(false),
+        weight: 0.3,
+        kind: ImageKind::Linux,
+        note: "/home",
+    },
     // ChromeOS — multiple markers for recovery-image shape tolerance.
     // v0.16.0 validation caught a Chromebook tar misclassified as
     // Windows; root cause was the path-prefix pollution in absolute-
@@ -224,31 +402,121 @@ const MARKERS: &[Marker] = &[
     // images where chronos is empty and the `/etc/cros-machine-id`
     // file isn't present in the extracted tree. These three markers
     // give DETECT-1 three different paths to ChromeOS certainty.
-    Marker { needle: "/opt/google/chrome/", is_file: None, weight: 0.5, kind: ImageKind::ChromeOS, note: "Chrome install root" },
-    Marker { needle: "/etc/cros-machine-id", is_file: Some(true), weight: 0.9, kind: ImageKind::ChromeOS, note: "CrOS machine-id" },
-    Marker { needle: "/home/chronos/", is_file: None, weight: 0.9, kind: ImageKind::ChromeOS, note: "CrOS chronos (with children)" },
+    Marker {
+        needle: "/opt/google/chrome/",
+        is_file: None,
+        weight: 0.5,
+        kind: ImageKind::ChromeOS,
+        note: "Chrome install root",
+    },
+    Marker {
+        needle: "/etc/cros-machine-id",
+        is_file: Some(true),
+        weight: 0.9,
+        kind: ImageKind::ChromeOS,
+        note: "CrOS machine-id",
+    },
+    Marker {
+        needle: "/home/chronos/",
+        is_file: None,
+        weight: 0.9,
+        kind: ImageKind::ChromeOS,
+        note: "CrOS chronos (with children)",
+    },
     // Bare `chronos` directory entry — fires when chronos is empty
     // (common on recovery images post-logout) so ChromeOS isn't lost
     // just because there are no child files to scan.
-    Marker { needle: "/home/chronos", is_file: Some(false), weight: 0.9, kind: ImageKind::ChromeOS, note: "CrOS chronos dir" },
+    Marker {
+        needle: "/home/chronos",
+        is_file: Some(false),
+        weight: 0.9,
+        kind: ImageKind::ChromeOS,
+        note: "CrOS chronos dir",
+    },
     // `.shadow` cryptohome — ChromeOS-unique layout under /home
     // (cryptohome vaults per-user, distinct from regular Linux). Fires
     // on both the directory entry and its hash-dir children.
-    Marker { needle: "/home/.shadow", is_file: None, weight: 0.8, kind: ImageKind::ChromeOS, note: "CrOS cryptohome .shadow" },
+    Marker {
+        needle: "/home/.shadow",
+        is_file: None,
+        weight: 0.8,
+        kind: ImageKind::ChromeOS,
+        note: "CrOS cryptohome .shadow",
+    },
     // Cellebrite UFED / UFDR (treated as a container; plugins still run)
-    Marker { needle: "extraction_ffs.zip", is_file: Some(true), weight: 0.9, kind: ImageKind::CellebriteReport, note: "Cellebrite EXTRACTION_FFS" },
-    Marker { needle: ".ufdx", is_file: Some(true), weight: 0.9, kind: ImageKind::CellebriteReport, note: "UFDX metadata" },
-    Marker { needle: "/report.xml", is_file: Some(true), weight: 0.5, kind: ImageKind::CellebriteReport, note: "UFDR report.xml" },
+    Marker {
+        needle: "extraction_ffs.zip",
+        is_file: Some(true),
+        weight: 0.9,
+        kind: ImageKind::CellebriteReport,
+        note: "Cellebrite EXTRACTION_FFS",
+    },
+    Marker {
+        needle: ".ufdx",
+        is_file: Some(true),
+        weight: 0.9,
+        kind: ImageKind::CellebriteReport,
+        note: "UFDX metadata",
+    },
+    Marker {
+        needle: "/report.xml",
+        is_file: Some(true),
+        weight: 0.5,
+        kind: ImageKind::CellebriteReport,
+        note: "UFDR report.xml",
+    },
     // Network capture
-    Marker { needle: ".pcap", is_file: Some(true), weight: 0.9, kind: ImageKind::NetworkCapture, note: "PCAP" },
-    Marker { needle: ".pcapng", is_file: Some(true), weight: 0.9, kind: ImageKind::NetworkCapture, note: "PCAP-NG" },
+    Marker {
+        needle: ".pcap",
+        is_file: Some(true),
+        weight: 0.9,
+        kind: ImageKind::NetworkCapture,
+        note: "PCAP",
+    },
+    Marker {
+        needle: ".pcapng",
+        is_file: Some(true),
+        weight: 0.9,
+        kind: ImageKind::NetworkCapture,
+        note: "PCAP-NG",
+    },
     // Memory dumps
-    Marker { needle: ".mem", is_file: Some(true), weight: 0.6, kind: ImageKind::MemoryDump, note: "Raw memory image" },
-    Marker { needle: ".raw", is_file: Some(true), weight: 0.3, kind: ImageKind::MemoryDump, note: ".raw (may be disk)" },
-    Marker { needle: ".dmp", is_file: Some(true), weight: 0.7, kind: ImageKind::MemoryDump, note: "Windows dump file" },
+    Marker {
+        needle: ".mem",
+        is_file: Some(true),
+        weight: 0.6,
+        kind: ImageKind::MemoryDump,
+        note: "Raw memory image",
+    },
+    Marker {
+        needle: ".raw",
+        is_file: Some(true),
+        weight: 0.3,
+        kind: ImageKind::MemoryDump,
+        note: ".raw (may be disk)",
+    },
+    Marker {
+        needle: ".dmp",
+        is_file: Some(true),
+        weight: 0.7,
+        kind: ImageKind::MemoryDump,
+        note: "Windows dump file",
+    },
     // Cloud exports
-    Marker { needle: "/takeout/", is_file: Some(false), weight: 0.9, kind: ImageKind::CloudExport, note: "Google Takeout root" },
-    Marker { needle: "archive_browser.html", is_file: Some(true), weight: 0.5, kind: ImageKind::CloudExport, note: "Google Takeout browser" },
+    Marker {
+        needle: "/takeout/",
+        is_file: Some(false),
+        weight: 0.9,
+        kind: ImageKind::CloudExport,
+        note: "Google Takeout root",
+    },
+    Marker {
+        needle: "archive_browser.html",
+        is_file: Some(true),
+        weight: 0.5,
+        kind: ImageKind::CloudExport,
+        note: "Google Takeout browser",
+    },
 ];
 
 // ── Classification engine ──────────────────────────────────────────────
@@ -258,8 +526,7 @@ const MARKERS: &[Marker] = &[
 /// full disk image stays O(bounded) — this is a hint, not a full
 /// catalogue.
 pub fn classify(root: &Path) -> ImageClassification {
-    let mut scores: std::collections::HashMap<ImageKind, f64> =
-        std::collections::HashMap::new();
+    let mut scores: std::collections::HashMap<ImageKind, f64> = std::collections::HashMap::new();
     let mut evidence: Vec<ClassificationEvidence> = Vec::new();
     let mut total_weight = 0f64;
 
@@ -322,11 +589,7 @@ fn scan_single(
     tally_markers_for(path, scan_root, true, scores, evidence, total);
 }
 
-fn scan_dir(
-    current: &Path,
-    depth: u32,
-    ctx: &mut ScanCtx,
-) {
+fn scan_dir(current: &Path, depth: u32, ctx: &mut ScanCtx) {
     if depth > ctx.max_depth {
         return;
     }
@@ -451,13 +714,20 @@ fn to_image_type(kind: ImageKind, root: &Path, _evidence: &[ClassificationEviden
         ImageKind::MacOS => ImageType::MacOS { version: None },
         ImageKind::IOS => ImageType::IOS { version: None },
         ImageKind::IPadOS => ImageType::IPadOS { version: None },
-        ImageKind::Android => ImageType::Android { version: None, oem: None },
+        ImageKind::Android => ImageType::Android {
+            version: None,
+            oem: None,
+        },
         ImageKind::ChromeOS => ImageType::ChromeOS,
         ImageKind::Linux => ImageType::Linux { distribution: None },
         ImageKind::MemoryDump => ImageType::MemoryDump { host_os: None },
         ImageKind::NetworkCapture => ImageType::NetworkCapture,
         ImageKind::CloudExport => ImageType::CloudExport {
-            provider: if root.to_string_lossy().to_ascii_lowercase().contains("takeout") {
+            provider: if root
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .contains("takeout")
+            {
                 "Google Takeout".into()
             } else {
                 "unknown".into()
@@ -530,110 +800,238 @@ pub fn recommend_plugins(image_type: &ImageType) -> PluginRecommendation {
         ImageType::WindowsWorkstation { .. } | ImageType::WindowsServer { .. } => {
             PluginRecommendation {
                 recommended: names(&[
-                    "Strata Phantom", "Strata Chronicle", "Strata Sentinel", "Strata Trace",
-                    "Strata Remnant", "Strata Guardian", "Strata Cipher", "Strata Nimbus",
-                    "Strata Conduit", "Strata Vector", "Strata Wraith", "Strata Recon",
+                    "Strata Phantom",
+                    "Strata Chronicle",
+                    "Strata Sentinel",
+                    "Strata Trace",
+                    "Strata Remnant",
+                    "Strata Guardian",
+                    "Strata Cipher",
+                    "Strata Nimbus",
+                    "Strata Conduit",
+                    "Strata Vector",
+                    "Strata Wraith",
+                    "Strata Recon",
                     "Strata Sigma",
                 ]),
                 optional: names(&["Strata Carbon", "Strata NetFlow", "Strata CSAM Scanner"]),
                 unnecessary: names(&[
-                    "Strata MacTrace", "Strata Apex", "Strata Pulse", "Strata Arbor",
-                    "Strata Specter", "Strata Vault",
+                    "Strata MacTrace",
+                    "Strata Apex",
+                    "Strata Pulse",
+                    "Strata Arbor",
+                    "Strata Specter",
+                    "Strata Vault",
                 ]),
             }
         }
         ImageType::MacOS { .. } => PluginRecommendation {
             recommended: names(&[
-                "Strata MacTrace", "Strata Apex", "Strata Cipher", "Strata Nimbus",
-                "Strata Conduit", "Strata Vector", "Strata Recon", "Strata Sigma",
+                "Strata MacTrace",
+                "Strata Apex",
+                "Strata Cipher",
+                "Strata Nimbus",
+                "Strata Conduit",
+                "Strata Vector",
+                "Strata Recon",
+                "Strata Sigma",
             ]),
             optional: names(&["Strata Vault", "Strata NetFlow", "Strata CSAM Scanner"]),
             unnecessary: names(&[
-                "Strata Phantom", "Strata Chronicle", "Strata Sentinel", "Strata Trace",
-                "Strata Remnant", "Strata Guardian", "Strata Pulse", "Strata Arbor",
-                "Strata Carbon", "Strata Specter", "Strata Wraith",
+                "Strata Phantom",
+                "Strata Chronicle",
+                "Strata Sentinel",
+                "Strata Trace",
+                "Strata Remnant",
+                "Strata Guardian",
+                "Strata Pulse",
+                "Strata Arbor",
+                "Strata Carbon",
+                "Strata Specter",
+                "Strata Wraith",
             ]),
         },
         ImageType::IOS { .. } | ImageType::IPadOS { .. } => PluginRecommendation {
-            recommended: names(&["Strata Pulse", "Strata Apex", "Strata Vault", "Strata Sigma"]),
+            recommended: names(&[
+                "Strata Pulse",
+                "Strata Apex",
+                "Strata Vault",
+                "Strata Sigma",
+            ]),
             optional: names(&["Strata Cipher", "Strata Nimbus", "Strata Recon"]),
             unnecessary: names(&[
-                "Strata Phantom", "Strata Chronicle", "Strata Sentinel", "Strata Trace",
-                "Strata Remnant", "Strata Guardian", "Strata MacTrace", "Strata Carbon",
-                "Strata NetFlow", "Strata Conduit", "Strata Wraith", "Strata Arbor",
-                "Strata Specter", "Strata Vector", "Strata CSAM Scanner",
+                "Strata Phantom",
+                "Strata Chronicle",
+                "Strata Sentinel",
+                "Strata Trace",
+                "Strata Remnant",
+                "Strata Guardian",
+                "Strata MacTrace",
+                "Strata Carbon",
+                "Strata NetFlow",
+                "Strata Conduit",
+                "Strata Wraith",
+                "Strata Arbor",
+                "Strata Specter",
+                "Strata Vector",
+                "Strata CSAM Scanner",
             ]),
         },
         ImageType::Android { .. } => PluginRecommendation {
             recommended: names(&[
-                "Strata Carbon", "Strata Pulse", "Strata Specter", "Strata Apex",
-                "Strata Vault", "Strata Sigma",
+                "Strata Carbon",
+                "Strata Pulse",
+                "Strata Specter",
+                "Strata Apex",
+                "Strata Vault",
+                "Strata Sigma",
             ]),
             optional: names(&["Strata Cipher", "Strata Recon", "Strata CSAM Scanner"]),
             unnecessary: names(&[
-                "Strata Phantom", "Strata Chronicle", "Strata Sentinel", "Strata Trace",
-                "Strata Remnant", "Strata Guardian", "Strata MacTrace", "Strata NetFlow",
-                "Strata Conduit", "Strata Wraith", "Strata Arbor", "Strata Nimbus",
+                "Strata Phantom",
+                "Strata Chronicle",
+                "Strata Sentinel",
+                "Strata Trace",
+                "Strata Remnant",
+                "Strata Guardian",
+                "Strata MacTrace",
+                "Strata NetFlow",
+                "Strata Conduit",
+                "Strata Wraith",
+                "Strata Arbor",
+                "Strata Nimbus",
                 "Strata Vector",
             ]),
         },
         ImageType::Linux { .. } | ImageType::Unix => PluginRecommendation {
             recommended: names(&[
-                "Strata Arbor", "Strata NetFlow", "Strata Cipher", "Strata Recon",
-                "Strata Vector", "Strata Sigma",
+                "Strata Arbor",
+                "Strata NetFlow",
+                "Strata Cipher",
+                "Strata Recon",
+                "Strata Vector",
+                "Strata Sigma",
             ]),
             optional: names(&["Strata Nimbus", "Strata CSAM Scanner"]),
             unnecessary: names(&[
-                "Strata Phantom", "Strata Chronicle", "Strata Sentinel", "Strata Trace",
-                "Strata Remnant", "Strata Guardian", "Strata MacTrace", "Strata Apex",
-                "Strata Carbon", "Strata Pulse", "Strata Specter", "Strata Conduit",
-                "Strata Wraith", "Strata Vault",
+                "Strata Phantom",
+                "Strata Chronicle",
+                "Strata Sentinel",
+                "Strata Trace",
+                "Strata Remnant",
+                "Strata Guardian",
+                "Strata MacTrace",
+                "Strata Apex",
+                "Strata Carbon",
+                "Strata Pulse",
+                "Strata Specter",
+                "Strata Conduit",
+                "Strata Wraith",
+                "Strata Vault",
             ]),
         },
         ImageType::ChromeOS => PluginRecommendation {
-            recommended: names(&["Strata Carbon", "Strata Nimbus", "Strata Recon", "Strata Sigma"]),
+            recommended: names(&[
+                "Strata Carbon",
+                "Strata Nimbus",
+                "Strata Recon",
+                "Strata Sigma",
+            ]),
             optional: names(&["Strata Cipher", "Strata Arbor", "Strata Vector"]),
             unnecessary: names(&[
-                "Strata Phantom", "Strata Chronicle", "Strata Sentinel", "Strata Trace",
-                "Strata Remnant", "Strata Guardian", "Strata MacTrace", "Strata Apex",
-                "Strata Pulse", "Strata Specter", "Strata NetFlow", "Strata Conduit",
-                "Strata Wraith", "Strata Vault", "Strata CSAM Scanner",
+                "Strata Phantom",
+                "Strata Chronicle",
+                "Strata Sentinel",
+                "Strata Trace",
+                "Strata Remnant",
+                "Strata Guardian",
+                "Strata MacTrace",
+                "Strata Apex",
+                "Strata Pulse",
+                "Strata Specter",
+                "Strata NetFlow",
+                "Strata Conduit",
+                "Strata Wraith",
+                "Strata Vault",
+                "Strata CSAM Scanner",
             ]),
         },
         ImageType::MemoryDump { .. } => PluginRecommendation {
             recommended: names(&[
-                "Strata Phantom", "Strata Wraith", "Strata Vector", "Strata Recon",
+                "Strata Phantom",
+                "Strata Wraith",
+                "Strata Vector",
+                "Strata Recon",
                 "Strata Sigma",
             ]),
             optional: names(&["Strata Cipher", "Strata Sentinel"]),
             unnecessary: names(&[
-                "Strata Chronicle", "Strata Trace", "Strata Remnant", "Strata Guardian",
-                "Strata MacTrace", "Strata Apex", "Strata Carbon", "Strata Pulse",
-                "Strata Specter", "Strata NetFlow", "Strata Conduit", "Strata Nimbus",
-                "Strata Arbor", "Strata Vault", "Strata CSAM Scanner",
+                "Strata Chronicle",
+                "Strata Trace",
+                "Strata Remnant",
+                "Strata Guardian",
+                "Strata MacTrace",
+                "Strata Apex",
+                "Strata Carbon",
+                "Strata Pulse",
+                "Strata Specter",
+                "Strata NetFlow",
+                "Strata Conduit",
+                "Strata Nimbus",
+                "Strata Arbor",
+                "Strata Vault",
+                "Strata CSAM Scanner",
             ]),
         },
         ImageType::NetworkCapture => PluginRecommendation {
             recommended: names(&["Strata NetFlow", "Strata Recon", "Strata Sigma"]),
             optional: names(&["Strata Vector"]),
             unnecessary: names(&[
-                "Strata Phantom", "Strata Chronicle", "Strata Sentinel", "Strata Trace",
-                "Strata Remnant", "Strata Guardian", "Strata Cipher", "Strata MacTrace",
-                "Strata Apex", "Strata Carbon", "Strata Pulse", "Strata Specter",
-                "Strata Conduit", "Strata Wraith", "Strata Nimbus", "Strata Arbor",
-                "Strata Vault", "Strata CSAM Scanner",
+                "Strata Phantom",
+                "Strata Chronicle",
+                "Strata Sentinel",
+                "Strata Trace",
+                "Strata Remnant",
+                "Strata Guardian",
+                "Strata Cipher",
+                "Strata MacTrace",
+                "Strata Apex",
+                "Strata Carbon",
+                "Strata Pulse",
+                "Strata Specter",
+                "Strata Conduit",
+                "Strata Wraith",
+                "Strata Nimbus",
+                "Strata Arbor",
+                "Strata Vault",
+                "Strata CSAM Scanner",
             ]),
         },
         ImageType::CloudExport { .. } => PluginRecommendation {
             recommended: names(&[
-                "Strata Nimbus", "Strata Recon", "Strata Carbon", "Strata Sigma",
+                "Strata Nimbus",
+                "Strata Recon",
+                "Strata Carbon",
+                "Strata Sigma",
             ]),
             optional: names(&["Strata Cipher", "Strata Vector"]),
             unnecessary: names(&[
-                "Strata Phantom", "Strata Chronicle", "Strata Sentinel", "Strata Trace",
-                "Strata Remnant", "Strata Guardian", "Strata MacTrace", "Strata Apex",
-                "Strata Pulse", "Strata Specter", "Strata NetFlow", "Strata Conduit",
-                "Strata Wraith", "Strata Arbor", "Strata Vault", "Strata CSAM Scanner",
+                "Strata Phantom",
+                "Strata Chronicle",
+                "Strata Sentinel",
+                "Strata Trace",
+                "Strata Remnant",
+                "Strata Guardian",
+                "Strata MacTrace",
+                "Strata Apex",
+                "Strata Pulse",
+                "Strata Specter",
+                "Strata NetFlow",
+                "Strata Conduit",
+                "Strata Wraith",
+                "Strata Arbor",
+                "Strata Vault",
+                "Strata CSAM Scanner",
             ]),
         },
         ImageType::CellebriteReport => PluginRecommendation {
@@ -642,14 +1040,27 @@ pub fn recommend_plugins(image_type: &ImageType) -> PluginRecommendation {
             // exhaustive. The examiner can re-run against the unpacked
             // filesystem root for sharper routing.
             recommended: names(&[
-                "Strata Pulse", "Strata Apex", "Strata Carbon", "Strata Specter",
-                "Strata Vault", "Strata Sigma",
+                "Strata Pulse",
+                "Strata Apex",
+                "Strata Carbon",
+                "Strata Specter",
+                "Strata Vault",
+                "Strata Sigma",
             ]),
             optional: names(&["Strata Cipher", "Strata Recon", "Strata Nimbus"]),
             unnecessary: names(&[
-                "Strata Phantom", "Strata Chronicle", "Strata Sentinel", "Strata Trace",
-                "Strata Remnant", "Strata Guardian", "Strata MacTrace", "Strata NetFlow",
-                "Strata Conduit", "Strata Wraith", "Strata Arbor", "Strata Vector",
+                "Strata Phantom",
+                "Strata Chronicle",
+                "Strata Sentinel",
+                "Strata Trace",
+                "Strata Remnant",
+                "Strata Guardian",
+                "Strata MacTrace",
+                "Strata NetFlow",
+                "Strata Conduit",
+                "Strata Wraith",
+                "Strata Arbor",
+                "Strata Vector",
                 "Strata CSAM Scanner",
             ]),
         },
@@ -741,22 +1152,32 @@ fn pair_relationship(
     b: &ImageClassification,
 ) -> Option<(RelationshipType, f64, Vec<String>)> {
     // Memory dump + host OS match.
-    if let (ImageType::MemoryDump { host_os: Some(os) }, other) | (other, ImageType::MemoryDump { host_os: Some(os) }) =
-        (&a.primary_type, &b.primary_type)
+    if let (ImageType::MemoryDump { host_os: Some(os) }, other)
+    | (other, ImageType::MemoryDump { host_os: Some(os) }) = (&a.primary_type, &b.primary_type)
     {
-        if other.label().to_ascii_lowercase().contains(&os.to_ascii_lowercase()) {
-            return Some((RelationshipType::MemoryOfDisk, 0.85, vec![format!("host_os={os}")]));
+        if other
+            .label()
+            .to_ascii_lowercase()
+            .contains(&os.to_ascii_lowercase())
+        {
+            return Some((
+                RelationshipType::MemoryOfDisk,
+                0.85,
+                vec![format!("host_os={os}")],
+            ));
         }
     }
     // BackupRelationship: one mobile, one desktop where desktop's
     // evidence markers mention mobile dirs.
     let (mobile, desktop) = match (&a.primary_type, &b.primary_type) {
-        (ImageType::IOS { .. } | ImageType::Android { .. }, ImageType::WindowsWorkstation { .. } | ImageType::MacOS { .. }) => {
-            (a, b)
-        }
-        (ImageType::WindowsWorkstation { .. } | ImageType::MacOS { .. }, ImageType::IOS { .. } | ImageType::Android { .. }) => {
-            (b, a)
-        }
+        (
+            ImageType::IOS { .. } | ImageType::Android { .. },
+            ImageType::WindowsWorkstation { .. } | ImageType::MacOS { .. },
+        ) => (a, b),
+        (
+            ImageType::WindowsWorkstation { .. } | ImageType::MacOS { .. },
+            ImageType::IOS { .. } | ImageType::Android { .. },
+        ) => (b, a),
         _ => return try_cloud_or_same_network(a, b),
     };
     // If the desktop side's markers mention iTunes / Android backup
@@ -783,10 +1204,8 @@ fn try_cloud_or_same_network(
     a: &ImageClassification,
     b: &ImageClassification,
 ) -> Option<(RelationshipType, f64, Vec<String>)> {
-    if let (
-        ImageType::CloudExport { provider: pa },
-        ImageType::CloudExport { provider: pb },
-    ) = (&a.primary_type, &b.primary_type)
+    if let (ImageType::CloudExport { provider: pa }, ImageType::CloudExport { provider: pb }) =
+        (&a.primary_type, &b.primary_type)
     {
         if pa.eq_ignore_ascii_case(pb) {
             return Some((
@@ -818,7 +1237,10 @@ mod tests {
         fs::write(d.path().join("Windows/System32/ntoskrnl.exe"), b"kernel").expect("ok");
         fs::create_dir_all(d.path().join("Users/alice")).expect("ok");
         let c = classify(d.path());
-        assert!(matches!(c.primary_type, ImageType::WindowsWorkstation { .. }));
+        assert!(matches!(
+            c.primary_type,
+            ImageType::WindowsWorkstation { .. }
+        ));
         assert!(c.confidence > 0.3);
         assert!(c.recommended_plugins.iter().any(|p| p == "Strata Phantom"));
     }
@@ -987,11 +1409,16 @@ mod tests {
             ImageType::WindowsWorkstation { version: None },
             ImageType::MacOS { version: None },
             ImageType::IOS { version: None },
-            ImageType::Android { version: None, oem: None },
+            ImageType::Android {
+                version: None,
+                oem: None,
+            },
             ImageType::Linux { distribution: None },
             ImageType::MemoryDump { host_os: None },
             ImageType::NetworkCapture,
-            ImageType::CloudExport { provider: "Google".into() },
+            ImageType::CloudExport {
+                provider: "Google".into(),
+            },
             ImageType::CellebriteReport,
             ImageType::ChromeOS,
         ] {

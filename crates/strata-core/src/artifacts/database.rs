@@ -122,9 +122,11 @@ impl ArtifactDatabase {
 
     pub fn count(&self) -> rusqlite::Result<u64> {
         self.conn
-            .query_row("SELECT COUNT(*) FROM artifacts WHERE case_id = ?1", [&self.case_id], |r| {
-                r.get::<_, i64>(0)
-            })
+            .query_row(
+                "SELECT COUNT(*) FROM artifacts WHERE case_id = ?1",
+                [&self.case_id],
+                |r| r.get::<_, i64>(0),
+            )
             .map(|v| v as u64)
     }
 
@@ -247,10 +249,7 @@ fn insert_one(
         ForensicValue::Low => "Low",
         ForensicValue::Informational => "Info",
     };
-    let raw = record
-        .raw_data
-        .as_ref()
-        .map(|v| v.to_string());
+    let raw = record.raw_data.as_ref().map(|v| v.to_string());
     tx.execute(
         "INSERT INTO artifacts (\
             case_id, plugin_name, category, subcategory, title, detail, source_path, \
@@ -317,8 +316,7 @@ mod tests {
     fn batch_insert_round_trip() {
         let tmp = tempfile::tempdir().expect("t");
         let mut db = ArtifactDatabase::open_or_create(tmp.path(), "case-2").expect("o");
-        let records: Vec<ArtifactRecord> =
-            (0..100).map(|i| sample(&format!("evt-{i}"))).collect();
+        let records: Vec<ArtifactRecord> = (0..100).map(|i| sample(&format!("evt-{i}"))).collect();
         let ids = db.insert_batch("Phantom", &records).expect("b");
         assert_eq!(ids.len(), 100);
         assert_eq!(db.count().expect("c"), 100);

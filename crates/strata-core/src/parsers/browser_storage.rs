@@ -57,11 +57,7 @@ impl ArtifactParser for BrowserStorageParser {
     }
 
     fn target_patterns(&self) -> Vec<&str> {
-        vec![
-            "webappsstore.sqlite",
-            "*.sqlite",
-            "Local Storage",
-        ]
+        vec!["webappsstore.sqlite", "*.sqlite", "Local Storage"]
     }
 
     fn parse_file(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
@@ -187,10 +183,7 @@ impl BrowserStorageParser {
 
                 let rows = stmt
                     .query_map([], |row| {
-                        Ok((
-                            row.get::<_, String>(0).ok(),
-                            row.get::<_, i64>(1).ok(),
-                        ))
+                        Ok((row.get::<_, String>(0).ok(), row.get::<_, i64>(1).ok()))
                     })
                     .map_err(|e| ParserError::Database(e.to_string()))?;
 

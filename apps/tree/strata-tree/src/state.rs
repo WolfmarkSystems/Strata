@@ -494,11 +494,11 @@ pub struct AppState {
 
     // ── View ──
     pub view_mode: ViewMode,
-    pub preview_tab: u8,         // 0=Metadata 1=Hex 2=Text 3=Image
-    pub theme_index: usize,      // index into theme::THEMES
-    pub metadata_expanded: bool, // collapsible metadata strip below file table
-    pub navigator_collapsed: bool,  // Ctrl+B toggle for 3-panel layout
-    pub court_mode: bool,           // Ctrl+Shift+C — presentation-safe mode
+    pub preview_tab: u8,                      // 0=Metadata 1=Hex 2=Text 3=Image
+    pub theme_index: usize,                   // index into theme::THEMES
+    pub metadata_expanded: bool,              // collapsible metadata strip below file table
+    pub navigator_collapsed: bool,            // Ctrl+B toggle for 3-panel layout
+    pub court_mode: bool,                     // Ctrl+Shift+C — presentation-safe mode
     pub court_mode_prev_theme: Option<usize>, // theme to restore on exit
 
     // ── Sort ──
@@ -935,13 +935,15 @@ impl AppState {
         }
         let original = section.content.clone();
         section.content = new_text.clone();
-        summary.examiner_edits.push(strata_ml_summary::ExaminerEdit {
-            section_type,
-            original_text: original,
-            edited_text: new_text,
-            edited_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-            edit_reason: reason,
-        });
+        summary
+            .examiner_edits
+            .push(strata_ml_summary::ExaminerEdit {
+                section_type,
+                original_text: original,
+                edited_text: new_text,
+                edited_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                edit_reason: reason,
+            });
         summary.examiner_approved = false;
         summary.status = strata_ml_summary::SummaryStatus::UnderReview;
     }
@@ -968,7 +970,11 @@ impl AppState {
         }
         self.log_action(
             "COURT_MODE",
-            if self.court_mode { "enabled" } else { "disabled" },
+            if self.court_mode {
+                "enabled"
+            } else {
+                "disabled"
+            },
         );
     }
 
@@ -1126,10 +1132,7 @@ impl AppState {
                 self.plugin_results.push(output);
             }
             Err(e) => {
-                self.log_action(
-                    "PLUGIN_ERROR",
-                    &format!("{} — {}", plugin_name, e),
-                );
+                self.log_action("PLUGIN_ERROR", &format!("{} — {}", plugin_name, e));
                 self.status = format!("Plugin error: {} — {}", plugin_name, e);
             }
         }

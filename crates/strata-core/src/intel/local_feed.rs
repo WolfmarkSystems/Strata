@@ -61,11 +61,7 @@ impl ThreatIntelDatabase {
         Ok(Self { conn })
     }
 
-    pub fn import_ip_plaintext(
-        &mut self,
-        path: &Path,
-        source: &str,
-    ) -> Result<usize, IntelError> {
+    pub fn import_ip_plaintext(&mut self, path: &Path, source: &str) -> Result<usize, IntelError> {
         let body = fs::read_to_string(path)?;
         let tx = self.conn.transaction()?;
         let mut n = 0usize;
@@ -184,9 +180,9 @@ impl ThreatIntelDatabase {
     }
 
     pub fn status(&self) -> Result<Vec<(String, String, i64, i64)>, IntelError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT feed_name, kind, imported_at, record_count FROM feed_status",
-        )?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT feed_name, kind, imported_at, record_count FROM feed_status")?;
         let rows = stmt.query_map([], |row| {
             let name: String = row.get(0)?;
             let kind: String = row.get(1)?;
@@ -279,7 +275,9 @@ mod tests {
         let dir2 = tempfile::tempdir().expect("tempdir");
         let p = dir2.path().join("d.txt");
         fs::write(&p, "evil.example.com\nbaddomain.test\n").expect("w");
-        let n = db.import_domain_plaintext(&p, "malware_domain_list").expect("imp");
+        let n = db
+            .import_domain_plaintext(&p, "malware_domain_list")
+            .expect("imp");
         assert_eq!(n, 2);
         assert!(db.domain_known_bad("evil.example.com"));
     }

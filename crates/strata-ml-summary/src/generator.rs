@@ -20,8 +20,10 @@ impl SummaryGenerator {
     /// The result is always `SummaryStatus::Draft` and `examiner_approved = false`.
     pub fn generate(&self, input: &SummaryInput) -> Result<GeneratedSummary, anyhow::Error> {
         // Phase 1: Structured extraction
-        let charge_findings =
-            FindingExtractor::extract_charge_relevant(&input.plugin_outputs, &input.selected_charges);
+        let charge_findings = FindingExtractor::extract_charge_relevant(
+            &input.plugin_outputs,
+            &input.selected_charges,
+        );
         let destruction_events =
             FindingExtractor::extract_destruction_events(&input.plugin_outputs);
         let highlights = FindingExtractor::extract_highlights(&input.plugin_outputs);
@@ -62,7 +64,10 @@ impl SummaryGenerator {
                 charge_findings.len()
             )
         } else if !charge_findings.is_empty() {
-            format!("{} artifacts supporting the charged conduct", charge_findings.len())
+            format!(
+                "{} artifacts supporting the charged conduct",
+                charge_findings.len()
+            )
         } else {
             format!(
                 "{} artifacts across {} plugins",
@@ -123,7 +128,9 @@ impl SummaryGenerator {
 
         // Evidence destruction section
         if !destruction_events.is_empty() {
-            let content = self.templates.render_destruction_events(&destruction_events)?;
+            let content = self
+                .templates
+                .render_destruction_events(&destruction_events)?;
             for ev in &destruction_events {
                 claim_sources.push(ClaimSource {
                     claim_text: format!("{}: {}", ev.event_type, ev.scope),
@@ -222,7 +229,9 @@ impl SummaryGenerator {
         }
 
         // Advisory notice — ALWAYS last, NEVER editable
-        let advisory_text = self.templates.render_advisory_notice(input.artifact_count)?;
+        let advisory_text = self
+            .templates
+            .render_advisory_notice(input.artifact_count)?;
         sections.push(SummarySection {
             section_type: SectionType::AdvisoryNotice,
             title: "ADVISORY".into(),
@@ -340,7 +349,11 @@ mod tests {
     fn generator_produces_all_sections() {
         let gen = SummaryGenerator::new().unwrap();
         let summary = gen.generate(&test_input()).unwrap();
-        let types: Vec<SectionType> = summary.sections.iter().map(|s| s.section_type.clone()).collect();
+        let types: Vec<SectionType> = summary
+            .sections
+            .iter()
+            .map(|s| s.section_type.clone())
+            .collect();
         assert!(types.contains(&SectionType::Overview));
         assert!(types.contains(&SectionType::AdvisoryNotice));
         assert!(types.contains(&SectionType::ChargedConduct));

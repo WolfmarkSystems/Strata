@@ -90,19 +90,25 @@ impl ChargeDatabase {
 
     /// Filter by code set (USC, UCMJ, State).
     pub fn by_code_set(&self, set: ChargeSet) -> Result<Vec<ChargeEntry>, ChargeError> {
-        let mut stmt = self.conn.prepare("SELECT * FROM charges WHERE code_set = ?1")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM charges WHERE code_set = ?1")?;
         collect_rows(&mut stmt, params![set.as_str()])
     }
 
     /// Filter by USC title number.
     pub fn by_title(&self, title: u32) -> Result<Vec<ChargeEntry>, ChargeError> {
-        let mut stmt = self.conn.prepare("SELECT * FROM charges WHERE title = ?1")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM charges WHERE title = ?1")?;
         collect_rows(&mut stmt, params![title])
     }
 
     /// Filter by category string.
     pub fn by_category(&self, category: &str) -> Result<Vec<ChargeEntry>, ChargeError> {
-        let mut stmt = self.conn.prepare("SELECT * FROM charges WHERE category = ?1")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM charges WHERE category = ?1")?;
         collect_rows(&mut stmt, params![category])
     }
 
@@ -182,8 +188,7 @@ fn row_to_entry(row: &rusqlite::Row) -> rusqlite::Result<ChargeEntry> {
         _ => ChargeSeverity::Felony,
     };
     let tags_str: String = row.get(9)?;
-    let artifact_tags: Vec<String> =
-        serde_json::from_str(&tags_str).unwrap_or_default();
+    let artifact_tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
 
     Ok(ChargeEntry {
         id: row.get(0)?,
@@ -239,7 +244,9 @@ mod tests {
         let db = ChargeDatabase::open_memory().unwrap();
         let results = db.search("rape").unwrap();
         assert!(
-            results.iter().any(|c| c.code_set == ChargeSet::UCMJ && c.citation.contains("120")),
+            results
+                .iter()
+                .any(|c| c.code_set == ChargeSet::UCMJ && c.citation.contains("120")),
             "expected UCMJ Art. 120"
         );
     }
@@ -258,7 +265,11 @@ mod tests {
     fn categories_returns_non_empty_list() {
         let db = ChargeDatabase::open_memory().unwrap();
         let cats = db.categories().unwrap();
-        assert!(cats.len() >= 10, "expected >=10 categories, got {}", cats.len());
+        assert!(
+            cats.len() >= 10,
+            "expected >=10 categories, got {}",
+            cats.len()
+        );
     }
 
     #[test]

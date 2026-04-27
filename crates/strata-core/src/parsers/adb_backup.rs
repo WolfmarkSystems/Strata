@@ -66,7 +66,10 @@ impl ArtifactParser for AdbBackupParser {
         let version = lines.get(1).and_then(|l| l.trim().parse::<i32>().ok());
         let compressed = lines.get(2).map(|l| l.trim() == "1").unwrap_or(false);
         let encrypted = lines.get(3).map(|l| l.trim() != "none").unwrap_or(false);
-        let encryption_type = lines.get(3).map(|l| l.trim().to_string()).filter(|s| s != "none");
+        let encryption_type = lines
+            .get(3)
+            .map(|l| l.trim().to_string())
+            .filter(|s| s != "none");
 
         // Scan for package names in the data (apps/com.xxx patterns)
         let mut apps = Vec::new();
@@ -92,15 +95,27 @@ impl ArtifactParser for AdbBackupParser {
             encrypted,
             encryption_type: encryption_type.clone(),
             file_size: data.len(),
-            estimated_content_size: if compressed { data.len() * 3 } else { data.len() },
+            estimated_content_size: if compressed {
+                data.len() * 3
+            } else {
+                data.len()
+            },
             apps_detected: apps.clone(),
         };
 
         let mut desc = format!(
             "ADB Backup: v{} ({}, {}) {} bytes, {} apps detected",
             version.unwrap_or(0),
-            if compressed { "compressed" } else { "uncompressed" },
-            if encrypted { "ENCRYPTED" } else { "unencrypted" },
+            if compressed {
+                "compressed"
+            } else {
+                "uncompressed"
+            },
+            if encrypted {
+                "ENCRYPTED"
+            } else {
+                "unencrypted"
+            },
             data.len(),
             apps.len(),
         );
@@ -133,10 +148,7 @@ impl ArtifactParser for AdbBackupParser {
             .collect();
 
         if !interesting_apps.is_empty() {
-            desc.push_str(&format!(
-                " [Notable: {}]",
-                interesting_apps.join(", ")
-            ));
+            desc.push_str(&format!(" [Notable: {}]", interesting_apps.join(", ")));
         }
 
         artifacts.push(ParsedArtifact {

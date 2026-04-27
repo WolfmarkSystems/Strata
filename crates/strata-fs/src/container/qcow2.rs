@@ -40,14 +40,14 @@ impl Qcow2Container {
         }
 
         let magic = [buf[0], buf[1], buf[2], buf[3]];
-        let version = u32::from_be_bytes(buf[4..8].try_into().unwrap());
-        let backing_file_offset = u64::from_be_bytes(buf[8..16].try_into().unwrap());
-        let backing_file_size = u32::from_be_bytes(buf[16..20].try_into().unwrap());
-        let cluster_bits = u32::from_be_bytes(buf[20..24].try_into().unwrap());
-        let size = u64::from_be_bytes(buf[24..32].try_into().unwrap());
-        let crypt_method = u32::from_be_bytes(buf[32..36].try_into().unwrap());
-        let l1_size = u32::from_be_bytes(buf[36..40].try_into().unwrap());
-        let l1_table_offset = u64::from_be_bytes(buf[40..48].try_into().unwrap());
+        let version = read_u32_be(&buf, 4)?;
+        let backing_file_offset = read_u64_be(&buf, 8)?;
+        let backing_file_size = read_u32_be(&buf, 16)?;
+        let cluster_bits = read_u32_be(&buf, 20)?;
+        let size = read_u64_be(&buf, 24)?;
+        let crypt_method = read_u32_be(&buf, 32)?;
+        let l1_size = read_u32_be(&buf, 36)?;
+        let l1_table_offset = read_u64_be(&buf, 40)?;
 
         Ok(Self {
             path: path.to_path_buf(),
@@ -74,6 +74,24 @@ fn read_at(file: &File, offset: u64, buf: &mut [u8]) -> Result<usize, std::io::E
     {
         file.seek_read(buf, offset)
     }
+}
+
+fn read_u32_be(buf: &[u8], offset: usize) -> Result<u32, ForensicError> {
+    let bytes: [u8; 4] = buf
+        .get(offset..offset + 4)
+        .ok_or(ForensicError::InvalidImageFormat)?
+        .try_into()
+        .map_err(|_| ForensicError::InvalidImageFormat)?;
+    Ok(u32::from_be_bytes(bytes))
+}
+
+fn read_u64_be(buf: &[u8], offset: usize) -> Result<u64, ForensicError> {
+    let bytes: [u8; 8] = buf
+        .get(offset..offset + 8)
+        .ok_or(ForensicError::InvalidImageFormat)?
+        .try_into()
+        .map_err(|_| ForensicError::InvalidImageFormat)?;
+    Ok(u64::from_be_bytes(bytes))
 }
 
 impl EvidenceContainerRO for Qcow2Container {

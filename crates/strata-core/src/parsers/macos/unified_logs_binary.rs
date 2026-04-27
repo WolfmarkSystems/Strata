@@ -84,7 +84,7 @@ mod tests {
 
     fn build_tracev3_header() -> Vec<u8> {
         let mut buf = Vec::new();
-        buf.extend_from_slice(b"vt03");  // magic
+        buf.extend_from_slice(b"vt03"); // magic
         buf.extend_from_slice(&64_u32.to_le_bytes()); // size of this chunk
         buf.extend_from_slice(&[0u8; 56]); // padding to 64 bytes
         buf

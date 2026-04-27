@@ -142,11 +142,31 @@ fn query_messages(conn: &Connection) -> rusqlite::Result<Vec<MessageRecord>> {
          FROM message m \
          LEFT JOIN handle h ON m.handle_id = h.ROWID \
          ORDER BY m.date ASC",
-        attr = if has_attrbody { "m.attributedBody" } else { "NULL" },
-        thread = if has_thread { "m.thread_originator_guid" } else { "NULL" },
-        assoc = if has_assoc { "m.associated_message_guid" } else { "NULL" },
-        style = if has_style { "m.expressive_send_style_id" } else { "NULL" },
-        down = if has_downgraded { "m.was_downgraded" } else { "0" },
+        attr = if has_attrbody {
+            "m.attributedBody"
+        } else {
+            "NULL"
+        },
+        thread = if has_thread {
+            "m.thread_originator_guid"
+        } else {
+            "NULL"
+        },
+        assoc = if has_assoc {
+            "m.associated_message_guid"
+        } else {
+            "NULL"
+        },
+        style = if has_style {
+            "m.expressive_send_style_id"
+        } else {
+            "NULL"
+        },
+        down = if has_downgraded {
+            "m.was_downgraded"
+        } else {
+            "0"
+        },
         ifm = if has_isfromme { "m.is_from_me" } else { "0" },
         svc = if has_service { "m.service" } else { "NULL" },
     );
@@ -198,8 +218,7 @@ fn query_messages(conn: &Connection) -> rusqlite::Result<Vec<MessageRecord>> {
         let Some(date) = date.and_then(decode_message_date) else {
             continue;
         };
-        let attributed_text =
-            attr_body.as_deref().and_then(extract_attributed_string);
+        let attributed_text = attr_body.as_deref().and_then(extract_attributed_string);
         let attachments = load_attachments(conn, rowid).unwrap_or_default();
         let chat_identifier = load_chat_identifier(conn, rowid);
         out.push(MessageRecord {
@@ -242,10 +261,14 @@ fn load_chat_identifier(conn: &Connection, message_rowid: i64) -> Option<String>
                WHERE cmj.message_id = ?1 \
                LIMIT 1";
     let mut stmt = conn.prepare(sql).ok()?;
-    stmt.query_row([message_rowid], |row| row.get::<_, String>(0)).ok()
+    stmt.query_row([message_rowid], |row| row.get::<_, String>(0))
+        .ok()
 }
 
-fn load_attachments(conn: &Connection, message_rowid: i64) -> rusqlite::Result<Vec<AttachmentRecord>> {
+fn load_attachments(
+    conn: &Connection,
+    message_rowid: i64,
+) -> rusqlite::Result<Vec<AttachmentRecord>> {
     let sql = "SELECT a.transfer_name, a.mime_type, a.total_bytes, \
                       COALESCE(a.is_sticker, 0) \
                FROM attachment a \
@@ -449,20 +472,14 @@ mod tests {
         let records = parse(&dir.path().join("chat.db"));
         assert_eq!(records.len(), 2);
 
-        let m1 = records
-            .iter()
-            .find(|r| r.rowid == 1)
-            .expect("msg 1");
+        let m1 = records.iter().find(|r| r.rowid == 1).expect("msg 1");
         assert_eq!(m1.text.as_deref(), Some("hello world"));
         assert_eq!(m1.date.timestamp(), 1_717_243_200);
         assert!(m1.attachments.is_empty());
         assert!(!m1.is_from_me);
         assert_eq!(m1.service, "iMessage");
 
-        let m2 = records
-            .iter()
-            .find(|r| r.rowid == 2)
-            .expect("msg 2");
+        let m2 = records.iter().find(|r| r.rowid == 2).expect("msg 2");
         assert!(m2.text.is_none());
         assert_eq!(m2.attributed_text.as_deref(), Some("secret payload"));
         assert_eq!(m2.thread_originator_guid.as_deref(), Some("THREAD-1"));
@@ -475,7 +492,10 @@ mod tests {
         assert!(m2.is_from_me);
         assert_eq!(m2.service, "SMS");
         assert_eq!(m2.attachments.len(), 1);
-        assert_eq!(m2.attachments[0].transfer_name.as_deref(), Some("photo.jpg"));
+        assert_eq!(
+            m2.attachments[0].transfer_name.as_deref(),
+            Some("photo.jpg")
+        );
         assert_eq!(m2.attachments[0].mime_type.as_deref(), Some("image/jpeg"));
         assert_eq!(m2.attachments[0].total_bytes, 1_048_576);
 
@@ -524,8 +544,11 @@ mod tests {
             [],
         )
         .expect("msg2");
-        conn.execute("INSERT INTO chat (ROWID, chat_identifier) VALUES (1, '6700')", [])
-            .expect("chat");
+        conn.execute(
+            "INSERT INTO chat (ROWID, chat_identifier) VALUES (1, '6700')",
+            [],
+        )
+        .expect("chat");
         conn.execute(
             "INSERT INTO chat_message_join (chat_id, message_id) VALUES (1, 1), (1, 2)",
             [],
@@ -553,10 +576,7 @@ mod tests {
         blob.extend_from_slice(b"junk\x00prefix");
         blob.extend_from_slice(b"NSString\x01\x05hello");
         blob.extend_from_slice(b"\x00trailing");
-        assert_eq!(
-            extract_attributed_string(&blob).as_deref(),
-            Some("hello")
-        );
+        assert_eq!(extract_attributed_string(&blob).as_deref(), Some("hello"));
     }
 
     #[test]

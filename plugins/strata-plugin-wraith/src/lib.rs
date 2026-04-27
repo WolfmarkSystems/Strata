@@ -62,24 +62,31 @@ impl WraithPlugin {
             return false;
         }
         parts.iter().all(|p| {
-            !p.is_empty() && p.len() <= 3 && p.chars().all(|c| c.is_ascii_digit())
+            !p.is_empty()
+                && p.len() <= 3
+                && p.chars().all(|c| c.is_ascii_digit())
                 && p.parse::<u32>().map(|n| n <= 255).unwrap_or(false)
         })
     }
 
     /// Known malware-related strings to look for in memory.
     const MALWARE_STRINGS: &'static [&'static str] = &[
-        "mimikatz", "meterpreter", "cobalt strike", "beacon", "bloodhound",
-        "rubeus", "lazagne", "empire", "covenant", "crackmapexec",
+        "mimikatz",
+        "meterpreter",
+        "cobalt strike",
+        "beacon",
+        "bloodhound",
+        "rubeus",
+        "lazagne",
+        "empire",
+        "covenant",
+        "crackmapexec",
     ];
 
     fn analyze_file(path: &Path) -> Vec<Artifact> {
         let mut results = Vec::new();
         let path_str = path.to_string_lossy();
-        let name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let name_lower = name.to_lowercase();
         let path_lower = path_str.to_lowercase();
 
@@ -94,7 +101,11 @@ impl WraithPlugin {
                 use std::io::Read;
                 if f.read_exact(&mut magic).is_ok() {
                     let magic_str = String::from_utf8_lossy(&magic);
-                    if magic_str == "HIBR" || magic_str == "RSTR" || magic_str == "hibr" || magic_str == "rstr" {
+                    if magic_str == "HIBR"
+                        || magic_str == "RSTR"
+                        || magic_str == "hibr"
+                        || magic_str == "rstr"
+                    {
                         format!("Valid hibernation file (magic: {}) — contains full RAM snapshot for memory forensics", magic_str)
                     } else {
                         format!("Hibernation file found (magic: {:02X}{:02X}{:02X}{:02X}) — may be compressed or partial", magic[0], magic[1], magic[2], magic[3])
@@ -156,7 +167,10 @@ impl WraithPlugin {
                 results.push(a);
             } else if unusual_location && !is_legitimate_wer {
                 let mut a = Artifact::new("Suspicious Dump", &path_str);
-                a.add_field("title", &format!("Suspicious .dmp in non-WER path: {}", name));
+                a.add_field(
+                    "title",
+                    &format!("Suspicious .dmp in non-WER path: {}", name),
+                );
                 a.add_field(
                     "detail",
                     "Process memory dump found in user Temp / AppData (outside WER ReportArchive). May be a credential-dumping artifact.",
@@ -187,7 +201,9 @@ impl WraithPlugin {
         }
 
         // Crash Dumps
-        if name_lower.ends_with(".dmp") && (path_lower.contains("minidump") || name_lower == "memory.dmp") {
+        if name_lower.ends_with(".dmp")
+            && (path_lower.contains("minidump") || name_lower == "memory.dmp")
+        {
             let mut artifact = Artifact::new("SystemActivity", &path_str);
             artifact.add_field("file_type", "Crash Dump");
 
@@ -195,9 +211,13 @@ impl WraithPlugin {
                 let mut magic = [0u8; 4];
                 use std::io::Read;
                 if f.read_exact(&mut magic).is_ok() && &magic == b"MDMP" {
-                    "Valid minidump file (MDMP magic) — process crash dump with memory regions".to_string()
+                    "Valid minidump file (MDMP magic) — process crash dump with memory regions"
+                        .to_string()
                 } else {
-                    format!("Dump file found (header: {:02X}{:02X}{:02X}{:02X})", magic[0], magic[1], magic[2], magic[3])
+                    format!(
+                        "Dump file found (header: {:02X}{:02X}{:02X}{:02X})",
+                        magic[0], magic[1], magic[2], magic[3]
+                    )
                 }
             } else {
                 "Crash dump file found — could not read header".to_string()
@@ -254,7 +274,8 @@ impl WraithPlugin {
                             detail_parts.push(format!("{} IP addresses", found_ips.len()));
                         }
                         if has_malware {
-                            let unique_malware: HashSet<&str> = found_malware.iter().map(|s| s.as_str()).collect();
+                            let unique_malware: HashSet<&str> =
+                                found_malware.iter().map(|s| s.as_str()).collect();
                             detail_parts.push(format!(
                                 "MALWARE STRINGS: {}",
                                 unique_malware.into_iter().collect::<Vec<_>>().join(", ")
@@ -293,9 +314,7 @@ impl StrataPlugin for WraithPlugin {
     }
 
     fn capabilities(&self) -> Vec<PluginCapability> {
-        vec![
-            PluginCapability::ArtifactExtraction,
-        ]
+        vec![PluginCapability::ArtifactExtraction]
     }
 
     fn description(&self) -> &str {
@@ -334,7 +353,11 @@ impl StrataPlugin for WraithPlugin {
                 "Crash Dump" => (ArtifactCategory::SystemActivity, ForensicValue::High),
                 "Memory String" => (
                     ArtifactCategory::ExecutionHistory,
-                    if is_suspicious { ForensicValue::Critical } else { ForensicValue::Medium },
+                    if is_suspicious {
+                        ForensicValue::Critical
+                    } else {
+                        ForensicValue::Medium
+                    },
                 ),
                 _ => (ArtifactCategory::SystemActivity, ForensicValue::Medium),
             };
@@ -348,11 +371,7 @@ impl StrataPlugin for WraithPlugin {
                     .get("title")
                     .cloned()
                     .unwrap_or_else(|| artifact.source.clone()),
-                detail: artifact
-                    .data
-                    .get("detail")
-                    .cloned()
-                    .unwrap_or_default(),
+                detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                 source_path: artifact.source.clone(),
                 forensic_value,
                 mitre_technique: artifact.data.get("mitre").cloned(),
@@ -441,8 +460,11 @@ mod sprint75_backfill_tests {
                 .unwrap_or(0),
         ));
         std::fs::create_dir_all(&dir).expect("mkdir");
-        std::fs::write(dir.join("garbage.bin"), [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
-            .expect("write garbage");
+        std::fs::write(
+            dir.join("garbage.bin"),
+            [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF],
+        )
+        .expect("write garbage");
         PluginContext {
             root_path: dir.to_string_lossy().into_owned(),
             vfs: None,

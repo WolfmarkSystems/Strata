@@ -71,8 +71,7 @@ impl ArtifactParser for SpotlightMetadataParser {
         // Accept any file whose name *or* path contains the kMDItem prefix.
         // This covers both the dumped extended-attribute file and the rare
         // .com.apple.metadata side files.
-        let is_metadata = path_str.contains("com.apple.metadata")
-            || path_str.contains("kmditem");
+        let is_metadata = path_str.contains("com.apple.metadata") || path_str.contains("kmditem");
         if !is_metadata {
             return Ok(Vec::new());
         }

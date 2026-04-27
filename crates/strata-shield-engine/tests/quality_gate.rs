@@ -34,13 +34,7 @@ fn ast_quality_gate_passes() {
         return;
     };
     let output = Command::new(env!("CARGO"))
-        .args([
-            "run",
-            "--quiet",
-            "-p",
-            "strata-verify-quality",
-            "--",
-        ])
+        .args(["run", "--quiet", "-p", "strata-verify-quality", "--"])
         .current_dir(&root)
         .output();
     let output = match output {

@@ -83,7 +83,9 @@ pub fn parse_rubin_events(conn: &Connection) -> Vec<RubinEvent> {
     let rows = stmt.query_map([], |r| {
         Ok((
             r.get::<_, i64>(0).unwrap_or(0),
-            r.get::<_, Option<String>>(1).unwrap_or(None).unwrap_or_default(),
+            r.get::<_, Option<String>>(1)
+                .unwrap_or(None)
+                .unwrap_or_default(),
             r.get::<_, Option<String>>(2).unwrap_or(None),
             r.get::<_, Option<f64>>(3).unwrap_or(None),
             r.get::<_, Option<f64>>(4).unwrap_or(None),
@@ -96,7 +98,7 @@ pub fn parse_rubin_events(conn: &Connection) -> Vec<RubinEvent> {
         let timestamp = Utc
             .timestamp_opt(ts / 1000, 0)
             .single()
-            .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap());
+            .unwrap_or_else(unix_epoch);
         let event_kind = match kind_raw.as_str() {
             "app_suggestion" | "suggestion" => RubinEventKind::AppSuggestion,
             "routine" | "routine_trigger" => RubinEventKind::RoutineTrigger,
@@ -139,7 +141,9 @@ pub fn parse_wellbeing_events(conn: &Connection) -> Vec<WellbeingEvent> {
     let rows = stmt.query_map([], |r| {
         Ok((
             r.get::<_, i64>(0).unwrap_or(0),
-            r.get::<_, Option<String>>(1).unwrap_or(None).unwrap_or_default(),
+            r.get::<_, Option<String>>(1)
+                .unwrap_or(None)
+                .unwrap_or_default(),
             r.get::<_, Option<String>>(2).unwrap_or(None),
             r.get::<_, Option<i64>>(3).unwrap_or(None),
         ))
@@ -150,7 +154,7 @@ pub fn parse_wellbeing_events(conn: &Connection) -> Vec<WellbeingEvent> {
         let timestamp = Utc
             .timestamp_opt(ts / 1000, 0)
             .single()
-            .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap());
+            .unwrap_or_else(unix_epoch);
         let kind = match kind_raw.to_ascii_lowercase().as_str() {
             "focus_on" | "focus_mode_enabled" => WellbeingEventKind::FocusModeEnabled,
             "focus_off" | "focus_mode_disabled" => WellbeingEventKind::FocusModeDisabled,
@@ -168,6 +172,10 @@ pub fn parse_wellbeing_events(conn: &Connection) -> Vec<WellbeingEvent> {
         });
     }
     out
+}
+
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
 }
 
 fn first_table(conn: &Connection, candidates: &[&str]) -> Option<String> {
@@ -256,10 +264,8 @@ mod tests {
     #[test]
     fn unknown_event_kind_preserved_as_string() {
         let c = Connection::open_in_memory().expect("open");
-        c.execute_batch(
-            "CREATE TABLE rubin_events (timestamp INTEGER, event_type TEXT);",
-        )
-        .expect("s");
+        c.execute_batch("CREATE TABLE rubin_events (timestamp INTEGER, event_type TEXT);")
+            .expect("s");
         c.execute(
             "INSERT INTO rubin_events VALUES (1700000000000, 'custom_kind_xyz')",
             [],

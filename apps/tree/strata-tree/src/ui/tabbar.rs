@@ -7,19 +7,19 @@ use egui::Color32;
 // Phosphor Regular icon codepoints (loaded via font in app.rs)
 #[allow(dead_code)]
 mod ph {
-    pub const FOLDER_OPEN: &str = "\u{E256}";       // File Explorer
-    pub const STACK: &str = "\u{E68A}";              // Artifacts (stacked layers)
-    pub const BOOKMARK_SIMPLE: &str = "\u{E0EA}";    // Bookmarks
-    pub const IMAGE: &str = "\u{E2CA}";              // Gallery
-    pub const CLOCK: &str = "\u{E19A}";              // Timeline
-    pub const TREE_STRUCTURE: &str = "\u{E6EE}";     // Registry (branching tree)
-    pub const WARNING: &str = "\u{E752}";            // Event Logs (warning triangle)
-    pub const GLOBE: &str = "\u{E288}";              // Browser History
-    pub const MAGNIFYING_GLASS: &str = "\u{E30C}";   // Search
-    pub const HASH: &str = "\u{E2A2}";              // Hash Sets
-    pub const SHIELD_CHECK: &str = "\u{E622}";       // Audit Log (shield + check)
-    pub const PUZZLE_PIECE: &str = "\u{E596}";       // Plugins
-    pub const GEAR: &str = "\u{E270}";              // Settings
+    pub const FOLDER_OPEN: &str = "\u{E256}"; // File Explorer
+    pub const STACK: &str = "\u{E68A}"; // Artifacts (stacked layers)
+    pub const BOOKMARK_SIMPLE: &str = "\u{E0EA}"; // Bookmarks
+    pub const IMAGE: &str = "\u{E2CA}"; // Gallery
+    pub const CLOCK: &str = "\u{E19A}"; // Timeline
+    pub const TREE_STRUCTURE: &str = "\u{E6EE}"; // Registry (branching tree)
+    pub const WARNING: &str = "\u{E752}"; // Event Logs (warning triangle)
+    pub const GLOBE: &str = "\u{E288}"; // Browser History
+    pub const MAGNIFYING_GLASS: &str = "\u{E30C}"; // Search
+    pub const HASH: &str = "\u{E2A2}"; // Hash Sets
+    pub const SHIELD_CHECK: &str = "\u{E622}"; // Audit Log (shield + check)
+    pub const PUZZLE_PIECE: &str = "\u{E596}"; // Plugins
+    pub const GEAR: &str = "\u{E270}"; // Settings
 }
 
 struct SidebarEntry {
@@ -135,11 +135,14 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
             };
             let (rect, resp) = ui.allocate_exact_size(egui::vec2(36.0, 32.0), egui::Sense::click());
             if resp.hovered() && !active {
-                ui.painter().rect_filled(rect, crate::theme::RADIUS_MD, t.card);
+                ui.painter()
+                    .rect_filled(rect, crate::theme::RADIUS_MD, t.card);
             }
             if active {
-                ui.painter().rect_filled(rect, crate::theme::RADIUS_MD, t.card);
-                let bar = egui::Rect::from_min_size(rect.left_top(), egui::vec2(2.0, rect.height()));
+                ui.painter()
+                    .rect_filled(rect, crate::theme::RADIUS_MD, t.card);
+                let bar =
+                    egui::Rect::from_min_size(rect.left_top(), egui::vec2(2.0, rect.height()));
                 ui.painter().rect_filled(bar, 0.0, t.active);
             }
             ui.painter().text(

@@ -107,7 +107,11 @@ fn parse_pca_timestamp(s: &str) -> Option<DateTime<Utc>> {
 
 fn extract_exe_name(path: &str) -> &str {
     let b = path.as_bytes();
-    let split_at = b.iter().rposition(|c| *c == b'\\' || *c == b'/').map(|i| i + 1).unwrap_or(0);
+    let split_at = b
+        .iter()
+        .rposition(|c| *c == b'\\' || *c == b'/')
+        .map(|i| i + 1)
+        .unwrap_or(0);
     &path[split_at..]
 }
 
@@ -119,7 +123,10 @@ pub fn check_suspicion(entry: &PcaEntry) -> Option<String> {
         || pl.contains("\\downloads\\")
         || pl.contains("\\users\\public\\")
     {
-        return Some(format!("Execution from user-writable path: {}", entry.exe_path));
+        return Some(format!(
+            "Execution from user-writable path: {}",
+            entry.exe_path
+        ));
     }
     let ename = entry.exe_name.to_ascii_lowercase();
     if LOLBINS.contains(&ename.as_str()) {

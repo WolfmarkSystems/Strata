@@ -330,10 +330,7 @@ impl BrowserAutofillParser {
                     .get("timeLastUsed")
                     .and_then(|t| t.as_i64())
                     .map(|ms| ms / 1000);
-                let times_used = login
-                    .get("timesUsed")
-                    .and_then(|t| t.as_i64())
-                    .unwrap_or(0);
+                let times_used = login.get("timesUsed").and_then(|t| t.as_i64()).unwrap_or(0);
 
                 artifacts.push(ParsedArtifact {
                     timestamp: time_last_used.or(time_created),

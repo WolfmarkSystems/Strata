@@ -73,10 +73,7 @@ const V12_BASELINE_CASES: &[RegressionCase] = &[
         name: "jo-2009-11-16",
         image_subpath: "jo-2009-11-16.E01",
         min_total_artifacts: 3_300, // v12 observed 3,537
-        min_per_plugin: &[
-            ("Strata Phantom", 500),
-            ("Strata Vector", 2_300),
-        ],
+        min_per_plugin: &[("Strata Phantom", 500), ("Strata Vector", 2_300)],
         reason_if_low: "same as charlie — shared codepath",
     },
     // Acquisition-trim cases: floor of 1 catches total breakage while
@@ -126,15 +123,9 @@ fn run_case(binary: &Path, root: &Path, case: &RegressionCase) -> CaseResult {
     let summary_path = case_dir.path().join("summary.json");
 
     let status = Command::new(binary)
-        .args([
-            "ingest",
-            "run",
-            "--source",
-        ])
+        .args(["ingest", "run", "--source"])
         .arg(&source)
-        .args([
-            "--case-dir",
-        ])
+        .args(["--case-dir"])
         .arg(case_dir.path())
         .args([
             "--case-name",
@@ -310,8 +301,14 @@ mod unit {
                 !case.min_per_plugin.is_empty(),
                 "{name}: Windows baseline images must have per-plugin floors"
             );
-            let has_phantom = case.min_per_plugin.iter().any(|(p, _)| *p == "Strata Phantom");
-            let has_vector = case.min_per_plugin.iter().any(|(p, _)| *p == "Strata Vector");
+            let has_phantom = case
+                .min_per_plugin
+                .iter()
+                .any(|(p, _)| *p == "Strata Phantom");
+            let has_vector = case
+                .min_per_plugin
+                .iter()
+                .any(|(p, _)| *p == "Strata Vector");
             assert!(has_phantom, "{name}: must guard Phantom");
             assert!(has_vector, "{name}: must guard Vector");
         }

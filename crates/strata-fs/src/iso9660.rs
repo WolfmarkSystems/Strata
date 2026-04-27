@@ -47,7 +47,7 @@ impl Iso9660Reader {
 
         let volume_id = String::from_utf8_lossy(&pvd_buf[40..72]).trim().to_string();
         // Little-endian value is first in BOTH-endian (e.g. 8 bytes where first 4 are LE, last 4 BE)
-        let volume_space_size = u32::from_le_bytes(pvd_buf[80..84].try_into().unwrap());
+        let volume_space_size = read_u32_le(&pvd_buf, 80)?;
 
         let root_directory_record = Self::parse_directory_record(&pvd_buf[156..190])?;
 
@@ -71,15 +71,26 @@ impl Iso9660Reader {
         }
 
         let ext_attr_length = buf[1];
-        let extent_location = u32::from_le_bytes(buf[2..6].try_into().unwrap());
-        let data_length = u32::from_le_bytes(buf[10..14].try_into().unwrap());
+        if buf.len() < 33 {
+            return Err(ForensicError::InvalidImageFormat);
+        }
+
+        let extent_location = read_u32_le(buf, 2)?;
+        let data_length = read_u32_le(buf, 10)?;
 
         let flags = buf[25];
         let is_directory = (flags & 2) != 0;
         let file_unit_size = buf[26];
         let interleave_gap = buf[27];
-        let vol_seq_number = u16::from_le_bytes(buf[28..30].try_into().unwrap());
+        let vol_seq_number = read_u16_le(buf, 28)?;
         let name_len = buf[32] as usize;
+        if 33usize
+            .checked_add(name_len)
+            .map(|end| end > buf.len())
+            .unwrap_or(true)
+        {
+            return Err(ForensicError::InvalidImageFormat);
+        }
 
         // Handle current dir and parent dir special names
         let name = if name_len == 1 && buf[33] == 0 {
@@ -153,6 +164,24 @@ impl Iso9660Reader {
         self.file.read_exact(&mut buf)?;
         Ok(buf)
     }
+}
+
+fn read_u16_le(buf: &[u8], offset: usize) -> Result<u16, ForensicError> {
+    let bytes: [u8; 2] = buf
+        .get(offset..offset + 2)
+        .ok_or(ForensicError::InvalidImageFormat)?
+        .try_into()
+        .map_err(|_| ForensicError::InvalidImageFormat)?;
+    Ok(u16::from_le_bytes(bytes))
+}
+
+fn read_u32_le(buf: &[u8], offset: usize) -> Result<u32, ForensicError> {
+    let bytes: [u8; 4] = buf
+        .get(offset..offset + 4)
+        .ok_or(ForensicError::InvalidImageFormat)?
+        .try_into()
+        .map_err(|_| ForensicError::InvalidImageFormat)?;
+    Ok(u32::from_le_bytes(bytes))
 }
 
 pub fn iso9660_detect(path: &Path) -> Result<bool, ForensicError> {

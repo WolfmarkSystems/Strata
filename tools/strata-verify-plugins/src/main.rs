@@ -137,8 +137,7 @@ pub fn orphan_registrations(
 }
 
 fn read_expected(path: &Path) -> Result<String, String> {
-    std::fs::read_to_string(path)
-        .map_err(|e| format!("failed to read {}: {}", path.display(), e))
+    std::fs::read_to_string(path).map_err(|e| format!("failed to read {}: {}", path.display(), e))
 }
 
 fn run() -> ExitCode {
@@ -150,9 +149,8 @@ fn run() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let plugins_rs = match read_expected(
-        &root.join("crates/strata-engine-adapter/src/plugins.rs"),
-    ) {
+    let plugins_rs = match read_expected(&root.join("crates/strata-engine-adapter/src/plugins.rs"))
+    {
         Ok(s) => s,
         Err(e) => {
             eprintln!("error: {}", e);

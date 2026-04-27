@@ -89,10 +89,8 @@ impl NotesStore {
 
     /// Delete a note by ID.
     pub fn delete_note(&self, note_id: &str) -> Result<(), NotesError> {
-        self.conn.execute(
-            "DELETE FROM artifact_notes WHERE id = ?1",
-            params![note_id],
-        )?;
+        self.conn
+            .execute("DELETE FROM artifact_notes WHERE id = ?1", params![note_id])?;
         Ok(())
     }
 
@@ -166,7 +164,11 @@ mod tests {
     fn add_and_retrieve_note() {
         let store = NotesStore::open_memory().unwrap();
         let note = store
-            .add_note("artifact-001", "Suspicious file — needs review", "SA Randolph")
+            .add_note(
+                "artifact-001",
+                "Suspicious file — needs review",
+                "SA Randolph",
+            )
             .unwrap();
         assert_eq!(note.artifact_id, "artifact-001");
         assert_eq!(note.examiner_name, "SA Randolph");
@@ -182,9 +184,7 @@ mod tests {
         let note = store
             .add_note("artifact-002", "Initial note", "SA Smith")
             .unwrap();
-        store
-            .update_note(&note.id, "Updated note text")
-            .unwrap();
+        store.update_note(&note.id, "Updated note text").unwrap();
 
         let notes = store.notes_for_artifact("artifact-002").unwrap();
         assert_eq!(notes.len(), 1);
@@ -207,9 +207,15 @@ mod tests {
     #[test]
     fn multiple_notes_per_artifact() {
         let store = NotesStore::open_memory().unwrap();
-        store.add_note("artifact-004", "First observation", "SA A").unwrap();
-        store.add_note("artifact-004", "Second observation", "SA B").unwrap();
-        store.add_note("artifact-005", "Different artifact", "SA A").unwrap();
+        store
+            .add_note("artifact-004", "First observation", "SA A")
+            .unwrap();
+        store
+            .add_note("artifact-004", "Second observation", "SA B")
+            .unwrap();
+        store
+            .add_note("artifact-005", "Different artifact", "SA A")
+            .unwrap();
 
         let notes_4 = store.notes_for_artifact("artifact-004").unwrap();
         assert_eq!(notes_4.len(), 2);

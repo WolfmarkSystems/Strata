@@ -98,11 +98,7 @@ impl ArtifactParser for RdpArtifactsParser {
 }
 
 impl RdpArtifactsParser {
-    fn parse_rdp_file(
-        &self,
-        path: &Path,
-        data: &[u8],
-    ) -> Result<Vec<ParsedArtifact>, ParserError> {
+    fn parse_rdp_file(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
         let mut artifacts = Vec::new();
         let source = path.to_string_lossy().to_string();
         let text = String::from_utf8_lossy(data);
@@ -160,9 +156,9 @@ impl RdpArtifactsParser {
             );
         }
         if entry.printer_redirection {
-            entry.forensic_flags.push(
-                "PRINTER_REDIRECT — Printers shared with remote host".to_string(),
-            );
+            entry
+                .forensic_flags
+                .push("PRINTER_REDIRECT — Printers shared with remote host".to_string());
         }
 
         let server = entry

@@ -87,11 +87,7 @@ pub fn seal_html(html: &str, key: &SigningKey) -> String {
     seal_html_with_timestamp(html, key, timestamp)
 }
 
-fn seal_html_with_timestamp(
-    html: &str,
-    key: &SigningKey,
-    timestamp: DateTime<Utc>,
-) -> String {
+fn seal_html_with_timestamp(html: &str, key: &SigningKey, timestamp: DateTime<Utc>) -> String {
     let mut hasher = Sha256::new();
     hasher.update(html.as_bytes());
     let digest = hasher.finalize();
@@ -122,9 +118,7 @@ fn seal_html_with_timestamp(
 /// Verify a sealed HTML report. Returns `Ok(SealVerification)` when
 /// the signature is valid; `Err(SealError)` otherwise.
 pub fn verify_sealed_html(sealed: &str) -> Result<SealVerification, SealError> {
-    let seal_start = sealed
-        .rfind(SEAL_MARKER)
-        .ok_or(SealError::NoSeal)?;
+    let seal_start = sealed.rfind(SEAL_MARKER).ok_or(SealError::NoSeal)?;
     let content = &sealed[..seal_start];
     let content_trimmed = content.trim_end_matches('\n');
     let seal_end = sealed[seal_start..]
@@ -152,8 +146,7 @@ pub fn verify_sealed_html(sealed: &str) -> Result<SealVerification, SealError> {
     }
     let mut pk_arr = [0u8; 32];
     pk_arr.copy_from_slice(&pubkey_bytes);
-    let verifying_key =
-        VerifyingKey::from_bytes(&pk_arr).map_err(|_| SealError::InvalidKey)?;
+    let verifying_key = VerifyingKey::from_bytes(&pk_arr).map_err(|_| SealError::InvalidKey)?;
     let mut sig_arr = [0u8; 64];
     sig_arr.copy_from_slice(&sig_bytes);
     let signature = Signature::from_bytes(&sig_arr);
@@ -176,9 +169,7 @@ fn extract_attr(block: &str, attr: &'static str) -> Result<String, SealError> {
     let needle = format!("{}=\"", attr);
     let pos = block.find(&needle).ok_or(SealError::Missing(attr))?;
     let start = pos + needle.len();
-    let end = block[start..]
-        .find('"')
-        .ok_or(SealError::Missing(attr))?;
+    let end = block[start..].find('"').ok_or(SealError::Missing(attr))?;
     Ok(block[start..start + end].to_string())
 }
 
@@ -212,7 +203,10 @@ mod tests {
         let html = "<html><body>test report</body></html>";
         let sealed = seal_html(html, &key);
         let result = verify_sealed_html(&sealed).expect("verified");
-        assert_eq!(result.pubkey_hex, hex_encode(&key.verifying_key().to_bytes()));
+        assert_eq!(
+            result.pubkey_hex,
+            hex_encode(&key.verifying_key().to_bytes())
+        );
     }
 
     #[test]

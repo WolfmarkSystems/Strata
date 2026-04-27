@@ -3,8 +3,8 @@ use strata_plugin_sdk::PluginOutput;
 use crate::types::*;
 
 const FORENSIC_EXTENSIONS: &[&str] = &[
-    ".msg", ".pst", ".ost", ".log", ".evt", ".evtx", ".db", ".sqlite",
-    ".sqlite3", ".edb", ".dat", ".reg", ".hve",
+    ".msg", ".pst", ".ost", ".log", ".evt", ".evtx", ".db", ".sqlite", ".sqlite3", ".edb", ".dat",
+    ".reg", ".hve",
 ];
 
 /// Detects systematic deletion patterns suggesting deliberate cleanup.
@@ -45,10 +45,7 @@ impl EvidenceDeletionDetector {
 
         // Pattern 1: Large number of Recycle Bin entries in short window
         if recycle_entries.len() >= 20 {
-            let timestamps: Vec<i64> = recycle_entries
-                .iter()
-                .filter_map(|(ts, _)| *ts)
-                .collect();
+            let timestamps: Vec<i64> = recycle_entries.iter().filter_map(|(ts, _)| *ts).collect();
             if timestamps.len() >= 10 {
                 let mut sorted = timestamps.clone();
                 sorted.sort();
@@ -101,11 +98,11 @@ impl EvidenceDeletionDetector {
                     plugin_name: "Multiple".to_string(),
                     artifact_category: "Evidence Deletion".to_string(),
                     artifact_id: "forensic-file-deletion".to_string(),
-                    timestamp: forensic_deletions
-                        .first()
-                        .and_then(|(_, ts)| {
-                            ts.and_then(|t| chrono::DateTime::from_timestamp(t, 0).map(|d| d.to_rfc3339()))
-                        }),
+                    timestamp: forensic_deletions.first().and_then(|(_, ts)| {
+                        ts.and_then(|t| {
+                            chrono::DateTime::from_timestamp(t, 0).map(|d| d.to_rfc3339())
+                        })
+                    }),
                     file_path: forensic_deletions.first().map(|(p, _)| p.clone()),
                 },
                 anomaly_type: AnomalyType::EvidenceDeletion,

@@ -23,7 +23,8 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                 // TODO: embed wolf_mark.png here
                 // use include_bytes! when PNG ready
                 // icon_data: load_image_bytes(...)
-                let (_wolf_slot, _) = ui.allocate_exact_size(egui::vec2(32.0, 32.0), egui::Sense::hover());
+                let (_wolf_slot, _) =
+                    ui.allocate_exact_size(egui::vec2(32.0, 32.0), egui::Sense::hover());
 
                 // STRATA wordmark — 18px bold, letter spacing via spaces
                 ui.label(
@@ -77,7 +78,10 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                                     .monospace(),
                             )
                             .fill(egui::Color32::from_rgb(0x2a, 0x1a, 0x00))
-                            .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(0xc8, 0x85, 0x5a)))
+                            .stroke(egui::Stroke::new(
+                                1.0,
+                                egui::Color32::from_rgb(0xc8, 0x85, 0x5a),
+                            ))
                             .rounding(3.0),
                         );
                         ui.add_space(4.0);
@@ -136,11 +140,12 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     ui.add_space(left_pad);
                 }
 
-                let search_border = if state.global_search_active || !state.global_search_query.is_empty() {
-                    t.active
-                } else {
-                    t.border
-                };
+                let search_border =
+                    if state.global_search_active || !state.global_search_query.is_empty() {
+                        t.active
+                    } else {
+                        t.border
+                    };
 
                 egui::Frame::none()
                     .fill(t.card)
@@ -163,7 +168,11 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                                 activate_search_mode(state);
                             }
                             if state.global_search_active
-                                && ui.button(egui::RichText::new("\u{2715}").color(t.muted).size(11.0)).clicked()
+                                && ui
+                                    .button(
+                                        egui::RichText::new("\u{2715}").color(t.muted).size(11.0),
+                                    )
+                                    .clicked()
                             {
                                 exit_search_mode(state);
                             }
@@ -177,30 +186,73 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                 let sep_c = label_c;
                 let total_files = state.total_files_count;
                 let suspicious = state.suspicious_event_count;
-                let flagged = state.file_index.iter().filter(|f| f.hash_flag.as_deref() == Some("KnownBad")).count();
+                let flagged = state
+                    .file_index
+                    .iter()
+                    .filter(|f| f.hash_flag.as_deref() == Some("KnownBad"))
+                    .count();
                 let carved = state.file_index.iter().filter(|f| f.is_carved).count();
-                let hashed = state.file_index.iter().filter(|f| f.sha256.is_some()).count();
+                let hashed = state
+                    .file_index
+                    .iter()
+                    .filter(|f| f.sha256.is_some())
+                    .count();
                 let artifacts = state.artifact_total;
 
                 let stat = |ui: &mut egui::Ui, name: &str, val: usize, val_color: egui::Color32| {
                     ui.label(egui::RichText::new(name).color(label_c).size(11.0));
-                    ui.label(egui::RichText::new(format_count(val)).color(val_color).size(12.0).strong());
+                    ui.label(
+                        egui::RichText::new(format_count(val))
+                            .color(val_color)
+                            .size(12.0)
+                            .strong(),
+                    );
                 };
                 let sep = |ui: &mut egui::Ui| {
                     ui.label(egui::RichText::new("|").color(sep_c).size(10.0));
                 };
 
-                stat(ui, "FILES", total_files, egui::Color32::from_rgb(0x4a, 0x60, 0x80));
+                stat(
+                    ui,
+                    "FILES",
+                    total_files,
+                    egui::Color32::from_rgb(0x4a, 0x60, 0x80),
+                );
                 sep(ui);
-                stat(ui, "SUSPICIOUS", suspicious, egui::Color32::from_rgb(0xb8, 0x78, 0x40));
+                stat(
+                    ui,
+                    "SUSPICIOUS",
+                    suspicious,
+                    egui::Color32::from_rgb(0xb8, 0x78, 0x40),
+                );
                 sep(ui);
-                stat(ui, "FLAGGED", flagged, egui::Color32::from_rgb(0xa8, 0x40, 0x40));
+                stat(
+                    ui,
+                    "FLAGGED",
+                    flagged,
+                    egui::Color32::from_rgb(0xa8, 0x40, 0x40),
+                );
                 sep(ui);
-                stat(ui, "CARVED", carved, egui::Color32::from_rgb(0x4a, 0x78, 0x90));
+                stat(
+                    ui,
+                    "CARVED",
+                    carved,
+                    egui::Color32::from_rgb(0x4a, 0x78, 0x90),
+                );
                 sep(ui);
-                stat(ui, "HASHED", hashed, egui::Color32::from_rgb(0x48, 0x78, 0x58));
+                stat(
+                    ui,
+                    "HASHED",
+                    hashed,
+                    egui::Color32::from_rgb(0x48, 0x78, 0x58),
+                );
                 sep(ui);
-                stat(ui, "ARTIFACTS", artifacts, egui::Color32::from_rgb(0x60, 0x58, 0x78));
+                stat(
+                    ui,
+                    "ARTIFACTS",
+                    artifacts,
+                    egui::Color32::from_rgb(0x60, 0x58, 0x78),
+                );
 
                 // ── Action buttons (right-aligned) ─────────────────────
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -215,16 +267,26 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
 
                     // Export
                     ui.add_enabled_ui(has_case, |ui| {
-                        let resp = action_btn(ui, "EXPORT",
+                        let resp = action_btn(
+                            ui,
+                            "EXPORT",
                             egui::Color32::from_rgb(0xb8, 0x78, 0x40),
                             egui::Color32::from_rgb(0x38, 0x20, 0x10),
-                            egui::Color32::from_rgb(0x0f, 0x10, 0x14));
+                            egui::Color32::from_rgb(0x0f, 0x10, 0x14),
+                        );
                         if resp.clicked() {
                             if let Some(dir) = rfd::FileDialog::new().pick_folder() {
                                 match crate::ui::export::export_bundle(state, &dir) {
                                     Ok(files) => {
-                                        state.status = format!("Export: {} files → {}", files.len(), dir.display());
-                                        state.log_action("EXPORT", &format!("dir={} files={}", dir.display(), files.len()));
+                                        state.status = format!(
+                                            "Export: {} files → {}",
+                                            files.len(),
+                                            dir.display()
+                                        );
+                                        state.log_action(
+                                            "EXPORT",
+                                            &format!("dir={} files={}", dir.display(), files.len()),
+                                        );
                                     }
                                     Err(e) => state.status = format!("Export failed: {}", e),
                                 }
@@ -234,24 +296,38 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
 
                     // Report
                     ui.add_enabled_ui(has_case && can_report_export, |ui| {
-                        let resp = action_btn(ui, "REPORT",
+                        let resp = action_btn(
+                            ui,
+                            "REPORT",
                             egui::Color32::from_rgb(0x48, 0x78, 0x58),
                             egui::Color32::from_rgb(0x14, 0x20, 0x18),
-                            egui::Color32::from_rgb(0x0f, 0x10, 0x14));
+                            egui::Color32::from_rgb(0x0f, 0x10, 0x14),
+                        );
                         if resp.clicked() {
                             if let Some(path) = rfd::FileDialog::new()
                                 .add_filter("HTML", &["html"])
                                 .add_filter("PDF", &["pdf"])
                                 .save_file()
                             {
-                                let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+                                let ext = path
+                                    .extension()
+                                    .and_then(|e| e.to_str())
+                                    .unwrap_or("")
+                                    .to_lowercase();
                                 let result = if ext == "html" && can_html_report {
-                                    crate::ui::export::export_case_html(state, &path).map(|_| "html")
+                                    crate::ui::export::export_case_html(state, &path)
+                                        .map(|_| "html")
                                 } else {
                                     crate::ui::export::export_case_pdf(state, &path).map(|_| "pdf")
                                 };
                                 match result {
-                                    Ok(k) => { state.status = format!("Report: {}", path.display()); state.log_action("REPORT", &format!("{}={}", k, path.display())); }
+                                    Ok(k) => {
+                                        state.status = format!("Report: {}", path.display());
+                                        state.log_action(
+                                            "REPORT",
+                                            &format!("{}={}", k, path.display()),
+                                        );
+                                    }
                                     Err(e) => state.status = format!("Report failed: {}", e),
                                 }
                             }
@@ -260,10 +336,13 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
 
                     // Carve
                     ui.add_enabled_ui(has_files && can_file_carve, |ui| {
-                        let resp = action_btn(ui, "CARVE",
+                        let resp = action_btn(
+                            ui,
+                            "CARVE",
                             egui::Color32::from_rgb(0x3a, 0x48, 0x58),
                             egui::Color32::from_rgb(0x18, 0x1c, 0x24),
-                            egui::Color32::from_rgb(0x0f, 0x10, 0x14));
+                            egui::Color32::from_rgb(0x0f, 0x10, 0x14),
+                        );
                         if resp.clicked() && !state.carve_active {
                             if state.carve_target_evidence_id.is_none() {
                                 if let Some(first) = state.evidence_sources.first() {
@@ -276,16 +355,27 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
 
                     // Hash All
                     ui.add_enabled_ui(has_files, |ui| {
-                        let resp = action_btn(ui, "HASH ALL",
+                        let resp = action_btn(
+                            ui,
+                            "HASH ALL",
                             egui::Color32::from_rgb(0x8a, 0x9a, 0xaa),
                             egui::Color32::from_rgb(0x1a, 0x28, 0x40),
-                            egui::Color32::from_rgb(0x0f, 0x10, 0x14));
+                            egui::Color32::from_rgb(0x0f, 0x10, 0x14),
+                        );
                         if resp.clicked() && !state.hashing_active {
-                            let files: Vec<crate::state::FileEntry> = state.file_index.iter()
-                                .filter(|f| !f.is_dir && f.sha256.is_none()).cloned().collect();
+                            let files: Vec<crate::state::FileEntry> = state
+                                .file_index
+                                .iter()
+                                .filter(|f| !f.is_dir && f.sha256.is_none())
+                                .cloned()
+                                .collect();
                             if !files.is_empty() {
                                 let (tx, rx) = std::sync::mpsc::channel();
-                                crate::evidence::hasher::spawn_hash_worker(files, state.vfs_context.clone(), tx);
+                                crate::evidence::hasher::spawn_hash_worker(
+                                    files,
+                                    state.vfs_context.clone(),
+                                    tx,
+                                );
                                 state.hashing_rx = Some(rx);
                                 state.hashing_active = true;
                                 state.status = "Hashing started...".to_string();
@@ -328,9 +418,7 @@ fn activate_search_mode(state: &mut AppState) {
         let path_lower = f.path.to_lowercase();
         let ext_lower = f.extension.as_deref().unwrap_or("").to_lowercase();
 
-        if name_lower.contains(&query)
-            || path_lower.contains(&query)
-            || ext_lower.contains(&query)
+        if name_lower.contains(&query) || path_lower.contains(&query) || ext_lower.contains(&query)
         {
             state.global_search_results.push(idx);
         }
@@ -345,7 +433,14 @@ fn activate_search_mode(state: &mut AppState) {
         state.global_search_results.len(),
         state.global_search_query
     );
-    state.log_action("SEARCH", &format!("query={} results={}", state.global_search_query, state.global_search_results.len()));
+    state.log_action(
+        "SEARCH",
+        &format!(
+            "query={} results={}",
+            state.global_search_query,
+            state.global_search_results.len()
+        ),
+    );
 }
 
 fn exit_search_mode(state: &mut AppState) {
@@ -737,11 +832,7 @@ fn draw_wolf_head(painter: &egui::Painter, rect: egui::Rect) {
 
     let poly = |points: &[(f32, f32)], fill: egui::Color32| {
         let pts: Vec<egui::Pos2> = points.iter().map(|&(x, y)| p(x, y)).collect();
-        painter.add(egui::Shape::convex_polygon(
-            pts,
-            fill,
-            egui::Stroke::NONE,
-        ));
+        painter.add(egui::Shape::convex_polygon(pts, fill, egui::Stroke::NONE));
     };
 
     let poly_stroke = |points: &[(f32, f32)], fill: egui::Color32, stroke: egui::Stroke| {
@@ -803,33 +894,69 @@ fn draw_wolf_head(painter: &egui::Painter, rect: egui::Rect) {
 
     // Left eye socket
     poly(
-        &[(8.0, 11.0), (10.0, 10.0), (12.0, 12.0), (10.0, 14.0), (7.0, 13.0)],
+        &[
+            (8.0, 11.0),
+            (10.0, 10.0),
+            (12.0, 12.0),
+            (10.0, 14.0),
+            (7.0, 13.0),
+        ],
         egui::Color32::from_rgb(0x08, 0x0c, 0x10),
     );
     // Left eye glow
     poly(
-        &[(8.0, 11.0), (10.0, 10.0), (12.0, 12.0), (10.0, 13.0), (8.0, 12.0)],
+        &[
+            (8.0, 11.0),
+            (10.0, 10.0),
+            (12.0, 12.0),
+            (10.0, 13.0),
+            (8.0, 12.0),
+        ],
         egui::Color32::from_rgba_unmultiplied(0x4a, 0x7f, 0xc1, 128),
     );
     // Left eye bright
     poly(
-        &[(9.0, 11.0), (10.0, 10.0), (11.0, 12.0), (10.0, 13.0), (8.0, 12.0)],
+        &[
+            (9.0, 11.0),
+            (10.0, 10.0),
+            (11.0, 12.0),
+            (10.0, 13.0),
+            (8.0, 12.0),
+        ],
         egui::Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 230),
     );
 
     // Right eye socket
     poly(
-        &[(20.0, 11.0), (18.0, 10.0), (16.0, 12.0), (18.0, 14.0), (21.0, 13.0)],
+        &[
+            (20.0, 11.0),
+            (18.0, 10.0),
+            (16.0, 12.0),
+            (18.0, 14.0),
+            (21.0, 13.0),
+        ],
         egui::Color32::from_rgb(0x08, 0x0c, 0x10),
     );
     // Right eye glow
     poly(
-        &[(20.0, 11.0), (18.0, 10.0), (16.0, 12.0), (18.0, 13.0), (20.0, 12.0)],
+        &[
+            (20.0, 11.0),
+            (18.0, 10.0),
+            (16.0, 12.0),
+            (18.0, 13.0),
+            (20.0, 12.0),
+        ],
         egui::Color32::from_rgba_unmultiplied(0x4a, 0x7f, 0xc1, 128),
     );
     // Right eye bright
     poly(
-        &[(19.0, 11.0), (18.0, 10.0), (17.0, 12.0), (18.0, 13.0), (20.0, 12.0)],
+        &[
+            (19.0, 11.0),
+            (18.0, 10.0),
+            (17.0, 12.0),
+            (18.0, 13.0),
+            (20.0, 12.0),
+        ],
         egui::Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 230),
     );
 
@@ -841,7 +968,13 @@ fn draw_wolf_head(painter: &egui::Painter, rect: egui::Rect) {
 
     // Chin plate
     poly_stroke(
-        &[(10.0, 21.0), (14.0, 19.0), (18.0, 21.0), (16.0, 25.0), (12.0, 25.0)],
+        &[
+            (10.0, 21.0),
+            (14.0, 19.0),
+            (18.0, 21.0),
+            (16.0, 25.0),
+            (12.0, 25.0),
+        ],
         egui::Color32::from_rgb(0x1a, 0x2e, 0x44),
         egui::Stroke::new(0.4 * sx.min(sy), egui::Color32::from_rgb(0x8f, 0xa8, 0xc0)),
     );

@@ -17,8 +17,7 @@
 pub mod stream;
 
 pub use stream::{
-    auto_select_mode, ArchiveEntry, CompressionMethod, ExtractionMode, VfsError,
-    VirtualFilesystem,
+    auto_select_mode, ArchiveEntry, CompressionMethod, ExtractionMode, VfsError, VirtualFilesystem,
 };
 
 use crate::container::ContainerType;
@@ -113,12 +112,30 @@ pub struct ContainerInfo {
 /// progress output.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SafetyLimit {
-    MaxDepthReached { depth: u8 },
-    TotalSizeExceeded { bytes: u64, limit: u64 },
-    FileCountExceeded { count: u64, limit: u64 },
-    IndividualFileSizeExceeded { path: PathBuf, bytes: u64, limit: u64 },
-    Timeout { container: PathBuf, elapsed_secs: u64 },
-    DiskSpaceExhausted { available: u64, needed: u64 },
+    MaxDepthReached {
+        depth: u8,
+    },
+    TotalSizeExceeded {
+        bytes: u64,
+        limit: u64,
+    },
+    FileCountExceeded {
+        count: u64,
+        limit: u64,
+    },
+    IndividualFileSizeExceeded {
+        path: PathBuf,
+        bytes: u64,
+        limit: u64,
+    },
+    Timeout {
+        container: PathBuf,
+        elapsed_secs: u64,
+    },
+    DiskSpaceExhausted {
+        available: u64,
+        needed: u64,
+    },
 }
 
 /// Non-fatal issues observed while unpacking. The run still completes —
@@ -339,8 +356,7 @@ fn recursive_unpack(
                 break;
             }
             if candidate.is_file() && classify_archive(&candidate) != ArchiveKind::None {
-                let nested_leaf =
-                    recursive_unpack(&candidate, engine, depth + 1, state, started)?;
+                let nested_leaf = recursive_unpack(&candidate, engine, depth + 1, state, started)?;
                 leaf = nested_leaf;
                 // Stop after finding the first nested archive to avoid
                 // combinatorial explosion on wide archives.
@@ -458,7 +474,9 @@ fn safe_join(root: &Path, rel: &Path) -> Option<PathBuf> {
                     return None;
                 }
             }
-            std::path::Component::Normal(_) | std::path::Component::RootDir | std::path::Component::Prefix(_) => {
+            std::path::Component::Normal(_)
+            | std::path::Component::RootDir
+            | std::path::Component::Prefix(_) => {
                 out.push(c);
             }
             std::path::Component::CurDir => {}
@@ -503,12 +521,10 @@ fn extract_zip(
                         archive_type: "zip".into(),
                     });
                 } else {
-                    state
-                        .warnings
-                        .push(UnpackWarning::UnsupportedCompression {
-                            path: input.to_path_buf(),
-                            detail: detail.to_string(),
-                        });
+                    state.warnings.push(UnpackWarning::UnsupportedCompression {
+                        path: input.to_path_buf(),
+                        detail: detail.to_string(),
+                    });
                 }
                 continue;
             }
@@ -728,8 +744,8 @@ mod tests {
     fn make_zip(path: &Path, entries: &[(&str, &[u8])]) {
         let file = fs::File::create(path).expect("zip create");
         let mut w = zip::ZipWriter::new(file);
-        let opts: zip::write::SimpleFileOptions =
-            zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        let opts: zip::write::SimpleFileOptions = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
         for (name, body) in entries {
             w.start_file::<_, ()>(*name, opts).expect("start");
             w.write_all(body).expect("write");
@@ -821,8 +837,9 @@ mod tests {
         let z = src.path().join("bomb.zip");
         // 64 files × 1 MiB = 64 MiB, cap set to 4 MiB.
         let blob = vec![0u8; 1024 * 1024];
-        let entries: Vec<(String, Vec<u8>)> =
-            (0..64).map(|i| (format!("f{}.bin", i), blob.clone())).collect();
+        let entries: Vec<(String, Vec<u8>)> = (0..64)
+            .map(|i| (format!("f{}.bin", i), blob.clone()))
+            .collect();
         let file = fs::File::create(&z).expect("zip");
         let mut w = zip::ZipWriter::new(file);
         let opts: zip::write::SimpleFileOptions = zip::write::SimpleFileOptions::default()

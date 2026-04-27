@@ -64,7 +64,9 @@ impl TemplateEngine {
                 })
             })
             .collect();
-        let rendered = self.hbs.render("charged_conduct", &json!({ "findings": data }))?;
+        let rendered = self
+            .hbs
+            .render("charged_conduct", &json!({ "findings": data }))?;
         Ok(rendered)
     }
 

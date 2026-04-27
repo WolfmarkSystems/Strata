@@ -39,7 +39,8 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     {
                         match crate::ui::export::export_bundle(state, &dir) {
                             Ok(files) => {
-                                state.status = format!("Exported {} files to {}", files.len(), dir.display());
+                                state.status =
+                                    format!("Exported {} files to {}", files.len(), dir.display());
                                 state.log_action(
                                     "EXPORT_BUNDLE",
                                     &format!("dir={} files={}", dir.display(), files.len()),

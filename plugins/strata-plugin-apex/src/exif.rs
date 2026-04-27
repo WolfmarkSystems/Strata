@@ -198,8 +198,7 @@ mod tests {
 
     #[test]
     fn parse_exif_datetime_round_trip() {
-        let dt = parse_exif_datetime("2024:06:01 12:00:00".to_string())
-            .expect("parses");
+        let dt = parse_exif_datetime("2024:06:01 12:00:00".to_string()).expect("parses");
         assert_eq!(dt.timestamp(), 1_717_243_200);
     }
 

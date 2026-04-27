@@ -128,12 +128,9 @@ fn get_or_create_session(
 /// Look up a CSAM session by evidence id without creating one.
 fn get_session(evidence_id: &str) -> AdapterResult<Arc<Mutex<CsamSession>>> {
     let store = CSAM_STORE.lock().expect("csam store poisoned");
-    store
-        .get(evidence_id)
-        .cloned()
-        .ok_or_else(|| {
-            AdapterError::EngineError(format!("no CSAM session for evidence {}", evidence_id))
-        })
+    store.get(evidence_id).cloned().ok_or_else(|| {
+        AdapterError::EngineError(format!("no CSAM session for evidence {}", evidence_id))
+    })
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -417,11 +414,7 @@ pub fn csam_review_hit(evidence_id: &str, hit_id: &str) -> AdapterResult<()> {
 
 /// Confirm a hit. Marks `examiner_confirmed = true`, stores the
 /// examiner's notes, records `HitConfirmed` in the audit chain.
-pub fn csam_confirm_hit(
-    evidence_id: &str,
-    hit_id: &str,
-    notes: &str,
-) -> AdapterResult<()> {
+pub fn csam_confirm_hit(evidence_id: &str, hit_id: &str, notes: &str) -> AdapterResult<()> {
     let session = get_session(evidence_id)?;
     let mut s = session.lock().expect("csam session poisoned");
     if let Some(hit) = s.hits.iter_mut().find(|h| h.hit_id.to_string() == hit_id) {
@@ -438,11 +431,7 @@ pub fn csam_confirm_hit(
 /// Dismiss a hit as a false positive. The hit stays in the results
 /// list (so it remains in the audit trail and the report) but is
 /// marked dismissed via the audit action.
-pub fn csam_dismiss_hit(
-    evidence_id: &str,
-    hit_id: &str,
-    reason: &str,
-) -> AdapterResult<()> {
+pub fn csam_dismiss_hit(evidence_id: &str, hit_id: &str, reason: &str) -> AdapterResult<()> {
     let session = get_session(evidence_id)?;
     let mut s = session.lock().expect("csam session poisoned");
     s.record(CsamAuditAction::HitDismissed {
@@ -462,10 +451,7 @@ pub fn csam_dismiss_hit(
 /// in-memory chain only. (For the strata-tree egui app, the report
 /// integrity flag instead reflects the full unified case chain —
 /// see strata-tree's `state_csam.rs::generate_csam_report`.)
-pub fn csam_generate_report(
-    evidence_id: &str,
-    output_pdf_path: &str,
-) -> AdapterResult<()> {
+pub fn csam_generate_report(evidence_id: &str, output_pdf_path: &str) -> AdapterResult<()> {
     let session = get_session(evidence_id)?;
     let mut s = session.lock().expect("csam session poisoned");
 
@@ -520,10 +506,7 @@ pub fn csam_generate_report(
 }
 
 /// Export the in-memory CSAM audit log as JSON.
-pub fn csam_export_audit_log(
-    evidence_id: &str,
-    output_path: &str,
-) -> AdapterResult<()> {
+pub fn csam_export_audit_log(evidence_id: &str, output_path: &str) -> AdapterResult<()> {
     let session = get_session(evidence_id)?;
     let s = session.lock().expect("csam session poisoned");
     let json = s
@@ -652,14 +635,8 @@ mod tests {
         let id = unique_evidence_id();
         let f = write_hash_file("# only comments\n");
 
-        let err = csam_import_hash_set(
-            &id,
-            f.path().to_str().unwrap(),
-            "bad",
-            "ex",
-            "CASE",
-        )
-        .unwrap_err();
+        let err =
+            csam_import_hash_set(&id, f.path().to_str().unwrap(), "bad", "ex", "CASE").unwrap_err();
         let msg = format!("{}", err);
         assert!(msg.contains("import"));
 
@@ -748,12 +725,16 @@ mod tests {
         csam_run_scan(&evidence_id, opts).unwrap();
 
         let hits = csam_list_hits(&evidence_id).unwrap();
-        let before_audit = csam_session_summary(&evidence_id).unwrap().audit_entry_count;
+        let before_audit = csam_session_summary(&evidence_id)
+            .unwrap()
+            .audit_entry_count;
         csam_dismiss_hit(&evidence_id, &hits[0].hit_id, "operator-dismissed").unwrap();
 
         let still_there = csam_list_hits(&evidence_id).unwrap();
         assert_eq!(still_there.len(), 1, "dismissed hit must remain in list");
-        let after_audit = csam_session_summary(&evidence_id).unwrap().audit_entry_count;
+        let after_audit = csam_session_summary(&evidence_id)
+            .unwrap()
+            .audit_entry_count;
         assert_eq!(after_audit, before_audit + 1);
 
         let _ = csam_drop_session(&evidence_id);

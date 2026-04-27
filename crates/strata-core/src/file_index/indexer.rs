@@ -238,13 +238,8 @@ mod tests {
         write(&dir, "b.bin", &[0xFFu8; 2048]);
         let db_dir = tempfile::tempdir().expect("dbdir");
         let mut idx = FileIndex::open(&db_dir.path().join("idx.db")).expect("open");
-        let report = index_filesystem(
-            dir.path(),
-            &mut idx,
-            &IndexerConfig::default(),
-            |_| {},
-        )
-        .expect("index");
+        let report = index_filesystem(dir.path(), &mut idx, &IndexerConfig::default(), |_| {})
+            .expect("index");
         assert_eq!(report.files_indexed, 2);
         assert!(report.bytes_indexed >= 2048);
         let hits_a = idx.query_by_filename("a.txt").expect("q");
@@ -259,13 +254,7 @@ mod tests {
         write(&dir, "report.pdf", b"%PDF-1.7\nfake body");
         let db_dir = tempfile::tempdir().expect("dbdir");
         let mut idx = FileIndex::open(&db_dir.path().join("idx.db")).expect("open");
-        index_filesystem(
-            dir.path(),
-            &mut idx,
-            &IndexerConfig::default(),
-            |_| {},
-        )
-        .expect("index");
+        index_filesystem(dir.path(), &mut idx, &IndexerConfig::default(), |_| {}).expect("index");
         let hits = idx.query_by_filename("report.pdf").expect("q");
         assert_eq!(hits[0].mime_type.as_deref(), Some("application/pdf"));
     }
@@ -278,13 +267,8 @@ mod tests {
         }
         let db_dir = tempfile::tempdir().expect("dbdir");
         let mut idx = FileIndex::open(&db_dir.path().join("idx.db")).expect("open");
-        let report = index_filesystem(
-            dir.path(),
-            &mut idx,
-            &IndexerConfig::default(),
-            |_| {},
-        )
-        .expect("index");
+        let report = index_filesystem(dir.path(), &mut idx, &IndexerConfig::default(), |_| {})
+            .expect("index");
         assert!(report.files_per_second > 0.0);
         assert_eq!(report.files_indexed, 8);
     }
@@ -313,13 +297,7 @@ mod tests {
         write(&dir, "outer.txt", b"hi");
         let db_dir = tempfile::tempdir().expect("dbdir");
         let mut idx = FileIndex::open(&db_dir.path().join("idx.db")).expect("open");
-        index_filesystem(
-            dir.path(),
-            &mut idx,
-            &IndexerConfig::default(),
-            |_| {},
-        )
-        .expect("index");
+        index_filesystem(dir.path(), &mut idx, &IndexerConfig::default(), |_| {}).expect("index");
         assert_eq!(idx.count().expect("count"), 2);
     }
 }

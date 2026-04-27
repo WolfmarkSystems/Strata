@@ -139,7 +139,9 @@ impl DockerForensicsParser {
             .and_then(|v| v.as_str())
             .map(String::from);
 
-        let state_running = state.and_then(|s| s.get("Running")).and_then(|v| v.as_bool());
+        let state_running = state
+            .and_then(|s| s.get("Running"))
+            .and_then(|v| v.as_bool());
         let state_status = state
             .and_then(|s| s.get("Status"))
             .and_then(|v| v.as_str())
@@ -149,7 +151,11 @@ impl DockerForensicsParser {
         let command: Option<Vec<String>> = config
             .and_then(|c| c.get("Cmd"))
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect());
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            });
 
         // Extract environment variables (filter sensitive ones)
         let env_vars: Vec<String> = config
@@ -217,7 +223,11 @@ impl DockerForensicsParser {
         let volumes: Vec<String> = host_config
             .and_then(|h| h.get("Binds"))
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default();
         for vol in &volumes {
             if vol.starts_with("/:/") || vol.contains("/etc:") || vol.contains("/var/run/docker") {
@@ -231,20 +241,39 @@ impl DockerForensicsParser {
             name: name.clone(),
             hostname,
             created: created.clone(),
-            started: state.and_then(|s| s.get("StartedAt")).and_then(|v| v.as_str()).map(String::from),
-            finished: state.and_then(|s| s.get("FinishedAt")).and_then(|v| v.as_str()).map(String::from),
+            started: state
+                .and_then(|s| s.get("StartedAt"))
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            finished: state
+                .and_then(|s| s.get("FinishedAt"))
+                .and_then(|v| v.as_str())
+                .map(String::from),
             state_running,
             state_status: state_status.clone(),
-            restart_count: state.and_then(|s| s.get("RestartCount")).and_then(|v| v.as_i64()).map(|v| v as i32),
+            restart_count: state
+                .and_then(|s| s.get("RestartCount"))
+                .and_then(|v| v.as_i64())
+                .map(|v| v as i32),
             command,
-            entrypoint: config.and_then(|c| c.get("Entrypoint")).and_then(|v| v.as_array()).map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect()),
+            entrypoint: config
+                .and_then(|c| c.get("Entrypoint"))
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                }),
             env_vars,
             exposed_ports,
             volumes,
             network_mode,
             privileged,
             pid_mode,
-            ipc_mode: host_config.and_then(|h| h.get("IpcMode")).and_then(|v| v.as_str()).map(String::from),
+            ipc_mode: host_config
+                .and_then(|h| h.get("IpcMode"))
+                .and_then(|v| v.as_str())
+                .map(String::from),
             forensic_flags: forensic_flags.clone(),
         };
 
@@ -310,11 +339,7 @@ impl DockerForensicsParser {
         Ok(artifacts)
     }
 
-    fn parse_manifest(
-        &self,
-        path: &Path,
-        data: &[u8],
-    ) -> Result<Vec<ParsedArtifact>, ParserError> {
+    fn parse_manifest(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
         let mut artifacts = Vec::new();
         let source = path.to_string_lossy().to_string();
 
@@ -333,12 +358,20 @@ impl DockerForensicsParser {
             let repo_tags: Vec<String> = item
                 .get("RepoTags")
                 .and_then(|r| r.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
             let layers: Vec<String> = item
                 .get("Layers")
                 .and_then(|l| l.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
 
             artifacts.push(ParsedArtifact {
@@ -424,11 +457,7 @@ impl DockerForensicsParser {
         Ok(artifacts)
     }
 
-    fn parse_compose(
-        &self,
-        path: &Path,
-        data: &[u8],
-    ) -> Result<Vec<ParsedArtifact>, ParserError> {
+    fn parse_compose(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
         let mut artifacts = Vec::new();
         let source = path.to_string_lossy().to_string();
         let text = String::from_utf8_lossy(data);
@@ -444,7 +473,11 @@ impl DockerForensicsParser {
                 in_services = true;
                 continue;
             }
-            if in_services && !line.starts_with(' ') && !line.starts_with('\t') && !trimmed.is_empty() {
+            if in_services
+                && !line.starts_with(' ')
+                && !line.starts_with('\t')
+                && !trimmed.is_empty()
+            {
                 in_services = false;
             }
             if in_services {
@@ -493,7 +526,10 @@ impl DockerForensicsParser {
 
         let mut forensic_flags = Vec::new();
 
-        let privileged = json.get("Privileged").and_then(|v| v.as_bool()).unwrap_or(false);
+        let privileged = json
+            .get("Privileged")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
         if privileged {
             forensic_flags.push("PRIVILEGED MODE".to_string());
         }
@@ -501,7 +537,11 @@ impl DockerForensicsParser {
         let cap_add: Vec<String> = json
             .get("CapAdd")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default();
         for cap in &cap_add {
             if cap == "SYS_ADMIN" || cap == "SYS_PTRACE" || cap == "NET_ADMIN" {

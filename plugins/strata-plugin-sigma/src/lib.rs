@@ -87,9 +87,7 @@ impl StrataPlugin for SigmaPlugin {
     }
 
     fn capabilities(&self) -> Vec<PluginCapability> {
-        vec![
-            PluginCapability::ArtifactExtraction,
-        ]
+        vec![PluginCapability::ArtifactExtraction]
     }
 
     fn description(&self) -> &str {
@@ -167,9 +165,7 @@ impl StrataPlugin for SigmaPlugin {
         // RULE: USB Exfiltration Sequence
         //   Phantom finds new USB device + Chronicle finds large file access
         //   on the same day + Remnant finds file deletion after USB removal.
-        let phantom_usb = all_records
-            .iter()
-            .any(|r| r.subcategory == "USB Device");
+        let phantom_usb = all_records.iter().any(|r| r.subcategory == "USB Device");
         let chron_recent = all_records
             .iter()
             .any(|r| r.subcategory == "Recent Files" || r.subcategory == "OpenSavePidlMRU");
@@ -256,9 +252,9 @@ impl StrataPlugin for SigmaPlugin {
         let new_account = all_records
             .iter()
             .any(|r| r.subcategory == "SAM Account" || r.subcategory == "Cloud Identity");
-        let persistence = all_records
-            .iter()
-            .any(|r| r.subcategory == "Service" || r.subcategory == "AutoRun" || r.subcategory == "BAM/DAM");
+        let persistence = all_records.iter().any(|r| {
+            r.subcategory == "Service" || r.subcategory == "AutoRun" || r.subcategory == "BAM/DAM"
+        });
         if new_account && persistence {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: New Account + Persistence Installed");
@@ -359,7 +355,10 @@ impl StrataPlugin for SigmaPlugin {
             results.push(a);
         }
 
-        if all_records.iter().any(|r| r.subcategory == "Winlogon Persistence") {
+        if all_records
+            .iter()
+            .any(|r| r.subcategory == "Winlogon Persistence")
+        {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: Winlogon Helper DLL Persistence");
             a.add_field(
@@ -372,7 +371,10 @@ impl StrataPlugin for SigmaPlugin {
             results.push(a);
         }
 
-        if all_records.iter().any(|r| r.subcategory == "Browser Helper Object") {
+        if all_records
+            .iter()
+            .any(|r| r.subcategory == "Browser Helper Object")
+        {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: Browser Helper Object Persistence");
             a.add_field(
@@ -411,7 +413,10 @@ impl StrataPlugin for SigmaPlugin {
             results.push(a);
         }
 
-        if all_records.iter().any(|r| r.subcategory == "Shell Execute Hook") {
+        if all_records
+            .iter()
+            .any(|r| r.subcategory == "Shell Execute Hook")
+        {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: Shell Execute Hook Persistence");
             a.add_field(
@@ -464,9 +469,7 @@ impl StrataPlugin for SigmaPlugin {
         //     NetFlow WinSCP/Rclone/MEGAsync entry
         //     Phantom USB device entry
         //     Nimbus cloud sync entry
-        let phantom_archive = all_records
-            .iter()
-            .any(|r| r.subcategory == "Archive Tool");
+        let phantom_archive = all_records.iter().any(|r| r.subcategory == "Archive Tool");
         let exfil_tool = all_records.iter().any(|r| {
             r.subcategory == "WinSCP Config"
                 || r.subcategory == "Rclone Config"
@@ -502,8 +505,7 @@ impl StrataPlugin for SigmaPlugin {
             .iter()
             .any(|r| r.subcategory.contains("Scheduled Task"));
         let suspicious_script = all_records.iter().any(|r| {
-            r.subcategory == "Suspicious Script"
-                && r.forensic_value == ForensicValue::Critical
+            r.subcategory == "Suspicious Script" && r.forensic_value == ForensicValue::Critical
         });
         if trust_record && (bam_suspicious || scheduled_task || suspicious_script) {
             let mut a = Artifact::new("Sigma Rule", "sigma");
@@ -521,9 +523,7 @@ impl StrataPlugin for SigmaPlugin {
         //   factory_reset detected AND any of:
         //     Recent app installs after reset
         //     WhatsApp/Signal/Telegram messages still present
-        let factory_reset = all_records
-            .iter()
-            .any(|r| r.subcategory == "Factory Reset");
+        let factory_reset = all_records.iter().any(|r| r.subcategory == "Factory Reset");
         let mobile_messaging = all_records.iter().any(|r| {
             r.subcategory == "WhatsApp Android"
                 || r.subcategory == "Signal"
@@ -543,9 +543,7 @@ impl StrataPlugin for SigmaPlugin {
 
         // RULE: SRUM + Exfil Tools
         //   Trace SRUM detection + any exfil tool entry from NetFlow.
-        let srum = all_records
-            .iter()
-            .any(|r| r.subcategory == "SRUM Database");
+        let srum = all_records.iter().any(|r| r.subcategory == "SRUM Database");
         if srum && (exfil_tool || all_records.iter().any(|r| r.subcategory == "P2P Client")) {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: SRUM + Exfil Tool Co-Presence");
@@ -622,10 +620,7 @@ impl StrataPlugin for SigmaPlugin {
         //   10+ 4625 events OR any 4625 followed by 4624 same user.
         if count_evtx(4625) >= 10 {
             let mut a = Artifact::new("Sigma Rule", "sigma");
-            a.add_field(
-                "title",
-                "RULE FIRED: Failed Logon Burst (10+ EID 4625)",
-            );
+            a.add_field("title", "RULE FIRED: Failed Logon Burst (10+ EID 4625)");
             a.add_field(
                 "detail",
                 &format!(
@@ -654,10 +649,7 @@ impl StrataPlugin for SigmaPlugin {
         // RULE: Scheduled Task Persistence (Hayabusa: Task Scheduler Abuse)
         if has_evtx(4698) {
             let mut a = Artifact::new("Sigma Rule", "sigma");
-            a.add_field(
-                "title",
-                "RULE FIRED: Scheduled Task Created (EID 4698)",
-            );
+            a.add_field("title", "RULE FIRED: Scheduled Task Created (EID 4698)");
             a.add_field(
                 "detail",
                 "Event 4698 present: scheduled task creation is a common persistence mechanism (MITRE T1053.005). Review the task name, command, and author — tasks run by SYSTEM under a user-supplied payload are especially suspicious.",
@@ -735,10 +727,7 @@ impl StrataPlugin for SigmaPlugin {
             });
         if ps_obfuscated {
             let mut a = Artifact::new("Sigma Rule", "sigma");
-            a.add_field(
-                "title",
-                "RULE FIRED: Obfuscated PowerShell (EID 4104)",
-            );
+            a.add_field("title", "RULE FIRED: Obfuscated PowerShell (EID 4104)");
             a.add_field(
                 "detail",
                 "PowerShell Script Block Logging captured a command containing common obfuscation/evasion markers (FromBase64String, IEX, DownloadString, -enc, -nop, bypass). MITRE T1059.001 + T1027. This is the highest-signal Windows detection available.",
@@ -805,10 +794,7 @@ impl StrataPlugin for SigmaPlugin {
             .any(|r| r.detail.to_lowercase().contains("lsass.exe"));
         if lsass_access {
             let mut a = Artifact::new("Sigma Rule", "sigma");
-            a.add_field(
-                "title",
-                "RULE FIRED: LSASS Process Access (Sysmon EID 10)",
-            );
+            a.add_field("title", "RULE FIRED: LSASS Process Access (Sysmon EID 10)");
             a.add_field(
                 "detail",
                 "Sysmon captured a process opening a handle to LSASS — the canonical Mimikatz / credential-dumping indicator. MITRE T1003.001. Verify the source process is on the Microsoft-signed allowlist (MsMpEng, WmiPrvSE).",
@@ -1026,7 +1012,8 @@ impl StrataPlugin for SigmaPlugin {
 
         // ── Rule 30 — High-confidence temporal anomaly ──────────────
         // Fires when AnomalyEngine finds TemporalOutlier with confidence >= 0.8
-        let ml_temporal: Vec<_> = ctx.prior_results
+        let ml_temporal: Vec<_> = ctx
+            .prior_results
             .iter()
             .flat_map(|output| &output.artifacts)
             .filter(|r| {
@@ -1039,12 +1026,15 @@ impl StrataPlugin for SigmaPlugin {
         if !ml_temporal.is_empty() {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: ML Temporal Anomaly Detected");
-            a.add_field("detail", &format!(
-                "ML anomaly engine found {} high-confidence temporal outlier(s). \
+            a.add_field(
+                "detail",
+                &format!(
+                    "ML anomaly engine found {} high-confidence temporal outlier(s). \
                  Activity detected outside the device's established behavioral baseline. \
                  [ML-ASSISTED — ADVISORY ONLY]",
-                ml_temporal.len()
-            ));
+                    ml_temporal.len()
+                ),
+            );
             a.add_field("file_type", "Sigma Rule");
             a.add_field("suspicious", "true");
             a.add_field("mitre", "T1059");
@@ -1053,7 +1043,8 @@ impl StrataPlugin for SigmaPlugin {
 
         // ── Rule 31 — Stealth execution detected ──────────────────────
         // Fires when AnomalyEngine finds StealthExecution with confidence >= 0.75
-        let ml_stealth: Vec<_> = ctx.prior_results
+        let ml_stealth: Vec<_> = ctx
+            .prior_results
             .iter()
             .flat_map(|output| &output.artifacts)
             .filter(|r| {
@@ -1065,12 +1056,15 @@ impl StrataPlugin for SigmaPlugin {
         if !ml_stealth.is_empty() {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: ML Stealth Execution Detected");
-            a.add_field("detail", &format!(
-                "ML anomaly engine found {} stealth execution(s) — single run, \
+            a.add_field(
+                "detail",
+                &format!(
+                    "ML anomaly engine found {} stealth execution(s) — single run, \
                  zero focus time, no user interaction artifacts. \
                  [ML-ASSISTED — ADVISORY ONLY]",
-                ml_stealth.len()
-            ));
+                    ml_stealth.len()
+                ),
+            );
             a.add_field("file_type", "Sigma Rule");
             a.add_field("suspicious", "true");
             a.add_field("mitre", "T1059.001");
@@ -1080,7 +1074,8 @@ impl StrataPlugin for SigmaPlugin {
         // ── Rule 32 — Timestamp manipulation confirmed ────────────────
         // Fires when AnomalyEngine finds TimestampManipulation with confidence >= 0.85
         // ($SI/$FN mismatch is near-definitive)
-        let ml_timestomp: Vec<_> = ctx.prior_results
+        let ml_timestomp: Vec<_> = ctx
+            .prior_results
             .iter()
             .flat_map(|output| &output.artifacts)
             .filter(|r| {
@@ -1092,12 +1087,15 @@ impl StrataPlugin for SigmaPlugin {
         if !ml_timestomp.is_empty() {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: ML Timestamp Manipulation Confirmed");
-            a.add_field("detail", &format!(
-                "ML anomaly engine found {} timestamp manipulation indicator(s). \
+            a.add_field(
+                "detail",
+                &format!(
+                    "ML anomaly engine found {} timestamp manipulation indicator(s). \
                  Impossible clustering, future timestamps, or $SI/$FN mismatch. \
                  [ML-ASSISTED — ADVISORY ONLY]",
-                ml_timestomp.len()
-            ));
+                    ml_timestomp.len()
+                ),
+            );
             a.add_field("file_type", "Sigma Rule");
             a.add_field("suspicious", "true");
             a.add_field("mitre", "T1070.006");
@@ -1106,7 +1104,8 @@ impl StrataPlugin for SigmaPlugin {
 
         // ── Rule 33 — Anti-forensic chain detected ────────────────────
         // Fires when 2+ AntiForensicBehavior findings exist (coordinated cleanup)
-        let ml_antiforensic: Vec<_> = ctx.prior_results
+        let ml_antiforensic: Vec<_> = ctx
+            .prior_results
             .iter()
             .flat_map(|output| &output.artifacts)
             .filter(|r| {
@@ -1117,12 +1116,15 @@ impl StrataPlugin for SigmaPlugin {
         if ml_antiforensic.len() >= 2 {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: ML Anti-Forensic Chain Detected");
-            a.add_field("detail", &format!(
-                "{} anti-forensic behavior indicators detected in coordinated pattern. \
+            a.add_field(
+                "detail",
+                &format!(
+                    "{} anti-forensic behavior indicators detected in coordinated pattern. \
                  VSS deletion + log clearing = deliberate evidence destruction. \
                  [ML-ASSISTED — ADVISORY ONLY]",
-                ml_antiforensic.len()
-            ));
+                    ml_antiforensic.len()
+                ),
+            );
             a.add_field("file_type", "Sigma Rule");
             a.add_field("suspicious", "true");
             a.add_field("mitre", "T1070");
@@ -1131,7 +1133,8 @@ impl StrataPlugin for SigmaPlugin {
 
         // ── Rule 34 — Abnormal exfiltration pattern ───────────────────
         // Fires when AbnormalDataTransfer + TemporalOutlier in same session
-        let has_transfer_anomaly = ctx.prior_results
+        let has_transfer_anomaly = ctx
+            .prior_results
             .iter()
             .flat_map(|output| &output.artifacts)
             .any(|r| {
@@ -1142,10 +1145,11 @@ impl StrataPlugin for SigmaPlugin {
         if has_transfer_anomaly && has_temporal_anomaly {
             let mut a = Artifact::new("Sigma Rule", "sigma");
             a.add_field("title", "RULE FIRED: ML Abnormal Exfiltration Pattern");
-            a.add_field("detail",
+            a.add_field(
+                "detail",
                 "Abnormal data transfer coincides with temporal anomaly — \
                  off-hours exfiltration pattern. \
-                 [ML-ASSISTED — ADVISORY ONLY]"
+                 [ML-ASSISTED — ADVISORY ONLY]",
             );
             a.add_field("file_type", "Sigma Rule");
             a.add_field("suspicious", "true");
@@ -1252,11 +1256,7 @@ impl StrataPlugin for SigmaPlugin {
                     .get("title")
                     .cloned()
                     .unwrap_or_else(|| artifact.source.clone()),
-                detail: artifact
-                    .data
-                    .get("detail")
-                    .cloned()
-                    .unwrap_or_default(),
+                detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                 source_path: artifact.source.clone(),
                 forensic_value,
                 // Sprint 7 finding P2-F4 (part 2): Sigma rule
@@ -1426,7 +1426,9 @@ mod tests {
         );
         let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
         assert!(
-            titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            titles
+                .iter()
+                .any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
             "expected Rule 28 to fire, got: {:?}",
             titles
         );
@@ -1446,7 +1448,9 @@ mod tests {
         );
         let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
         assert!(
-            titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            titles
+                .iter()
+                .any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
             "expected Rule 28 to fire on High-confidence perceptual hit, got: {:?}",
             titles
         );
@@ -1466,7 +1470,9 @@ mod tests {
         );
         let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
         assert!(
-            !titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            !titles
+                .iter()
+                .any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
             "Rule 28 must NOT fire on Medium-only confidence, got: {:?}",
             titles
         );
@@ -1525,7 +1531,9 @@ mod tests {
         };
         let titles = run_sigma(vec![prior]);
         assert!(
-            !titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            !titles
+                .iter()
+                .any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
             "Rule 28 must require subcategory='CSAM Hit', got: {:?}",
             titles
         );
@@ -1625,7 +1633,9 @@ mod tests {
         );
         // But Rule 28 SHOULD fire.
         assert!(
-            titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            titles
+                .iter()
+                .any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
             "Rule 28 should fire on Confirmed exact hit, got: {:?}",
             titles
         );
@@ -1648,7 +1658,9 @@ mod tests {
         );
         let titles = run_sigma(vec![synthetic_csam_plugin_output(vec![hit])]);
         assert!(
-            titles.iter().any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
+            titles
+                .iter()
+                .any(|t| t == "RULE FIRED: CSAM Hash Match Detected"),
             "Rule 28 should fire, got: {:?}",
             titles
         );
@@ -1704,8 +1716,14 @@ mod tests {
             .iter()
             .filter(|t| *t == "RULE FIRED: Probable CSAM Variant Detected")
             .count();
-        assert_eq!(r28_count, 1, "Rule 28 should fire exactly once aggregating multi hits");
-        assert_eq!(r29_count, 1, "Rule 29 should fire exactly once aggregating multi hits");
+        assert_eq!(
+            r28_count, 1,
+            "Rule 28 should fire exactly once aggregating multi hits"
+        );
+        assert_eq!(
+            r29_count, 1,
+            "Rule 29 should fire exactly once aggregating multi hits"
+        );
     }
 
     // ── Sprint 2 Fix 2 — six Windows persistence rules ─────────────
@@ -1799,8 +1817,7 @@ mod tests {
         .iter()
         .map(|s| phantom_persistence_record(s))
         .collect();
-        let all_titles =
-            run_sigma_all_titles(vec![synthetic_phantom_output(records)]);
+        let all_titles = run_sigma_all_titles(vec![synthetic_phantom_output(records)]);
         let rule_fires = all_titles
             .iter()
             .filter(|t| t.starts_with("RULE FIRED:"))
@@ -1864,9 +1881,7 @@ mod tests {
             category: ArtifactCategory::NetworkArtifacts,
             subcategory: "Email Address Found".to_string(),
             timestamp: Some(0),
-            title:
-                "Email Address Found: 200104061723.jab03225@zinfandel.lacita.com"
-                    .to_string(),
+            title: "Email Address Found: 200104061723.jab03225@zinfandel.lacita.com".to_string(),
             detail: "extracted from /case/extracted/... content".to_string(),
             source_path: "/case/extracted/Charlie/file.txt".to_string(),
             forensic_value: ForensicValue::Medium,

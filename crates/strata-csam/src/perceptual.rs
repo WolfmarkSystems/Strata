@@ -72,8 +72,7 @@ pub fn hex_to_dhash(hex: &str) -> Result<u64> {
     if hex.len() != 16 {
         bail!("dHash hex must be 16 characters, got {}", hex.len());
     }
-    u64::from_str_radix(hex, 16)
-        .map_err(|e| anyhow!("invalid dHash hex {:?}: {}", hex, e))
+    u64::from_str_radix(hex, 16).map_err(|e| anyhow!("invalid dHash hex {:?}: {}", hex, e))
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -164,8 +163,7 @@ impl PerceptualHashDb {
             let hex_part = parts.next().unwrap_or("");
             let source_part = parts.next().unwrap_or("").trim();
 
-            let hash = hex_to_dhash(hex_part)
-                .with_context(|| format!("line {}", line_no + 1))?;
+            let hash = hex_to_dhash(hex_part).with_context(|| format!("line {}", line_no + 1))?;
             let source = if source_part.is_empty() {
                 hex_part.to_string()
             } else {
@@ -304,7 +302,11 @@ mod tests {
         let h_base = compute_dhash(&base).unwrap();
         let h_edit = compute_dhash(&edited).unwrap();
         let d = hamming_distance(h_base, h_edit);
-        assert!(d > 0, "expected nonzero distance for edited image, got {}", d);
+        assert!(
+            d > 0,
+            "expected nonzero distance for edited image, got {}",
+            d
+        );
         assert!(d < 10, "expected distance < 10, got {}", d);
     }
 

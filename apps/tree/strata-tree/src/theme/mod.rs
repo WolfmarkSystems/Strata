@@ -61,22 +61,22 @@ const CLEAN: Color32 = Color32::from_rgb(0x22, 0xc5, 0x5e);
 pub const THEME_IRON_WOLF: StrataTheme = StrataTheme {
     name: "Iron Wolf",
     subtitle: "DEFAULT",
-    bg:       Color32::from_rgb(0x05, 0x06, 0x07),  // tightened: darker base
-    panel:    Color32::from_rgb(0x0c, 0x0e, 0x14),  // tightened: visible lift
-    card:     Color32::from_rgb(0x12, 0x15, 0x1c),  // tightened: visible card
+    bg: Color32::from_rgb(0x05, 0x06, 0x07), // tightened: darker base
+    panel: Color32::from_rgb(0x0c, 0x0e, 0x14), // tightened: visible lift
+    card: Color32::from_rgb(0x12, 0x15, 0x1c), // tightened: visible card
     elevated: Color32::from_rgb(0x16, 0x1a, 0x22),
-    border:   Color32::from_rgb(0x1e, 0x24, 0x2e),
-    active:   Color32::from_rgb(0xd8, 0xe2, 0xec),
-    text:     Color32::from_rgb(0xd8, 0xe2, 0xec),
-    secondary:Color32::from_rgb(0x8a, 0x9a, 0xaa),
-    muted:    Color32::from_rgb(0x3a, 0x48, 0x58),
+    border: Color32::from_rgb(0x1e, 0x24, 0x2e),
+    active: Color32::from_rgb(0xd8, 0xe2, 0xec),
+    text: Color32::from_rgb(0xd8, 0xe2, 0xec),
+    secondary: Color32::from_rgb(0x8a, 0x9a, 0xaa),
+    muted: Color32::from_rgb(0x3a, 0x48, 0x58),
     suspicious: Color32::from_rgb(0xb8, 0x78, 0x40),
-    flagged:    Color32::from_rgb(0xa8, 0x40, 0x40),
-    clean:      Color32::from_rgb(0x48, 0x78, 0x58),
-    csam_alert:    Color32::from_rgb(0xd0, 0x30, 0x30),
+    flagged: Color32::from_rgb(0xa8, 0x40, 0x40),
+    clean: Color32::from_rgb(0x48, 0x78, 0x58),
+    csam_alert: Color32::from_rgb(0xd0, 0x30, 0x30),
     surface_hover: Color32::from_rgb(0x14, 0x18, 0x20),
-    divider:       Color32::from_rgb(0x14, 0x18, 0x1e),
-    selection:     Color32::from_rgb(0x0f, 0x25, 0x40),
+    divider: Color32::from_rgb(0x14, 0x18, 0x1e),
+    selection: Color32::from_rgb(0x0f, 0x25, 0x40),
 };
 
 // ── Theme 1: Midnight ───────────────────────────────────────────────────────
@@ -95,10 +95,10 @@ pub const THEME_MIDNIGHT: StrataTheme = StrataTheme {
     suspicious: SUSPICIOUS,
     flagged: FLAGGED,
     clean: CLEAN,
-    csam_alert:    Color32::from_rgb(0xd0, 0x30, 0x30),
+    csam_alert: Color32::from_rgb(0xd0, 0x30, 0x30),
     surface_hover: Color32::from_rgb(0x1a, 0x20, 0x30),
-    divider:       Color32::from_rgb(0x1e, 0x24, 0x34),
-    selection:     Color32::from_rgb(0x14, 0x28, 0x44),
+    divider: Color32::from_rgb(0x1e, 0x24, 0x34),
+    selection: Color32::from_rgb(0x14, 0x28, 0x44),
 };
 
 // ── Theme 2: Void ────────────────────────────────────────────────────────────
@@ -117,10 +117,10 @@ pub const THEME_VOID: StrataTheme = StrataTheme {
     suspicious: SUSPICIOUS,
     flagged: FLAGGED,
     clean: CLEAN,
-    csam_alert:    Color32::from_rgb(0xd0, 0x30, 0x30),
+    csam_alert: Color32::from_rgb(0xd0, 0x30, 0x30),
     surface_hover: Color32::from_rgb(0x1a, 0x1a, 0x24),
-    divider:       Color32::from_rgb(0x1e, 0x1e, 0x28),
-    selection:     Color32::from_rgb(0x20, 0x1a, 0x40),
+    divider: Color32::from_rgb(0x1e, 0x1e, 0x28),
+    selection: Color32::from_rgb(0x20, 0x1a, 0x40),
 };
 
 // ── Theme 3: Tactical ────────────────────────────────────────────────────────
@@ -139,10 +139,10 @@ pub const THEME_TACTICAL: StrataTheme = StrataTheme {
     suspicious: SUSPICIOUS,
     flagged: FLAGGED,
     clean: CLEAN,
-    csam_alert:    Color32::from_rgb(0xd0, 0x30, 0x30),
+    csam_alert: Color32::from_rgb(0xd0, 0x30, 0x30),
     surface_hover: Color32::from_rgb(0x1e, 0x26, 0x2c),
-    divider:       Color32::from_rgb(0x20, 0x2a, 0x30),
-    selection:     Color32::from_rgb(0x14, 0x30, 0x28),
+    divider: Color32::from_rgb(0x20, 0x2a, 0x30),
+    selection: Color32::from_rgb(0x14, 0x30, 0x28),
 };
 
 // ── Theme 4: Ash ─────────────────────────────────────────────────────────────
@@ -161,10 +161,10 @@ pub const THEME_ASH: StrataTheme = StrataTheme {
     suspicious: SUSPICIOUS,
     flagged: FLAGGED,
     clean: CLEAN,
-    csam_alert:    Color32::from_rgb(0xc0, 0x30, 0x30),
+    csam_alert: Color32::from_rgb(0xc0, 0x30, 0x30),
     surface_hover: Color32::from_rgb(0xd0, 0xcc, 0xc6),
-    divider:       Color32::from_rgb(0xb0, 0xac, 0xa6),
-    selection:     Color32::from_rgb(0xc4, 0xd8, 0xe4),
+    divider: Color32::from_rgb(0xb0, 0xac, 0xa6),
+    selection: Color32::from_rgb(0xc4, 0xd8, 0xe4),
 };
 
 // ── Theme 5: Graphite ────────────────────────────────────────────────────────
@@ -183,10 +183,10 @@ pub const THEME_GRAPHITE: StrataTheme = StrataTheme {
     suspicious: SUSPICIOUS,
     flagged: FLAGGED,
     clean: CLEAN,
-    csam_alert:    Color32::from_rgb(0xd0, 0x30, 0x30),
+    csam_alert: Color32::from_rgb(0xd0, 0x30, 0x30),
     surface_hover: Color32::from_rgb(0x28, 0x28, 0x28),
-    divider:       Color32::from_rgb(0x38, 0x38, 0x38),
-    selection:     Color32::from_rgb(0x1a, 0x2a, 0x3a),
+    divider: Color32::from_rgb(0x38, 0x38, 0x38),
+    selection: Color32::from_rgb(0x1a, 0x2a, 0x3a),
 };
 
 // ── Theme 6: High Contrast (accessibility) ───────────────────────────────────
@@ -205,10 +205,10 @@ pub const THEME_HIGH_CONTRAST: StrataTheme = StrataTheme {
     suspicious: Color32::from_rgb(0xff, 0xff, 0x00),
     flagged: Color32::from_rgb(0xff, 0x44, 0x44),
     clean: Color32::from_rgb(0x00, 0xff, 0x00),
-    csam_alert:    Color32::from_rgb(0xff, 0x00, 0x00),
+    csam_alert: Color32::from_rgb(0xff, 0x00, 0x00),
     surface_hover: Color32::from_rgb(0x22, 0x22, 0x22),
-    divider:       Color32::from_rgb(0x44, 0x44, 0x44),
-    selection:     Color32::from_rgb(0x00, 0x00, 0x55),
+    divider: Color32::from_rgb(0x44, 0x44, 0x44),
+    selection: Color32::from_rgb(0x00, 0x00, 0x55),
 };
 
 /// All available themes, indexed 0..6.
@@ -375,10 +375,24 @@ pub fn apply_theme(ctx: &egui::Context, theme: &StrataTheme) {
     style.spacing.window_margin = egui::Margin::same(0.0);
     style.spacing.menu_margin = egui::Margin::same(4.0);
     style.interaction.selectable_labels = false;
-    style.text_styles.insert(egui::TextStyle::Body, egui::FontId::proportional(FONT_BODY));
-    style.text_styles.insert(egui::TextStyle::Small, egui::FontId::proportional(FONT_CAPTION));
-    style.text_styles.insert(egui::TextStyle::Button, egui::FontId::proportional(FONT_BODY));
-    style.text_styles.insert(egui::TextStyle::Heading, egui::FontId::proportional(FONT_H1));
-    style.text_styles.insert(egui::TextStyle::Monospace, egui::FontId::monospace(FONT_MONO));
+    style
+        .text_styles
+        .insert(egui::TextStyle::Body, egui::FontId::proportional(FONT_BODY));
+    style.text_styles.insert(
+        egui::TextStyle::Small,
+        egui::FontId::proportional(FONT_CAPTION),
+    );
+    style.text_styles.insert(
+        egui::TextStyle::Button,
+        egui::FontId::proportional(FONT_BODY),
+    );
+    style.text_styles.insert(
+        egui::TextStyle::Heading,
+        egui::FontId::proportional(FONT_H1),
+    );
+    style.text_styles.insert(
+        egui::TextStyle::Monospace,
+        egui::FontId::monospace(FONT_MONO),
+    );
     ctx.set_style(style);
 }

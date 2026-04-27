@@ -37,8 +37,10 @@ pub fn parse(bytes: &[u8], guid: &str) -> NotepadTab {
         .cloned();
     let content_length = content.as_deref().map(|s| s.len()).unwrap_or(0);
     let unsaved_content = file_path.is_none() && content_length > 0;
-    let suspicious_pattern =
-        content.as_deref().and_then(classify_suspicious).map(|s| s.to_string());
+    let suspicious_pattern = content
+        .as_deref()
+        .and_then(classify_suspicious)
+        .map(|s| s.to_string());
     NotepadTab {
         tab_guid: guid.to_string(),
         unsaved_content,
@@ -92,7 +94,9 @@ fn classify_suspicious(text: &str) -> Option<&'static str> {
     if lc.contains("http://") || lc.contains("https://") {
         return Some("url");
     }
-    if lc.contains("password") || lc.contains("passwd") || lc.contains("api_key")
+    if lc.contains("password")
+        || lc.contains("passwd")
+        || lc.contains("api_key")
         || lc.contains("secret")
     {
         return Some("credential");
@@ -121,8 +125,8 @@ pub fn is_tabstate_path(path: &Path) -> bool {
         .to_string_lossy()
         .replace('\\', "/")
         .to_ascii_lowercase();
-    let is_tabstate = normalised
-        .contains("microsoft.windowsnotepad_8wekyb3d8bbwe/localstate/tabstate/");
+    let is_tabstate =
+        normalised.contains("microsoft.windowsnotepad_8wekyb3d8bbwe/localstate/tabstate/");
     if !is_tabstate {
         return false;
     }
@@ -134,10 +138,12 @@ pub fn is_tabstate_path(path: &Path) -> bool {
 }
 
 pub fn tab_guid_from_path(path: &Path) -> String {
-    let name = path
-        .to_string_lossy()
-        .replace('\\', "/");
-    name.rsplit('/').next().unwrap_or("").trim_end_matches(".bin").to_string()
+    let name = path.to_string_lossy().replace('\\', "/");
+    name.rsplit('/')
+        .next()
+        .unwrap_or("")
+        .trim_end_matches(".bin")
+        .to_string()
 }
 
 #[cfg(test)]
@@ -179,7 +185,10 @@ mod tests {
         blob.extend_from_slice(&[0u8; 8]);
         blob.extend_from_slice(&utf16("some body"));
         let tab = parse(&blob, "DEF-GUID");
-        assert_eq!(tab.file_path.as_deref(), Some("C:\\Users\\alice\\notes.txt"));
+        assert_eq!(
+            tab.file_path.as_deref(),
+            Some("C:\\Users\\alice\\notes.txt")
+        );
         assert!(!tab.unsaved_content);
     }
 

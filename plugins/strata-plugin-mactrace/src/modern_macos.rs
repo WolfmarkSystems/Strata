@@ -65,8 +65,9 @@ impl ModernMacosArtifactType {
     /// record for a non-Apple unapproved entry is upgraded to `"High"`.
     pub fn forensic_value(&self) -> &'static str {
         match self {
-            ModernMacosArtifactType::BackgroundTask
-            | ModernMacosArtifactType::NetworkUsage => "High",
+            ModernMacosArtifactType::BackgroundTask | ModernMacosArtifactType::NetworkUsage => {
+                "High"
+            }
             _ => "Medium",
         }
     }
@@ -439,7 +440,9 @@ mod tests {
             Some(ModernMacosArtifactType::InstallHistory)
         );
         assert_eq!(
-            ModernMacosArtifactType::from_path(Path::new("/private/var/networkd/db/netusage.sqlite")),
+            ModernMacosArtifactType::from_path(Path::new(
+                "/private/var/networkd/db/netusage.sqlite"
+            )),
             Some(ModernMacosArtifactType::NetworkUsage)
         );
         assert!(ModernMacosArtifactType::from_path(Path::new("/nope")).is_none());
@@ -522,13 +525,16 @@ mod tests {
         let mut entry = plist::Dictionary::new();
         entry.insert("displayName".into(), Value::String("Xcode".into()));
         entry.insert("displayVersion".into(), Value::String("15.0".into()));
-        entry.insert("processName".into(), Value::String("softwareupdated".into()));
+        entry.insert(
+            "processName".into(),
+            Value::String("softwareupdated".into()),
+        );
         entry.insert(
             "packageIdentifiers".into(),
             Value::Array(vec![Value::String("com.apple.pkg.Xcode".into())]),
         );
-        let sys_time = std::time::SystemTime::UNIX_EPOCH
-            + std::time::Duration::from_secs(1_717_243_200);
+        let sys_time =
+            std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_717_243_200);
         entry.insert("date".into(), Value::Date(sys_time.into()));
         let root = Value::Array(vec![Value::Dictionary(entry)]);
         root.to_file_xml(&path).expect("write plist");
@@ -591,7 +597,10 @@ mod tests {
             ModernMacosArtifactType::BackgroundTask.forensic_value(),
             "High"
         );
-        assert_eq!(ModernMacosArtifactType::ScreenTime.forensic_value(), "Medium");
+        assert_eq!(
+            ModernMacosArtifactType::ScreenTime.forensic_value(),
+            "Medium"
+        );
     }
 
     #[test]

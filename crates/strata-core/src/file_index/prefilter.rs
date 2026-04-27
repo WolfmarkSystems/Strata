@@ -108,7 +108,8 @@ mod tests {
     #[test]
     fn run_prefilter_noop_without_feeds() {
         let (_dir, mut idx) = open_idx();
-        idx.upsert_batch(&[entry_with_hash("aa".repeat(32).as_str())]).expect("ins");
+        idx.upsert_batch(&[entry_with_hash("aa".repeat(32).as_str())])
+            .expect("ins");
         let report = run_prefilter(&mut idx, None, None).expect("run");
         assert_eq!(report.nsrl_matches, 0);
         assert_eq!(report.threat_intel_matches, 0);

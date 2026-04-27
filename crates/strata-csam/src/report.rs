@@ -21,8 +21,7 @@
 
 use anyhow::{Context, Result};
 use printpdf::{
-    BuiltinFont, Mm, Op, PdfDocument, PdfFontHandle, PdfPage, PdfSaveOptions, Point, Pt,
-    TextItem,
+    BuiltinFont, Mm, Op, PdfDocument, PdfFontHandle, PdfPage, PdfSaveOptions, Point, Pt, TextItem,
 };
 use std::path::Path;
 
@@ -105,8 +104,7 @@ impl CsamReport {
     /// Pretty-printed for human inspection; the structure round-trips
     /// through `serde_json::from_str` back into a `CsamReport`.
     pub fn generate_json(&self, output_path: &Path) -> Result<()> {
-        let json = serde_json::to_string_pretty(self)
-            .context("serializing CsamReport to JSON")?;
+        let json = serde_json::to_string_pretty(self).context("serializing CsamReport to JSON")?;
         std::fs::write(output_path, json)
             .with_context(|| format!("writing CSAM JSON to {}", output_path.display()))?;
         Ok(())
@@ -123,15 +121,9 @@ impl CsamReport {
         lines.push("=".repeat(60));
         lines.push(String::new());
         lines.push("RESTRICTED CONTENT NOTICE".to_string());
-        lines.push(
-            "This report documents matches against examiner-imported".to_string(),
-        );
-        lines.push(
-            "CSAM hash databases. No image content is embedded. All".to_string(),
-        );
-        lines.push(
-            "findings require qualified examiner review and produce".to_string(),
-        );
+        lines.push("This report documents matches against examiner-imported".to_string());
+        lines.push("CSAM hash databases. No image content is embedded. All".to_string());
+        lines.push("findings require qualified examiner review and produce".to_string());
         lines.push("intelligence, not conclusions.".to_string());
         lines.push(String::new());
 
@@ -157,10 +149,7 @@ impl CsamReport {
         lines.push(String::new());
 
         // ── Hash sets ──────────────────────────────────────────────
-        lines.push(format!(
-            "HASH SETS USED ({})",
-            self.hash_sets_used.len()
-        ));
+        lines.push(format!("HASH SETS USED ({})", self.hash_sets_used.len()));
         lines.push("-".repeat(60));
         if self.hash_sets_used.is_empty() {
             lines.push("(none — perceptual scan only)".to_string());
@@ -205,10 +194,7 @@ impl CsamReport {
         // ── Audit chain status ─────────────────────────────────────
         lines.push("CHAIN OF CUSTODY".to_string());
         lines.push("-".repeat(60));
-        lines.push(format!(
-            "Audit Log Entries    : {}",
-            self.audit_log.len()
-        ));
+        lines.push(format!("Audit Log Entries    : {}", self.audit_log.len()));
         lines.push(format!(
             "Chain Integrity      : {}",
             if self.audit_integrity_verified {
@@ -232,15 +218,9 @@ impl CsamReport {
                 lines.push(format!("  MD5           : {}", hit.md5));
                 lines.push(format!("  SHA-1         : {}", hit.sha1));
                 lines.push(format!("  SHA-256       : {}", hit.sha256));
-                lines.push(format!(
-                    "  Match Type    : {}",
-                    hit.match_type.as_str()
-                ));
+                lines.push(format!("  Match Type    : {}", hit.match_type.as_str()));
                 lines.push(format!("  Match Source  : {}", hit.match_source));
-                lines.push(format!(
-                    "  Confidence    : {}",
-                    hit.confidence.as_str()
-                ));
+                lines.push(format!("  Confidence    : {}", hit.confidence.as_str()));
                 if let (Some(p), Some(d)) = (&hit.perceptual_hash, hit.perceptual_distance) {
                     lines.push(format!("  Perceptual    : {} (distance {})", p, d));
                 }
@@ -279,8 +259,14 @@ impl CsamReport {
                 if !entry.detail.is_empty() {
                     lines.push(format!("        detail   : {}", entry.detail));
                 }
-                lines.push(format!("        prev_hash: {}", short_hash(&entry.prev_hash)));
-                lines.push(format!("        entry_hash: {}", short_hash(&entry.entry_hash)));
+                lines.push(format!(
+                    "        prev_hash: {}",
+                    short_hash(&entry.prev_hash)
+                ));
+                lines.push(format!(
+                    "        entry_hash: {}",
+                    short_hash(&entry.entry_hash)
+                ));
             }
         }
         lines.push(String::new());
@@ -288,12 +274,8 @@ impl CsamReport {
         // ── Footer notice ──────────────────────────────────────────
         lines.push("END OF REPORT".to_string());
         lines.push("=".repeat(60));
-        lines.push(
-            "All findings in this report require qualified examiner".to_string(),
-        );
-        lines.push(
-            "review. Discovery of CSAM creates mandatory reporting".to_string(),
-        );
+        lines.push("All findings in this report require qualified examiner".to_string());
+        lines.push("review. Discovery of CSAM creates mandatory reporting".to_string());
         lines.push("obligations under 18 U.S.C. § 2258A and applicable".to_string());
         lines.push("state laws.".to_string());
 
@@ -624,9 +606,7 @@ mod tests {
         let mut report = sample_report(vec![sample_hit(1)]);
         report.audit_integrity_verified = false;
         let lines = report.build_lines();
-        assert!(lines
-            .iter()
-            .any(|l| l.contains("NOT VERIFIED")));
+        assert!(lines.iter().any(|l| l.contains("NOT VERIFIED")));
     }
 
     #[test]

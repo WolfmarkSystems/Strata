@@ -97,7 +97,9 @@ mod tests {
                 subsection: Some("(a)(1)".to_string()),
                 citation: "18 U.S.C. § 2252(a)(1)".to_string(),
                 short_title: "Sexual Exploitation of Minors".to_string(),
-                description: "Possession/distribution of material involving sexual exploitation of minors".to_string(),
+                description:
+                    "Possession/distribution of material involving sexual exploitation of minors"
+                        .to_string(),
                 category: "Child Exploitation".to_string(),
                 artifact_tags: vec!["Media".into(), "Network".into()],
                 severity: ChargeSeverity::Felony,

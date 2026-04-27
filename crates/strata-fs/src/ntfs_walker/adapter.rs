@@ -14,8 +14,6 @@ pub struct PartitionReader {
     partition_offset: u64,
     partition_size: u64,
     cursor: u64,
-    #[allow(dead_code)]
-    sector_size: usize,
 }
 
 impl PartitionReader {
@@ -23,14 +21,13 @@ impl PartitionReader {
         image: Arc<dyn EvidenceImage>,
         partition_offset: u64,
         partition_size: u64,
-        sector_size: usize,
+        _sector_size: usize,
     ) -> Self {
         Self {
             image,
             partition_offset,
             partition_size,
             cursor: 0,
-            sector_size,
         }
     }
 

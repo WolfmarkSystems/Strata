@@ -64,16 +64,20 @@ pub fn parse_playstation(json: &str, psn_id: &str) -> Vec<PlayStationArtifact> {
                 .unwrap_or("Event")
                 .to_string(),
             timestamp,
-            game_title: entry
-                .get("game")
-                .and_then(|x| x.as_str())
-                .map(String::from),
+            game_title: entry.get("game").and_then(|x| x.as_str()).map(String::from),
             friends_involved: entry
                 .get("friends")
                 .and_then(|x| x.as_array())
-                .map(|arr| arr.iter().filter_map(|e| e.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|e| e.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default(),
-            message_content: entry.get("message").and_then(|x| x.as_str()).map(String::from),
+            message_content: entry
+                .get("message")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             trophy_data: trophy,
         })
     })
@@ -108,11 +112,18 @@ pub fn parse_xbox(json: &str, gamertag: &str) -> Vec<XboxArtifact> {
                 .get("clip_path")
                 .and_then(|x| x.as_str())
                 .map(String::from),
-            message_content: entry.get("message").and_then(|x| x.as_str()).map(String::from),
+            message_content: entry
+                .get("message")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             party_members: entry
                 .get("party")
                 .and_then(|x| x.as_array())
-                .map(|arr| arr.iter().filter_map(|e| e.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|e| e.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default(),
             club_name: entry.get("club").and_then(|x| x.as_str()).map(String::from),
         })
@@ -150,7 +161,11 @@ pub fn parse_nintendo(json: &str, nintendo_account: &str) -> Vec<NintendoArtifac
             friend_interactions: entry
                 .get("friends")
                 .and_then(|x| x.as_array())
-                .map(|arr| arr.iter().filter_map(|e| e.as_str().map(String::from)).collect())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|e| e.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default(),
             screenshot_path: entry
                 .get("screenshot")
@@ -225,7 +240,10 @@ mod tests {
         let json = r#"[{"type":"Clip","timestamp":"2026-04-10T19:00:00Z",
             "game":"COD","clip_path":"/DCIM/clip1.mp4"}]"#;
         let a = parse_xbox(json, "GamertagX");
-        assert_eq!(a[0].clip_or_screenshot_path.as_deref(), Some("/DCIM/clip1.mp4"));
+        assert_eq!(
+            a[0].clip_or_screenshot_path.as_deref(),
+            Some("/DCIM/clip1.mp4")
+        );
     }
 
     #[test]

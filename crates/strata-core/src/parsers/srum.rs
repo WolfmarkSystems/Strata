@@ -270,7 +270,8 @@ fn extract_app_identifiers(data: &[u8]) -> Vec<String> {
             if end - start >= 8 {
                 let path_str = String::from_utf8_lossy(&data[start..end]).to_string();
                 let lower = path_str.to_lowercase();
-                if (lower.ends_with(".exe") || lower.contains("\\windows\\")
+                if (lower.ends_with(".exe")
+                    || lower.contains("\\windows\\")
                     || lower.contains("\\program files"))
                     && seen.insert(path_str.clone())
                 {
@@ -295,7 +296,9 @@ fn extract_sids(data: &[u8]) -> Vec<String> {
     while let Some(pos) = text[search_from..].find(pattern) {
         let abs_pos = search_from + pos;
         let mut end = abs_pos + pattern.len();
-        while end < text.len() && (text.as_bytes()[end].is_ascii_digit() || text.as_bytes()[end] == b'-') {
+        while end < text.len()
+            && (text.as_bytes()[end].is_ascii_digit() || text.as_bytes()[end] == b'-')
+        {
             end += 1;
         }
         let sid = &text[abs_pos..end];
@@ -415,15 +418,17 @@ mod tests {
         let data = make_srudb();
         let path = Path::new("/evidence/SRUDB.dat");
         let result = parser.parse_file(path, &data).unwrap();
-        let app_artifact = result
-            .iter()
-            .find(|a| a.artifact_type == "srum_app_usage");
+        let app_artifact = result.iter().find(|a| a.artifact_type == "srum_app_usage");
         assert!(app_artifact.is_some());
         let apps = app_artifact.unwrap().json_data["applications"]
             .as_array()
             .unwrap();
-        assert!(apps.iter().any(|a| a.as_str().unwrap().contains("firefox.exe")));
-        assert!(apps.iter().any(|a| a.as_str().unwrap().contains("svchost.exe")));
+        assert!(apps
+            .iter()
+            .any(|a| a.as_str().unwrap().contains("firefox.exe")));
+        assert!(apps
+            .iter()
+            .any(|a| a.as_str().unwrap().contains("svchost.exe")));
         assert!(apps.iter().any(|a| a.as_str().unwrap().contains("tor.exe")));
     }
 
@@ -433,14 +438,14 @@ mod tests {
         let data = make_srudb();
         let path = Path::new("/evidence/SRUDB.dat");
         let result = parser.parse_file(path, &data).unwrap();
-        let sid_artifact = result
-            .iter()
-            .find(|a| a.artifact_type == "srum_user_sids");
+        let sid_artifact = result.iter().find(|a| a.artifact_type == "srum_user_sids");
         assert!(sid_artifact.is_some());
         let sids = sid_artifact.unwrap().json_data["user_sids"]
             .as_array()
             .unwrap();
-        assert!(sids.iter().any(|s| s.as_str().unwrap().starts_with("S-1-5-21-")));
+        assert!(sids
+            .iter()
+            .any(|s| s.as_str().unwrap().starts_with("S-1-5-21-")));
     }
 
     #[test]
@@ -481,8 +486,12 @@ mod tests {
         let indicators = net_artifact.json_data["network_indicators"]
             .as_array()
             .unwrap();
-        assert!(indicators.iter().any(|i| i.as_str().unwrap().contains("Wi-Fi")));
-        assert!(indicators.iter().any(|i| i.as_str().unwrap().contains("Ethernet")));
+        assert!(indicators
+            .iter()
+            .any(|i| i.as_str().unwrap().contains("Wi-Fi")));
+        assert!(indicators
+            .iter()
+            .any(|i| i.as_str().unwrap().contains("Ethernet")));
     }
 
     #[test]

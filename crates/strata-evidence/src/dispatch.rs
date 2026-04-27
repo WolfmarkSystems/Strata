@@ -104,12 +104,18 @@ mod tests {
 
     #[test]
     fn detects_vhdx_by_magic() {
-        assert_eq!(detect_format(b"vhdxfile", Path::new("x.unknown")), ImageFormat::Vhdx);
+        assert_eq!(
+            detect_format(b"vhdxfile", Path::new("x.unknown")),
+            ImageFormat::Vhdx
+        );
     }
 
     #[test]
     fn detects_vmdk_sparse_by_magic() {
-        assert_eq!(detect_format(b"KDMV", Path::new("x.unknown")), ImageFormat::Vmdk);
+        assert_eq!(
+            detect_format(b"KDMV", Path::new("x.unknown")),
+            ImageFormat::Vmdk
+        );
     }
 
     #[test]
@@ -122,10 +128,22 @@ mod tests {
 
     #[test]
     fn falls_back_to_extension() {
-        assert_eq!(detect_format(b"\x00\x00\x00\x00", Path::new("img.raw")), ImageFormat::Raw);
-        assert_eq!(detect_format(b"\x00\x00\x00\x00", Path::new("img.VHD")), ImageFormat::Vhd);
-        assert_eq!(detect_format(b"\x00\x00\x00\x00", Path::new("img.dmg")), ImageFormat::AppleDmg);
-        assert_eq!(detect_format(b"\x00\x00\x00\x00", Path::new("x.unknown")), ImageFormat::Unknown);
+        assert_eq!(
+            detect_format(b"\x00\x00\x00\x00", Path::new("img.raw")),
+            ImageFormat::Raw
+        );
+        assert_eq!(
+            detect_format(b"\x00\x00\x00\x00", Path::new("img.VHD")),
+            ImageFormat::Vhd
+        );
+        assert_eq!(
+            detect_format(b"\x00\x00\x00\x00", Path::new("img.dmg")),
+            ImageFormat::AppleDmg
+        );
+        assert_eq!(
+            detect_format(b"\x00\x00\x00\x00", Path::new("x.unknown")),
+            ImageFormat::Unknown
+        );
     }
 
     #[test]

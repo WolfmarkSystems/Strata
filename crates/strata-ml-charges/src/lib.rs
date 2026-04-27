@@ -10,11 +10,11 @@
 //!
 //! Gov/Mil only — requires strata-charges feature.
 
-pub mod types;
-pub mod rules;
+pub mod engine;
 pub mod gap_analyzer;
 pub mod matrix;
-pub mod engine;
+pub mod rules;
+pub mod types;
 
 pub use engine::analyze;
 pub use types::*;

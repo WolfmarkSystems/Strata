@@ -66,7 +66,10 @@ impl ArtifactParser for MacosDocumentRevisionsParser {
     }
 
     fn target_patterns(&self) -> Vec<&str> {
-        vec![".documentrevisions-v100/db-v1/db.sqlite", "documentrevisions"]
+        vec![
+            ".documentrevisions-v100/db-v1/db.sqlite",
+            "documentrevisions",
+        ]
     }
 
     fn parse_file(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
@@ -218,10 +221,7 @@ mod tests {
         let out = parser.parse_file(&doc_rev_path(), &data).unwrap();
         let file_count = out
             .iter()
-            .filter(|a| {
-                a.description
-                    .starts_with("DocumentRevisions tracked file")
-            })
+            .filter(|a| a.description.starts_with("DocumentRevisions tracked file"))
             .count();
         let gen_count = out
             .iter()

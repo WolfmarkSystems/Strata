@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use std::path::{Path, PathBuf};
 use strata_license::{
-    ENTERPRISE_FEATURES, FREE_FEATURES, LicenseTier, PRO_FEATURES, TRIAL_FEATURES, StrataLicense,
+    ENTERPRISE_FEATURES, FREE_FEATURES, LicenseTier, PRO_FEATURES, StrataLicense, TRIAL_FEATURES,
 };
 
 #[derive(Parser, Debug)]

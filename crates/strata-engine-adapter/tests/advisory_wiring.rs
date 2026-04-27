@@ -11,9 +11,7 @@
 //! If this test fails, the pipeline wiring regressed and the
 //! website's Advisory Analytics claim becomes false.
 
-use strata_plugin_advisory::{
-    AdvisoryPlugin, SUBCATEGORY_OBSTRUCTION, SUBCATEGORY_SUMMARY,
-};
+use strata_plugin_advisory::{AdvisoryPlugin, SUBCATEGORY_OBSTRUCTION, SUBCATEGORY_SUMMARY};
 use strata_plugin_sdk::{PluginContext, StrataPlugin};
 
 #[test]

@@ -85,7 +85,11 @@ impl IocQuery {
             .filter(|l| !l.is_empty() && !l.starts_with('#'))
             .filter_map(|l| l.split(',').next())
             .map(|v| v.trim().trim_matches('"'))
-            .filter(|v| !v.is_empty() && !v.eq_ignore_ascii_case("indicator") && !v.eq_ignore_ascii_case("ioc"))
+            .filter(|v| {
+                !v.is_empty()
+                    && !v.eq_ignore_ascii_case("indicator")
+                    && !v.eq_ignore_ascii_case("ioc")
+            })
             .map(Self::new)
             .collect()
     }
@@ -151,7 +155,14 @@ pub fn search_artifacts(
                     ("detail", &record.detail),
                     ("subcategory", &record.subcategory),
                     ("source_path", &record.source_path),
-                    ("raw_data", &record.raw_data.as_ref().map(|v| v.to_string()).unwrap_or_default()),
+                    (
+                        "raw_data",
+                        &record
+                            .raw_data
+                            .as_ref()
+                            .map(|v| v.to_string())
+                            .unwrap_or_default(),
+                    ),
                 ];
 
                 for (field_name, field_value) in &fields {
@@ -207,7 +218,8 @@ pub fn group_by_ioc(hits: &[IocHit]) -> Vec<(&str, Vec<&IocHit>)> {
 
 /// Export IOC search results as CSV.
 pub fn export_csv(hits: &[IocHit]) -> String {
-    let mut out = String::from("IOC,IOC_Type,Plugin,Artifact,Field,Context,Source,Timestamp,Suspicious\n");
+    let mut out =
+        String::from("IOC,IOC_Type,Plugin,Artifact,Field,Context,Source,Timestamp,Suspicious\n");
     for h in hits {
         out.push_str(&format!(
             "\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"\n",
@@ -291,7 +303,9 @@ fn is_ipv6(v: &str) -> bool {
     if parts.len() < 3 {
         return false;
     }
-    parts.iter().all(|p| p.is_empty() || p.len() <= 4 && p.chars().all(|c| c.is_ascii_hexdigit()))
+    parts
+        .iter()
+        .all(|p| p.is_empty() || p.len() <= 4 && p.chars().all(|c| c.is_ascii_hexdigit()))
 }
 
 fn is_email(v: &str) -> bool {
@@ -439,7 +453,10 @@ mod tests {
         assert_eq!(IocQuery::new("192.168.1.1").ioc_type, IocType::Ipv4);
         assert_eq!(IocQuery::new("2001:db8::1").ioc_type, IocType::Ipv6);
         assert_eq!(IocQuery::new("evil.example.com").ioc_type, IocType::Domain);
-        assert_eq!(IocQuery::new("https://evil.com/shell.php").ioc_type, IocType::Url);
+        assert_eq!(
+            IocQuery::new("https://evil.com/shell.php").ioc_type,
+            IocType::Url
+        );
         assert_eq!(
             IocQuery::new("d41d8cd98f00b204e9800998ecf8427e").ioc_type,
             IocType::Md5

@@ -16,31 +16,131 @@ pub struct MimeSignature {
 }
 
 pub const SIGNATURES: &[MimeSignature] = &[
-    MimeSignature { mime: "application/x-sqlite3", magic: b"SQLite format 3\0", offset: 0 },
-    MimeSignature { mime: "application/vnd.microsoft.portable-executable", magic: b"MZ", offset: 0 },
-    MimeSignature { mime: "application/x-executable", magic: &[0x7F, b'E', b'L', b'F'], offset: 0 },
-    MimeSignature { mime: "application/x-mach-binary", magic: &[0xCF, 0xFA, 0xED, 0xFE], offset: 0 },
-    MimeSignature { mime: "application/x-mach-binary", magic: &[0xCE, 0xFA, 0xED, 0xFE], offset: 0 },
-    MimeSignature { mime: "application/pdf", magic: b"%PDF", offset: 0 },
-    MimeSignature { mime: "application/zip", magic: &[0x50, 0x4B, 0x03, 0x04], offset: 0 },
-    MimeSignature { mime: "application/x-rar", magic: &[0x52, 0x61, 0x72, 0x21, 0x1A, 0x07], offset: 0 },
-    MimeSignature { mime: "application/x-7z-compressed", magic: &[0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C], offset: 0 },
-    MimeSignature { mime: "image/jpeg", magic: &[0xFF, 0xD8, 0xFF], offset: 0 },
-    MimeSignature { mime: "image/png", magic: &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], offset: 0 },
-    MimeSignature { mime: "image/gif", magic: b"GIF8", offset: 0 },
-    MimeSignature { mime: "image/webp", magic: b"WEBP", offset: 8 },
-    MimeSignature { mime: "image/heif", magic: b"ftypheic", offset: 4 },
-    MimeSignature { mime: "image/heif", magic: b"ftypmif1", offset: 4 },
-    MimeSignature { mime: "video/mp4", magic: b"ftyp", offset: 4 },
-    MimeSignature { mime: "audio/mpeg", magic: &[0xFF, 0xFB], offset: 0 },
-    MimeSignature { mime: "audio/mpeg", magic: b"ID3", offset: 0 },
-    MimeSignature { mime: "application/vnd.ms-outlook-pst", magic: b"!BDN", offset: 0 },
-    MimeSignature { mime: "application/x-ms-shortcut", magic: &[0x4C, 0x00, 0x00, 0x00], offset: 0 },
-    MimeSignature { mime: "application/x-windows-registry-hive", magic: b"regf", offset: 0 },
-    MimeSignature { mime: "application/x-windows-prefetch", magic: b"SCCA", offset: 4 },
-    MimeSignature { mime: "application/x-gzip", magic: &[0x1F, 0x8B], offset: 0 },
-    MimeSignature { mime: "application/x-bzip2", magic: b"BZh", offset: 0 },
-    MimeSignature { mime: "application/x-xz", magic: &[0xFD, b'7', b'z', b'X', b'Z', 0x00], offset: 0 },
+    MimeSignature {
+        mime: "application/x-sqlite3",
+        magic: b"SQLite format 3\0",
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/vnd.microsoft.portable-executable",
+        magic: b"MZ",
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/x-executable",
+        magic: &[0x7F, b'E', b'L', b'F'],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/x-mach-binary",
+        magic: &[0xCF, 0xFA, 0xED, 0xFE],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/x-mach-binary",
+        magic: &[0xCE, 0xFA, 0xED, 0xFE],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/pdf",
+        magic: b"%PDF",
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/zip",
+        magic: &[0x50, 0x4B, 0x03, 0x04],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/x-rar",
+        magic: &[0x52, 0x61, 0x72, 0x21, 0x1A, 0x07],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/x-7z-compressed",
+        magic: &[0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "image/jpeg",
+        magic: &[0xFF, 0xD8, 0xFF],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "image/png",
+        magic: &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "image/gif",
+        magic: b"GIF8",
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "image/webp",
+        magic: b"WEBP",
+        offset: 8,
+    },
+    MimeSignature {
+        mime: "image/heif",
+        magic: b"ftypheic",
+        offset: 4,
+    },
+    MimeSignature {
+        mime: "image/heif",
+        magic: b"ftypmif1",
+        offset: 4,
+    },
+    MimeSignature {
+        mime: "video/mp4",
+        magic: b"ftyp",
+        offset: 4,
+    },
+    MimeSignature {
+        mime: "audio/mpeg",
+        magic: &[0xFF, 0xFB],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "audio/mpeg",
+        magic: b"ID3",
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/vnd.ms-outlook-pst",
+        magic: b"!BDN",
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/x-ms-shortcut",
+        magic: &[0x4C, 0x00, 0x00, 0x00],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/x-windows-registry-hive",
+        magic: b"regf",
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/x-windows-prefetch",
+        magic: b"SCCA",
+        offset: 4,
+    },
+    MimeSignature {
+        mime: "application/x-gzip",
+        magic: &[0x1F, 0x8B],
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/x-bzip2",
+        magic: b"BZh",
+        offset: 0,
+    },
+    MimeSignature {
+        mime: "application/x-xz",
+        magic: &[0xFD, b'7', b'z', b'X', b'Z', 0x00],
+        offset: 0,
+    },
 ];
 
 /// Classify a MIME type from magic bytes. Pass at least the first 64

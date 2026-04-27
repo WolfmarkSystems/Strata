@@ -10,7 +10,10 @@ use std::path::Path;
 use strata_plugin_sdk::Artifact;
 
 const KNOWN_MDM_PACKAGES: &[(&str, &str)] = &[
-    ("com.airwatch.androidagent", "VMware AirWatch / Workspace ONE"),
+    (
+        "com.airwatch.androidagent",
+        "VMware AirWatch / Workspace ONE",
+    ),
     ("com.mobileiron", "MobileIron / Ivanti"),
     ("com.microsoft.intune", "Microsoft Intune"),
     ("com.citrix.mdm", "Citrix Endpoint Management"),
@@ -30,7 +33,10 @@ pub struct WorkProfileArtifact {
 }
 
 pub fn is_work_profile_path(path: &Path) -> bool {
-    let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let lower = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
     let name = lower.rsplit('/').next().unwrap_or("");
     (lower.contains("/data/system/users/") && name == "userinfo.xml")
         || (lower.contains("/data/system/") && name == "device_policies.xml")
@@ -38,13 +44,14 @@ pub fn is_work_profile_path(path: &Path) -> bool {
 }
 
 fn profile_id_from_path(path: &Path) -> u32 {
-    let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let lower = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
     // /data/system/users/<id>/userinfo.xml
     let mut iter = lower.rsplit('/');
     let _name = iter.next();
-    iter.next()
-        .and_then(|s| s.parse::<u32>().ok())
-        .unwrap_or(0)
+    iter.next().and_then(|s| s.parse::<u32>().ok()).unwrap_or(0)
 }
 
 pub fn mdm_for_package(pkg: &str) -> Option<&'static str> {
@@ -73,7 +80,10 @@ fn find_all_xml_attr<'a>(body: &'a str, tag: &str, attr: &str) -> Vec<&'a str> {
     let open = format!("<{}", tag);
     while let Some(pos) = body[cursor..].find(&open) {
         let block_start = cursor + pos;
-        let block_end = body[block_start..].find('>').map(|e| block_start + e).unwrap_or(body.len());
+        let block_end = body[block_start..]
+            .find('>')
+            .map(|e| block_start + e)
+            .unwrap_or(body.len());
         let block = &body[block_start..=block_end];
         if let Some(attr_pos) = block.find(&format!("{}=\"", attr)) {
             let after = &block[attr_pos + attr.len() + 2..];
@@ -103,12 +113,7 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
     match name.as_str() {
         "userinfo.xml" => {
             let flags = extract_xml_attr(&body, "flags").unwrap_or_default();
-            let is_managed = flags
-                .trim_start_matches("0x")
-                .parse::<u32>()
-                .unwrap_or(0)
-                & 0x30
-                != 0;
+            let is_managed = flags.trim_start_matches("0x").parse::<u32>().unwrap_or(0) & 0x30 != 0;
             let user_name = extract_xml_attr(&body, "name").unwrap_or_default();
             let mut a = Artifact::new("Android Work Profile", &path.to_string_lossy());
             a.add_field(
@@ -166,7 +171,10 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
             }
             if body.contains("<wipeData") || body.contains("wipeData=\"true\"") {
                 let mut a = Artifact::new("Remote Wipe Command", &path.to_string_lossy());
-                a.add_field("title", "Remote wipeData command present in device_policies.xml");
+                a.add_field(
+                    "title",
+                    "Remote wipeData command present in device_policies.xml",
+                );
                 a.add_field("file_type", "Remote Wipe Command");
                 a.add_field("mitre", "T1485");
                 a.add_field("forensic_value", "High");
@@ -185,8 +193,12 @@ mod tests {
 
     #[test]
     fn is_work_profile_path_matches_known_files() {
-        assert!(is_work_profile_path(Path::new("/data/system/users/10/userInfo.xml")));
-        assert!(is_work_profile_path(Path::new("/data/system/device_policies.xml")));
+        assert!(is_work_profile_path(Path::new(
+            "/data/system/users/10/userInfo.xml"
+        )));
+        assert!(is_work_profile_path(Path::new(
+            "/data/system/device_policies.xml"
+        )));
         assert!(!is_work_profile_path(Path::new("/tmp/other.xml")));
     }
 
@@ -203,7 +215,12 @@ mod tests {
     #[test]
     fn scan_userinfo_marks_work_profile() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let users = dir.path().join("data").join("system").join("users").join("10");
+        let users = dir
+            .path()
+            .join("data")
+            .join("system")
+            .join("users")
+            .join("10");
         std::fs::create_dir_all(&users).expect("mkdirs");
         let path = users.join("userInfo.xml");
         std::fs::write(

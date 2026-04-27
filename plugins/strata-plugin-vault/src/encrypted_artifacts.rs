@@ -68,7 +68,8 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
         }
     }
     // Tor Browser presence.
-    if lower.contains("/tor browser/") || lower.contains("\\tor browser\\")
+    if lower.contains("/tor browser/")
+        || lower.contains("\\tor browser\\")
         || lower.contains("/torbrowser-data/")
     {
         let path_str = path.to_string_lossy().to_string();
@@ -112,7 +113,10 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
             );
             a.add_field("detail", &format!("torrc at {}", path_str2));
             a.add_field("file_type", "Tor Browser History");
-            a.add_field("custom_bridges", if custom_bridges { "true" } else { "false" });
+            a.add_field(
+                "custom_bridges",
+                if custom_bridges { "true" } else { "false" },
+            );
             a.add_field("mitre", "T1090.003");
             a.add_field("forensic_value", "High");
             a.add_field("suspicious", "true");
@@ -190,7 +194,9 @@ fn tor_onion_urls(path: &Path) -> Option<Vec<String>> {
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )
     .ok()?;
-    let mut stmt = conn.prepare("SELECT url FROM moz_places WHERE url LIKE '%.onion%'").ok()?;
+    let mut stmt = conn
+        .prepare("SELECT url FROM moz_places WHERE url LIKE '%.onion%'")
+        .ok()?;
     let rows = stmt.query_map([], |row| row.get::<_, String>(0)).ok()?;
     let mut out = Vec::new();
     for r in rows.flatten() {
@@ -213,9 +219,9 @@ mod tests {
         )
         .expect("write");
         let out = scan(&path);
-        assert!(out.iter().any(
-            |a| a.data.get("archive_format").map(|s| s.as_str()) == Some("7Zip")
-        ));
+        assert!(out
+            .iter()
+            .any(|a| a.data.get("archive_format").map(|s| s.as_str()) == Some("7Zip")));
     }
 
     #[test]
@@ -227,9 +233,9 @@ mod tests {
         body.extend_from_slice(&[0u8; 54]);
         std::fs::write(&path, &body).expect("write");
         let out = scan(&path);
-        assert!(out.iter().any(
-            |a| a.data.get("archive_format").map(|s| s.as_str()) == Some("ZIP")
-        ));
+        assert!(out
+            .iter()
+            .any(|a| a.data.get("archive_format").map(|s| s.as_str()) == Some("ZIP")));
     }
 
     #[test]
@@ -240,9 +246,9 @@ mod tests {
         body.extend_from_slice(&[0u8; 56]);
         std::fs::write(&path, &body).expect("write");
         let out = scan(&path);
-        assert!(out.iter().any(
-            |a| a.data.get("archive_format").map(|s| s.as_str()) == Some("AxCrypt")
-        ));
+        assert!(out
+            .iter()
+            .any(|a| a.data.get("archive_format").map(|s| s.as_str()) == Some("AxCrypt")));
     }
 
     #[test]
@@ -262,7 +268,11 @@ mod tests {
     fn parses_tor_places_for_onion_urls() {
         use rusqlite::Connection;
         let dir = tempfile::tempdir().expect("tempdir");
-        let tbdir = dir.path().join("Tor Browser").join("Browser").join("profile.default");
+        let tbdir = dir
+            .path()
+            .join("Tor Browser")
+            .join("Browser")
+            .join("profile.default");
         std::fs::create_dir_all(&tbdir).expect("mkdirs");
         let path = tbdir.join("places.sqlite");
         let conn = Connection::open(&path).expect("open");
@@ -275,9 +285,9 @@ mod tests {
         .expect("insert");
         drop(conn);
         let out = scan(&path);
-        assert!(out.iter().any(
-            |a| a.data.get("file_type").map(|s| s.as_str()) == Some("Tor Browser History")
-        ));
+        assert!(out
+            .iter()
+            .any(|a| a.data.get("file_type").map(|s| s.as_str()) == Some("Tor Browser History")));
     }
 
     #[test]

@@ -173,8 +173,7 @@ fn generate_summary(state: &mut AppState) {
         })
         .collect();
 
-    let plugin_outputs: Vec<strata_plugin_sdk::PluginOutput> =
-        state.plugin_results.clone();
+    let plugin_outputs: Vec<strata_plugin_sdk::PluginOutput> = state.plugin_results.clone();
 
     let case_id = state
         .case

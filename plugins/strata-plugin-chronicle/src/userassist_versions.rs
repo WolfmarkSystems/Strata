@@ -41,10 +41,10 @@ pub fn shimcache_version(bytes: &[u8]) -> WindowsVersion {
     }
     let sig = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
     match sig {
-        0xBADC0FEE => WindowsVersion::Win7,      // v2 (Win7)
-        0xBADC0FFE => WindowsVersion::Win8,      // v3 (Win8/8.1)
-        0x30 => WindowsVersion::Win10,           // v4 (Win10)
-        0x34 => WindowsVersion::Win11,           // v5 (Win11)
+        0xBADC0FEE => WindowsVersion::Win7, // v2 (Win7)
+        0xBADC0FFE => WindowsVersion::Win8, // v3 (Win8/8.1)
+        0x30 => WindowsVersion::Win10,      // v4 (Win10)
+        0x34 => WindowsVersion::Win11,      // v5 (Win11)
         _ => WindowsVersion::Unknown,
     }
 }
@@ -82,7 +82,10 @@ pub enum TransactionLogKind {
 /// UserAssist GUID bucket -> Windows version (helps the decoder
 /// apply the right field layout).
 pub fn userassist_bucket_version(guid: &str) -> WindowsVersion {
-    let g = guid.trim_start_matches('{').trim_end_matches('}').to_ascii_uppercase();
+    let g = guid
+        .trim_start_matches('{')
+        .trim_end_matches('}')
+        .to_ascii_uppercase();
     match g.as_str() {
         "75048700-EF1F-11D0-9888-006097DEACF9" => WindowsVersion::XP,
         "5E6AB780-7743-11CF-A12B-00AA004AE837" => WindowsVersion::XP,
@@ -118,8 +121,14 @@ mod tests {
 
     #[test]
     fn transaction_log_kind_recognises_suffixes() {
-        assert_eq!(transaction_log_kind("SYSTEM.LOG1"), TransactionLogKind::Modern);
-        assert_eq!(transaction_log_kind("system.log"), TransactionLogKind::Legacy);
+        assert_eq!(
+            transaction_log_kind("SYSTEM.LOG1"),
+            TransactionLogKind::Modern
+        );
+        assert_eq!(
+            transaction_log_kind("system.log"),
+            TransactionLogKind::Legacy
+        );
         assert_eq!(transaction_log_kind("system"), TransactionLogKind::None);
     }
 
@@ -129,7 +138,10 @@ mod tests {
             userassist_bucket_version("{CEBFF5CD-ACE2-4F4F-9178-9926F41749EA}"),
             WindowsVersion::Win7
         );
-        assert_eq!(userassist_bucket_version("{unknown-guid}"), WindowsVersion::Unknown);
+        assert_eq!(
+            userassist_bucket_version("{unknown-guid}"),
+            WindowsVersion::Unknown
+        );
     }
 
     #[test]

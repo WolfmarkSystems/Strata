@@ -51,12 +51,7 @@ impl ArtifactParser for TorBrowserParser {
     }
 
     fn target_patterns(&self) -> Vec<&str> {
-        vec![
-            "torrc",
-            "torrc-defaults",
-            "state",
-            "places.sqlite",
-        ]
+        vec!["torrc", "torrc-defaults", "state", "places.sqlite"]
     }
 
     fn parse_file(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
@@ -91,11 +86,7 @@ impl ArtifactParser for TorBrowserParser {
 }
 
 impl TorBrowserParser {
-    fn parse_torrc(
-        &self,
-        path: &Path,
-        data: &[u8],
-    ) -> Result<Vec<ParsedArtifact>, ParserError> {
+    fn parse_torrc(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
         let mut artifacts = Vec::new();
         let source = path.to_string_lossy().to_string();
         let text = String::from_utf8_lossy(data);
@@ -111,7 +102,9 @@ impl TorBrowserParser {
             forensic_flags: Vec::new(),
         };
 
-        entry.forensic_flags.push("TOR_USAGE — Tor configuration detected".to_string());
+        entry
+            .forensic_flags
+            .push("TOR_USAGE — Tor configuration detected".to_string());
 
         for line in text.lines() {
             let trimmed = line.trim();
@@ -133,7 +126,9 @@ impl TorBrowserParser {
                     entry.forensic_flags.push(format!("BRIDGE: {}", value));
                 }
                 "usebridges" if value == "1" => {
-                    entry.forensic_flags.push("BRIDGES_ENABLED — Using bridges to circumvent censorship".to_string());
+                    entry.forensic_flags.push(
+                        "BRIDGES_ENABLED — Using bridges to circumvent censorship".to_string(),
+                    );
                 }
                 "socksport" => entry.socks_port = Some(value.to_string()),
                 "controlport" => entry.control_port = Some(value.to_string()),
@@ -196,10 +191,7 @@ impl TorBrowserParser {
             }
         }
 
-        let mut desc = format!(
-            "Tor State: {} entry guards",
-            guards.len(),
-        );
+        let mut desc = format!("Tor State: {} entry guards", guards.len(),);
         if let Some(ref lw) = last_written {
             desc.push_str(&format!(" (last written: {})", lw));
         }
@@ -257,11 +249,8 @@ impl TorBrowserParser {
                     // Firefox timestamps are microseconds since epoch
                     let ts = row.3.map(|us| us / 1_000_000);
 
-                    let mut desc = format!(
-                        "Tor Browser History: {} (visited {} times)",
-                        row.0,
-                        row.2,
-                    );
+                    let mut desc =
+                        format!("Tor Browser History: {} (visited {} times)", row.0, row.2,);
 
                     // Flag .onion addresses
                     if row.0.contains(".onion") {

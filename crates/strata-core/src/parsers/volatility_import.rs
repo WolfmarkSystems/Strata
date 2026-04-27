@@ -153,9 +153,15 @@ impl ArtifactParser for VolatilityImportParser {
             "malfind" => {
                 for row in rows.iter().take(10000) {
                     let pid = row.get("PID").or(row.get("pid")).and_then(|v| v.as_i64());
-                    let process = row.get("Process").or(row.get("process")).and_then(|v| v.as_str());
+                    let process = row
+                        .get("Process")
+                        .or(row.get("process"))
+                        .and_then(|v| v.as_str());
                     let protection = row.get("Protection").and_then(|v| v.as_str());
-                    let hex_dump = row.get("Hexdump").or(row.get("hexdump")).and_then(|v| v.as_str());
+                    let hex_dump = row
+                        .get("Hexdump")
+                        .or(row.get("hexdump"))
+                        .and_then(|v| v.as_str());
 
                     artifacts.push(ParsedArtifact {
                         timestamp: None,
@@ -180,7 +186,10 @@ impl ArtifactParser for VolatilityImportParser {
             "cmdline" => {
                 for row in rows.iter().take(10000) {
                     let pid = row.get("PID").or(row.get("pid")).and_then(|v| v.as_i64());
-                    let process = row.get("Process").or(row.get("process")).and_then(|v| v.as_str());
+                    let process = row
+                        .get("Process")
+                        .or(row.get("process"))
+                        .and_then(|v| v.as_str());
                     let args = row.get("Args").or(row.get("args")).and_then(|v| v.as_str());
 
                     if let Some(cmdline) = args {
@@ -191,7 +200,11 @@ impl ArtifactParser for VolatilityImportParser {
                                 "Memory [cmdline]: PID {} ({}) — {}",
                                 pid.unwrap_or(-1),
                                 process.unwrap_or("unknown"),
-                                if cmdline.len() > 150 { format!("{}...", &cmdline[..150]) } else { cmdline.to_string() },
+                                if cmdline.len() > 150 {
+                                    format!("{}...", &cmdline[..150])
+                                } else {
+                                    cmdline.to_string()
+                                },
                             ),
                             source_path: source.clone(),
                             json_data: serde_json::json!({
@@ -302,8 +315,14 @@ fn parse_vol_process(row: &serde_json::Value) -> VolProcess {
             .or(row.get("process"))
             .and_then(|v| v.as_str())
             .map(String::from),
-        create_time: row.get("CreateTime").and_then(|v| v.as_str()).map(String::from),
-        exit_time: row.get("ExitTime").and_then(|v| v.as_str()).map(String::from),
+        create_time: row
+            .get("CreateTime")
+            .and_then(|v| v.as_str())
+            .map(String::from),
+        exit_time: row
+            .get("ExitTime")
+            .and_then(|v| v.as_str())
+            .map(String::from),
         threads: row.get("Threads").and_then(|v| v.as_i64()),
         handles: row.get("HandleCount").and_then(|v| v.as_i64()),
         session_id: row.get("SessionId").and_then(|v| v.as_i64()),
@@ -314,14 +333,27 @@ fn parse_vol_process(row: &serde_json::Value) -> VolProcess {
 
 fn parse_vol_netconn(row: &serde_json::Value) -> VolNetConnection {
     VolNetConnection {
-        protocol: row.get("Proto").or(row.get("protocol")).and_then(|v| v.as_str()).map(String::from),
-        local_addr: row.get("LocalAddr").and_then(|v| v.as_str()).map(String::from),
+        protocol: row
+            .get("Proto")
+            .or(row.get("protocol"))
+            .and_then(|v| v.as_str())
+            .map(String::from),
+        local_addr: row
+            .get("LocalAddr")
+            .and_then(|v| v.as_str())
+            .map(String::from),
         local_port: row.get("LocalPort").and_then(|v| v.as_i64()),
-        foreign_addr: row.get("ForeignAddr").and_then(|v| v.as_str()).map(String::from),
+        foreign_addr: row
+            .get("ForeignAddr")
+            .and_then(|v| v.as_str())
+            .map(String::from),
         foreign_port: row.get("ForeignPort").and_then(|v| v.as_i64()),
         state: row.get("State").and_then(|v| v.as_str()).map(String::from),
         pid: row.get("PID").or(row.get("pid")).and_then(|v| v.as_i64()),
         owner: row.get("Owner").and_then(|v| v.as_str()).map(String::from),
-        created: row.get("Created").and_then(|v| v.as_str()).map(String::from),
+        created: row
+            .get("Created")
+            .and_then(|v| v.as_str())
+            .map(String::from),
     }
 }

@@ -122,8 +122,8 @@ impl CsamHashDb {
     }
 
     fn import_vics(path: &Path, examiner: &str, name: &str) -> Result<Self> {
-        let file = File::open(path)
-            .with_context(|| format!("opening VICS file {}", path.display()))?;
+        let file =
+            File::open(path).with_context(|| format!("opening VICS file {}", path.display()))?;
         let reader = BufReader::new(file);
         let doc: VicsDocument =
             serde_json::from_reader(reader).context("parsing VICS JSON document")?;
@@ -174,8 +174,8 @@ impl CsamHashDb {
     }
 
     fn import_line_based(path: &Path, examiner: &str, name: &str) -> Result<Self> {
-        let file = File::open(path)
-            .with_context(|| format!("opening hash list {}", path.display()))?;
+        let file =
+            File::open(path).with_context(|| format!("opening hash list {}", path.display()))?;
         let reader = BufReader::new(file);
 
         let mut md5_set = HashSet::new();
@@ -195,8 +195,7 @@ impl CsamHashDb {
             }
 
             if let Some(comment_body) = trimmed.strip_prefix('#') {
-                if still_in_header_comments && comment_body.to_ascii_uppercase().contains("NCMEC")
-                {
+                if still_in_header_comments && comment_body.to_ascii_uppercase().contains("NCMEC") {
                     comment_block_mentions_ncmec = true;
                 }
                 continue;
@@ -230,8 +229,8 @@ impl CsamHashDb {
                 _ => {}
             }
 
-            let normalized = normalize_hash(trimmed, len)
-                .with_context(|| format!("line {}", line_no + 1))?;
+            let normalized =
+                normalize_hash(trimmed, len).with_context(|| format!("line {}", line_no + 1))?;
 
             match len {
                 32 => {
@@ -248,8 +247,8 @@ impl CsamHashDb {
             entry_count += 1;
         }
 
-        let detected_len = detected_len
-            .ok_or_else(|| anyhow!("hash list contained no hash entries"))?;
+        let detected_len =
+            detected_len.ok_or_else(|| anyhow!("hash list contained no hash entries"))?;
 
         let format = match (detected_len, comment_block_mentions_ncmec) {
             (32, true) => HashSetFormat::NcmecMd5,
@@ -388,9 +387,9 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         let f = write_temp(content);
         let db = CsamHashDb::import_from_file(f.path(), "ex", "g").unwrap();
         assert_eq!(db.source_format, HashSetFormat::GenericSha256);
-        assert!(db.lookup_sha256(
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        ));
+        assert!(
+            db.lookup_sha256("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+        );
     }
 
     #[test]
@@ -420,9 +419,9 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         assert_eq!(db.entry_count, 2);
         assert!(db.lookup_md5("d41d8cd98f00b204e9800998ecf8427e"));
         assert!(db.lookup_sha1("da39a3ee5e6b4b0d3255bfef95601890afd80709"));
-        assert!(db.lookup_sha256(
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        ));
+        assert!(
+            db.lookup_sha256("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+        );
     }
 
     #[test]
@@ -435,7 +434,10 @@ d41d8cd98f00b204e9800998ecf8427e
         let db = CsamHashDb::import_from_file(f.path(), "ex", "n").unwrap();
         let m = db.lookup_any("d41d8cd98f00b204e9800998ecf8427e", "", "");
         assert_eq!(m, Some(MatchType::ExactMd5));
-        assert_eq!(db.lookup_any("00000000000000000000000000000000", "", ""), None);
+        assert_eq!(
+            db.lookup_any("00000000000000000000000000000000", "", ""),
+            None
+        );
     }
 
     #[test]

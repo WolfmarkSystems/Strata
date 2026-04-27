@@ -1,5 +1,5 @@
-use time::{Duration, OffsetDateTime};
 use strata_core::errors::ForensicError;
+use time::{Duration, OffsetDateTime};
 
 pub struct HeuristicSqliteViewer;
 

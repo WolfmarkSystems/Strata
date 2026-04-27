@@ -11,10 +11,10 @@
 //!
 //! Runs completely offline. No API calls, no cloud, ever.
 
-pub mod types;
-pub mod features;
 pub mod detectors;
 pub mod engine;
+pub mod features;
+pub mod types;
 
 pub use engine::{AnomalyConfig, AnomalyEngine, DetectorSet, ADVISORY_NOTICE};
 pub use types::*;

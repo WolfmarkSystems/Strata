@@ -128,7 +128,11 @@ fn ntfs_walker_reads_nps_jean_system_hive() {
     };
     assert!(system_bytes.len() > 1024, "SYSTEM hive must be substantial");
     // Registry hives start with "regf"
-    assert_eq!(&system_bytes[..4], b"regf", "SYSTEM hive should start with regf magic");
+    assert_eq!(
+        &system_bytes[..4],
+        b"regf",
+        "SYSTEM hive should start with regf magic"
+    );
     eprintln!("NPS Jean SYSTEM hive: {} bytes", system_bytes.len());
 }
 

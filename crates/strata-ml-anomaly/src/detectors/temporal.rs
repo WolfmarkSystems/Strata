@@ -6,10 +6,7 @@ use chrono::Timelike;
 pub struct TemporalOutlierDetector;
 
 impl TemporalOutlierDetector {
-    pub fn run(
-        timeline: &[TimelineEntry],
-        _baseline: &BaselineSummary,
-    ) -> Vec<AnomalyFinding> {
+    pub fn run(timeline: &[TimelineEntry], _baseline: &BaselineSummary) -> Vec<AnomalyFinding> {
         if timeline.len() < 10 {
             return Vec::new();
         }
@@ -92,7 +89,10 @@ impl TemporalOutlierDetector {
                 ),
                 evidence_points: vec![
                     format!("Hour {} has {} of {} total events", hour, hour_count, total),
-                    format!("Normal activity window: {:02}:00\u{2013}{:02}:00", start, end),
+                    format!(
+                        "Normal activity window: {:02}:00\u{2013}{:02}:00",
+                        start, end
+                    ),
                     format!("{} hours outside normal window", hours_outside),
                 ],
                 suggested_followup: vec![

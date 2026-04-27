@@ -389,8 +389,7 @@ mod tests {
 
     #[test]
     fn raid0_reads_striped_members_in_order() {
-        let root =
-            std::env::temp_dir().join(format!("strata_raid0_test_{}", uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("strata_raid0_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&root).expect("create temp root");
 
         let disk0 = root.join("disk0.img");

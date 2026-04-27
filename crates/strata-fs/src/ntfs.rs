@@ -836,8 +836,6 @@ fn enumerate_mft_sequential<C: EvidenceContainerRO>(
 
 struct NtfsBootSectorInternal {
     bytes_per_sector: u16,
-    #[allow(dead_code)]
-    sectors_per_cluster: u8,
     cluster_size_bytes: u32,
     mft_lcn: i64,
     clusters_per_mft_record: i8,
@@ -858,7 +856,6 @@ fn parse_boot_sector_internal(vbr: &[u8]) -> Result<NtfsBootSectorInternal, Fore
 
     Ok(NtfsBootSectorInternal {
         bytes_per_sector,
-        sectors_per_cluster,
         cluster_size_bytes,
         mft_lcn,
         clusters_per_mft_record,

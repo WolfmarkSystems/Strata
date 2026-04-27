@@ -115,7 +115,10 @@ mod tests {
 
     #[test]
     fn binary_hash_from_filename_strips_extension() {
-        assert_eq!(binary_hash_from_filename("DEADBEEFCAFE.aot"), "DEADBEEFCAFE");
+        assert_eq!(
+            binary_hash_from_filename("DEADBEEFCAFE.aot"),
+            "DEADBEEFCAFE"
+        );
         assert_eq!(binary_hash_from_filename("nohex"), "nohex");
     }
 

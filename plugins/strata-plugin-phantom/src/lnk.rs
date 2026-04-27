@@ -52,12 +52,10 @@ use chrono::{DateTime, Utc};
 const LNK_HEADER_SIZE: u32 = 0x4C;
 /// Standard LNK class identifier.
 const LNK_CLSID: [u8; 16] = [
-    0x01, 0x14, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46,
+    0x01, 0x14, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46,
 ];
 const FILETIME_EPOCH_DELTA: i64 = 11_644_473_600;
 
-#[allow(dead_code)]
 mod link_flags {
     pub const HAS_LINK_TARGET_IDLIST: u32 = 0x0000_0001;
     pub const HAS_LINK_INFO: u32 = 0x0000_0002;
@@ -448,8 +446,7 @@ mod tests {
         out.push(0);
         // Patch up link_info_size.
         let link_info_size = (out.len() - link_info_start) as u32;
-        out[link_info_start..link_info_start + 4]
-            .copy_from_slice(&link_info_size.to_le_bytes());
+        out[link_info_start..link_info_start + 4].copy_from_slice(&link_info_size.to_le_bytes());
         // Terminator ExtraData block.
         out.extend_from_slice(&0u32.to_le_bytes());
         out

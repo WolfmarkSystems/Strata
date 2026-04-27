@@ -265,10 +265,7 @@ pub fn analyze_behavior(artifacts: &[ParsedArtifact]) -> Result<BehaviorReport, 
                 "Detected {} execution artifacts involving scripting interpreters",
                 execution_artifacts.len()
             ),
-            artifacts: execution_artifacts
-                .into_iter()
-                .take(10)
-                .collect(),
+            artifacts: execution_artifacts.into_iter().take(10).collect(),
         });
     }
 
@@ -279,10 +276,7 @@ pub fn analyze_behavior(artifacts: &[ParsedArtifact]) -> Result<BehaviorReport, 
                 "Detected {} persistence mechanisms",
                 persistence_artifacts.len()
             ),
-            artifacts: persistence_artifacts
-                .into_iter()
-                .take(10)
-                .collect(),
+            artifacts: persistence_artifacts.into_iter().take(10).collect(),
         });
     }
 
@@ -293,10 +287,7 @@ pub fn analyze_behavior(artifacts: &[ParsedArtifact]) -> Result<BehaviorReport, 
                 "Detected {} remote access artifacts",
                 network_artifacts.len()
             ),
-            artifacts: network_artifacts
-                .into_iter()
-                .take(10)
-                .collect(),
+            artifacts: network_artifacts.into_iter().take(10).collect(),
         });
     }
 
@@ -307,10 +298,7 @@ pub fn analyze_behavior(artifacts: &[ParsedArtifact]) -> Result<BehaviorReport, 
                 "Detected {} credential access artifacts",
                 credential_artifacts.len()
             ),
-            artifacts: credential_artifacts
-                .into_iter()
-                .take(10)
-                .collect(),
+            artifacts: credential_artifacts.into_iter().take(10).collect(),
         });
     }
 
@@ -321,10 +309,7 @@ pub fn analyze_behavior(artifacts: &[ParsedArtifact]) -> Result<BehaviorReport, 
                 "Detected {} potential data exfiltration artifacts",
                 exfiltration_artifacts.len()
             ),
-            artifacts: exfiltration_artifacts
-                .into_iter()
-                .take(10)
-                .collect(),
+            artifacts: exfiltration_artifacts.into_iter().take(10).collect(),
         });
     }
 
@@ -420,7 +405,11 @@ const SUSPICIOUS_PATH_PATTERNS: &[(&str, &str, f32)] = &[
     ("\\perflogs\\", "File in PerfLogs (common staging)", 0.7),
     ("c:\\intel\\", "File in C:\\Intel (malware staging)", 0.8),
     ("c:\\recovery\\", "File in C:\\Recovery (hidden exec)", 0.6),
-    ("\\sysvol\\", "File in SYSVOL (domain-wide persistence)", 0.7),
+    (
+        "\\sysvol\\",
+        "File in SYSVOL (domain-wide persistence)",
+        0.7,
+    ),
     ("\\debug\\wia\\", "File in Debug\\WIA (T1036)", 0.8),
     ("/tmp/", "File in Unix /tmp", 0.3),
     ("/dev/shm/", "File in /dev/shm (memory-only exec)", 0.8),
@@ -429,7 +418,11 @@ const SUSPICIOUS_PATH_PATTERNS: &[(&str, &str, f32)] = &[
     ("\\windows\\fonts\\", "EXE in Fonts directory (T1036)", 0.7),
     ("\\windows\\help\\", "File in Windows Help (staging)", 0.6),
     ("\\windows\\addins\\", "File in Windows Addins", 0.6),
-    ("\\windows\\ime\\", "File in Windows IME (rare, suspicious)", 0.7),
+    (
+        "\\windows\\ime\\",
+        "File in Windows IME (rare, suspicious)",
+        0.7,
+    ),
 ];
 
 /// Suspicious execution patterns in artifact descriptions
@@ -468,13 +461,17 @@ const SUSPICIOUS_EXECUTION_PATTERNS: &[(&str, &str, f32)] = &[
 
 /// Registry paths associated with persistence mechanisms
 const PERSISTENCE_REGISTRY_PATTERNS: &[(&str, &str, f32)] = &[
-    ("currentversion\\run", "Run key persistence (T1547.001)", 0.6),
-    ("currentversion\\runonce", "RunOnce persistence (T1547.001)", 0.6),
     (
-        "winlogon\\shell",
-        "Winlogon shell hijack (T1547.004)",
-        0.8,
+        "currentversion\\run",
+        "Run key persistence (T1547.001)",
+        0.6,
     ),
+    (
+        "currentversion\\runonce",
+        "RunOnce persistence (T1547.001)",
+        0.6,
+    ),
+    ("winlogon\\shell", "Winlogon shell hijack (T1547.004)", 0.8),
     (
         "winlogon\\userinit",
         "Winlogon Userinit hijack (T1547.004)",
@@ -485,27 +482,15 @@ const PERSISTENCE_REGISTRY_PATTERNS: &[(&str, &str, f32)] = &[
         "IFEO debugger persistence (T1546.012)",
         0.7,
     ),
-    (
-        "appinit_dlls",
-        "AppInit DLL injection (T1546.010)",
-        0.8,
-    ),
-    (
-        "servicedll",
-        "Service DLL modification (T1543.003)",
-        0.7,
-    ),
+    ("appinit_dlls", "AppInit DLL injection (T1546.010)", 0.8),
+    ("servicedll", "Service DLL modification (T1543.003)", 0.7),
     (
         "security\\policy\\secrets",
         "LSA secrets access (T1003.004)",
         0.9,
     ),
     ("sam\\domains", "SAM database access (T1003.002)", 0.8),
-    (
-        "classes\\clsid",
-        "COM object hijacking (T1546.015)",
-        0.5,
-    ),
+    ("classes\\clsid", "COM object hijacking (T1546.015)", 0.5),
 ];
 
 /// Encoded PowerShell signatures to detect in binary data
@@ -529,7 +514,11 @@ const ENCODED_POWERSHELL_SIGS: &[&str] = &[
 /// Known malicious string signatures
 /// (signature, name, confidence)
 const MALWARE_STRING_SIGS: &[(&str, &str, f32)] = &[
-    ("This program cannot be run in DOS mode", "PE executable", 0.1),
+    (
+        "This program cannot be run in DOS mode",
+        "PE executable",
+        0.1,
+    ),
     ("ReflectiveLoader", "Reflective DLL injection", 0.9),
     ("beacon.dll", "Cobalt Strike beacon", 0.95),
     ("beacon.x64.dll", "Cobalt Strike x64 beacon", 0.95),
@@ -537,10 +526,18 @@ const MALWARE_STRING_SIGS: &[(&str, &str, f32)] = &[
     ("WinHTTP.WinHTTPRequest", "HTTP downloader component", 0.5),
     ("COMSPEC", "Shell execution via COMSPEC", 0.3),
     ("ShellExecute", "Shell execution API", 0.2),
-    ("VirtualAlloc", "Memory allocation (potential shellcode)", 0.2),
+    (
+        "VirtualAlloc",
+        "Memory allocation (potential shellcode)",
+        0.2,
+    ),
     ("CreateRemoteThread", "Remote thread injection", 0.6),
     ("NtCreateThreadEx", "Native API thread creation", 0.7),
-    ("WriteProcessMemory", "Process memory write (injection)", 0.5),
+    (
+        "WriteProcessMemory",
+        "Process memory write (injection)",
+        0.5,
+    ),
 ];
 
 // ---------------------------------------------------------------------------
@@ -556,11 +553,7 @@ fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
         .position(|window| window == needle)
 }
 
-fn extract_network_indicators(
-    text: &str,
-    source: &str,
-    indicators: &mut Vec<ThreatIndicator>,
-) {
+fn extract_network_indicators(text: &str, source: &str, indicators: &mut Vec<ThreatIndicator>) {
     // IPv4 extraction
     if let Ok(re) = Regex::new(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b") {
         for cap in re.captures_iter(text) {

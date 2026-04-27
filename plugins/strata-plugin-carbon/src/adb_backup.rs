@@ -171,8 +171,16 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
         &format!(
             "ADB backup v{} ({}, {})",
             backup.version,
-            if backup.encrypted { "encrypted" } else { "plaintext" },
-            if backup.compressed { "compressed" } else { "uncompressed" }
+            if backup.encrypted {
+                "encrypted"
+            } else {
+                "plaintext"
+            },
+            if backup.compressed {
+                "compressed"
+            } else {
+                "uncompressed"
+            }
         ),
     );
     a.add_field(
@@ -198,7 +206,10 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
     );
     a.add_field("version", &backup.version.to_string());
     a.add_field("encrypted", if backup.encrypted { "true" } else { "false" });
-    a.add_field("compressed", if backup.compressed { "true" } else { "false" });
+    a.add_field(
+        "compressed",
+        if backup.compressed { "true" } else { "false" },
+    );
     if let Some(e) = &backup.encryption_algo {
         a.add_field("encryption_algo", e);
     }
@@ -258,7 +269,16 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let path = write_ab(
             &dir,
-            &["ANDROID BACKUP", "5", "1", "AES-256", "deadbeef", "cafebabe", "10000", "hash"],
+            &[
+                "ANDROID BACKUP",
+                "5",
+                "1",
+                "AES-256",
+                "deadbeef",
+                "cafebabe",
+                "10000",
+                "hash",
+            ],
             b"encrypted-stream-bytes",
         );
         let backup = parse(&path).expect("parsed");
@@ -271,14 +291,14 @@ mod tests {
     fn parse_unencrypted_uncompressed_enumerates_app_packages() {
         let dir = tempfile::tempdir().expect("tempdir");
         let body = b"apps/com.example.alpha/files/data\napps/com.example.beta/_db/main.db\napps/com.example.alpha/files/again\n";
-        let path = write_ab(
-            &dir,
-            &["ANDROID BACKUP", "1", "0", "none"],
-            body,
-        );
+        let path = write_ab(&dir, &["ANDROID BACKUP", "1", "0", "none"], body);
         let backup = parse(&path).expect("parsed");
-        assert!(backup.included_apps.contains(&"com.example.alpha".to_string()));
-        assert!(backup.included_apps.contains(&"com.example.beta".to_string()));
+        assert!(backup
+            .included_apps
+            .contains(&"com.example.alpha".to_string()));
+        assert!(backup
+            .included_apps
+            .contains(&"com.example.beta".to_string()));
         assert!(backup.database_count >= 1);
     }
 

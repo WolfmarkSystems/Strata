@@ -52,11 +52,7 @@ impl ArtifactParser for CoreAnalyticsParser {
     }
 
     fn target_patterns(&self) -> Vec<&str> {
-        vec![
-            "*.core_analytics",
-            "Analytics_*.json",
-            "aggregate",
-        ]
+        vec!["*.core_analytics", "Analytics_*.json", "aggregate"]
     }
 
     fn parse_file(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
@@ -92,10 +88,7 @@ impl ArtifactParser for CoreAnalyticsParser {
                             .get("bundleVersion")
                             .and_then(|v| v.as_str())
                             .map(String::from),
-                        event_type: json
-                            .get("name")
-                            .and_then(|v| v.as_str())
-                            .map(String::from),
+                        event_type: json.get("name").and_then(|v| v.as_str()).map(String::from),
                         timestamp: json
                             .get("timestamp")
                             .and_then(|v| v.as_str())
@@ -111,9 +104,7 @@ impl ArtifactParser for CoreAnalyticsParser {
                             .get("launchCount")
                             .and_then(|v| v.as_i64())
                             .map(|v| v as i32),
-                        power_impact: message
-                            .get("powerImpact")
-                            .and_then(|v| v.as_f64()),
+                        power_impact: message.get("powerImpact").and_then(|v| v.as_f64()),
                         process_name: app_descriptions
                             .get("processName")
                             .and_then(|v| v.as_str())

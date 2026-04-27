@@ -40,10 +40,7 @@ pub fn content_hash(a: &Artifact) -> String {
         .timestamp
         .map(|s| (s as i64).saturating_mul(1_000_000))
         .unwrap_or(0);
-    let payload = format!(
-        "{}|{}|{}|{}",
-        file_type, a.source, ts_us, description
-    );
+    let payload = format!("{}|{}|{}|{}", file_type, a.source, ts_us, description);
     let digest = Sha256::digest(payload.as_bytes());
     hex_of(&digest)
 }
@@ -77,8 +74,7 @@ pub fn merge_rescan(
     };
     match request.merge_mode {
         MergeMode::Replace => {
-            let mut out: Vec<Artifact> =
-                existing.into_iter().filter(|a| !is_target(a)).collect();
+            let mut out: Vec<Artifact> = existing.into_iter().filter(|a| !is_target(a)).collect();
             out.extend(new_from_plugins);
             out
         }
@@ -88,8 +84,7 @@ pub fn merge_rescan(
             out
         }
         MergeMode::Deduplicate => {
-            let mut seen: HashSet<String> =
-                existing.iter().map(content_hash).collect();
+            let mut seen: HashSet<String> = existing.iter().map(content_hash).collect();
             let mut out = existing;
             for a in new_from_plugins {
                 let h = content_hash(&a);
@@ -132,8 +127,12 @@ mod tests {
         let fresh = vec![art("phantom", "Prefetch", "A2")];
         let merged = merge_rescan(existing, fresh, &req(vec!["phantom"], MergeMode::Replace));
         assert_eq!(merged.len(), 2);
-        assert!(merged.iter().any(|a| a.data.get("title") == Some(&"A2".to_string())));
-        assert!(merged.iter().any(|a| a.data.get("title") == Some(&"B".to_string())));
+        assert!(merged
+            .iter()
+            .any(|a| a.data.get("title") == Some(&"A2".to_string())));
+        assert!(merged
+            .iter()
+            .any(|a| a.data.get("title") == Some(&"B".to_string())));
     }
 
     #[test]
@@ -151,7 +150,11 @@ mod tests {
             art("phantom", "Prefetch", "A"),
             art("phantom", "Prefetch", "B"),
         ];
-        let merged = merge_rescan(existing, fresh, &req(vec!["phantom"], MergeMode::Deduplicate));
+        let merged = merge_rescan(
+            existing,
+            fresh,
+            &req(vec!["phantom"], MergeMode::Deduplicate),
+        );
         assert_eq!(merged.len(), 2);
     }
 

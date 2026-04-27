@@ -175,10 +175,7 @@ impl ArtifactParser for ChromeMacOsParser {
                             title: row.get(1).ok(),
                             visit_count: row.get::<_, i64>(2).unwrap_or(0),
                             typed_count: row.get::<_, i64>(3).unwrap_or(0),
-                            last_visit: row
-                                .get::<_, i64>(4)
-                                .ok()
-                                .map(chrome_microseconds_to_unix),
+                            last_visit: row.get::<_, i64>(4).ok().map(chrome_microseconds_to_unix),
                             profile: profile.clone(),
                         })
                     })
@@ -251,10 +248,7 @@ impl ArtifactParser for ChromeMacOsParser {
                                 .get::<_, i64>(3)
                                 .ok()
                                 .map(chrome_microseconds_to_unix),
-                            expires_utc: row
-                                .get::<_, i64>(4)
-                                .ok()
-                                .map(chrome_microseconds_to_unix),
+                            expires_utc: row.get::<_, i64>(4).ok().map(chrome_microseconds_to_unix),
                             is_secure: row.get::<_, i64>(5).unwrap_or(0) != 0,
                             profile: profile.clone(),
                         })

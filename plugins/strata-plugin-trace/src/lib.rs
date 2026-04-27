@@ -11,42 +11,122 @@ pub mod srum;
 
 /// (binary_name, description, mitre_technique)
 const LOLBINS: &[(&str, &str, &str)] = &[
-    ("certutil", "Certificate utility — can decode/download payloads", "T1140"),
-    ("bitsadmin", "BITS transfer abuse for file download", "T1197"),
-    ("mshta", "HTML Application execution for script delivery", "T1218.005"),
-    ("regsvr32", "COM scriptlet execution via DLL registration", "T1218.010"),
-    ("rundll32", "Proxy execution through DLL entry points", "T1218.011"),
-    ("wscript", "Windows Script Host — VBS/JS execution", "T1059.005"),
-    ("cscript", "Console Script Host — VBS/JS execution", "T1059.005"),
-    ("powershell", "PowerShell command-line interpreter", "T1059.001"),
+    (
+        "certutil",
+        "Certificate utility — can decode/download payloads",
+        "T1140",
+    ),
+    (
+        "bitsadmin",
+        "BITS transfer abuse for file download",
+        "T1197",
+    ),
+    (
+        "mshta",
+        "HTML Application execution for script delivery",
+        "T1218.005",
+    ),
+    (
+        "regsvr32",
+        "COM scriptlet execution via DLL registration",
+        "T1218.010",
+    ),
+    (
+        "rundll32",
+        "Proxy execution through DLL entry points",
+        "T1218.011",
+    ),
+    (
+        "wscript",
+        "Windows Script Host — VBS/JS execution",
+        "T1059.005",
+    ),
+    (
+        "cscript",
+        "Console Script Host — VBS/JS execution",
+        "T1059.005",
+    ),
+    (
+        "powershell",
+        "PowerShell command-line interpreter",
+        "T1059.001",
+    ),
     ("cmd", "Windows Command Shell", "T1059.003"),
-    ("msiexec", "Windows Installer package execution", "T1218.007"),
-    ("installutil", ".NET InstallUtil for signed binary proxy execution", "T1218.004"),
+    (
+        "msiexec",
+        "Windows Installer package execution",
+        "T1218.007",
+    ),
+    (
+        "installutil",
+        ".NET InstallUtil for signed binary proxy execution",
+        "T1218.004",
+    ),
     ("regasm", ".NET assembly registration utility", "T1218.009"),
-    ("regsvcs", ".NET component services registration utility", "T1218.009"),
-    ("msbuild", "Microsoft Build Engine — inline task execution", "T1127.001"),
+    (
+        "regsvcs",
+        ".NET component services registration utility",
+        "T1218.009",
+    ),
+    (
+        "msbuild",
+        "Microsoft Build Engine — inline task execution",
+        "T1127.001",
+    ),
     ("wmic", "WMI command-line interface", "T1047"),
-    ("schtasks", "Scheduled task creation and management", "T1053.005"),
+    (
+        "schtasks",
+        "Scheduled task creation and management",
+        "T1053.005",
+    ),
     ("at", "Legacy task scheduler", "T1053.002"),
     ("sc", "Service Control Manager manipulation", "T1543.003"),
     ("net", "Network enumeration and share mapping", "T1049"),
-    ("netsh", "Network configuration and firewall modification", "T1562.004"),
+    (
+        "netsh",
+        "Network configuration and firewall modification",
+        "T1562.004",
+    ),
     ("nltest", "Domain trust and DC enumeration", "T1016"),
     ("whoami", "User and privilege discovery", "T1033"),
     ("tasklist", "Process enumeration", "T1057"),
-    ("taskkill", "Process termination for defense evasion", "T1562"),
+    (
+        "taskkill",
+        "Process termination for defense evasion",
+        "T1562",
+    ),
     ("vssadmin", "Volume Shadow Copy deletion", "T1490"),
     ("wbadmin", "Backup catalog deletion", "T1490"),
     ("bcdedit", "Boot configuration modification", "T1490"),
-    ("esentutl", "ESE database utility — credential extraction", "T1003.003"),
+    (
+        "esentutl",
+        "ESE database utility — credential extraction",
+        "T1003.003",
+    ),
     ("fsutil", "File system utility — data destruction", "T1485"),
-    ("icacls", "ACL modification for permission changes", "T1222.001"),
+    (
+        "icacls",
+        "ACL modification for permission changes",
+        "T1222.001",
+    ),
     ("takeown", "File ownership seizure", "T1222.001"),
     ("robocopy", "Lateral file transfer via remote copy", "T1570"),
-    ("curl", "Command-line HTTP client for ingress tool transfer", "T1105"),
+    (
+        "curl",
+        "Command-line HTTP client for ingress tool transfer",
+        "T1105",
+    ),
     ("python", "Python interpreter execution", "T1059.006"),
-    ("wsl", "Windows Subsystem for Linux — indirect command execution", "T1202"),
-    ("expand", "CAB file expansion — payload decompression", "T1140"),
+    (
+        "wsl",
+        "Windows Subsystem for Linux — indirect command execution",
+        "T1202",
+    ),
+    (
+        "expand",
+        "CAB file expansion — payload decompression",
+        "T1140",
+    ),
 ];
 
 pub struct TracePlugin {
@@ -70,10 +150,7 @@ impl TracePlugin {
 
     fn classify_file(path: &Path) -> Option<&'static str> {
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-        let name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let lower_name = name.to_lowercase();
         let lower_ext = ext.to_lowercase();
 
@@ -98,14 +175,8 @@ impl TracePlugin {
     }
 
     fn detect_lolbin(path: &Path) -> Option<(&'static str, &'static str, &'static str)> {
-        let name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
-        let stem = path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("");
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
         let lower_stem = stem.to_lowercase();
         let lower_name = name.to_lowercase();
 
@@ -152,7 +223,14 @@ impl TracePlugin {
         let cmd_lower = command.to_lowercase();
         let args_lower = arguments.to_lowercase();
 
-        let suspicious_cmds = ["powershell", "cmd", "mshta", "wscript", "cscript", "certutil"];
+        let suspicious_cmds = [
+            "powershell",
+            "cmd",
+            "mshta",
+            "wscript",
+            "cscript",
+            "certutil",
+        ];
         let suspicious_args = ["-encoded", "-enc", "-hidden", "downloadstring", "base64"];
         let suspicious_paths = ["temp", "downloads", "appdata"];
 
@@ -166,8 +244,16 @@ impl TracePlugin {
             "Command: {} {} | Author: {} | Description: {}",
             command,
             arguments,
-            if author.is_empty() { "(unknown)" } else { &author },
-            if description.is_empty() { "(none)" } else { &description },
+            if author.is_empty() {
+                "(unknown)"
+            } else {
+                &author
+            },
+            if description.is_empty() {
+                "(none)"
+            } else {
+                &description
+            },
         );
 
         Some((task_name, detail, is_suspicious))
@@ -177,8 +263,10 @@ impl TracePlugin {
     fn detect_bam_dam(path: &Path, _name: &str) -> Vec<Artifact> {
         let mut results = Vec::new();
         let path_str = path.to_string_lossy().to_lowercase();
-        if path_str.contains("bam\\usersettings") || path_str.contains("dam\\usersettings")
-            || path_str.contains("bam/usersettings") || path_str.contains("dam/usersettings")
+        if path_str.contains("bam\\usersettings")
+            || path_str.contains("dam\\usersettings")
+            || path_str.contains("bam/usersettings")
+            || path_str.contains("dam/usersettings")
         {
             let mut artifact = Artifact::new("Execution", &path.to_string_lossy());
             artifact.add_field("category", "BAM/DAM Entry");
@@ -203,10 +291,7 @@ impl TracePlugin {
             artifact.add_field("category", "Autorun Entry");
             artifact.add_field("file_type", "Autorun Entry");
             artifact.add_field("title", &format!("Run Key: {}", path.display()));
-            artifact.add_field(
-                "detail",
-                "Registry Run key persistence mechanism found",
-            );
+            artifact.add_field("detail", "Registry Run key persistence mechanism found");
             artifact.add_field("mitre", "T1547.001");
             artifact.add_field("suspicious", "true");
             results.push(artifact);
@@ -374,7 +459,11 @@ impl TracePlugin {
             );
             a.add_field(
                 "forensic_value",
-                if app.is_suspicious { "Critical" } else { "High" },
+                if app.is_suspicious {
+                    "Critical"
+                } else {
+                    "High"
+                },
             );
             if app.is_suspicious {
                 a.add_field("suspicious", "true");
@@ -405,7 +494,8 @@ impl TracePlugin {
         }
 
         // Read e_lfanew (offset to PE header) at offset 0x3C as little-endian u32
-        let e_lfanew = u32::from_le_bytes([data[0x3C], data[0x3D], data[0x3E], data[0x3F]]) as usize;
+        let e_lfanew =
+            u32::from_le_bytes([data[0x3C], data[0x3D], data[0x3E], data[0x3F]]) as usize;
 
         // PE compilation timestamp is at e_lfanew + 8
         let ts_offset = e_lfanew + 8;
@@ -525,13 +615,9 @@ impl StrataPlugin for TracePlugin {
 
                 // Check for LOLBINs first
                 if let Some((bin_name, description, mitre)) = Self::detect_lolbin(&entry_path) {
-                    let mut artifact =
-                        Artifact::new("Execution", &entry_path.to_string_lossy());
+                    let mut artifact = Artifact::new("Execution", &entry_path.to_string_lossy());
                     artifact.add_field("title", &format!("LOLBIN: {}", bin_name));
-                    artifact.add_field(
-                        "detail",
-                        &format!("{} | MITRE: {}", description, mitre),
-                    );
+                    artifact.add_field("detail", &format!("{} | MITRE: {}", description, mitre));
                     artifact.add_field("file_type", "LOLBIN");
                     artifact.add_field("lolbin", bin_name);
                     artifact.add_field("suspicious", "true");
@@ -557,10 +643,8 @@ impl StrataPlugin for TracePlugin {
                                         "Prefetch file found — indicates program was executed",
                                     );
                                 } else {
-                                    artifact.add_field(
-                                        "title",
-                                        &format!("{} (Prefetch)", exe_name),
-                                    );
+                                    artifact
+                                        .add_field("title", &format!("{} (Prefetch)", exe_name));
                                     artifact.add_field(
                                         "detail",
                                         "Prefetch file found — indicates program was executed",
@@ -572,10 +656,7 @@ impl StrataPlugin for TracePlugin {
                                     .file_stem()
                                     .and_then(|s| s.to_str())
                                     .unwrap_or("Unknown");
-                                artifact.add_field(
-                                    "title",
-                                    &format!("{} (Prefetch)", pf_name),
-                                );
+                                artifact.add_field("title", &format!("{} (Prefetch)", pf_name));
                                 artifact.add_field(
                                     "detail",
                                     "Prefetch file found — indicates program was executed (unreadable)",
@@ -659,10 +740,7 @@ impl StrataPlugin for TracePlugin {
                 if crate::bits::is_bits_path(&entry_path) {
                     if let Ok(bytes) = std::fs::read(&entry_path) {
                         for job in crate::bits::parse_qmgr_binary(&bytes) {
-                            let mut a = Artifact::new(
-                                "Execution",
-                                &entry_path.to_string_lossy(),
-                            );
+                            let mut a = Artifact::new("Execution", &entry_path.to_string_lossy());
                             a.add_field("file_type", "BITS Transfer");
                             a.add_field("category", "BITS Transfer");
                             a.add_field(
@@ -707,16 +785,10 @@ impl StrataPlugin for TracePlugin {
                             crate::pca::parse_general_db(&body, file_name)
                         };
                         for entry in entries {
-                            let mut a = Artifact::new(
-                                "Execution",
-                                &entry_path.to_string_lossy(),
-                            );
+                            let mut a = Artifact::new("Execution", &entry_path.to_string_lossy());
                             a.add_field("file_type", "PCA Execution");
                             a.add_field("category", "PCA Execution");
-                            a.add_field(
-                                "title",
-                                &format!("PCA: {}", entry.exe_name),
-                            );
+                            a.add_field("title", &format!("PCA: {}", entry.exe_name));
                             let mut detail = format!(
                                 "exe_path={} | last_executed={} | source={}",
                                 entry.exe_path,
@@ -816,7 +888,9 @@ impl StrataPlugin for TracePlugin {
                 "SRUM Provider" => (ArtifactCategory::SystemActivity, ForensicValue::High),
                 "SRUM User" => (ArtifactCategory::SystemActivity, ForensicValue::High),
                 "SRUM Activity" => (ArtifactCategory::SystemActivity, ForensicValue::High),
-                "Timestomp Detected" => (ArtifactCategory::ExecutionHistory, ForensicValue::Critical),
+                "Timestomp Detected" => {
+                    (ArtifactCategory::ExecutionHistory, ForensicValue::Critical)
+                }
                 _ => (ArtifactCategory::ExecutionHistory, ForensicValue::Medium),
             };
 
@@ -829,11 +903,7 @@ impl StrataPlugin for TracePlugin {
                     .get("title")
                     .cloned()
                     .unwrap_or_else(|| artifact.source.clone()),
-                detail: artifact
-                    .data
-                    .get("detail")
-                    .cloned()
-                    .unwrap_or_default(),
+                detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                 source_path: artifact.source.clone(),
                 forensic_value,
                 mitre_technique: artifact.data.get("mitre").cloned(),
@@ -954,9 +1024,12 @@ mod sprint3_wiring_tests {
         );
         // The synthetic source URL is evil.example.com, not a
         // MS CDN — check_suspicion must flag it.
-        let any_suspicious = bits_transfers
-            .iter()
-            .any(|a| a.data.get("suspicious").map(|v| v == "true").unwrap_or(false));
+        let any_suspicious = bits_transfers.iter().any(|a| {
+            a.data
+                .get("suspicious")
+                .map(|v| v == "true")
+                .unwrap_or(false)
+        });
         assert!(
             any_suspicious,
             "BITS Transfer with non-MS source URL must be suspicious"
@@ -1032,7 +1105,11 @@ mod sprint3_wiring_tests {
         // Simulate Charlie-shape content: a SYSTEM hive fragment
         // with no PCA files in the tree.
         fs::create_dir_all(dir.path().join("Windows/System32/config")).expect("mk");
-        fs::write(dir.path().join("Windows/System32/config/SYSTEM"), b"regf\x00").expect("w");
+        fs::write(
+            dir.path().join("Windows/System32/config/SYSTEM"),
+            b"regf\x00",
+        )
+        .expect("w");
         let arts = run_trace(dir.path());
         let pca_count = arts
             .iter()

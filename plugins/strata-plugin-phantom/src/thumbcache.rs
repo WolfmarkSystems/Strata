@@ -154,12 +154,7 @@ pub fn parse(bytes: &[u8]) -> ThumbcacheFile {
     out
 }
 
-fn walk_entries(
-    bytes: &[u8],
-    start_off: usize,
-    cache_type: &str,
-    out: &mut Vec<ThumbcacheEntry>,
-) {
+fn walk_entries(bytes: &[u8], start_off: usize, cache_type: &str, out: &mut Vec<ThumbcacheEntry>) {
     let mut offset = start_off;
     while offset + MIN_ENTRY_HEADER <= bytes.len() && out.len() < MAX_ENTRIES {
         let magic = match read_u32_le(bytes, offset) {
@@ -313,7 +308,7 @@ mod tests {
         blob.extend_from_slice(&0u32.to_le_bytes()); // unknown
         blob.extend_from_slice(&0xDEAD_BEEF_CAFE_BABE_u64.to_le_bytes()); // data_checksum
         blob.extend_from_slice(&0xFEED_FACE_BAAD_F00D_u64.to_le_bytes()); // header_checksum
-        // Payload.
+                                                                          // Payload.
         blob.extend_from_slice(payload);
         blob
     }

@@ -54,8 +54,7 @@ impl NetFlowPlugin {
         let lc_path = path.to_string_lossy().to_lowercase();
 
         // PCAPs
-        if lc_name.ends_with(".pcap") || lc_name.ends_with(".pcapng") || lc_name.ends_with(".cap")
-        {
+        if lc_name.ends_with(".pcap") || lc_name.ends_with(".pcapng") || lc_name.ends_with(".cap") {
             return Some(("PCAP", "Packet Capture"));
         }
 
@@ -328,10 +327,7 @@ impl StrataPlugin for NetFlowPlugin {
                             for alert in crate::dns_ids::parse_ids_log(&body) {
                                 let mut a = Artifact::new("IDS Alert", &path_str);
                                 a.timestamp = Some(alert.timestamp.timestamp() as u64);
-                                a.add_field(
-                                    "title",
-                                    &format!("IDS: {}", alert.signature),
-                                );
+                                a.add_field("title", &format!("IDS: {}", alert.signature));
                                 a.add_field(
                                     "detail",
                                     &format!(
@@ -381,9 +377,7 @@ impl StrataPlugin for NetFlowPlugin {
                                 }
                                 a.add_field(
                                     "mitre",
-                                    crate::dns_ids::mitre_for_ids(
-                                        alert.classification.as_deref(),
-                                    ),
+                                    crate::dns_ids::mitre_for_ids(alert.classification.as_deref()),
                                 );
                                 let severity = match alert.priority {
                                     Some(p) if p <= 1 => "High",
@@ -415,17 +409,18 @@ impl StrataPlugin for NetFlowPlugin {
                         use std::io::Read;
                         let mut header = [0u8; 4];
                         if f.read_exact(&mut header).is_ok() {
-                            let magic = Self::pcap_magic_check(&header)
-                                .unwrap_or("unknown magic");
+                            let magic = Self::pcap_magic_check(&header).unwrap_or("unknown magic");
                             let mut a = Artifact::new("Packet Capture", &path_str);
-                            a.add_field("title", &format!("PCAP: {}", path.file_name().and_then(|n| n.to_str()).unwrap_or("")));
+                            a.add_field(
+                                "title",
+                                &format!(
+                                    "PCAP: {}",
+                                    path.file_name().and_then(|n| n.to_str()).unwrap_or("")
+                                ),
+                            );
                             a.add_field(
                                 "detail",
-                                &format!(
-                                    "Format: {} | Size: {} bytes",
-                                    magic,
-                                    file_size
-                                ),
+                                &format!("Format: {} | Size: {} bytes", magic, file_size),
                             );
                             a.add_field("file_type", "PCAP");
                             a.add_field("mitre", "T1071");
@@ -452,10 +447,7 @@ impl StrataPlugin for NetFlowPlugin {
                                 }
                                 let mut a = Artifact::new("Web Attack", &path_str);
                                 a.add_field("title", &format!("HTTP: {}", reason));
-                                a.add_field(
-                                    "detail",
-                                    &line.chars().take(320).collect::<String>(),
-                                );
+                                a.add_field("detail", &line.chars().take(320).collect::<String>());
                                 a.add_field("file_type", file_type);
                                 a.add_field("suspicious", "true");
                                 a.add_field("forensic_value", "High");
@@ -475,7 +467,10 @@ impl StrataPlugin for NetFlowPlugin {
                         if flagged == 0 {
                             let mut a = Artifact::new("Web Server Log", &path_str);
                             a.add_field("title", &format!("{} present", file_type));
-                            a.add_field("detail", &format!("{} \u{2014} no attack patterns matched", file_type));
+                            a.add_field(
+                                "detail",
+                                &format!("{} \u{2014} no attack patterns matched", file_type),
+                            );
                             a.add_field("file_type", file_type);
                             a.add_field("forensic_value", "Medium");
                             out.push(a);
@@ -526,7 +521,10 @@ impl StrataPlugin for NetFlowPlugin {
                             for (name, kind) in remotes {
                                 let mut a = Artifact::new("Rclone", &path_str);
                                 a.add_field("title", &format!("Rclone remote: {}", name));
-                                a.add_field("detail", &format!("Type: {} — potential exfil destination", kind));
+                                a.add_field(
+                                    "detail",
+                                    &format!("Type: {} — potential exfil destination", kind),
+                                );
                                 a.add_field("file_type", "Rclone Config");
                                 a.add_field("mitre", "T1537");
                                 a.add_field("forensic_value", "Critical");
@@ -551,7 +549,11 @@ impl StrataPlugin for NetFlowPlugin {
                     out.push(a);
                 }
 
-                "Splashtop Log" | "Splashtop FTC Log" | "LogMeIn Log" | "ScreenConnect Artifact" | "Atera Agent" => {
+                "Splashtop Log"
+                | "Splashtop FTC Log"
+                | "LogMeIn Log"
+                | "ScreenConnect Artifact"
+                | "Atera Agent" => {
                     let mut a = Artifact::new("Remote Access Tool", &path_str);
                     a.add_field("title", &format!("{} artifact", file_type));
                     a.add_field(
@@ -618,7 +620,14 @@ impl StrataPlugin for NetFlowPlugin {
                 // ── v1.1.0: P2P client deep ─────────────────────────
                 "BitTorrent Data" | "uTorrent Data" | "FrostWire" => {
                     let mut a = Artifact::new("P2P Client", &path_str);
-                    a.add_field("title", &format!("{}: {}", file_type, path.file_name().and_then(|n| n.to_str()).unwrap_or("")));
+                    a.add_field(
+                        "title",
+                        &format!(
+                            "{}: {}",
+                            file_type,
+                            path.file_name().and_then(|n| n.to_str()).unwrap_or("")
+                        ),
+                    );
                     a.add_field(
                         "detail",
                         "P2P client persistent data — typically resume.dat contains active torrents with hashes, file paths, and progress",
@@ -659,10 +668,7 @@ impl StrataPlugin for NetFlowPlugin {
                                 }
                                 let mut a = Artifact::new("P2P Download", &path_str);
                                 a.add_field("title", "qBittorrent download event");
-                                a.add_field(
-                                    "detail",
-                                    &line.chars().take(280).collect::<String>(),
-                                );
+                                a.add_field("detail", &line.chars().take(280).collect::<String>());
                                 a.add_field("file_type", "qBittorrent Log");
                                 a.add_field("forensic_value", "High");
                                 a.add_field("suspicious", "true");
@@ -673,7 +679,10 @@ impl StrataPlugin for NetFlowPlugin {
                         if download_count == 0 {
                             let mut a = Artifact::new("P2P Client", &path_str);
                             a.add_field("title", "qBittorrent log present");
-                            a.add_field("detail", "qBittorrent log file — no download events matched");
+                            a.add_field(
+                                "detail",
+                                "qBittorrent log file — no download events matched",
+                            );
                             a.add_field("file_type", "qBittorrent Log");
                             a.add_field("forensic_value", "Medium");
                             out.push(a);
@@ -696,7 +705,13 @@ impl StrataPlugin for NetFlowPlugin {
 
                 "OneNote Notebook" => {
                     let mut a = Artifact::new("OneNote", &path_str);
-                    a.add_field("title", &format!("OneNote notebook: {}", path.file_name().and_then(|n| n.to_str()).unwrap_or("")));
+                    a.add_field(
+                        "title",
+                        &format!(
+                            "OneNote notebook: {}",
+                            path.file_name().and_then(|n| n.to_str()).unwrap_or("")
+                        ),
+                    );
                     a.add_field(
                         "detail",
                         "OneNote notebook section file — examine with OneNote or specialized parser",
@@ -728,7 +743,8 @@ impl StrataPlugin for NetFlowPlugin {
                             let line = line.trim();
                             if let Some(rest) = line.strip_prefix("displayName") {
                                 if let Some(eq) = rest.find('=') {
-                                    display_name = rest[eq + 1..].trim().trim_matches('"').to_string();
+                                    display_name =
+                                        rest[eq + 1..].trim().trim_matches('"').to_string();
                                 }
                             }
                             if line.contains(".vmdk") {
@@ -739,7 +755,10 @@ impl StrataPlugin for NetFlowPlugin {
                             }
                         }
                         let title = if display_name.is_empty() {
-                            format!("VMware VM: {}", path.file_name().and_then(|n| n.to_str()).unwrap_or(""))
+                            format!(
+                                "VMware VM: {}",
+                                path.file_name().and_then(|n| n.to_str()).unwrap_or("")
+                            )
                         } else {
                             format!("VMware VM: {}", display_name)
                         };
@@ -758,7 +777,13 @@ impl StrataPlugin for NetFlowPlugin {
 
                 "VMware VMDK" => {
                     let mut a = Artifact::new("VMware VM", &path_str);
-                    a.add_field("title", &format!("VMware disk: {}", path.file_name().and_then(|n| n.to_str()).unwrap_or("")));
+                    a.add_field(
+                        "title",
+                        &format!(
+                            "VMware disk: {}",
+                            path.file_name().and_then(|n| n.to_str()).unwrap_or("")
+                        ),
+                    );
                     a.add_field(
                         "detail",
                         "VMDK virtual disk — may contain a separate filesystem requiring its own evidence acquisition",
@@ -785,7 +810,11 @@ impl StrataPlugin for NetFlowPlugin {
         let mut suspicious = 0usize;
         for a in &artifacts {
             let ft = a.data.get("file_type").cloned().unwrap_or_default();
-            let is_sus = a.data.get("suspicious").map(|s| s == "true").unwrap_or(false);
+            let is_sus = a
+                .data
+                .get("suspicious")
+                .map(|s| s == "true")
+                .unwrap_or(false);
             if is_sus {
                 suspicious += 1;
             }
@@ -817,7 +846,11 @@ impl StrataPlugin for NetFlowPlugin {
                 category,
                 subcategory: ft,
                 timestamp: a.timestamp.map(|t| t as i64),
-                title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
+                title: a
+                    .data
+                    .get("title")
+                    .cloned()
+                    .unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
                 source_path: a.source.clone(),
                 forensic_value: fv,
@@ -910,8 +943,11 @@ mod sprint75_backfill_tests {
                 .unwrap_or(0),
         ));
         std::fs::create_dir_all(&dir).expect("mkdir");
-        std::fs::write(dir.join("garbage.bin"), [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
-            .expect("write garbage");
+        std::fs::write(
+            dir.join("garbage.bin"),
+            [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF],
+        )
+        .expect("write garbage");
         PluginContext {
             root_path: dir.to_string_lossy().into_owned(),
             vfs: None,

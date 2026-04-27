@@ -6,8 +6,15 @@ use crate::types::*;
 pub struct AntiForensicBehaviorDetector;
 
 const SECURE_DELETE_TOOLS: &[&str] = &[
-    "eraser", "ccleaner", "sdelete", "cipher /w", "bleachbit",
-    "privazer", "wise disk cleaner", "dban", "killdisk",
+    "eraser",
+    "ccleaner",
+    "sdelete",
+    "cipher /w",
+    "bleachbit",
+    "privazer",
+    "wise disk cleaner",
+    "dban",
+    "killdisk",
 ];
 
 const VSS_DELETION_INDICATORS: &[&str] = &[
@@ -58,8 +65,10 @@ impl AntiForensicBehaviorDetector {
                             title
                         ),
                         vec!["VSS deletion command in artifact".to_string()],
-                        vec!["Check if VSS snapshots still exist".to_string(),
-                             "Review Remnant plugin for shadow copy remnants".to_string()],
+                        vec![
+                            "Check if VSS snapshots still exist".to_string(),
+                            "Review Remnant plugin for shadow copy remnants".to_string(),
+                        ],
                     ));
                     break;
                 }
@@ -78,10 +87,7 @@ impl AntiForensicBehaviorDetector {
             }
         }
         if log_clear_events.len() >= 2 {
-            let timestamps: Vec<i64> = log_clear_events
-                .iter()
-                .filter_map(|(_, ts)| *ts)
-                .collect();
+            let timestamps: Vec<i64> = log_clear_events.iter().filter_map(|(_, ts)| *ts).collect();
             let within_window = if timestamps.len() >= 2 {
                 let min = timestamps.iter().min().unwrap();
                 let max = timestamps.iter().max().unwrap();
@@ -110,8 +116,10 @@ impl AntiForensicBehaviorDetector {
                     .iter()
                     .map(|(t, _)| t.to_string())
                     .collect(),
-                vec!["Review EVTX gap analysis".to_string(),
-                     "Check for EventLog service restart events".to_string()],
+                vec![
+                    "Review EVTX gap analysis".to_string(),
+                    "Check for EventLog service restart events".to_string(),
+                ],
             ));
         }
 
@@ -140,22 +148,16 @@ impl AntiForensicBehaviorDetector {
         }
 
         // Pattern 4: browser history deletion with cache present
-        let _has_browser_history = all_details
-            .iter()
-            .any(|(_, _, _, _)| false);
-        let has_cache = all_details
-            .iter()
-            .any(|(d, t, _, _)| {
-                let combined = format!("{} {}", d, t).to_lowercase();
-                combined.contains("cache") && combined.contains("browser")
-            });
-        let history_deleted = all_details
-            .iter()
-            .any(|(d, t, _, _)| {
-                let combined = format!("{} {}", d, t).to_lowercase();
-                (combined.contains("history") && combined.contains("deleted"))
-                    || (combined.contains("history") && combined.contains("cleared"))
-            });
+        let _has_browser_history = all_details.iter().any(|(_, _, _, _)| false);
+        let has_cache = all_details.iter().any(|(d, t, _, _)| {
+            let combined = format!("{} {}", d, t).to_lowercase();
+            combined.contains("cache") && combined.contains("browser")
+        });
+        let history_deleted = all_details.iter().any(|(d, t, _, _)| {
+            let combined = format!("{} {}", d, t).to_lowercase();
+            (combined.contains("history") && combined.contains("deleted"))
+                || (combined.contains("history") && combined.contains("cleared"))
+        });
         if history_deleted && has_cache {
             findings.push(Self::make_finding(
                 &format!("antiforensic-browser-{}", findings.len()),
@@ -194,9 +196,8 @@ impl AntiForensicBehaviorDetector {
                 plugin_name: "Multiple".to_string(),
                 artifact_category: "Anti-Forensic".to_string(),
                 artifact_id: title.to_string(),
-                timestamp: ts.and_then(|t| {
-                    chrono::DateTime::from_timestamp(t, 0).map(|d| d.to_rfc3339())
-                }),
+                timestamp: ts
+                    .and_then(|t| chrono::DateTime::from_timestamp(t, 0).map(|d| d.to_rfc3339())),
                 file_path: if path.is_empty() {
                     None
                 } else {
@@ -266,22 +267,18 @@ mod tests {
             make_output("wevtutil cl System", "Event log cleared"),
         ];
         let findings = AntiForensicBehaviorDetector::run(&outputs);
-        assert!(
-            findings
-                .iter()
-                .any(|f| f.explanation.contains("log clearing")),
-        );
+        assert!(findings
+            .iter()
+            .any(|f| f.explanation.contains("log clearing")),);
     }
 
     #[test]
     fn antiforensic_detector_flags_ccleaner_execution() {
         let outputs = vec![make_output("CCleaner.exe", "Prefetch execution")];
         let findings = AntiForensicBehaviorDetector::run(&outputs);
-        assert!(
-            findings
-                .iter()
-                .any(|f| f.explanation.to_lowercase().contains("ccleaner")),
-        );
+        assert!(findings
+            .iter()
+            .any(|f| f.explanation.to_lowercase().contains("ccleaner")),);
     }
 
     #[test]
@@ -292,7 +289,9 @@ mod tests {
             make_output("wevtutil cl Application", "cleared"),
         ];
         let findings = AntiForensicBehaviorDetector::run(&outputs);
-        let chain = findings.iter().find(|f| f.explanation.contains("log clearing"));
+        let chain = findings
+            .iter()
+            .find(|f| f.explanation.contains("log clearing"));
         assert!(chain.is_some());
         assert!(chain.unwrap().confidence >= 0.90);
     }

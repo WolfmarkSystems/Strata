@@ -212,11 +212,7 @@ fn matches_ext(algo: HashAlgo, ext: &str) -> bool {
 pub fn verify_image(path: &Path) -> Result<IntegrityResult, IntegrityError> {
     let sidecar = find_sidecar_hash(path);
     let (expected_hash, algo, sidecar_source) = match sidecar {
-        Some((hex, algo, p)) => (
-            Some(hex),
-            algo,
-            Some(p.to_string_lossy().to_string()),
-        ),
+        Some((hex, algo, p)) => (Some(hex), algo, Some(p.to_string_lossy().to_string())),
         None => (None, HashAlgo::Sha256, None),
     };
     let started = Instant::now();

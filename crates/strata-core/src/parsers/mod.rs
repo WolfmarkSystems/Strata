@@ -14,10 +14,10 @@ pub mod cloud;
 pub mod docker_forensics;
 pub mod email;
 pub mod ese_parser;
-pub mod execution_correlation;
 pub mod etw;
 pub mod evtx;
 pub mod evtx_structured;
+pub mod execution_correlation;
 pub mod facebook_messenger;
 pub mod ios;
 pub mod iot;
@@ -63,10 +63,10 @@ pub mod windows_search;
 pub mod wnf;
 
 // ── v0.7.0 additions (gameplan Phase 2) ────────────────────────────────────
-pub mod zone_identifier;
-pub mod setupapi_log;
 pub mod i30_index;
+pub mod setupapi_log;
 pub mod ual;
+pub mod zone_identifier;
 
 // ── v1.5.0 additions ───────────────────────────────────────────────────────
 pub mod ufdr;

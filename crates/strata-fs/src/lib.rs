@@ -23,10 +23,14 @@ pub mod virtualization;
 // apfs_advanced retired in v16 Session 3 (70 LOC of stubs, never
 // wired to anything). Follow-on sprint may re-expose equivalents
 // on top of the external `apfs` crate if genuine use cases emerge.
+pub mod apfs_walker;
 pub mod btrfs_advanced;
 pub mod ext4_advanced;
-pub mod hfsplus;
+pub mod ext4_walker;
+pub mod fat_walker;
 pub mod fs_dispatch;
+pub mod hfsplus;
+pub mod hfsplus_walker;
 pub mod iso9660;
 pub mod mft;
 pub mod mft_walker;
@@ -34,10 +38,6 @@ pub mod ntfs;
 pub mod ntfs_parser;
 pub mod ntfs_usn;
 pub mod ntfs_walker;
-pub mod ext4_walker;
-pub mod hfsplus_walker;
-pub mod fat_walker;
-pub mod apfs_walker;
 pub mod regions;
 pub mod shadowcopy;
 pub mod snapshot;

@@ -38,10 +38,12 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                     );
                     bar_div(ui, &t);
                     pill_clickable(
-                        ui, "RESULTS",
+                        ui,
+                        "RESULTS",
                         &state.global_search_results.len().to_string(),
                         egui::Color32::from_rgb(0x7d, 0xd3, 0xfc),
-                        true, || {},
+                        true,
+                        || {},
                     );
                     bar_div(ui, &t);
                 }
@@ -62,7 +64,14 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                 let sus_count = state.suspicious_event_count;
                 let sus_color = egui::Color32::from_rgb(0xf5, 0x9e, 0x0b);
                 let sus_bold = sus_count > 0;
-                if pill_clickable(ui, "SUSPICIOUS", &sus_count.to_string(), sus_color, sus_bold, || {}) {
+                if pill_clickable(
+                    ui,
+                    "SUSPICIOUS",
+                    &sus_count.to_string(),
+                    sus_color,
+                    sus_bold,
+                    || {},
+                ) {
                     state.file_filter = "$suspicious".to_string();
                     state.mark_filter_dirty();
                     state.view_mode = ViewMode::FileExplorer;
@@ -73,7 +82,14 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                 let flag_count = state.flagged_count();
                 let flag_color = egui::Color32::from_rgb(0xef, 0x44, 0x44);
                 let flag_bold = flag_count > 0;
-                if pill_clickable(ui, "FLAGGED", &flag_count.to_string(), flag_color, flag_bold, || {}) {
+                if pill_clickable(
+                    ui,
+                    "FLAGGED",
+                    &flag_count.to_string(),
+                    flag_color,
+                    flag_bold,
+                    || {},
+                ) {
                     state.file_filter = "knownbad".to_string();
                     state.mark_filter_dirty();
                     state.view_mode = ViewMode::FileExplorer;
@@ -83,7 +99,14 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                 // CARVED — cyan
                 let carved_count = state.carved_count();
                 let carved_color = egui::Color32::from_rgb(0x7d, 0xd3, 0xfc);
-                if pill_clickable(ui, "CARVED", &carved_count.to_string(), carved_color, false, || {}) {
+                if pill_clickable(
+                    ui,
+                    "CARVED",
+                    &carved_count.to_string(),
+                    carved_color,
+                    false,
+                    || {},
+                ) {
                     state.file_filter = "$CARVED".to_string();
                     state.mark_filter_dirty();
                     state.view_mode = ViewMode::FileExplorer;
@@ -93,12 +116,26 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
                 // HASHED — green
                 let hashed_count = state.hashed_count();
                 let hashed_color = egui::Color32::from_rgb(0x22, 0xc5, 0x5e);
-                pill_clickable(ui, "HASHED", &hashed_count.to_string(), hashed_color, false, || {});
+                pill_clickable(
+                    ui,
+                    "HASHED",
+                    &hashed_count.to_string(),
+                    hashed_color,
+                    false,
+                    || {},
+                );
                 bar_div(ui, &t);
 
                 // ARTIFACTS — purple
                 let artifact_color = egui::Color32::from_rgb(0xa7, 0x8b, 0xfa);
-                if pill_clickable(ui, "ARTIFACTS", &state.artifact_total.to_string(), artifact_color, state.artifact_total > 0, || {}) {
+                if pill_clickable(
+                    ui,
+                    "ARTIFACTS",
+                    &state.artifact_total.to_string(),
+                    artifact_color,
+                    state.artifact_total > 0,
+                    || {},
+                ) {
                     state.view_mode = ViewMode::Artifacts;
                 }
             });
@@ -115,7 +152,11 @@ fn pill_clickable(
     _on_click: impl FnOnce(),
 ) -> bool {
     let label_text = egui::RichText::new(label)
-        .color(if bold { value_color } else { egui::Color32::from_rgb(0x88, 0x99, 0xaa) })
+        .color(if bold {
+            value_color
+        } else {
+            egui::Color32::from_rgb(0x88, 0x99, 0xaa)
+        })
         .size(11.0)
         .strong();
     let value_text = if bold {
@@ -124,15 +165,15 @@ fn pill_clickable(
             .size(12.0)
             .strong()
     } else {
-        egui::RichText::new(value)
-            .color(value_color)
-            .size(12.0)
+        egui::RichText::new(value).color(value_color).size(12.0)
     };
 
-    let resp = ui.horizontal(|ui| {
-        ui.label(label_text);
-        ui.label(value_text);
-    }).response;
+    let resp = ui
+        .horizontal(|ui| {
+            ui.label(label_text);
+            ui.label(value_text);
+        })
+        .response;
 
     let click = ui.interact(resp.rect, resp.id.with(label), egui::Sense::click());
     click.clicked()

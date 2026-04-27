@@ -84,9 +84,7 @@ impl NsrlDatabase {
             let md5 = hex_decode(&parts[1]);
             let _crc = &parts[2];
             let filename = parts.get(3).cloned();
-            let filesize = parts
-                .get(4)
-                .and_then(|s| s.parse::<i64>().ok());
+            let filesize = parts.get(4).and_then(|s| s.parse::<i64>().ok());
             tx.execute(
                 "INSERT INTO nsrl (sha256, sha1, md5, filename, filesize) VALUES (NULL, ?1, ?2, ?3, ?4)",
                 params![sha1, md5, filename, filesize],
@@ -306,6 +304,9 @@ mod tests {
     #[test]
     fn parse_csv_line_handles_quoted_commas() {
         let fields = parse_csv_line("\"abc\",\"d,e,f\",\"ghi\"");
-        assert_eq!(fields, vec!["abc".to_string(), "d,e,f".to_string(), "ghi".to_string()]);
+        assert_eq!(
+            fields,
+            vec!["abc".to_string(), "d,e,f".to_string(), "ghi".to_string()]
+        );
     }
 }

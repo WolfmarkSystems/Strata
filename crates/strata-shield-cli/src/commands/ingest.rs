@@ -78,7 +78,10 @@ pub struct IngestMatrixArgs {
 /// * `auto` — DETECT-2: accept auto-selected plugin set.
 #[derive(Parser, Debug)]
 pub struct IngestRunArgs {
-    #[arg(long, help = "Evidence source path (image, mount, or logical directory)")]
+    #[arg(
+        long,
+        help = "Evidence source path (image, mount, or logical directory)"
+    )]
     pub source: PathBuf,
 
     #[arg(long, help = "Case output directory (created if missing)")]
@@ -90,7 +93,11 @@ pub struct IngestRunArgs {
     #[arg(long, default_value = "unknown", help = "Examiner identity")]
     pub examiner: String,
 
-    #[arg(long, value_delimiter = ',', help = "Comma-separated plugin names (default: all)")]
+    #[arg(
+        long,
+        value_delimiter = ',',
+        help = "Comma-separated plugin names (default: all)"
+    )]
     pub plugins: Option<Vec<String>>,
 
     #[arg(long, default_value = "text", help = "Output format: text | json")]
@@ -105,7 +112,10 @@ pub struct IngestRunArgs {
     #[arg(long, help = "Write machine-readable JSON summary to this path")]
     pub json_result: Option<PathBuf>,
 
-    #[arg(long, help = "Auto-unpack nested containers before running plugins (UNPACK-3)")]
+    #[arg(
+        long,
+        help = "Auto-unpack nested containers before running plugins (UNPACK-3)"
+    )]
     pub auto_unpack: bool,
 
     #[arg(long, help = "Extraction scratch dir (default: <case_dir>/unpacked)")]
@@ -114,10 +124,17 @@ pub struct IngestRunArgs {
     #[arg(long, help = "Skip DETECT-1 classification and run every plugin")]
     pub skip_routing: bool,
 
-    #[arg(long, value_delimiter = ',', help = "Add optional plugins to the recommended set (DETECT-2)")]
+    #[arg(
+        long,
+        value_delimiter = ',',
+        help = "Add optional plugins to the recommended set (DETECT-2)"
+    )]
     pub include: Option<Vec<String>>,
 
-    #[arg(long, help = "Accept auto-selected plugin set without prompting (DETECT-2)")]
+    #[arg(
+        long,
+        help = "Accept auto-selected plugin set without prompting (DETECT-2)"
+    )]
     pub auto: bool,
 }
 
@@ -298,11 +315,18 @@ pub fn execute(args: IngestArgs) {
 /// * `2` — fatal pre-run error (source missing, case_dir unwritable, …).
 pub fn run_ingest(args: IngestRunArgs) -> i32 {
     if !args.source.exists() {
-        eprintln!("Error: --source path does not exist: {}", args.source.display());
+        eprintln!(
+            "Error: --source path does not exist: {}",
+            args.source.display()
+        );
         return 2;
     }
     if let Err(e) = std::fs::create_dir_all(&args.case_dir) {
-        eprintln!("Error: failed to create --case-dir {}: {}", args.case_dir.display(), e);
+        eprintln!(
+            "Error: failed to create --case-dir {}: {}",
+            args.case_dir.display(),
+            e
+        );
         return 2;
     }
 
@@ -319,7 +343,11 @@ pub fn run_ingest(args: IngestRunArgs) -> i32 {
             .clone()
             .unwrap_or_else(|| args.case_dir.join("unpacked"));
         if let Err(e) = std::fs::create_dir_all(&scratch) {
-            eprintln!("Warning: failed to create unpack root {}: {}", scratch.display(), e);
+            eprintln!(
+                "Warning: failed to create unpack root {}: {}",
+                scratch.display(),
+                e
+            );
         }
         let engine = strata_fs::unpack::UnpackEngine::new(scratch.clone())
             .with_max_total_bytes(250 * 1024 * 1024 * 1024) // 250 GiB cap
@@ -344,16 +372,15 @@ pub fn run_ingest(args: IngestRunArgs) -> i32 {
                     total_bytes_extracted: r.total_bytes_extracted,
                     total_files_extracted: r.total_files_extracted,
                     elapsed_ms: r.elapsed.as_millis(),
-                    limits_hit: r
-                        .limits_hit
-                        .iter()
-                        .map(|l| format!("{:?}", l))
-                        .collect(),
+                    limits_hit: r.limits_hit.iter().map(|l| format!("{:?}", l)).collect(),
                     warnings: r.warnings.iter().map(|w| format!("{:?}", w)).collect(),
                 });
             }
             Err(e) => {
-                eprintln!("Warning: auto-unpack failed: {} (continuing with original source)", e);
+                eprintln!(
+                    "Warning: auto-unpack failed: {} (continuing with original source)",
+                    e
+                );
             }
         }
     }
@@ -409,7 +436,13 @@ pub fn run_ingest(args: IngestRunArgs) -> i32 {
     let case_id_sanitised = args
         .case_name
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect::<String>();
     let case_id = if case_id_sanitised.is_empty() {
         "case".to_string()
@@ -590,7 +623,11 @@ fn write_summary_json(path: &Path, summary: &IngestRunSummary) {
     match serde_json::to_string_pretty(summary) {
         Ok(json) => {
             if let Err(e) = std::fs::write(path, json) {
-                eprintln!("Warning: failed to write --json-result {}: {}", path.display(), e);
+                eprintln!(
+                    "Warning: failed to write --json-result {}: {}",
+                    path.display(),
+                    e
+                );
             }
         }
         Err(e) => {
@@ -624,7 +661,11 @@ fn print_text_summary(summary: &IngestRunSummary) {
 mod tests {
     use super::*;
 
-    fn make_args(source: PathBuf, case_dir: PathBuf, plugins: Option<Vec<String>>) -> IngestRunArgs {
+    fn make_args(
+        source: PathBuf,
+        case_dir: PathBuf,
+        plugins: Option<Vec<String>>,
+    ) -> IngestRunArgs {
         IngestRunArgs {
             source,
             case_dir,
@@ -726,7 +767,10 @@ mod tests {
         args.json_result = Some(out.clone());
         let _ = run_ingest(args);
         let body = std::fs::read_to_string(&out).expect("read");
-        assert!(body.contains("\"unpack\""), "unpack summary should be present");
+        assert!(
+            body.contains("\"unpack\""),
+            "unpack summary should be present"
+        );
         assert!(body.contains("\"containers_traversed\""));
     }
 
@@ -866,11 +910,7 @@ fn mount_partitions_composite(
         if size == 0 {
             continue;
         }
-        match strata_fs::fs_dispatch::open_filesystem(
-            std::sync::Arc::clone(&image),
-            offset,
-            size,
-        ) {
+        match strata_fs::fs_dispatch::open_filesystem(std::sync::Arc::clone(&image), offset, size) {
             Ok(walker) => {
                 composite.mount(&name, std::sync::Arc::from(walker));
                 mounted_count += 1;
@@ -883,10 +923,7 @@ fn mount_partitions_composite(
             }
             Err(e) => {
                 if !quiet {
-                    eprintln!(
-                        "[evidence] skipped {} at offset {}: {}",
-                        name, offset, e
-                    );
+                    eprintln!("[evidence] skipped {} at offset {}: {}", name, offset, e);
                 }
             }
         }

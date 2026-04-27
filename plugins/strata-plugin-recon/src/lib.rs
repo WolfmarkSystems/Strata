@@ -28,8 +28,14 @@ impl ReconPlugin {
 
     /// Suspicious email providers commonly used for anonymity.
     const SUSPICIOUS_PROVIDERS: &'static [&'static str] = &[
-        "protonmail", "tutanota", "guerrillamail", "tempmail", "throwaway",
-        "sharklasers", "mailinator", "yopmail",
+        "protonmail",
+        "tutanota",
+        "guerrillamail",
+        "tempmail",
+        "throwaway",
+        "sharklasers",
+        "mailinator",
+        "yopmail",
     ];
 
     /// Extract username from a path containing "Users/" or "Users\\".
@@ -68,8 +74,12 @@ impl ReconPlugin {
             return false;
         }
         // Basic sanity: local part has only reasonable chars
-        local.chars().all(|c| c.is_alphanumeric() || c == '.' || c == '_' || c == '-' || c == '+')
-            && domain.chars().all(|c| c.is_alphanumeric() || c == '.' || c == '-')
+        local
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '.' || c == '_' || c == '-' || c == '+')
+            && domain
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '.' || c == '-')
     }
 
     /// Check if a string is a valid IPv4 address.
@@ -98,10 +108,7 @@ impl ReconPlugin {
 
     /// Check if an IPv4 address is in a private range.
     fn is_private_ip(ip: &str) -> bool {
-        let parts: Vec<u8> = ip
-            .split('.')
-            .filter_map(|p| p.parse::<u8>().ok())
-            .collect();
+        let parts: Vec<u8> = ip.split('.').filter_map(|p| p.parse::<u8>().ok()).collect();
         if parts.len() != 4 {
             return true; // Treat invalid as private (skip)
         }
@@ -143,14 +150,8 @@ impl ReconPlugin {
         let mut results = Vec::new();
         let path_str = path.to_string_lossy();
         let path_lower = path_str.to_lowercase();
-        let name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
-        let ext = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("");
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         let ext_lower = ext.to_lowercase();
 
         // Extract username from path
@@ -171,7 +172,10 @@ impl ReconPlugin {
         }
 
         // For text/log/eml files: scan for emails, IPs, AWS keys
-        let is_text_file = matches!(ext_lower.as_str(), "txt" | "log" | "eml" | "csv" | "json" | "xml" | "cfg" | "ini" | "conf");
+        let is_text_file = matches!(
+            ext_lower.as_str(),
+            "txt" | "log" | "eml" | "csv" | "json" | "xml" | "cfg" | "ini" | "conf"
+        );
         if is_text_file {
             // Check file size (skip > 10MB)
             let file_size = match path.metadata() {
@@ -192,7 +196,15 @@ impl ReconPlugin {
             let mut found_aws_keys: Vec<String> = Vec::new();
 
             // Scan for email-like patterns
-            for word in content.split(|c: char| c.is_whitespace() || c == ',' || c == ';' || c == '<' || c == '>' || c == '"' || c == '\'') {
+            for word in content.split(|c: char| {
+                c.is_whitespace()
+                    || c == ','
+                    || c == ';'
+                    || c == '<'
+                    || c == '>'
+                    || c == '"'
+                    || c == '\''
+            }) {
                 let trimmed = word.trim();
 
                 // Email detection
@@ -201,7 +213,10 @@ impl ReconPlugin {
                 }
 
                 // IPv4 detection
-                if trimmed.contains('.') && Self::is_valid_ipv4(trimmed) && !Self::is_private_ip(trimmed) {
+                if trimmed.contains('.')
+                    && Self::is_valid_ipv4(trimmed)
+                    && !Self::is_private_ip(trimmed)
+                {
                     found_ips.insert(trimmed.to_string());
                 }
             }
@@ -211,7 +226,9 @@ impl ReconPlugin {
             for i in 0..content_bytes.len().saturating_sub(19) {
                 if &content_bytes[i..i + 4] == b"AKIA" {
                     let candidate = &content_bytes[i..i + 20];
-                    if candidate.len() == 20 && candidate[4..].iter().all(|b| b.is_ascii_alphanumeric()) {
+                    if candidate.len() == 20
+                        && candidate[4..].iter().all(|b| b.is_ascii_alphanumeric())
+                    {
                         if let Ok(key) = std::str::from_utf8(candidate) {
                             found_aws_keys.push(key.to_string());
                         }
@@ -221,19 +238,24 @@ impl ReconPlugin {
 
             // Create artifacts for emails
             for email in &found_emails {
-                let is_suspicious = Self::SUSPICIOUS_PROVIDERS
-                    .iter()
-                    .any(|p| email.contains(p));
+                let is_suspicious = Self::SUSPICIOUS_PROVIDERS.iter().any(|p| email.contains(p));
 
                 let mut artifact = Artifact::new("AccountsCredentials", &path_str);
                 artifact.add_field("title", &format!("Email Address Found: {}", email));
                 artifact.add_field("file_type", "Email Address Found");
-                artifact.add_field("detail", &format!(
-                    "Email address '{}' found in {}{}",
-                    email,
-                    name,
-                    if is_suspicious { " \u{2014} anonymous/privacy-focused provider" } else { "" },
-                ));
+                artifact.add_field(
+                    "detail",
+                    &format!(
+                        "Email address '{}' found in {}{}",
+                        email,
+                        name,
+                        if is_suspicious {
+                            " \u{2014} anonymous/privacy-focused provider"
+                        } else {
+                            ""
+                        },
+                    ),
+                );
                 if is_suspicious {
                     artifact.add_field("suspicious", "true");
                 }
@@ -246,12 +268,19 @@ impl ReconPlugin {
                 let mut artifact = Artifact::new("NetworkArtifacts", &path_str);
                 artifact.add_field("title", &format!("IP Address Reference: {}", ip));
                 artifact.add_field("file_type", "IP Address Reference");
-                artifact.add_field("detail", &format!(
-                    "Public IP {} referenced in {}{}",
-                    ip,
-                    name,
-                    if in_script { " \u{2014} FOUND IN SCRIPT FILE" } else { "" },
-                ));
+                artifact.add_field(
+                    "detail",
+                    &format!(
+                        "Public IP {} referenced in {}{}",
+                        ip,
+                        name,
+                        if in_script {
+                            " \u{2014} FOUND IN SCRIPT FILE"
+                        } else {
+                            ""
+                        },
+                    ),
+                );
                 if in_script {
                     artifact.add_field("suspicious", "true");
                 }
@@ -337,13 +366,24 @@ impl StrataPlugin for ReconPlugin {
                 "System Username" => (ArtifactCategory::AccountsCredentials, ForensicValue::Medium),
                 "Email Address Found" => (
                     ArtifactCategory::AccountsCredentials,
-                    if is_suspicious { ForensicValue::High } else { ForensicValue::Medium },
+                    if is_suspicious {
+                        ForensicValue::High
+                    } else {
+                        ForensicValue::Medium
+                    },
                 ),
                 "IP Address Reference" => (
                     ArtifactCategory::NetworkArtifacts,
-                    if is_suspicious { ForensicValue::High } else { ForensicValue::Low },
+                    if is_suspicious {
+                        ForensicValue::High
+                    } else {
+                        ForensicValue::Low
+                    },
                 ),
-                "Cloud API Key" => (ArtifactCategory::AccountsCredentials, ForensicValue::Critical),
+                "Cloud API Key" => (
+                    ArtifactCategory::AccountsCredentials,
+                    ForensicValue::Critical,
+                ),
                 _ => (ArtifactCategory::AccountsCredentials, ForensicValue::Medium),
             };
 
@@ -356,11 +396,7 @@ impl StrataPlugin for ReconPlugin {
                     .get("title")
                     .cloned()
                     .unwrap_or_else(|| artifact.source.clone()),
-                detail: artifact
-                    .data
-                    .get("detail")
-                    .cloned()
-                    .unwrap_or_default(),
+                detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                 source_path: artifact.source.clone(),
                 forensic_value,
                 mitre_technique: artifact.data.get("mitre").cloned(),
@@ -399,7 +435,9 @@ impl StrataPlugin for ReconPlugin {
                 categories_populated: categories,
                 headline: format!(
                     "Recon: {} identities, {} exposed credentials, {} total artifacts",
-                    username_count, cred_count, records.len(),
+                    username_count,
+                    cred_count,
+                    records.len(),
                 ),
             },
             warnings: vec![],
@@ -457,8 +495,11 @@ mod sprint75_backfill_tests {
                 .unwrap_or(0),
         ));
         std::fs::create_dir_all(&dir).expect("mkdir");
-        std::fs::write(dir.join("garbage.bin"), [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
-            .expect("write garbage");
+        std::fs::write(
+            dir.join("garbage.bin"),
+            [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF],
+        )
+        .expect("write garbage");
         PluginContext {
             root_path: dir.to_string_lossy().into_owned(),
             vfs: None,

@@ -48,10 +48,7 @@ pub const SRUM_EXTENSIONS: &[(&str, &str)] = &[
         "{DD6636C4-8929-4683-974E-22C046A43763}",
         "Network Connectivity",
     ),
-    (
-        "{FEE4E14F-02A9-4550-B5CE-5FA2DA202E37}",
-        "Energy Usage",
-    ),
+    ("{FEE4E14F-02A9-4550-B5CE-5FA2DA202E37}", "Energy Usage"),
     (
         "{FEE4E14F-02A9-4550-B5CE-5FA2DA202E37}LT",
         "Energy Usage (Long Term)",
@@ -72,10 +69,7 @@ pub const SRUM_EXTENSIONS: &[(&str, &str)] = &[
         "{B6D82AF1-F780-4E17-8077-6CB9AD8A6FC4}",
         "Tagged Energy Provider",
     ),
-    (
-        "{7ACBBAA3-D029-4BE4-9A7A-0885927F1D8F}",
-        "Vfu Provider",
-    ),
+    ("{7ACBBAA3-D029-4BE4-9A7A-0885927F1D8F}", "Vfu Provider"),
 ];
 
 /// Result of parsing a SRUM database.
@@ -456,14 +450,18 @@ mod tests {
         // gap of zeros separates the runs
         write_utf16le(&mut buf, 80, "S-1-5-21-1000-2000-3000-1001");
         let strings = extract_utf16le_strings(&buf, 5, 520);
-        assert!(strings.iter().any(|s| s == "C:\\Windows\\System32\\cmd.exe"));
+        assert!(strings
+            .iter()
+            .any(|s| s == "C:\\Windows\\System32\\cmd.exe"));
         assert!(strings.iter().any(|s| s == "S-1-5-21-1000-2000-3000-1001"));
     }
 
     #[test]
     fn looks_like_path_filters_correctly() {
         assert!(looks_like_path("C:\\Windows\\System32\\powershell.exe"));
-        assert!(looks_like_path("\\Device\\HarddiskVolume3\\Users\\admin\\bad.exe"));
+        assert!(looks_like_path(
+            "\\Device\\HarddiskVolume3\\Users\\admin\\bad.exe"
+        ));
         assert!(looks_like_path("%SystemRoot%\\System32\\svchost.exe"));
         assert!(!looks_like_path("hello world"));
         assert!(!looks_like_path("C:\\noext")); // no extension and no special prefix
@@ -497,7 +495,11 @@ mod tests {
         // which begins at offset 4096).
         let page1 = 4096usize;
         write_utf16le(&mut db, page1 + 64, "C:\\Windows\\System32\\powershell.exe");
-        write_utf16le(&mut db, page1 + 256, "C:\\Users\\victim\\Downloads\\benign.txt");
+        write_utf16le(
+            &mut db,
+            page1 + 256,
+            "C:\\Users\\victim\\Downloads\\benign.txt",
+        );
         write_utf16le(&mut db, page1 + 448, "S-1-5-21-1111-2222-3333-1001");
         // Embed two real SRUM extension GUIDs as ASCII into page 2.
         let page2 = 4096usize * 2;
@@ -527,7 +529,9 @@ mod tests {
 
         // SIDs include the embedded user SID.
         assert!(
-            parsed.user_sids.contains(&"S-1-5-21-1111-2222-3333-1001".to_string()),
+            parsed
+                .user_sids
+                .contains(&"S-1-5-21-1111-2222-3333-1001".to_string()),
             "expected SID in {:?}",
             parsed.user_sids
         );

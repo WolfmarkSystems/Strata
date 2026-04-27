@@ -326,9 +326,7 @@ fn is_path_char(b: u8) -> bool {
 
 fn is_plausible_path(s: &str) -> bool {
     // Must contain at least one backslash beyond the root
-    s.matches('\\').count() >= 2
-        && !s.contains('\0')
-        && s.len() < 500
+    s.matches('\\').count() >= 2 && !s.contains('\0') && s.len() < 500
 }
 
 /// Extract text snippets that look like document content.
@@ -462,7 +460,9 @@ mod tests {
     fn parses_windows_edb_header_and_tables() {
         let parser = WindowsSearchParser::new();
         let data = make_windows_edb();
-        let path = Path::new("/evidence/C/ProgramData/Microsoft/Search/Data/Applications/Windows/Windows.edb");
+        let path = Path::new(
+            "/evidence/C/ProgramData/Microsoft/Search/Data/Applications/Windows/Windows.edb",
+        );
         let result = parser.parse_file(path, &data).unwrap();
         assert!(!result.is_empty());
         let main = &result[0];
@@ -489,8 +489,12 @@ mod tests {
         let paths = paths_artifact.unwrap().json_data["indexed_files"]
             .as_array()
             .unwrap();
-        assert!(paths.iter().any(|p| p.as_str().unwrap().contains("evidence.docx")));
-        assert!(paths.iter().any(|p| p.as_str().unwrap().contains("financials.xlsx")));
+        assert!(paths
+            .iter()
+            .any(|p| p.as_str().unwrap().contains("evidence.docx")));
+        assert!(paths
+            .iter()
+            .any(|p| p.as_str().unwrap().contains("financials.xlsx")));
     }
 
     #[test]
@@ -506,7 +510,9 @@ mod tests {
         let snippets = content_artifact.unwrap().json_data["snippets"]
             .as_array()
             .unwrap();
-        assert!(snippets.iter().any(|s| s.as_str().unwrap().contains("meeting notes")));
+        assert!(snippets
+            .iter()
+            .any(|s| s.as_str().unwrap().contains("meeting notes")));
     }
 
     #[test]
@@ -522,7 +528,9 @@ mod tests {
         let emails = email_artifact.unwrap().json_data["email_addresses"]
             .as_array()
             .unwrap();
-        assert!(emails.iter().any(|e| e.as_str().unwrap() == "suspect@example.com"));
+        assert!(emails
+            .iter()
+            .any(|e| e.as_str().unwrap() == "suspect@example.com"));
     }
 
     #[test]
@@ -569,6 +577,8 @@ mod tests {
         let paths = paths_artifact.unwrap().json_data["indexed_files"]
             .as_array()
             .unwrap();
-        assert!(paths.iter().any(|p| p.as_str().unwrap().contains("file.txt")));
+        assert!(paths
+            .iter()
+            .any(|p| p.as_str().unwrap().contains("file.txt")));
     }
 }

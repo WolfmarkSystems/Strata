@@ -152,8 +152,12 @@ impl FeatureExtractor {
     pub fn extract_executions(outputs: &[PluginOutput]) -> Vec<ExecutionEvent> {
         let mut execs = Vec::new();
         let execution_types = [
-            "Prefetch", "AmCache File", "BAM/DAM Entry", "SRUM Activity",
-            "ShimCache", "AmCache Legacy File",
+            "Prefetch",
+            "AmCache File",
+            "BAM/DAM Entry",
+            "SRUM Activity",
+            "ShimCache",
+            "AmCache Legacy File",
         ];
 
         let all_types: Vec<&str> = outputs
@@ -174,8 +178,8 @@ impl FeatureExtractor {
                     .timestamp
                     .and_then(|t| DateTime::from_timestamp(t, 0));
                 let exe = extract_exe_name(&record.title);
-                let is_system = is_system_path(&record.source_path)
-                    || is_system_path(&record.detail);
+                let is_system =
+                    is_system_path(&record.source_path) || is_system_path(&record.detail);
 
                 execs.push(ExecutionEvent {
                     timestamp: ts,
@@ -403,7 +407,11 @@ fn is_system_path(path: &str) -> bool {
 fn extract_run_count(detail: &str) -> Option<u32> {
     if let Some(pos) = detail.to_lowercase().find("run count:") {
         let after = &detail[pos + 10..];
-        let num: String = after.trim().chars().take_while(|c| c.is_ascii_digit()).collect();
+        let num: String = after
+            .trim()
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
         num.parse().ok()
     } else {
         None
@@ -413,7 +421,11 @@ fn extract_run_count(detail: &str) -> Option<u32> {
 fn extract_focus_time(detail: &str) -> Option<u64> {
     if let Some(pos) = detail.to_lowercase().find("focus time:") {
         let after = &detail[pos + 11..];
-        let num: String = after.trim().chars().take_while(|c| c.is_ascii_digit()).collect();
+        let num: String = after
+            .trim()
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
         num.parse().ok()
     } else {
         None
@@ -425,7 +437,11 @@ fn extract_bytes(detail: &str, direction: &str) -> u64 {
     let needle = format!("{direction}:");
     if let Some(pos) = l.find(&needle) {
         let after = &detail[pos + needle.len()..];
-        let num: String = after.trim().chars().take_while(|c| c.is_ascii_digit()).collect();
+        let num: String = after
+            .trim()
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
         num.parse().unwrap_or(0)
     } else {
         0

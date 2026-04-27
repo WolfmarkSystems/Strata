@@ -115,7 +115,10 @@ pub enum EvidenceError {
     #[error("unsupported image format: {0}")]
     UnknownFormat(PathBuf),
     #[error("invalid {format} header: {reason}")]
-    InvalidHeader { format: &'static str, reason: String },
+    InvalidHeader {
+        format: &'static str,
+        reason: String,
+    },
     #[error("invalid MBR partition table")]
     NoValidMbr,
     #[error("invalid GPT partition table")]

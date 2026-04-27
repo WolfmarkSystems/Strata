@@ -24,11 +24,7 @@ pub struct ChromeOSArtifact {
 
 /// Detect ChromeOS by presence of the canonical paths.
 pub fn is_chromeos_root(root: &Path) -> bool {
-    let probes = [
-        "home/chronos",
-        "opt/google/chrome",
-        "etc/cros-machine-id",
-    ];
+    let probes = ["home/chronos", "opt/google/chrome", "etc/cros-machine-id"];
     probes.iter().any(|p| root.join(p).exists())
 }
 
@@ -75,7 +71,9 @@ pub fn chronos_user_dirs(root: &Path) -> Vec<PathBuf> {
 /// Linux modules.
 pub fn has_crostini(root: &Path) -> bool {
     root.join("home/chronos/user/crostini").exists()
-        || root.join("home/chronos/user/.local/share/crostini").exists()
+        || root
+            .join("home/chronos/user/.local/share/crostini")
+            .exists()
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────

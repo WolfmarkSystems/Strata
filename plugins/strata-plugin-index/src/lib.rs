@@ -84,10 +84,7 @@ impl StrataPlugin for IndexPlugin {
         // This is where we would call the internal migrated parsers
         // For now, let's just add a placeholder to verify the plugin works
         let mut artifact = Artifact::new("system", "strata_index");
-        artifact.add_field(
-            "description",
-            "Strata Index core parsing plugin",
-        );
+        artifact.add_field("description", "Strata Index core parsing plugin");
         results.push(artifact);
 
         Ok(results)
@@ -127,8 +124,11 @@ mod sprint75_backfill_tests {
                 .unwrap_or(0),
         ));
         std::fs::create_dir_all(&dir).expect("mkdir");
-        std::fs::write(dir.join("garbage.bin"), [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
-            .expect("write garbage");
+        std::fs::write(
+            dir.join("garbage.bin"),
+            [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF],
+        )
+        .expect("write garbage");
         PluginContext {
             root_path: dir.to_string_lossy().into_owned(),
             vfs: None,

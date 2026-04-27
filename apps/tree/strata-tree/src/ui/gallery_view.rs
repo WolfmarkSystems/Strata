@@ -54,7 +54,9 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
             }
             if !ext_filter.is_empty() {
                 let fext = f.extension.as_deref().unwrap_or("").to_lowercase();
-                if !fext.contains(&ext_filter) { return false; }
+                if !fext.contains(&ext_filter) {
+                    return false;
+                }
             }
             true
         })
@@ -91,7 +93,14 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         } else {
             String::new()
         };
-        if ui.add(egui::TextEdit::singleline(&mut min_str).desired_width(40.0).hint_text("0")).changed() {
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut min_str)
+                    .desired_width(40.0)
+                    .hint_text("0"),
+            )
+            .changed()
+        {
             state.gallery_min_size = min_str.parse::<u64>().unwrap_or(0) * 1024;
         }
         ui.label(egui::RichText::new("max KB").color(TEXT_MUTED).size(8.0));
@@ -100,7 +109,14 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         } else {
             String::new()
         };
-        if ui.add(egui::TextEdit::singleline(&mut max_str).desired_width(40.0).hint_text("∞")).changed() {
+        if ui
+            .add(
+                egui::TextEdit::singleline(&mut max_str)
+                    .desired_width(40.0)
+                    .hint_text("∞"),
+            )
+            .changed()
+        {
             state.gallery_max_size = max_str.parse::<u64>().unwrap_or(0) * 1024;
         }
         if ui.button("Clear").clicked() {

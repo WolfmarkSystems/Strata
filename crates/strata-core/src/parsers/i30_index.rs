@@ -65,18 +65,12 @@ impl I30Parser {
                 i += 8;
                 continue;
             }
-            let ft_modified =
-                i64::from_le_bytes(data[i + 16..i + 24].try_into().unwrap_or([0; 8]));
-            let ft_mft =
-                i64::from_le_bytes(data[i + 24..i + 32].try_into().unwrap_or([0; 8]));
-            let ft_accessed =
-                i64::from_le_bytes(data[i + 32..i + 40].try_into().unwrap_or([0; 8]));
-            let allocated =
-                u64::from_le_bytes(data[i + 40..i + 48].try_into().unwrap_or([0; 8]));
-            let real =
-                u64::from_le_bytes(data[i + 48..i + 56].try_into().unwrap_or([0; 8]));
-            let flags =
-                u32::from_le_bytes(data[i + 56..i + 60].try_into().unwrap_or([0; 4]));
+            let ft_modified = i64::from_le_bytes(data[i + 16..i + 24].try_into().unwrap_or([0; 8]));
+            let ft_mft = i64::from_le_bytes(data[i + 24..i + 32].try_into().unwrap_or([0; 8]));
+            let ft_accessed = i64::from_le_bytes(data[i + 32..i + 40].try_into().unwrap_or([0; 8]));
+            let allocated = u64::from_le_bytes(data[i + 40..i + 48].try_into().unwrap_or([0; 8]));
+            let real = u64::from_le_bytes(data[i + 48..i + 56].try_into().unwrap_or([0; 8]));
+            let flags = u32::from_le_bytes(data[i + 56..i + 60].try_into().unwrap_or([0; 4]));
 
             // Read the filename
             let name_bytes = &data[i + 0x52..name_bytes_end];
@@ -92,9 +86,7 @@ impl I30Parser {
 
             out.push(I30Entry {
                 filename,
-                mft_reference: u64::from_le_bytes(
-                    data[i..i + 8].try_into().unwrap_or([0; 8]),
-                ),
+                mft_reference: u64::from_le_bytes(data[i..i + 8].try_into().unwrap_or([0; 8])),
                 created: ft_created,
                 modified: ft_modified,
                 mft_modified: ft_mft,
@@ -122,27 +114,22 @@ mod tests {
     /// accessed), 8 bytes allocated, 8 bytes real size, 4 bytes flags,
     /// 4 bytes reparse, 1 byte name length, 1 byte namespace, then
     /// UTF-16LE filename.
-    fn build_filename_record(
-        mft_ref: u64,
-        created: i64,
-        name: &str,
-        flags: u32,
-    ) -> Vec<u8> {
+    fn build_filename_record(mft_ref: u64, created: i64, name: &str, flags: u32) -> Vec<u8> {
         let mut buf = Vec::new();
-        buf.extend_from_slice(&mft_ref.to_le_bytes());      // +0x00: parent MFT ref
-        buf.extend_from_slice(&created.to_le_bytes());       // +0x08: created
-        buf.extend_from_slice(&created.to_le_bytes());       // +0x10: modified
-        buf.extend_from_slice(&created.to_le_bytes());       // +0x18: mft_modified
-        buf.extend_from_slice(&created.to_le_bytes());       // +0x20: accessed
-        buf.extend_from_slice(&4096_u64.to_le_bytes());      // +0x28: allocated size
-        buf.extend_from_slice(&1024_u64.to_le_bytes());      // +0x30: real size
-        buf.extend_from_slice(&flags.to_le_bytes());         // +0x38: flags
-        buf.extend_from_slice(&0_u32.to_le_bytes());         // +0x3C: reparse
-        // +0x40..0x50: padding to get filename_len at offset 0x50
+        buf.extend_from_slice(&mft_ref.to_le_bytes()); // +0x00: parent MFT ref
+        buf.extend_from_slice(&created.to_le_bytes()); // +0x08: created
+        buf.extend_from_slice(&created.to_le_bytes()); // +0x10: modified
+        buf.extend_from_slice(&created.to_le_bytes()); // +0x18: mft_modified
+        buf.extend_from_slice(&created.to_le_bytes()); // +0x20: accessed
+        buf.extend_from_slice(&4096_u64.to_le_bytes()); // +0x28: allocated size
+        buf.extend_from_slice(&1024_u64.to_le_bytes()); // +0x30: real size
+        buf.extend_from_slice(&flags.to_le_bytes()); // +0x38: flags
+        buf.extend_from_slice(&0_u32.to_le_bytes()); // +0x3C: reparse
+                                                     // +0x40..0x50: padding to get filename_len at offset 0x50
         buf.resize(0x50, 0);
         let name_u16: Vec<u16> = name.encode_utf16().collect();
-        buf.push(name_u16.len() as u8);                     // +0x50: filename length
-        buf.push(0x30);                                      // +0x51: namespace (Win32+DOS)
+        buf.push(name_u16.len() as u8); // +0x50: filename length
+        buf.push(0x30); // +0x51: namespace (Win32+DOS)
         for ch in &name_u16 {
             buf.extend_from_slice(&ch.to_le_bytes());
         }
@@ -186,7 +173,9 @@ mod tests {
         // Pad rec1 to next 8-byte boundary, then add enough zero-padding
         // so the scanner's next `i + 0x50` falls inside rec2's header.
         let mut data = rec1;
-        while !data.len().is_multiple_of(8) { data.push(0); }
+        while !data.len().is_multiple_of(8) {
+            data.push(0);
+        }
         // The scanner will resume at name_bytes_end of rec1, then step
         // by 8 bytes until it finds the second record. We place rec2
         // right here; the scanner will land on it within a few steps.

@@ -136,10 +136,7 @@ fn looks_like_path(s: &str) -> bool {
     // Relative path with a filename that has an extension.
     if let Some(dot) = s.rfind('.') {
         let ext = &s[dot + 1..];
-        if !ext.is_empty()
-            && ext.len() <= 6
-            && ext.chars().all(|c| c.is_ascii_alphanumeric())
-        {
+        if !ext.is_empty() && ext.len() <= 6 && ext.chars().all(|c| c.is_ascii_alphanumeric()) {
             return true;
         }
     }
@@ -206,11 +203,7 @@ mod tests {
 
     #[test]
     fn ignores_runs_without_slash_or_valid_extension() {
-        let blob = build_ese_blob(&[
-            "HelloThereNoPath",
-            "AlsoNoSlashOrExt",
-            "C:\\Real\\Path.txt",
-        ]);
+        let blob = build_ese_blob(&["HelloThereNoPath", "AlsoNoSlashOrExt", "C:\\Real\\Path.txt"]);
         let records = parse(Path::new("/tmp/Windows.edb"), &blob);
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].item_path, "C:\\Real\\Path.txt");

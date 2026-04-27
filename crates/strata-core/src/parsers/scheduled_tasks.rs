@@ -70,10 +70,7 @@ impl ArtifactParser for ScheduledTasksParser {
     }
 
     fn target_patterns(&self) -> Vec<&str> {
-        vec![
-            "*.xml",
-            "*.job",
-        ]
+        vec!["*.xml", "*.job"]
     }
 
     fn parse_file(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
@@ -87,9 +84,7 @@ impl ArtifactParser for ScheduledTasksParser {
         }
 
         let mut entry = ScheduledTaskEntry {
-            task_name: path
-                .file_stem()
-                .map(|s| s.to_string_lossy().to_string()),
+            task_name: path.file_stem().map(|s| s.to_string_lossy().to_string()),
             author: extract_xml_value(&text, "Author"),
             description: extract_xml_value(&text, "Description"),
             date_created: extract_xml_value(&text, "Date"),
@@ -122,7 +117,8 @@ impl ArtifactParser for ScheduledTasksParser {
 
         for trigger_type in &trigger_types {
             if text.contains(&format!("<{}", trigger_type)) {
-                let start_boundary = extract_xml_value_in_section(&text, trigger_type, "StartBoundary");
+                let start_boundary =
+                    extract_xml_value_in_section(&text, trigger_type, "StartBoundary");
                 let end_boundary = extract_xml_value_in_section(&text, trigger_type, "EndBoundary");
                 let repetition = extract_xml_value_in_section(&text, trigger_type, "Interval");
                 let enabled = extract_xml_value_in_section(&text, trigger_type, "Enabled")
@@ -176,7 +172,9 @@ impl ArtifactParser for ScheduledTasksParser {
                     || args_lower.contains("invoke-expression")
                     || args_lower.contains("hidden")
                 {
-                    entry.forensic_flags.push(format!("SUSPICIOUS_ARGS: {}", args));
+                    entry
+                        .forensic_flags
+                        .push(format!("SUSPICIOUS_ARGS: {}", args));
                 }
             }
 
@@ -190,15 +188,21 @@ impl ArtifactParser for ScheduledTasksParser {
 
         // Additional flags
         if entry.hidden {
-            entry.forensic_flags.push("HIDDEN — Task configured as hidden".to_string());
+            entry
+                .forensic_flags
+                .push("HIDDEN — Task configured as hidden".to_string());
         }
         if entry.run_level.as_deref() == Some("HighestAvailable") {
-            entry.forensic_flags.push("ELEVATED — Runs with highest privileges".to_string());
+            entry
+                .forensic_flags
+                .push("ELEVATED — Runs with highest privileges".to_string());
         }
         if entry.security_principal.as_deref() == Some("S-1-5-18")
             || entry.security_principal.as_deref() == Some("SYSTEM")
         {
-            entry.forensic_flags.push("SYSTEM — Runs as SYSTEM account".to_string());
+            entry
+                .forensic_flags
+                .push("SYSTEM — Runs as SYSTEM account".to_string());
         }
 
         let task_name = entry.task_name.as_deref().unwrap_or("unknown");
@@ -207,10 +211,7 @@ impl ArtifactParser for ScheduledTasksParser {
             .first()
             .and_then(|a| a.command.as_deref())
             .unwrap_or("no command");
-        let mut desc = format!(
-            "Scheduled Task: {} -> {} (T1053.005)",
-            task_name, cmd,
-        );
+        let mut desc = format!("Scheduled Task: {} -> {} (T1053.005)", task_name, cmd,);
         for flag in &entry.forensic_flags {
             desc.push_str(&format!(" [{}]", flag));
         }

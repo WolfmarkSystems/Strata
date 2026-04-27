@@ -43,7 +43,11 @@ impl StrataTreeApp {
         } else {
             state.log_action(
                 "LAUNCH",
-                &format!("Strata v{} launched — {}", env!("CARGO_PKG_VERSION"), state.license_state.display_status()),
+                &format!(
+                    "Strata v{} launched — {}",
+                    env!("CARGO_PKG_VERSION"),
+                    state.license_state.display_status()
+                ),
             );
         }
 

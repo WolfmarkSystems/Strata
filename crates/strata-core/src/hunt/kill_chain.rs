@@ -96,7 +96,10 @@ pub fn tactics_for_technique(technique: &str) -> Vec<AttackTactic> {
         "T1059" | "T1204" | "T1203" | "T1053" => vec![AttackTactic::Execution],
         "T1547" | "T1543" | "T1546" => vec![AttackTactic::Persistence],
         "T1548" | "T1055" | "T1068" => {
-            vec![AttackTactic::PrivilegeEscalation, AttackTactic::DefenseEvasion]
+            vec![
+                AttackTactic::PrivilegeEscalation,
+                AttackTactic::DefenseEvasion,
+            ]
         }
         "T1027" => vec![AttackTactic::DefenseEvasion],
         "T1070" | "T1485" => vec![AttackTactic::DefenseEvasion, AttackTactic::Impact],
@@ -221,7 +224,9 @@ pub fn render_html(report: &KillChainReconstruction) -> String {
             .map(|d| format!("{:.2} hours", d))
             .unwrap_or_else(|| "unknown".to_string())
     ));
-    out.push_str("<table><tr><th>Tactic</th><th>ID</th><th>Artifacts</th><th>Techniques</th></tr>\n");
+    out.push_str(
+        "<table><tr><th>Tactic</th><th>ID</th><th>Artifacts</th><th>Techniques</th></tr>\n",
+    );
     for stage in &report.stages {
         out.push_str(&format!(
             "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n",
@@ -274,7 +279,10 @@ mod tests {
         assert!(report.stages.iter().any(|s| s.tactic == "Execution"));
         assert!(report.stages.iter().any(|s| s.tactic == "Persistence"));
         assert!(report.stages.iter().any(|s| s.tactic == "Lateral Movement"));
-        assert!(report.stages.iter().any(|s| s.tactic == "Command and Control"));
+        assert!(report
+            .stages
+            .iter()
+            .any(|s| s.tactic == "Command and Control"));
         assert_eq!(report.attack_start.map(|d| d.timestamp()), Some(100));
         assert_eq!(report.attack_end.map(|d| d.timestamp()), Some(700));
     }
@@ -283,7 +291,9 @@ mod tests {
     fn missing_stages_reported_when_no_evidence() {
         let arts = vec![art("X", "T1059", 1)];
         let report = reconstruct(&arts);
-        assert!(report.missing_stages.contains(&"Reconnaissance".to_string()));
+        assert!(report
+            .missing_stages
+            .contains(&"Reconnaissance".to_string()));
     }
 
     #[test]

@@ -60,9 +60,7 @@ impl WarrantScope {
                 .or_else(|| a.data.get("username"))
                 .cloned()
                 .unwrap_or_default();
-            if !account.is_empty()
-                && !self.authorized_accounts.contains(&account)
-            {
+            if !account.is_empty() && !self.authorized_accounts.contains(&account) {
                 reasons.push(format!("account '{}' outside authorisation", account));
             }
         }
@@ -128,7 +126,9 @@ impl WarrantScope {
 }
 
 fn escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 #[cfg(test)]

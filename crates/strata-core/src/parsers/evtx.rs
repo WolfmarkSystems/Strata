@@ -60,7 +60,7 @@ fn is_high_value_event(channel: &str, event_id: u32) -> bool {
             | 4771  // Kerberos pre-auth failed
             | 4776  // NTLM logon validation
             | 4781  // account name changed
-            | 1102  // audit log cleared
+            | 1102 // audit log cleared
         ),
         // System log
         "System" => matches!(
@@ -70,7 +70,7 @@ fn is_high_value_event(channel: &str, event_id: u32) -> bool {
             | 7036  // service state change
             | 104   // system log cleared
             | 6005  // event log service started
-            | 6006  // event log service stopped
+            | 6006 // event log service stopped
         ),
         // PowerShell operational
         s if s.eq_ignore_ascii_case("Microsoft-Windows-PowerShell/Operational") => {
@@ -104,7 +104,10 @@ fn is_high_value_event(channel: &str, event_id: u32) -> bool {
         }
         // Windows Defender operational
         s if s.eq_ignore_ascii_case("Microsoft-Windows-Windows Defender/Operational") => {
-            matches!(event_id, 1006 | 1007 | 1008 | 1116 | 1117 | 5001 | 5007 | 5010)
+            matches!(
+                event_id,
+                1006 | 1007 | 1008 | 1116 | 1117 | 5001 | 5007 | 5010
+            )
         }
         _ => false,
     }
@@ -248,8 +251,8 @@ impl ArtifactParser for EvtxParser {
             let source_ip = event_data_str(root, "IpAddress")
                 .or_else(|| event_data_str(root, "SourceNetworkAddress"));
             let logon_type = event_data_str(root, "LogonType");
-            let process_name = event_data_str(root, "ProcessName")
-                .or_else(|| event_data_str(root, "Image"));
+            let process_name =
+                event_data_str(root, "ProcessName").or_else(|| event_data_str(root, "Image"));
             let command_line = event_data_str(root, "CommandLine")
                 .or_else(|| event_data_str(root, "ScriptBlockText"));
             let parent_image = event_data_str(root, "ParentImage");
@@ -365,10 +368,7 @@ impl ArtifactParser for EvtxParser {
             //   * `forensic_value = "High"` for the structured set
             //   * `structured` — the typed Win<EID>* struct, serialized
             if let Some(structured) = evtx_structured::extract_event(event_id, root) {
-                data_obj.insert(
-                    "artifact_subcategory".into(),
-                    Value::from("Windows Event"),
-                );
+                data_obj.insert("artifact_subcategory".into(), Value::from("Windows Event"));
                 if let Some(mitre) = evtx_structured::mitre_for_event_id(event_id) {
                     data_obj.insert("mitre".into(), Value::from(mitre));
                 }

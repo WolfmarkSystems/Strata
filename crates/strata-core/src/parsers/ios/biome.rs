@@ -122,9 +122,7 @@ mod tests {
             .as_array()
             .expect("extracted_app_identifiers is not an array");
 
-        let strings: Vec<&str> = identifiers.iter()
-            .filter_map(|v| v.as_str())
-            .collect();
+        let strings: Vec<&str> = identifiers.iter().filter_map(|v| v.as_str()).collect();
         assert!(strings.contains(&"com.apple.mobilesafari"));
         assert!(strings.contains(&"https://gemini.google.com"));
     }

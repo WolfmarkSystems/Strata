@@ -18,7 +18,10 @@ pub const UCMJ_ARTICLES: &[(&str, &str)] = &[
     ("Article 81", "Conspiracy"),
     ("Article 92", "Failure to obey order or regulation"),
     ("Article 107", "False official statements"),
-    ("Article 117a", "Wrongful broadcast or distribution of intimate images"),
+    (
+        "Article 117a",
+        "Wrongful broadcast or distribution of intimate images",
+    ),
     ("Article 119", "Manslaughter"),
     ("Article 120", "Rape and sexual assault"),
     ("Article 120b", "Rape and sexual assault of a child"),
@@ -108,7 +111,10 @@ impl UcmjReport {
         html.push_str("<section><h2>DD Form 2922 Digital Evidence Worksheet</h2>\n");
         html.push_str("<table>\n");
         let rows: &[(&str, &str)] = &[
-            ("Evidence Item Number", &self.dd2922_fields.evidence_item_number),
+            (
+                "Evidence Item Number",
+                &self.dd2922_fields.evidence_item_number,
+            ),
             ("Media Description", &self.dd2922_fields.media_description),
             ("Make/Model", &self.dd2922_fields.make_model),
             (
@@ -130,9 +136,7 @@ impl UcmjReport {
         html.push_str("</table></section>\n");
 
         // Jurisdiction.
-        html.push_str(
-            "<section><h2>Jurisdiction and Authority</h2>\n<ul class=\"articles\">\n",
-        );
+        html.push_str("<section><h2>Jurisdiction and Authority</h2>\n<ul class=\"articles\">\n");
         for art in &self.ucmj_articles {
             html.push_str(&format!("<li>{}</li>\n", html_escape(art)));
         }
@@ -223,8 +227,7 @@ mod tests {
             examiner_name: "Doe, John".into(),
             examiner_rank: "SA".into(),
             examiner_credentials: "CFCE".into(),
-            examination_date: DateTime::<Utc>::from_timestamp(1_717_243_200, 0)
-                .expect("ts"),
+            examination_date: DateTime::<Utc>::from_timestamp(1_717_243_200, 0).expect("ts"),
             ucmj_articles: vec!["Article 120".into()],
             authorizing_official: "LTC Smith".into(),
             authorization_type: "SearchAuth".into(),

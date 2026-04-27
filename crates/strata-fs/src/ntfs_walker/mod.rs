@@ -46,8 +46,8 @@ impl NtfsWalker {
         let sector_size = image.sector_size().max(512) as usize;
         let raw = PartitionReader::new(image, partition_offset, partition_size, sector_size);
         let mut reader = BufReader::with_capacity(128 * 1024, raw);
-        let mut ntfs = Ntfs::new(&mut reader)
-            .map_err(|e| VfsError::Other(format!("ntfs open: {e}")))?;
+        let mut ntfs =
+            Ntfs::new(&mut reader).map_err(|e| VfsError::Other(format!("ntfs open: {e}")))?;
         // Populate the Upcase table so case-insensitive operations work.
         let _ = ntfs.read_upcase_table(&mut reader);
         Ok(Self {
@@ -141,7 +141,8 @@ fn best_file_name<T: Read + Seek>(
         if attr.ty().ok()? != NtfsAttributeType::FileName {
             continue;
         }
-        let Ok(structured) = attr.structured_value::<T, ntfs::structured_values::NtfsFileName>(_reader)
+        let Ok(structured) =
+            attr.structured_value::<T, ntfs::structured_values::NtfsFileName>(_reader)
         else {
             continue;
         };
@@ -169,7 +170,8 @@ fn file_size<T: Read + Seek>(_ntfs: &Ntfs, reader: &mut T, file: &NtfsFile<'_>) 
     let mut size = 0u64;
     for attr_res in file.attributes_raw() {
         let Ok(attr) = attr_res else { continue };
-        if matches!(attr.ty(), Ok(NtfsAttributeType::Data)) && attr.name().ok().map(|n| n.is_empty()).unwrap_or(false)
+        if matches!(attr.ty(), Ok(NtfsAttributeType::Data))
+            && attr.name().ok().map(|n| n.is_empty()).unwrap_or(false)
         {
             if let Ok(value) = attr.value(reader) {
                 size = value.len();
@@ -228,7 +230,9 @@ impl VirtualFilesystem for NtfsWalker {
         let mut out: Vec<VfsEntry> = Vec::new();
         while let Some(entry_res) = iter.next(&mut state.reader) {
             let Ok(entry) = entry_res else { continue };
-            let Some(Ok(fname_attr)) = entry.key() else { continue };
+            let Some(Ok(fname_attr)) = entry.key() else {
+                continue;
+            };
             let name_lossy = fname_attr.name().to_string_lossy();
             if name_lossy == "." || name_lossy == ".." {
                 continue;

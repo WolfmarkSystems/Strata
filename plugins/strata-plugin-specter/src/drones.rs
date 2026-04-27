@@ -10,7 +10,7 @@
 //!
 //! Zero `.unwrap()`, zero `unsafe {}`, zero `println!` per CLAUDE.md.
 
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -153,9 +153,18 @@ fn parse_common_json(manufacturer: &str, json: &str) -> Option<DroneFlightLog> {
         home_point,
         takeoff_point,
         landing_point,
-        max_altitude_meters: v.get("max_altitude_m").and_then(|x| x.as_f64()).unwrap_or(0.0),
-        max_distance_meters: v.get("max_distance_m").and_then(|x| x.as_f64()).unwrap_or(0.0),
-        total_distance_meters: v.get("total_distance_m").and_then(|x| x.as_f64()).unwrap_or(0.0),
+        max_altitude_meters: v
+            .get("max_altitude_m")
+            .and_then(|x| x.as_f64())
+            .unwrap_or(0.0),
+        max_distance_meters: v
+            .get("max_distance_m")
+            .and_then(|x| x.as_f64())
+            .unwrap_or(0.0),
+        total_distance_meters: v
+            .get("total_distance_m")
+            .and_then(|x| x.as_f64())
+            .unwrap_or(0.0),
         photos_captured: v.get("photos").and_then(|x| x.as_u64()).unwrap_or(0) as u32,
         videos_captured: v.get("videos").and_then(|x| x.as_u64()).unwrap_or(0) as u32,
         flight_track: track,
@@ -175,9 +184,7 @@ pub fn track_points_inside_box(
 ) -> Vec<FlightTrackPoint> {
     log.flight_track
         .iter()
-        .filter(|p| {
-            p.lat >= min_lat && p.lat <= max_lat && p.lng >= min_lng && p.lng <= max_lng
-        })
+        .filter(|p| p.lat >= min_lat && p.lat <= max_lat && p.lng >= min_lng && p.lng <= max_lng)
         .cloned()
         .collect()
 }
@@ -228,11 +235,6 @@ pub fn parse_dji_txt_header(txt: &str) -> Option<(String, String, String, DateTi
     }
     let start = start?;
     Some((serial, model, account, start))
-}
-
-#[allow(dead_code)]
-fn ts_opt_from_unix(secs: i64) -> Option<DateTime<Utc>> {
-    Utc.timestamp_opt(secs, 0).single()
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────

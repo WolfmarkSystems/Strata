@@ -47,11 +47,15 @@ pub struct MemoryNetworkConnection {
 }
 
 fn read_u32_le(buf: &[u8], off: usize) -> Option<u32> {
-    buf.get(off..off + 4).and_then(|s| s.try_into().ok()).map(u32::from_le_bytes)
+    buf.get(off..off + 4)
+        .and_then(|s| s.try_into().ok())
+        .map(u32::from_le_bytes)
 }
 
 fn read_u64_le(buf: &[u8], off: usize) -> Option<u64> {
-    buf.get(off..off + 8).and_then(|s| s.try_into().ok()).map(u64::from_le_bytes)
+    buf.get(off..off + 8)
+        .and_then(|s| s.try_into().ok())
+        .map(u64::from_le_bytes)
 }
 
 fn decode_filetime(ft: u64) -> Option<DateTime<Utc>> {
@@ -71,10 +75,7 @@ fn is_printable_process_name(bytes: &[u8]) -> Option<String> {
         return None;
     }
     let name_bytes = &bytes[..nul];
-    if !name_bytes
-        .iter()
-        .all(|b| (0x20..=0x7E).contains(b))
-    {
+    if !name_bytes.iter().all(|b| (0x20..=0x7E).contains(b)) {
         return None;
     }
     let s = std::str::from_utf8(name_bytes).ok()?.to_string();

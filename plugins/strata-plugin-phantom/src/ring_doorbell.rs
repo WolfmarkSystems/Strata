@@ -45,7 +45,11 @@ pub fn parse_events(json: &str) -> Vec<RingEvent> {
         let shared_users: Vec<String> = entry
             .get("shared_users")
             .and_then(|x| x.as_array())
-            .map(|arr| arr.iter().filter_map(|e| e.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|e| e.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default();
         out.push(RingEvent {
             event_id: entry
@@ -64,9 +68,15 @@ pub fn parse_events(json: &str) -> Vec<RingEvent> {
                 .and_then(|x| x.as_str())
                 .unwrap_or("")
                 .into(),
-            device_location: entry.get("location").and_then(|x| x.as_str()).map(String::from),
+            device_location: entry
+                .get("location")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             video_clip_reference: entry.get("clip").and_then(|x| x.as_str()).map(String::from),
-            audio_available: entry.get("audio").and_then(|x| x.as_bool()).unwrap_or(false),
+            audio_available: entry
+                .get("audio")
+                .and_then(|x| x.as_bool())
+                .unwrap_or(false),
             person_detected: entry.get("person_detected").and_then(|x| x.as_bool()),
             shared_users,
         });
@@ -84,7 +94,11 @@ pub struct RingSubscription {
 pub fn parse_subscription(json: &str) -> Option<RingSubscription> {
     let v: serde_json::Value = serde_json::from_str(json).ok()?;
     Some(RingSubscription {
-        tier: v.get("tier").and_then(|x| x.as_str()).unwrap_or("None").into(),
+        tier: v
+            .get("tier")
+            .and_then(|x| x.as_str())
+            .unwrap_or("None")
+            .into(),
         active: v.get("active").and_then(|x| x.as_bool()).unwrap_or(false),
         clip_retention_days: v
             .get("retention_days")
@@ -115,7 +129,8 @@ mod tests {
 
     #[test]
     fn handles_bare_array_shape() {
-        let json = r#"[{"id":"m-1","type":"Motion","timestamp":"2026-04-10T19:00:00Z","device":"Back"}]"#;
+        let json =
+            r#"[{"id":"m-1","type":"Motion","timestamp":"2026-04-10T19:00:00Z","device":"Back"}]"#;
         let e = parse_events(json);
         assert_eq!(e[0].event_id, "m-1");
     }

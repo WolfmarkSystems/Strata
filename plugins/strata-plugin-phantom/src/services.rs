@@ -89,7 +89,16 @@ fn has_encoded_chars(s: &str) -> bool {
     s.contains("%u")
         || s.contains("%x")
         || s.bytes()
-            .filter(|b| !(b.is_ascii_alphanumeric() || *b == b'\\' || *b == b'/' || *b == b':' || *b == b' ' || *b == b'.' || *b == b'-' || *b == b'_'))
+            .filter(|b| {
+                !(b.is_ascii_alphanumeric()
+                    || *b == b'\\'
+                    || *b == b'/'
+                    || *b == b':'
+                    || *b == b' '
+                    || *b == b'.'
+                    || *b == b'-'
+                    || *b == b'_')
+            })
             .count()
             > 2
 }

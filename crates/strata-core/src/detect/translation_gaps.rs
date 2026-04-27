@@ -113,7 +113,9 @@ pub fn gap_from_message(m: &MessageTranslationFacts) -> Option<TranslationGap> {
         gap_type: gap_type.clone(),
         what_is_present: "translated text + language metadata".into(),
         what_is_missing: match gap_type {
-            TranslationGapType::MessageTranslatedBeforeSend => "original pre-translation text".into(),
+            TranslationGapType::MessageTranslatedBeforeSend => {
+                "original pre-translation text".into()
+            }
             _ => "none — original retained on recipient side".into(),
         },
         examiner_warning: examiner_warning(gap_type),
@@ -141,7 +143,10 @@ pub fn gap_from_call(c: &CallTranslationFacts) -> Option<TranslationGap> {
 
 /// Returns a gap entry if the device-wide Translation feature toggle
 /// is on — coarse but honest.
-pub fn gap_from_system_flag(artifact_path: &str, translation_enabled: bool) -> Option<TranslationGap> {
+pub fn gap_from_system_flag(
+    artifact_path: &str,
+    translation_enabled: bool,
+) -> Option<TranslationGap> {
     if !translation_enabled {
         return None;
     }
@@ -149,9 +154,8 @@ pub fn gap_from_system_flag(artifact_path: &str, translation_enabled: bool) -> O
         artifact_path: artifact_path.into(),
         gap_type: TranslationGapType::SystemWideTranslationEnabled,
         what_is_present: "confirmation that Live Translation feature was enabled".into(),
-        what_is_missing:
-            "no direct evidence of which specific messages / calls were translated"
-                .into(),
+        what_is_missing: "no direct evidence of which specific messages / calls were translated"
+            .into(),
         examiner_warning: examiner_warning(TranslationGapType::SystemWideTranslationEnabled),
         confidence: 0.35,
     })

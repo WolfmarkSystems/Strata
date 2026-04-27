@@ -32,8 +32,7 @@ pub fn read_gpt(image: &dyn EvidenceImage) -> EvidenceResult<Vec<GptPartition>> 
         header[79],
     ]);
     let partition_count = u32::from_le_bytes([header[80], header[81], header[82], header[83]]);
-    let partition_entry_size =
-        u32::from_le_bytes([header[84], header[85], header[86], header[87]]);
+    let partition_entry_size = u32::from_le_bytes([header[84], header[85], header[86], header[87]]);
     if partition_entry_size == 0
         || partition_count == 0
         || partition_entry_size > 8192
@@ -59,16 +58,34 @@ pub fn read_gpt(image: &dyn EvidenceImage) -> EvidenceResult<Vec<GptPartition>> 
         let type_guid = guid_from_le_bytes(&entry_buf[..16]);
         let unique_guid = guid_from_le_bytes(&entry_buf[16..32]);
         let start_lba = u64::from_le_bytes([
-            entry_buf[32], entry_buf[33], entry_buf[34], entry_buf[35], entry_buf[36],
-            entry_buf[37], entry_buf[38], entry_buf[39],
+            entry_buf[32],
+            entry_buf[33],
+            entry_buf[34],
+            entry_buf[35],
+            entry_buf[36],
+            entry_buf[37],
+            entry_buf[38],
+            entry_buf[39],
         ]);
         let end_lba = u64::from_le_bytes([
-            entry_buf[40], entry_buf[41], entry_buf[42], entry_buf[43], entry_buf[44],
-            entry_buf[45], entry_buf[46], entry_buf[47],
+            entry_buf[40],
+            entry_buf[41],
+            entry_buf[42],
+            entry_buf[43],
+            entry_buf[44],
+            entry_buf[45],
+            entry_buf[46],
+            entry_buf[47],
         ]);
         let attributes = u64::from_le_bytes([
-            entry_buf[48], entry_buf[49], entry_buf[50], entry_buf[51], entry_buf[52],
-            entry_buf[53], entry_buf[54], entry_buf[55],
+            entry_buf[48],
+            entry_buf[49],
+            entry_buf[50],
+            entry_buf[51],
+            entry_buf[52],
+            entry_buf[53],
+            entry_buf[54],
+            entry_buf[55],
         ]);
         let name = decode_utf16_null_terminated(&entry_buf[56..128.min(entry_buf.len())]);
         let size_bytes = if end_lba >= start_lba {

@@ -39,10 +39,7 @@ pub fn analyze(
         .collect();
 
     for rule in rules::all_rules() {
-        if selected_citations
-            .iter()
-            .any(|c| c.contains(rule.section))
-        {
+        if selected_citations.iter().any(|c| c.contains(rule.section)) {
             continue;
         }
         if let Some(suggestion) = rule.evaluate(outputs) {
@@ -72,7 +69,11 @@ fn evaluate_charge_support(
     let mut artifacts = Vec::new();
     let mut plugin_names = std::collections::HashSet::new();
 
-    let tags: Vec<String> = charge.artifact_tags.iter().map(|t| t.to_lowercase()).collect();
+    let tags: Vec<String> = charge
+        .artifact_tags
+        .iter()
+        .map(|t| t.to_lowercase())
+        .collect();
     let section_lower = charge.section.to_lowercase();
     let category_lower = charge.category.to_lowercase();
 
@@ -94,9 +95,9 @@ fn evaluate_charge_support(
                     plugin_name: output.plugin_name.clone(),
                     artifact_description: record.title.clone(),
                     artifact_id: record.subcategory.clone(),
-                    timestamp: record
-                        .timestamp
-                        .and_then(|t| chrono::DateTime::from_timestamp(t, 0).map(|d| d.to_rfc3339())),
+                    timestamp: record.timestamp.and_then(|t| {
+                        chrono::DateTime::from_timestamp(t, 0).map(|d| d.to_rfc3339())
+                    }),
                     relevance_explanation: format!(
                         "Matches charge artifact tags for {}",
                         charge.short_title
@@ -204,8 +205,10 @@ mod tests {
                     make_record("CSAM Hit", "CSAM hash match — sha256", "csam"),
                 ],
                 summary: PluginSummary {
-                    total_artifacts: 3, suspicious_count: 3,
-                    categories_populated: vec![], headline: String::new(),
+                    total_artifacts: 3,
+                    suspicious_count: 3,
+                    categories_populated: vec![],
+                    headline: String::new(),
                 },
                 warnings: vec![],
             },
@@ -215,13 +218,27 @@ mod tests {
                 executed_at: String::new(),
                 duration_ms: 0,
                 artifacts: vec![
-                    make_record("Browser History", "Chrome download of CSAM material", "browser"),
-                    make_record("Browser History", "Chrome history — file sharing site", "browser"),
-                    make_record("Browser History", "Chrome history — file sharing site", "browser"),
+                    make_record(
+                        "Browser History",
+                        "Chrome download of CSAM material",
+                        "browser",
+                    ),
+                    make_record(
+                        "Browser History",
+                        "Chrome history — file sharing site",
+                        "browser",
+                    ),
+                    make_record(
+                        "Browser History",
+                        "Chrome history — file sharing site",
+                        "browser",
+                    ),
                 ],
                 summary: PluginSummary {
-                    total_artifacts: 3, suspicious_count: 2,
-                    categories_populated: vec![], headline: String::new(),
+                    total_artifacts: 3,
+                    suspicious_count: 2,
+                    categories_populated: vec![],
+                    headline: String::new(),
                 },
                 warnings: vec![],
             },
@@ -239,8 +256,10 @@ mod tests {
                 make_record("Execution", "wevtutil cl Security — log clearing", "evtx"),
             ],
             summary: PluginSummary {
-                total_artifacts: 2, suspicious_count: 2,
-                categories_populated: vec![], headline: String::new(),
+                total_artifacts: 2,
+                suspicious_count: 2,
+                categories_populated: vec![],
+                headline: String::new(),
             },
             warnings: vec![],
         }]
@@ -303,8 +322,10 @@ mod tests {
             duration_ms: 0,
             artifacts: vec![make_record("CSAM Hit", "csam hash match", "csam")],
             summary: PluginSummary {
-                total_artifacts: 1, suspicious_count: 1,
-                categories_populated: vec![], headline: String::new(),
+                total_artifacts: 1,
+                suspicious_count: 1,
+                categories_populated: vec![],
+                headline: String::new(),
             },
             warnings: vec![],
         }];
@@ -318,7 +339,10 @@ mod tests {
             .evidence_gaps
             .iter()
             .any(|g| g.missing_artifact_type.contains("Browser"));
-        assert!(has_browser_gap, "Expected browser history gap for CSAM charge");
+        assert!(
+            has_browser_gap,
+            "Expected browser history gap for CSAM charge"
+        );
     }
 
     #[test]
@@ -330,8 +354,10 @@ mod tests {
             duration_ms: 0,
             artifacts: vec![make_record("Normal", "normal file activity", "clean")],
             summary: PluginSummary {
-                total_artifacts: 1, suspicious_count: 0,
-                categories_populated: vec![], headline: String::new(),
+                total_artifacts: 1,
+                suspicious_count: 0,
+                categories_populated: vec![],
+                headline: String::new(),
             },
             warnings: vec![],
         }];
@@ -349,7 +375,10 @@ mod tests {
         };
         let result = analyze("test", &selected, &csam_outputs());
         assert!(!result.matrix.rows.is_empty());
-        assert_eq!(result.matrix.rows[0].charge_citation, "18 U.S.C. \u{00a7} 2252");
+        assert_eq!(
+            result.matrix.rows[0].charge_citation,
+            "18 U.S.C. \u{00a7} 2252"
+        );
     }
 
     // LOAD-BEARING — charge analysis must always be advisory.
@@ -361,7 +390,10 @@ mod tests {
             selected_at: String::new(),
         };
         let result = analyze("test", &selected, &vss_outputs());
-        assert!(result.is_advisory, "ChargeEvidenceAnalysis.is_advisory must always be true");
+        assert!(
+            result.is_advisory,
+            "ChargeEvidenceAnalysis.is_advisory must always be true"
+        );
         assert!(
             result.advisory_notice.contains("ADVISORY"),
             "Advisory notice must contain 'ADVISORY'"
@@ -396,12 +428,22 @@ mod tests {
             executed_at: String::new(),
             duration_ms: 0,
             artifacts: vec![
-                make_record("Network", ".mil domain access — unauthorized access detected", "mil"),
-                make_record("Network", "personal device artifact on classified network siprnet", "sipr"),
+                make_record(
+                    "Network",
+                    ".mil domain access — unauthorized access detected",
+                    "mil",
+                ),
+                make_record(
+                    "Network",
+                    "personal device artifact on classified network siprnet",
+                    "sipr",
+                ),
             ],
             summary: PluginSummary {
-                total_artifacts: 2, suspicious_count: 2,
-                categories_populated: vec![], headline: String::new(),
+                total_artifacts: 2,
+                suspicious_count: 2,
+                categories_populated: vec![],
+                headline: String::new(),
             },
             warnings: vec![],
         }];
@@ -411,7 +453,10 @@ mod tests {
             .suggested_charges
             .iter()
             .any(|s| s.charge.code_set == ChargeSet::UCMJ);
-        assert!(has_ucmj, "Expected UCMJ charge suggestion from .mil artifacts");
+        assert!(
+            has_ucmj,
+            "Expected UCMJ charge suggestion from .mil artifacts"
+        );
     }
 
     #[test]
@@ -421,12 +466,16 @@ mod tests {
             plugin_version: "1.0".to_string(),
             executed_at: String::new(),
             duration_ms: 0,
-            artifacts: vec![
-                make_record("Cloud", "OneDrive sync detected — csam related", "cloud"),
-            ],
+            artifacts: vec![make_record(
+                "Cloud",
+                "OneDrive sync detected — csam related",
+                "cloud",
+            )],
             summary: PluginSummary {
-                total_artifacts: 1, suspicious_count: 1,
-                categories_populated: vec![], headline: String::new(),
+                total_artifacts: 1,
+                suspicious_count: 1,
+                categories_populated: vec![],
+                headline: String::new(),
             },
             warnings: vec![],
         }];
@@ -436,10 +485,11 @@ mod tests {
             selected_at: String::new(),
         };
         let result = analyze("test", &selected, &outputs);
-        let has_cloud_gap = result
-            .evidence_gaps
-            .iter()
-            .any(|g| g.investigative_recommendation.to_lowercase().contains("warrant"));
+        let has_cloud_gap = result.evidence_gaps.iter().any(|g| {
+            g.investigative_recommendation
+                .to_lowercase()
+                .contains("warrant")
+        });
         assert!(has_cloud_gap, "Expected cloud warrant recommendation");
     }
 
@@ -455,8 +505,10 @@ mod tests {
                 .map(|i| make_record("CSAM Hit", &format!("csam match {}", i), "csam"))
                 .collect(),
             summary: PluginSummary {
-                total_artifacts: 10, suspicious_count: 10,
-                categories_populated: vec![], headline: String::new(),
+                total_artifacts: 10,
+                suspicious_count: 10,
+                categories_populated: vec![],
+                headline: String::new(),
             },
             warnings: vec![],
         }];

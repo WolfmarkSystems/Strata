@@ -119,9 +119,7 @@ impl<R: Read + Seek> MftWalker<R> {
             .map_err(ForensicError::Io)?;
 
         let mut vbr = [0u8; 512];
-        reader
-            .read_exact(&mut vbr)
-            .map_err(ForensicError::Io)?;
+        reader.read_exact(&mut vbr).map_err(ForensicError::Io)?;
 
         // Validate NTFS signature
         if &vbr[3..7] != b"NTFS" {
@@ -138,13 +136,11 @@ impl<R: Read + Seek> MftWalker<R> {
         let cluster_size = (bytes_per_sector as u32) * (sectors_per_cluster as u32);
 
         let total_sectors = u64::from_le_bytes([
-            vbr[0x28], vbr[0x29], vbr[0x2A], vbr[0x2B],
-            vbr[0x2C], vbr[0x2D], vbr[0x2E], vbr[0x2F],
+            vbr[0x28], vbr[0x29], vbr[0x2A], vbr[0x2B], vbr[0x2C], vbr[0x2D], vbr[0x2E], vbr[0x2F],
         ]);
 
         let mft_lcn = i64::from_le_bytes([
-            vbr[0x30], vbr[0x31], vbr[0x32], vbr[0x33],
-            vbr[0x34], vbr[0x35], vbr[0x36], vbr[0x37],
+            vbr[0x30], vbr[0x31], vbr[0x32], vbr[0x33], vbr[0x34], vbr[0x35], vbr[0x36], vbr[0x37],
         ]);
 
         // Record size: if negative, it's 2^abs(value)
@@ -251,7 +247,10 @@ impl<R: Read + Seek> MftWalker<R> {
 
     /// Enumerate and build full path tree.
     /// Returns entries with resolved paths ready for Tree integration.
-    pub fn enumerate_with_paths(&mut self, max_records: u32) -> Result<Vec<MftPathEntry>, ForensicError> {
+    pub fn enumerate_with_paths(
+        &mut self,
+        max_records: u32,
+    ) -> Result<Vec<MftPathEntry>, ForensicError> {
         let entries = self.enumerate(max_records)?;
         let path_entries = build_path_tree(&entries);
         info!(
@@ -344,8 +343,8 @@ fn parse_mft_entry(data: &[u8], record_number: u64) -> Option<MftFileEntry> {
 
     // Base file reference — if non-zero, this is an extension record (skip for now)
     let base_ref = u64::from_le_bytes([
-        data[0x20], data[0x21], data[0x22], data[0x23],
-        data[0x24], data[0x25], data[0x26], data[0x27],
+        data[0x20], data[0x21], data[0x22], data[0x23], data[0x24], data[0x25], data[0x26],
+        data[0x27],
     ]);
     if base_ref != 0 {
         // Extension record — skip (attributes belong to base record)
@@ -374,18 +373,29 @@ fn parse_mft_entry(data: &[u8], record_number: u64) -> Option<MftFileEntry> {
     let mut pos = first_attr_offset;
 
     while pos + 8 <= data.len() {
-        let attr_type = u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]);
+        let attr_type =
+            u32::from_le_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]);
         if attr_type == ATTR_END || attr_type == 0 {
             break;
         }
 
-        let attr_len = u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]]) as usize;
+        let attr_len =
+            u32::from_le_bytes([data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]])
+                as usize;
         if attr_len < 8 || pos + attr_len > data.len() {
             break;
         }
 
-        let non_resident = if pos + 8 < data.len() { data[pos + 8] } else { 0 };
-        let attr_name_len = if pos + 9 < data.len() { data[pos + 9] as usize } else { 0 };
+        let non_resident = if pos + 8 < data.len() {
+            data[pos + 8]
+        } else {
+            0
+        };
+        let attr_name_len = if pos + 9 < data.len() {
+            data[pos + 9] as usize
+        } else {
+            0
+        };
         let attr_name_offset = if pos + 11 < data.len() {
             u16::from_le_bytes([data[pos + 10], data[pos + 11]]) as usize
         } else {
@@ -409,8 +419,14 @@ fn parse_mft_entry(data: &[u8], record_number: u64) -> Option<MftFileEntry> {
             ATTR_STANDARD_INFORMATION if non_resident == 0 => {
                 // Resident $STANDARD_INFORMATION
                 if pos + 24 <= data.len() {
-                    let content_len = u32::from_le_bytes([data[pos + 16], data[pos + 17], data[pos + 18], data[pos + 19]]) as usize;
-                    let content_offset = u16::from_le_bytes([data[pos + 20], data[pos + 21]]) as usize;
+                    let content_len = u32::from_le_bytes([
+                        data[pos + 16],
+                        data[pos + 17],
+                        data[pos + 18],
+                        data[pos + 19],
+                    ]) as usize;
+                    let content_offset =
+                        u16::from_le_bytes([data[pos + 20], data[pos + 21]]) as usize;
                     let abs_offset = pos + content_offset;
 
                     if content_len >= 32 && abs_offset + 32 <= data.len() {
@@ -425,8 +441,14 @@ fn parse_mft_entry(data: &[u8], record_number: u64) -> Option<MftFileEntry> {
             ATTR_FILE_NAME if non_resident == 0 => {
                 // Resident $FILE_NAME
                 if pos + 24 <= data.len() {
-                    let content_len = u32::from_le_bytes([data[pos + 16], data[pos + 17], data[pos + 18], data[pos + 19]]) as usize;
-                    let content_offset = u16::from_le_bytes([data[pos + 20], data[pos + 21]]) as usize;
+                    let content_len = u32::from_le_bytes([
+                        data[pos + 16],
+                        data[pos + 17],
+                        data[pos + 18],
+                        data[pos + 19],
+                    ]) as usize;
+                    let content_offset =
+                        u16::from_le_bytes([data[pos + 20], data[pos + 21]]) as usize;
                     let abs_offset = pos + content_offset;
 
                     if content_len >= 66 && abs_offset + 66 <= data.len() {
@@ -447,7 +469,9 @@ fn parse_mft_entry(data: &[u8], record_number: u64) -> Option<MftFileEntry> {
                         let fn_name_bytes = fn_name_len * 2;
 
                         if fn_name_len > 0 && abs_offset + 66 + fn_name_bytes <= data.len() {
-                            if let Some(fn_name) = decode_utf16le(&data[abs_offset + 66..abs_offset + 66 + fn_name_bytes]) {
+                            if let Some(fn_name) = decode_utf16le(
+                                &data[abs_offset + 66..abs_offset + 66 + fn_name_bytes],
+                            ) {
                                 // Prefer Win32 (namespace 1) or Win32+DOS (namespace 3) names
                                 // over DOS-only (namespace 2)
                                 let should_replace = match (&best_name, fn_namespace) {
@@ -474,7 +498,12 @@ fn parse_mft_entry(data: &[u8], record_number: u64) -> Option<MftFileEntry> {
                 if non_resident == 0 {
                     // Resident $DATA
                     if pos + 20 <= data.len() {
-                        let content_len = u32::from_le_bytes([data[pos + 16], data[pos + 17], data[pos + 18], data[pos + 19]]) as usize;
+                        let content_len = u32::from_le_bytes([
+                            data[pos + 16],
+                            data[pos + 17],
+                            data[pos + 18],
+                            data[pos + 19],
+                        ]) as usize;
                         if size == 0 {
                             size = content_len as u64;
                         }
@@ -494,7 +523,8 @@ fn parse_mft_entry(data: &[u8], record_number: u64) -> Option<MftFileEntry> {
                     // Non-resident $DATA
                     if pos + 64 <= data.len() {
                         let data_size = read_u64_le(data, pos + 48);
-                        let runs_offset = u16::from_le_bytes([data[pos + 32], data[pos + 33]]) as usize;
+                        let runs_offset =
+                            u16::from_le_bytes([data[pos + 32], data[pos + 33]]) as usize;
 
                         if attr_name.is_none() || attr_name.as_deref() == Some("") {
                             // Default $DATA stream
@@ -576,8 +606,7 @@ fn parse_data_runs(data: &[u8]) -> Vec<DataRun> {
         let len_size = (header & 0x0F) as usize;
         let off_size = ((header >> 4) & 0x0F) as usize;
 
-        if len_size == 0 || idx + len_size + off_size > data.len() || len_size > 8 || off_size > 8
-        {
+        if len_size == 0 || idx + len_size + off_size > data.len() || len_size > 8 || off_size > 8 {
             break;
         }
 
@@ -800,7 +829,11 @@ mod tests {
         let unix = filetime_to_unix(ft);
         assert!(unix.is_some());
         let ts = unix.unwrap();
-        assert_eq!(ts, 1_704_067_200, "Expected 1704067200 (2024-01-01), got {}", ts);
+        assert_eq!(
+            ts, 1_704_067_200,
+            "Expected 1704067200 (2024-01-01), got {}",
+            ts
+        );
     }
 
     #[test]

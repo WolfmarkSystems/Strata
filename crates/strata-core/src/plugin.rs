@@ -4,9 +4,9 @@ use notify::{Event, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use strata_plugin_sdk::{PluginContext, PluginResult, StrataPlugin};
 use tokio::sync::mpsc;
 use tracing::{error, info};
-use strata_plugin_sdk::{PluginContext, PluginResult, StrataPlugin};
 
 pub type PluginMap = HashMap<String, Arc<LoadedPlugin>>;
 
@@ -196,10 +196,7 @@ impl PluginManager {
 /// Derive the plugin-specific FFI symbol name from a library path.
 /// e.g. `libstrata_plugin_remnant.so` → `create_plugin_remnant`
 fn plugin_symbol_name(path: &Path) -> String {
-    let stem = path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("");
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
     // Strip leading "lib" (Unix) and "strata_plugin_" prefix
     let stem = stem.strip_prefix("lib").unwrap_or(stem);
     let name = stem

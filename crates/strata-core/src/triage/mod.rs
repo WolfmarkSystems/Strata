@@ -93,11 +93,7 @@ pub fn standard_check_names() -> Vec<&'static str> {
 
 /// Run a sequence of checks until either all complete or the time
 /// budget is exhausted. Never panics.
-pub fn run_triage(
-    image_path: &str,
-    checks: Vec<TriageCheck>,
-    budget: Duration,
-) -> TriageResult {
+pub fn run_triage(image_path: &str, checks: Vec<TriageCheck>, budget: Duration) -> TriageResult {
     let start = Utc::now();
     let clock = Instant::now();
     let mut findings = Vec::new();
@@ -132,11 +128,7 @@ pub fn run_triage(
     }
 }
 
-fn recommend(
-    risk: &RiskLevel,
-    completed: &[String],
-    skipped: &[String],
-) -> String {
+fn recommend(risk: &RiskLevel, completed: &[String], skipped: &[String]) -> String {
     let mut reco = match risk {
         RiskLevel::High => "HIGH RISK — escalate for full examination immediately.".to_string(),
         RiskLevel::Medium => "Medium risk — schedule full examination.".to_string(),
@@ -265,8 +257,10 @@ mod tests {
             },
         ];
         let r = run_triage("/evidence", checks, Duration::from_millis(50));
-        assert!(r.checks_skipped.contains(&"second_check".to_string())
-            || r.checks_skipped.contains(&"slow_check".to_string()));
+        assert!(
+            r.checks_skipped.contains(&"second_check".to_string())
+                || r.checks_skipped.contains(&"slow_check".to_string())
+        );
     }
 
     #[test]

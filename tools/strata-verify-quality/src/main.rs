@@ -265,8 +265,12 @@ fn load_waivers(path: &Path) -> Waivers {
 fn should_skip(path: &Path) -> bool {
     for comp in path.components() {
         let s = comp.as_os_str().to_string_lossy();
-        if s == "target" || s == ".git" || s == "node_modules"
-            || s == "worktrees" || s == "examples" {
+        if s == "target"
+            || s == ".git"
+            || s == "node_modules"
+            || s == "worktrees"
+            || s == "examples"
+        {
             return true;
         }
     }

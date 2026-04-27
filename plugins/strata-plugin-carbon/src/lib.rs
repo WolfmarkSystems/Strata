@@ -116,12 +116,18 @@ impl StrataPlugin for CarbonPlugin {
         let mut suspicious = 0usize;
         for a in &artifacts {
             let file_type = a.data.get("file_type").cloned().unwrap_or_default();
-            let is_sus = a.data.get("suspicious").map(|v| v == "true").unwrap_or(false);
+            let is_sus = a
+                .data
+                .get("suspicious")
+                .map(|v| v == "true")
+                .unwrap_or(false);
             if is_sus {
                 suspicious += 1;
             }
             let category = match file_type.as_str() {
-                "Chromium/Login Data" | "Chromium/Autofill" => ArtifactCategory::AccountsCredentials,
+                "Chromium/Login Data" | "Chromium/Autofill" => {
+                    ArtifactCategory::AccountsCredentials
+                }
                 "Chromium/History Download" => ArtifactCategory::ExecutionHistory,
                 _ => ArtifactCategory::WebActivity,
             };
@@ -135,7 +141,11 @@ impl StrataPlugin for CarbonPlugin {
                 category,
                 subcategory: file_type,
                 timestamp: a.timestamp.map(|t| t as i64),
-                title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
+                title: a
+                    .data
+                    .get("title")
+                    .cloned()
+                    .unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
                 source_path: a.source.clone(),
                 forensic_value: fv,

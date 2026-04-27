@@ -378,10 +378,7 @@ mod tests {
         assert_eq!(db.count().expect("count"), 2);
 
         let in_range = db
-            .query_range(
-                1_717_243_000_000_000,
-                1_717_243_400_000_000,
-            )
+            .query_range(1_717_243_000_000_000, 1_717_243_400_000_000)
             .expect("range");
         assert_eq!(in_range.len(), 2);
         assert_eq!(in_range[0].artifact_type, "Prefetch Execution");
@@ -411,36 +408,43 @@ mod tests {
     #[test]
     fn query_mitre_filters_by_technique() {
         let (_dir, mut db) = open_tmp();
-        db.insert(
-            &make_artifact("A", "s1", 1, "t1", "T1059", false),
-            "x",
-        )
-        .expect("ins a");
-        db.insert(
-            &make_artifact("B", "s2", 2, "t2", "T1204", false),
-            "x",
-        )
-        .expect("ins b");
-        db.insert(
-            &make_artifact("C", "s3", 3, "t3", "T1059", true),
-            "x",
-        )
-        .expect("ins c");
+        db.insert(&make_artifact("A", "s1", 1, "t1", "T1059", false), "x")
+            .expect("ins a");
+        db.insert(&make_artifact("B", "s2", 2, "t2", "T1204", false), "x")
+            .expect("ins b");
+        db.insert(&make_artifact("C", "s3", 3, "t3", "T1059", true), "x")
+            .expect("ins c");
         let hits = db.query_mitre("T1059").expect("mitre");
         assert_eq!(hits.len(), 2);
-        assert!(hits.iter().all(|e| e.mitre_technique.as_deref() == Some("T1059")));
+        assert!(hits
+            .iter()
+            .all(|e| e.mitre_technique.as_deref() == Some("T1059")));
     }
 
     #[test]
     fn search_fts_finds_description_tokens() {
         let (_dir, mut db) = open_tmp();
         db.insert(
-            &make_artifact("LNK", "/r/a.lnk", 1, "suspicious payload.exe", "T1204", true),
+            &make_artifact(
+                "LNK",
+                "/r/a.lnk",
+                1,
+                "suspicious payload.exe",
+                "T1204",
+                true,
+            ),
             "phantom",
         )
         .expect("ins");
         db.insert(
-            &make_artifact("LNK", "/r/b.lnk", 2, "ordinary office document", "T1204", false),
+            &make_artifact(
+                "LNK",
+                "/r/b.lnk",
+                2,
+                "ordinary office document",
+                "T1204",
+                false,
+            ),
             "phantom",
         )
         .expect("ins");
@@ -452,24 +456,13 @@ mod tests {
     #[test]
     fn query_range_is_inclusive_and_sorted() {
         let (_dir, mut db) = open_tmp();
-        db.insert(
-            &make_artifact("E", "/s", 100, "late", "T1", false),
-            "p",
-        )
-        .expect("ins");
-        db.insert(
-            &make_artifact("E", "/s", 50, "mid", "T1", false),
-            "p",
-        )
-        .expect("ins");
-        db.insert(
-            &make_artifact("E", "/s", 10, "early", "T1", false),
-            "p",
-        )
-        .expect("ins");
-        let hits = db
-            .query_range(10_000_000, 100_000_000)
-            .expect("range");
+        db.insert(&make_artifact("E", "/s", 100, "late", "T1", false), "p")
+            .expect("ins");
+        db.insert(&make_artifact("E", "/s", 50, "mid", "T1", false), "p")
+            .expect("ins");
+        db.insert(&make_artifact("E", "/s", 10, "early", "T1", false), "p")
+            .expect("ins");
+        let hits = db.query_range(10_000_000, 100_000_000).expect("range");
         assert_eq!(hits.len(), 3);
         assert_eq!(hits[0].description, "early");
         assert_eq!(hits[2].description, "late");

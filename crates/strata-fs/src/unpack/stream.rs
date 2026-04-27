@@ -105,8 +105,7 @@ impl PayloadCache {
                 break;
             };
             if let Some(dropped) = self.map.remove(&victim) {
-                self.current_bytes =
-                    self.current_bytes.saturating_sub(dropped.len() as u64);
+                self.current_bytes = self.current_bytes.saturating_sub(dropped.len() as u64);
             }
         }
         self.current_bytes = self.current_bytes.saturating_add(len);
@@ -315,10 +314,7 @@ mod tests {
 
     #[test]
     fn auto_select_picks_hybrid_when_tight() {
-        assert_eq!(
-            auto_select_mode(5_000, 7_000),
-            ExtractionMode::HybridStream
-        );
+        assert_eq!(auto_select_mode(5_000, 7_000), ExtractionMode::HybridStream);
     }
 
     #[test]

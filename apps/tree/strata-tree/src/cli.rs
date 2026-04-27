@@ -299,8 +299,7 @@ fn run_search(evidence_file: &Path, query: &str) -> Result<(), String> {
     }
 
     let indexed = index_evidence(evidence_file)?;
-    let index_dir =
-        std::env::temp_dir().join(format!("strata-cli-index-{}", uuid::Uuid::new_v4()));
+    let index_dir = std::env::temp_dir().join(format!("strata-cli-index-{}", uuid::Uuid::new_v4()));
 
     let indexer = ContentIndexer::new(&index_dir);
     let stats = indexer

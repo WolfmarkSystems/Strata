@@ -55,11 +55,24 @@ pub struct VfsAttributes {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VfsSpecific {
     Host,
-    Ntfs { mft_record: u64, resident: bool },
-    Apfs { object_id: u64, snapshot: Option<String> },
-    Ext4 { inode: u64, extents_based: bool },
-    Fat { cluster: u32 },
-    HfsPlus { catalog_id: u32 },
+    Ntfs {
+        mft_record: u64,
+        resident: bool,
+    },
+    Apfs {
+        object_id: u64,
+        snapshot: Option<String>,
+    },
+    Ext4 {
+        inode: u64,
+        extents_based: bool,
+    },
+    Fat {
+        cluster: u32,
+    },
+    HfsPlus {
+        catalog_id: u32,
+    },
     Raw,
     Composite,
 }
@@ -121,10 +134,7 @@ pub trait VirtualFilesystem: Send + Sync {
 
     /// Walk the filesystem recursively, calling `filter` for each entry.
     /// Default implementation walks via `list_dir`.
-    fn walk(
-        &self,
-        filter: &mut dyn FnMut(&VfsEntry) -> WalkDecision,
-    ) -> VfsResult<Vec<VfsEntry>> {
+    fn walk(&self, filter: &mut dyn FnMut(&VfsEntry) -> WalkDecision) -> VfsResult<Vec<VfsEntry>> {
         let mut out: Vec<VfsEntry> = Vec::new();
         let mut queue: Vec<String> = vec!["/".into()];
         while let Some(dir) = queue.pop() {

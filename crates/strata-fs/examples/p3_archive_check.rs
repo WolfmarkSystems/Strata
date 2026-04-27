@@ -7,7 +7,9 @@ use strata_fs::container::{ContainerType, EvidenceSource, IngestRegistry};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
-    let path_arg = args.next().ok_or("usage: p3_archive_check <path> [--unpack]")?;
+    let path_arg = args
+        .next()
+        .ok_or("usage: p3_archive_check <path> [--unpack]")?;
     let do_unpack = args.any(|a| a == "--unpack");
 
     let path = Path::new(&path_arg);

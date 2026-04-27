@@ -1,8 +1,8 @@
 use crate::sqlite_utils::{table_columns, table_exists, with_sqlite_connection};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use tracing::warn;
 use strata_core::parser::{ArtifactParser, ParsedArtifact, ParserError};
+use tracing::warn;
 
 pub struct SignalParser;
 

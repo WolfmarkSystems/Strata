@@ -299,8 +299,7 @@ fn ensure_archive_extracted(archive_path: &Path) -> Result<std::path::PathBuf, F
     // chose this archive — the cap exists to defend against zip bombs in
     // automated/recursive contexts, not to throttle deliberate ingestion.
     // Bump to 1 TiB (still bounded, still trips runaway nested archives).
-    let engine = UnpackEngine::new(scratch.clone())
-        .with_max_total_bytes(1024 * 1024 * 1024 * 1024);
+    let engine = UnpackEngine::new(scratch.clone()).with_max_total_bytes(1024 * 1024 * 1024 * 1024);
     let result = unpack(archive_path, &engine)
         .map_err(|e| ForensicError::Container(format!("archive unpack failed: {e}")))?;
 

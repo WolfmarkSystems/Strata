@@ -55,7 +55,9 @@ impl IocFeedDatabase {
     }
 
     pub fn count(&self) -> Result<u64, FeedError> {
-        let n: i64 = self.conn.query_row("SELECT COUNT(*) FROM iocs", [], |r| r.get(0))?;
+        let n: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM iocs", [], |r| r.get(0))?;
         Ok(n.max(0) as u64)
     }
 
@@ -161,9 +163,9 @@ impl IocFeedDatabase {
     }
 
     pub fn all(&self) -> Result<Vec<Ioc>, FeedError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT value, ioc_type, source, confidence, mitre_technique FROM iocs",
-        )?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT value, ioc_type, source, confidence, mitre_technique FROM iocs")?;
         let rows = stmt.query_map([], |row| {
             let value: String = row.get(0)?;
             let kind: String = row.get(1)?;

@@ -82,8 +82,7 @@ impl CustodyLog {
         evidence_hash: Option<&str>,
     ) -> Result<CustodyEntry, CustodyError> {
         let sequence = self.next_sequence()?;
-        let timestamp =
-            chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         let prev_hash = self.last_hash()?;
         let entry_hash = compute_entry_hash(
             sequence,
@@ -230,13 +229,11 @@ impl CustodyLog {
     }
 
     fn next_sequence(&self) -> Result<u64, CustodyError> {
-        let n: i64 = self
-            .conn
-            .query_row(
-                "SELECT COALESCE(MAX(sequence), -1) FROM custody_log",
-                [],
-                |row| row.get(0),
-            )?;
+        let n: i64 = self.conn.query_row(
+            "SELECT COALESCE(MAX(sequence), -1) FROM custody_log",
+            [],
+            |row| row.get(0),
+        )?;
         Ok((n + 1) as u64)
     }
 

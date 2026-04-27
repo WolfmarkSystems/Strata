@@ -32,7 +32,8 @@ pub struct FaceTimeCall {
 /// dispatch between the legacy parser and this one.
 pub fn is_call_history_26(conn: &Connection) -> bool {
     let cols = column_names(conn, "ZCALLRECORD");
-    cols.iter().any(|c| c.eq_ignore_ascii_case("ZLIVETRANSLATION"))
+    cols.iter()
+        .any(|c| c.eq_ignore_ascii_case("ZLIVETRANSLATION"))
         || cols
             .iter()
             .any(|c| c.eq_ignore_ascii_case("ZGROUPPARTICIPANTS"))
@@ -73,7 +74,14 @@ pub fn parse_calls(conn: &Connection) -> Vec<FaceTimeCall> {
     let translation_col = pick(&["ZLIVETRANSLATION"]);
     let sql = format!(
         "SELECT {}, {}, {}, {}, {}, {}, {}, {} FROM ZCALLRECORD",
-        id_col, date_col, dur_col, answered_col, direction_col, type_col, participants_col, translation_col
+        id_col,
+        date_col,
+        dur_col,
+        answered_col,
+        direction_col,
+        type_col,
+        participants_col,
+        translation_col
     );
     let mut stmt = match conn.prepare(&sql) {
         Ok(s) => s,
@@ -101,7 +109,7 @@ pub fn parse_calls(conn: &Connection) -> Vec<FaceTimeCall> {
             Some(rusqlite::types::Value::Integer(i)) => i.to_string(),
             _ => String::new(),
         };
-        let started = cocoa_to_utc(row.1).unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap());
+        let started = cocoa_to_utc(row.1).unwrap_or_else(unix_epoch);
         let duration = row.2.map(|v| v.max(0) as u64);
         let ended = duration.map(|d| started + chrono::Duration::seconds(d as i64));
         let answered = row.3.unwrap_or(0) != 0;
@@ -136,6 +144,10 @@ pub fn parse_calls(conn: &Connection) -> Vec<FaceTimeCall> {
     out
 }
 
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
+}
+
 fn table_exists(conn: &Connection, t: &str) -> bool {
     let sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=?1";
     conn.query_row(sql, [t], |r| r.get::<_, String>(0)).is_ok()
@@ -146,7 +158,8 @@ fn cocoa_to_utc(secs: f64) -> Option<DateTime<Utc>> {
         return None;
     }
     let cocoa_epoch_offset = 978_307_200i64;
-    Utc.timestamp_opt(secs as i64 + cocoa_epoch_offset, 0).single()
+    Utc.timestamp_opt(secs as i64 + cocoa_epoch_offset, 0)
+        .single()
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────
@@ -193,10 +206,8 @@ mod tests {
     #[test]
     fn legacy_schema_returns_empty_for_is_call_history_26() {
         let c = Connection::open_in_memory().expect("open");
-        c.execute_batch(
-            "CREATE TABLE ZCALLRECORD (ZDATE REAL, ZDURATION INTEGER);",
-        )
-        .expect("schema");
+        c.execute_batch("CREATE TABLE ZCALLRECORD (ZDATE REAL, ZDURATION INTEGER);")
+            .expect("schema");
         assert!(!is_call_history_26(&c));
     }
 

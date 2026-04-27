@@ -130,7 +130,11 @@ fn parse_authorized_keys(path: &Path, data: &[u8], user: Option<&str>) -> Vec<Pa
         let key_type = parts.next().unwrap_or("").to_string();
         let key_blob = parts.next().unwrap_or("");
         let comment = parts.collect::<Vec<&str>>().join(" ");
-        let comment = if comment.is_empty() { None } else { Some(comment) };
+        let comment = if comment.is_empty() {
+            None
+        } else {
+            Some(comment)
+        };
 
         if key_type.is_empty() || key_blob.is_empty() {
             continue;
@@ -206,11 +210,7 @@ fn parse_known_hosts(path: &Path, data: &[u8], user: Option<&str>) -> Vec<Parsed
             description: format!(
                 "macOS known_host for user {}: {} ({})",
                 user.unwrap_or("(unknown)"),
-                if is_hashed {
-                    "<hashed>"
-                } else {
-                    host_field
-                },
+                if is_hashed { "<hashed>" } else { host_field },
                 key_type
             ),
             source_path: path.to_string_lossy().to_string(),
@@ -251,10 +251,7 @@ fn parse_apple_ssh_plist(
 /// Pull a leading options block from an authorized_keys line. Options end at
 /// the first unquoted whitespace character. Returns `(options, remainder)`.
 fn split_options(line: &str) -> (Option<String>, &str) {
-    if line.starts_with("ssh-")
-        || line.starts_with("ecdsa-")
-        || line.starts_with("sk-")
-    {
+    if line.starts_with("ssh-") || line.starts_with("ecdsa-") || line.starts_with("sk-") {
         return (None, line);
     }
     let mut in_quotes = false;
@@ -332,7 +329,9 @@ mod tests {
     fn rejects_non_user_paths() {
         let parser = MacosSshParser::new();
         let path = PathBuf::from("/etc/ssh/ssh_known_hosts");
-        let out = parser.parse_file(&path, b"github.com ssh-ed25519 AAAA").unwrap();
+        let out = parser
+            .parse_file(&path, b"github.com ssh-ed25519 AAAA")
+            .unwrap();
         assert!(out.is_empty());
     }
 
@@ -349,9 +348,7 @@ mod tests {
 </dict>
 </plist>"#;
         let parser = MacosSshParser::new();
-        let path = PathBuf::from(
-            "/Users/korbyn/Library/Preferences/com.apple.ssh.plist",
-        );
+        let path = PathBuf::from("/Users/korbyn/Library/Preferences/com.apple.ssh.plist");
         let out = parser.parse_file(&path, xml.as_bytes()).unwrap();
         assert_eq!(out.len(), 1);
         assert!(out[0].description.contains("com.apple.ssh.plist"));

@@ -50,8 +50,7 @@ pub fn reconstruct(nodes: &[RegistryBagNode]) -> Vec<Windows7Shellbag> {
     let mut name_index: HashMap<String, String> = HashMap::new();
     for n in nodes {
         let key = format!("{}/{}", n.parent_path, n.subkey_name);
-        let label = shell_item_label(&n.shell_item_data)
-            .unwrap_or_else(|| n.subkey_name.clone());
+        let label = shell_item_label(&n.shell_item_data).unwrap_or_else(|| n.subkey_name.clone());
         name_index.insert(key, label);
     }
     let mut out = Vec::new();
@@ -77,14 +76,22 @@ fn build_path(parent: &str, name: &str, idx: &HashMap<String, String>) -> String
     let mut labels: Vec<String> = Vec::new();
     let mut chain = String::new();
     for p in parent.split('/').filter(|s| !s.is_empty()) {
-        chain = if chain.is_empty() { p.to_string() } else { format!("{chain}/{p}") };
+        chain = if chain.is_empty() {
+            p.to_string()
+        } else {
+            format!("{chain}/{p}")
+        };
         if let Some(l) = idx.get(&chain) {
             labels.push(l.clone());
         } else {
             labels.push(p.to_string());
         }
     }
-    chain = if chain.is_empty() { name.into() } else { format!("{chain}/{name}") };
+    chain = if chain.is_empty() {
+        name.into()
+    } else {
+        format!("{chain}/{name}")
+    };
     if let Some(l) = idx.get(&chain) {
         labels.push(l.clone());
     } else {

@@ -24,12 +24,8 @@ fn paint_card(ui: &mut egui::Ui, t: &crate::theme::StrataTheme) {
 /// Paint a panel background (for sidebar) and clip content to it.
 fn paint_panel(ui: &mut egui::Ui, t: &crate::theme::StrataTheme) {
     let rect = ui.max_rect();
-    ui.painter().rect(
-        rect,
-        crate::theme::RADIUS_LG,
-        t.panel,
-        egui::Stroke::NONE,
-    );
+    ui.painter()
+        .rect(rect, crate::theme::RADIUS_LG, t.panel, egui::Stroke::NONE);
     ui.set_clip_rect(rect);
 }
 
@@ -70,7 +66,10 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
         });
 
     // Show ingestion progress screen while indexing is active
-    if matches!(state.indexing_state, crate::state::IndexingState::Running { .. }) {
+    if matches!(
+        state.indexing_state,
+        crate::state::IndexingState::Running { .. }
+    ) {
         render_ingestion_progress(ctx, state, &t);
         return;
     }
@@ -81,7 +80,11 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
     }
 }
 
-fn render_ingestion_progress(ctx: &egui::Context, state: &mut AppState, t: &crate::theme::StrataTheme) {
+fn render_ingestion_progress(
+    ctx: &egui::Context,
+    state: &mut AppState,
+    t: &crate::theme::StrataTheme,
+) {
     use crate::state::colors::*;
 
     let files_found = match &state.indexing_state {
@@ -107,7 +110,11 @@ fn render_ingestion_progress(ctx: &egui::Context, state: &mut AppState, t: &crat
         .unwrap_or_default();
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::default().fill(t.bg).inner_margin(egui::Margin::same(40.0)))
+        .frame(
+            egui::Frame::default()
+                .fill(t.bg)
+                .inner_margin(egui::Margin::same(40.0)),
+        )
         .show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(100.0);
@@ -158,9 +165,11 @@ fn render_ingestion_progress(ctx: &egui::Context, state: &mut AppState, t: &crat
 
                 // Status bar info
                 ui.label(
-                    egui::RichText::new("Evidence is read-only. No data is modified during indexing.")
-                        .color(TEXT_MUTED)
-                        .size(8.5),
+                    egui::RichText::new(
+                        "Evidence is read-only. No data is modified during indexing.",
+                    )
+                    .color(TEXT_MUTED)
+                    .size(8.5),
                 );
             });
         });

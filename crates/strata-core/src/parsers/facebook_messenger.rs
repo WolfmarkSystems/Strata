@@ -149,7 +149,13 @@ impl FacebookMessengerParser {
                     let preview = row
                         .message_text
                         .as_deref()
-                        .map(|t| if t.len() > 100 { format!("{}...", &t[..100]) } else { t.to_string() })
+                        .map(|t| {
+                            if t.len() > 100 {
+                                format!("{}...", &t[..100])
+                            } else {
+                                t.to_string()
+                            }
+                        })
                         .unwrap_or_else(|| "[no text]".to_string());
 
                     entries.push(ParsedArtifact {
@@ -262,13 +268,8 @@ impl FacebookMessengerParser {
                     .get("sender_name")
                     .and_then(|s| s.as_str())
                     .unwrap_or("unknown");
-                let content = msg
-                    .get("content")
-                    .and_then(|c| c.as_str())
-                    .unwrap_or("");
-                let ts_ms = msg
-                    .get("timestamp_ms")
-                    .and_then(|t| t.as_i64());
+                let content = msg.get("content").and_then(|c| c.as_str()).unwrap_or("");
+                let ts_ms = msg.get("timestamp_ms").and_then(|t| t.as_i64());
                 let has_photos = msg.get("photos").is_some();
                 let has_videos = msg.get("videos").is_some();
                 let has_audio = msg.get("audio_files").is_some();

@@ -150,7 +150,15 @@ impl CsamScanner {
             None
         };
 
-        Ok(self.match_hashes(path.to_string(), file_size, md5, sha1, sha256, dhash, config))
+        Ok(self.match_hashes(
+            path.to_string(),
+            file_size,
+            md5,
+            sha1,
+            sha256,
+            dhash,
+            config,
+        ))
     }
 
     /// Scan every reachable file in `source` and return all hits.
@@ -201,11 +209,7 @@ impl CsamScanner {
                 let hit_opt = match result {
                     Ok(opt) => opt,
                     Err(e) => {
-                        tracing::warn!(
-                            "[csam] scan failed for {}: {:#}",
-                            display_path,
-                            e
-                        );
+                        tracing::warn!("[csam] scan failed for {}: {:#}", display_path, e);
                         None
                     }
                 };
@@ -244,8 +248,7 @@ impl CsamScanner {
         let file_size = entry.size;
 
         let is_image = is_image_extension(path, &config.image_extensions);
-        let want_perceptual =
-            config.run_perceptual && is_image && self.perceptual_db.is_some();
+        let want_perceptual = config.run_perceptual && is_image && self.perceptual_db.is_some();
 
         let (md5, sha1, sha256, dhash) = if want_perceptual {
             // Image file with perceptual scanning enabled — load whole
@@ -419,11 +422,7 @@ fn walk_vfs(vfs: &dyn VirtualFileSystem, out: &mut Vec<VfsEntry>) {
                 }
             }
             Err(e) => {
-                tracing::warn!(
-                    "[csam] read_dir failed for {}: {:?}",
-                    dir.display(),
-                    e
-                );
+                tracing::warn!("[csam] read_dir failed for {}: {:?}", dir.display(), e);
             }
         }
     }
@@ -534,9 +533,7 @@ mod tests {
         // .txt is not in the image extension list — perceptual is
         // skipped, exact hashing still runs but no DB is loaded so
         // there's no exact-hash hit either.
-        let hit = scanner
-            .scan_file("readme.txt", payload, &cfg)
-            .unwrap();
+        let hit = scanner.scan_file("readme.txt", payload, &cfg).unwrap();
         assert!(hit.is_none());
     }
 
@@ -572,7 +569,11 @@ mod tests {
         // Progress channel must have produced at least 2 updates
         // (one per scanned file).
         let progress: Vec<_> = rx.try_iter().collect();
-        assert!(progress.len() >= 2, "got {} progress updates", progress.len());
+        assert!(
+            progress.len() >= 2,
+            "got {} progress updates",
+            progress.len()
+        );
     }
 
     #[test]

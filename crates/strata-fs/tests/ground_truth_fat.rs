@@ -138,10 +138,7 @@ fn walker_reads_multi_cluster_file_following_chain() {
     // FAT16 entry decode) silently produces shorter content.
     let bytes = walker.read_file("/big.bin").expect("read big.bin");
     assert_eq!(bytes.len(), 5000, "multi-cluster file must be fully read");
-    assert!(
-        bytes.iter().all(|&b| b == b'X'),
-        "every byte must be 'X'"
-    );
+    assert!(bytes.iter().all(|&b| b == b'X'), "every byte must be 'X'");
 }
 
 #[test]

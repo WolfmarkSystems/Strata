@@ -1,4 +1,4 @@
-use crate::features::{TimestampCluster, TimelineEntry};
+use crate::features::{TimelineEntry, TimestampCluster};
 use crate::types::*;
 use chrono::Utc;
 
@@ -45,8 +45,20 @@ impl TimestampManipulationDetector {
                     cluster.representative_time.format("%Y-%m-%d %H:%M:%S UTC"),
                 ),
                 evidence_points: vec![
-                    format!("{} files in {:.1}s window", cluster.file_count, cluster.span_seconds),
-                    format!("Representative paths: {}", cluster.paths.iter().take(3).cloned().collect::<Vec<_>>().join(", ")),
+                    format!(
+                        "{} files in {:.1}s window",
+                        cluster.file_count, cluster.span_seconds
+                    ),
+                    format!(
+                        "Representative paths: {}",
+                        cluster
+                            .paths
+                            .iter()
+                            .take(3)
+                            .cloned()
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
                 ],
                 suggested_followup: vec![
                     "Compare $STANDARD_INFORMATION vs $FILE_NAME timestamps in MFT".to_string(),
@@ -212,7 +224,7 @@ mod tests {
     #[test]
     fn timestamp_detector_high_confidence_for_mismatch() {
         let entry = make_entry_with_detail(
-            "$STANDARD_INFORMATION timestamps predate $FILE_NAME timestamps"
+            "$STANDARD_INFORMATION timestamps predate $FILE_NAME timestamps",
         );
         let findings = TimestampManipulationDetector::run(&[], &[entry]);
         assert!(!findings.is_empty());

@@ -219,11 +219,7 @@ fn render_lazy_tree(
     }
 
     // Collect immediate child directories of parent_prefix
-    let children = collect_immediate_children(
-        &state.file_index,
-        evidence_id,
-        parent_prefix,
-    );
+    let children = collect_immediate_children(&state.file_index, evidence_id, parent_prefix);
 
     let max_show = if depth == 0 { 60 } else { 40 };
 
@@ -339,11 +335,7 @@ fn collect_immediate_children(
 }
 
 /// Check if a directory path has any subdirectories.
-fn has_child_dirs(
-    files: &[crate::state::FileEntry],
-    evidence_id: &str,
-    prefix: &str,
-) -> bool {
+fn has_child_dirs(files: &[crate::state::FileEntry], evidence_id: &str, prefix: &str) -> bool {
     for f in files {
         if f.evidence_id != evidence_id {
             continue;
@@ -620,9 +612,12 @@ fn render_dir_tree(
 
     if truncated {
         ui.label(
-            egui::RichText::new(format!("  … {} more directories", nodes.len() - max_visible))
-                .color(t.muted)
-                .size(8.5),
+            egui::RichText::new(format!(
+                "  … {} more directories",
+                nodes.len() - max_visible
+            ))
+            .color(t.muted)
+            .size(8.5),
         );
     }
 }

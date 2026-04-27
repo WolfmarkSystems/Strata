@@ -52,14 +52,39 @@ pub fn parse_lock_events(json: &str) -> Vec<SmartLockEvent> {
             .map(|d| d.with_timezone(&Utc))
             .unwrap_or_else(Utc::now);
         out.push(SmartLockEvent {
-            event_id: entry.get("id").and_then(|x| x.as_str()).unwrap_or("").into(),
+            event_id: entry
+                .get("id")
+                .and_then(|x| x.as_str())
+                .unwrap_or("")
+                .into(),
             timestamp: ts,
-            lock_name: entry.get("lock").and_then(|x| x.as_str()).unwrap_or("").into(),
-            lock_location: entry.get("location").and_then(|x| x.as_str()).map(String::from),
-            event_type: entry.get("type").and_then(|x| x.as_str()).unwrap_or("Unknown").into(),
-            actor: entry.get("actor").and_then(|x| x.as_str()).map(String::from),
-            method: entry.get("method").and_then(|x| x.as_str()).unwrap_or("Unknown").into(),
-            successful: entry.get("successful").and_then(|x| x.as_bool()).unwrap_or(true),
+            lock_name: entry
+                .get("lock")
+                .and_then(|x| x.as_str())
+                .unwrap_or("")
+                .into(),
+            lock_location: entry
+                .get("location")
+                .and_then(|x| x.as_str())
+                .map(String::from),
+            event_type: entry
+                .get("type")
+                .and_then(|x| x.as_str())
+                .unwrap_or("Unknown")
+                .into(),
+            actor: entry
+                .get("actor")
+                .and_then(|x| x.as_str())
+                .map(String::from),
+            method: entry
+                .get("method")
+                .and_then(|x| x.as_str())
+                .unwrap_or("Unknown")
+                .into(),
+            successful: entry
+                .get("successful")
+                .and_then(|x| x.as_bool())
+                .unwrap_or(true),
         });
     }
     out
@@ -86,10 +111,21 @@ pub fn parse_alarm_events(json: &str) -> Vec<AlarmSystemEvent> {
             .unwrap_or_else(Utc::now);
         out.push(AlarmSystemEvent {
             timestamp: ts,
-            system_name: entry.get("system").and_then(|x| x.as_str()).unwrap_or("").into(),
-            event_type: entry.get("type").and_then(|x| x.as_str()).unwrap_or("Unknown").into(),
+            system_name: entry
+                .get("system")
+                .and_then(|x| x.as_str())
+                .unwrap_or("")
+                .into(),
+            event_type: entry
+                .get("type")
+                .and_then(|x| x.as_str())
+                .unwrap_or("Unknown")
+                .into(),
             zone: entry.get("zone").and_then(|x| x.as_str()).map(String::from),
-            actor: entry.get("actor").and_then(|x| x.as_str()).map(String::from),
+            actor: entry
+                .get("actor")
+                .and_then(|x| x.as_str())
+                .map(String::from),
         });
     }
     out

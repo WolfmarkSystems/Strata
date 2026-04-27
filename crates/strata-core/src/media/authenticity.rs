@@ -80,9 +80,9 @@ pub fn analyse(facts: &MediaFacts) -> AuthenticityReport {
     if let (Some(orig), Some(fs_created)) = (facts.exif_date_original, facts.filesystem_created) {
         if orig.timestamp() > fs_created.timestamp() {
             report.timestamp_consistent = false;
-            report.timestamp_anomalies.push(
-                "EXIF DateTimeOriginal is after filesystem created time".into(),
-            );
+            report
+                .timestamp_anomalies
+                .push("EXIF DateTimeOriginal is after filesystem created time".into());
         }
     }
     if let (Some(orig), Some(digi)) = (facts.exif_date_original, facts.exif_date_digitized) {
@@ -135,35 +135,41 @@ pub fn analyse(facts: &MediaFacts) -> AuthenticityReport {
         if let Some(lat) = facts.gps_latitude {
             if !(-90.0..=90.0).contains(&lat) {
                 ok = false;
-                report.gps_anomalies.push(format!("Invalid latitude: {}", lat));
+                report
+                    .gps_anomalies
+                    .push(format!("Invalid latitude: {}", lat));
             }
         }
         if let Some(lon) = facts.gps_longitude {
             if !(-180.0..=180.0).contains(&lon) {
                 ok = false;
-                report.gps_anomalies.push(format!("Invalid longitude: {}", lon));
+                report
+                    .gps_anomalies
+                    .push(format!("Invalid longitude: {}", lon));
             }
         }
         if let Some(alt) = facts.gps_altitude {
             if !(-500.0..=9000.0).contains(&alt) {
                 ok = false;
-                report.gps_anomalies.push(format!("Implausible altitude: {} m", alt));
+                report
+                    .gps_anomalies
+                    .push(format!("Implausible altitude: {} m", alt));
             }
         }
         if let Some(spd) = facts.gps_speed_kph {
             if spd > 400.0 {
                 ok = false;
-                report.gps_anomalies.push(format!("Implausible ground speed: {} km/h", spd));
+                report
+                    .gps_anomalies
+                    .push(format!("Implausible ground speed: {} km/h", spd));
             }
         }
-        if let (Some(exif_t), Some(gps_t)) =
-            (facts.exif_date_original, facts.gps_timestamp)
-        {
+        if let (Some(exif_t), Some(gps_t)) = (facts.exif_date_original, facts.gps_timestamp) {
             if (exif_t.timestamp() - gps_t.timestamp()).abs() > 1800 {
                 ok = false;
-                report.gps_anomalies.push(
-                    "GPS timestamp differs from EXIF timestamp by > 30 minutes".into(),
-                );
+                report
+                    .gps_anomalies
+                    .push("GPS timestamp differs from EXIF timestamp by > 30 minutes".into());
             }
         }
         report.gps_plausible = Some(ok);

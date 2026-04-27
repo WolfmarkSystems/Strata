@@ -117,8 +117,8 @@ fn looks_like_zip(data: &[u8]) -> bool {
 /// Open the ZIP, locate `report.xml`, parse it, and return entries.
 pub fn parse_ufdr_zip(data: &[u8]) -> Result<Vec<UfdrFileEntry>, ParserError> {
     let cursor = Cursor::new(data);
-    let mut archive = ZipArchive::new(cursor)
-        .map_err(|e| ParserError::Parse(format!("UFDR open: {}", e)))?;
+    let mut archive =
+        ZipArchive::new(cursor).map_err(|e| ParserError::Parse(format!("UFDR open: {}", e)))?;
 
     // Find report.xml inside the archive (it lives at the root in mainline
     // UFDRs but some exports nest it under `Reports/report.xml`).
@@ -303,10 +303,7 @@ fn build_entry_from_attrs(attrs: &HashMap<String, String>) -> Option<UfdrFileEnt
         .or_else(|| attrs.get("sha-256"))
         .cloned();
 
-    let category = attrs
-        .get("category")
-        .or_else(|| attrs.get("type"))
-        .cloned();
+    let category = attrs.get("category").or_else(|| attrs.get("type")).cloned();
 
     let mtime = attrs
         .get("modifytime")
@@ -400,14 +397,12 @@ pub fn read_ufdr_file(
         .lookup(original_path)
         .ok_or_else(|| ParserError::Vfs(format!("UFDR: no entry for {}", original_path)))?;
     let cursor = Cursor::new(archive_data);
-    let mut archive =
-        ZipArchive::new(cursor).map_err(|e| ParserError::Parse(e.to_string()))?;
+    let mut archive = ZipArchive::new(cursor).map_err(|e| ParserError::Parse(e.to_string()))?;
     let mut zf = archive
         .by_name(&entry.archive_path)
         .map_err(|e| ParserError::Vfs(format!("UFDR: archive entry missing: {}", e)))?;
     let mut buf = Vec::with_capacity(zf.size() as usize);
-    zf.read_to_end(&mut buf)
-        .map_err(ParserError::Io)?;
+    zf.read_to_end(&mut buf).map_err(ParserError::Io)?;
     Ok(buf)
 }
 
@@ -507,8 +502,7 @@ mod tests {
     fn read_ufdr_file_returns_archive_bytes() {
         let buf = build_sample_ufdr_zip();
         let map = UfdrFileMap::from_zip_bytes(&buf).unwrap();
-        let bytes =
-            read_ufdr_file(&buf, &map, "/sdcard/DCIM/Camera/photo_001.jpg").unwrap();
+        let bytes = read_ufdr_file(&buf, &map, "/sdcard/DCIM/Camera/photo_001.jpg").unwrap();
         assert_eq!(&bytes[..3], b"\xFF\xD8\xFF");
     }
 

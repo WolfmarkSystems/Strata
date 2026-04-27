@@ -71,7 +71,11 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
             return out;
         }
     }
-    if name == ".nomedia" && !NOMEDIA_ALLOWLIST_FRAGMENTS.iter().any(|f| lower.contains(f)) {
+    if name == ".nomedia"
+        && !NOMEDIA_ALLOWLIST_FRAGMENTS
+            .iter()
+            .any(|f| lower.contains(f))
+    {
         let path_str = path.to_string_lossy().to_string();
         let mut a = Artifact::new("Photo Vault App", &path_str);
         a.add_field(

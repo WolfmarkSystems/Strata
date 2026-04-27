@@ -172,11 +172,7 @@ pub fn execute(args: ReportArgs) -> i32 {
     let artifacts = match load_artifacts(&artifacts_db) {
         Ok(a) => a,
         Err(e) => {
-            eprintln!(
-                "Error: failed to read {}: {}",
-                artifacts_db.display(),
-                e
-            );
+            eprintln!("Error: failed to read {}: {}", artifacts_db.display(), e);
             return 1;
         }
     };
@@ -210,9 +206,7 @@ pub fn execute(args: ReportArgs) -> i32 {
         unique_plugin_count(&artifacts),
     );
     println!("  Output:     {}", output_path.display());
-    println!(
-        "  Strata ver: {STRATA_VERSION} (embedded at compile time)"
-    );
+    println!("  Strata ver: {STRATA_VERSION} (embedded at compile time)");
     0
 }
 
@@ -336,17 +330,9 @@ fn render_header(
         "| Ingest finished | {} |\n",
         metadata.finished_utc.as_deref().unwrap_or("(not recorded)")
     ));
-    out.push_str(&format!(
-        "| Report generated | {} |\n",
-        now.to_rfc3339()
-    ));
-    out.push_str(&format!(
-        "| Strata version | {STRATA_VERSION} |\n"
-    ));
-    out.push_str(&format!(
-        "| Total artifacts | {} |\n",
-        artifacts.len()
-    ));
+    out.push_str(&format!("| Report generated | {} |\n", now.to_rfc3339()));
+    out.push_str(&format!("| Strata version | {STRATA_VERSION} |\n"));
+    out.push_str(&format!("| Total artifacts | {} |\n", artifacts.len()));
     out.push('\n');
 }
 
@@ -367,10 +353,7 @@ fn render_evidence_integrity(out: &mut String, metadata: &CaseMetadata) {
             c.confidence.unwrap_or(0.0),
         ));
         if let Some(rec) = &c.recommended {
-            out.push_str(&format!(
-                "- **Recommended plugins:** {}\n",
-                rec.join(", ")
-            ));
+            out.push_str(&format!("- **Recommended plugins:** {}\n", rec.join(", ")));
         }
     }
     out.push_str(
@@ -387,9 +370,7 @@ fn render_findings(out: &mut String, artifacts: &[ArtifactRow]) {
     // Sigma rule firings (the primary examiner-actionable evidence).
     let sigma_rules: Vec<&ArtifactRow> = artifacts
         .iter()
-        .filter(|a| {
-            a.plugin_name == "Strata Sigma" && a.title.starts_with("RULE FIRED:")
-        })
+        .filter(|a| a.plugin_name == "Strata Sigma" && a.title.starts_with("RULE FIRED:"))
         .collect();
 
     if sigma_rules.is_empty() {
@@ -414,8 +395,7 @@ fn render_findings(out: &mut String, artifacts: &[ArtifactRow]) {
     let critical_count = artifacts
         .iter()
         .filter(|a| {
-            a.forensic_value.eq_ignore_ascii_case("Critical")
-                && a.plugin_name != "Strata Sigma"
+            a.forensic_value.eq_ignore_ascii_case("Critical") && a.plugin_name != "Strata Sigma"
         })
         .count();
     if critical_count > 0 {
@@ -442,10 +422,7 @@ fn render_finding_entry(
     if let Some(m) = &rule.mitre_technique {
         out.push_str(&format!("- **MITRE ATT&CK:** `{m}`\n"));
     }
-    out.push_str(&format!(
-        "- **Severity:** {}\n",
-        rule.forensic_value
-    ));
+    out.push_str(&format!("- **Severity:** {}\n", rule.forensic_value));
     out.push_str("- **Source:** Strata Sigma correlation engine\n");
     if !rule.detail.is_empty() {
         out.push_str(&format!("\n{}\n\n", rule.detail));
@@ -470,11 +447,11 @@ fn render_finding_entry(
         .filter(|a| {
             hint.map(|h| a.subcategory.eq_ignore_ascii_case(h))
                 .unwrap_or(false)
-                || (rule.mitre_technique.is_some()
-                    && a.mitre_technique == rule.mitre_technique)
+                || (rule.mitre_technique.is_some() && a.mitre_technique == rule.mitre_technique)
         })
         .collect();
-    let mut seen_titles: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
+    let mut seen_titles: std::collections::HashSet<(String, String)> =
+        std::collections::HashSet::new();
     let mut supporting: Vec<&ArtifactRow> = Vec::new();
     for a in &candidates {
         let key = (a.title.clone(), a.subcategory.clone());
@@ -591,57 +568,60 @@ fn infer_tactic(technique: &str) -> &'static str {
     let base = technique.split('.').next().unwrap_or(technique);
     match base {
         // Persistence
-        "T1547" | "T1546" | "T1176" | "T1543" | "T1053" | "T1136"
-        | "T1197" | "T1037" | "T1098" | "T1133" | "T1505" => "Persistence",
+        "T1547" | "T1546" | "T1176" | "T1543" | "T1053" | "T1136" | "T1197" | "T1037" | "T1098"
+        | "T1133" | "T1505" => "Persistence",
 
         // Execution
-        "T1059" | "T1218" | "T1204" | "T1047" | "T1129" | "T1106"
-        | "T1203" | "T1559" | "T1569" => "Execution",
+        "T1059" | "T1218" | "T1204" | "T1047" | "T1129" | "T1106" | "T1203" | "T1559" | "T1569" => {
+            "Execution"
+        }
 
         // Defense Evasion
-        "T1070" | "T1027" | "T1562" | "T1222" | "T1564" | "T1140"
-        | "T1202" | "T1014" | "T1036" | "T1112" | "T1134"
-        | "T1620" => "Defense Evasion",
+        "T1070" | "T1027" | "T1562" | "T1222" | "T1564" | "T1140" | "T1202" | "T1014" | "T1036"
+        | "T1112" | "T1134" | "T1620" => "Defense Evasion",
 
         // Credential Access
-        "T1003" | "T1552" | "T1555" | "T1110" | "T1040" | "T1187"
-        | "T1606" | "T1649" | "T1212" => "Credential Access",
+        "T1003" | "T1552" | "T1555" | "T1110" | "T1040" | "T1187" | "T1606" | "T1649" | "T1212" => {
+            "Credential Access"
+        }
 
         // Discovery
-        "T1083" | "T1057" | "T1049" | "T1082" | "T1016" | "T1069"
-        | "T1087" | "T1518" | "T1033" | "T1018" | "T1007"
-        | "T1135" | "T1046" | "T1217" | "T1010" | "T1120" => "Discovery",
+        "T1083" | "T1057" | "T1049" | "T1082" | "T1016" | "T1069" | "T1087" | "T1518" | "T1033"
+        | "T1018" | "T1007" | "T1135" | "T1046" | "T1217" | "T1010" | "T1120" => "Discovery",
 
         // Lateral Movement
         "T1021" | "T1550" | "T1558" | "T1534" | "T1570" | "T1563" => "Lateral Movement",
 
         // Collection
-        "T1005" | "T1114" | "T1113" | "T1119" | "T1056" | "T1115"
-        | "T1125" | "T1123" | "T1430" | "T1602" | "T1074" => "Collection",
+        "T1005" | "T1114" | "T1113" | "T1119" | "T1056" | "T1115" | "T1125" | "T1123" | "T1430"
+        | "T1602" | "T1074" => "Collection",
 
         // Command and Control
-        "T1071" | "T1095" | "T1105" | "T1572" | "T1573" | "T1090"
-        | "T1102" | "T1568" | "T1008" | "T1219" => "Command and Control",
+        "T1071" | "T1095" | "T1105" | "T1572" | "T1573" | "T1090" | "T1102" | "T1568" | "T1008"
+        | "T1219" => "Command and Control",
 
         // Exfiltration
-        "T1567" | "T1020" | "T1048" | "T1041" | "T1052" | "T1030"
-        | "T1011" | "T1029" => "Exfiltration",
+        "T1567" | "T1020" | "T1048" | "T1041" | "T1052" | "T1030" | "T1011" | "T1029" => {
+            "Exfiltration"
+        }
 
         // Initial Access
-        "T1189" | "T1190" | "T1566" | "T1200" | "T1078" | "T1195"
-        | "T1199" | "T1091" => "Initial Access",
+        "T1189" | "T1190" | "T1566" | "T1200" | "T1078" | "T1195" | "T1199" | "T1091" => {
+            "Initial Access"
+        }
 
         // Impact
-        "T1485" | "T1486" | "T1489" | "T1490" | "T1491" | "T1498"
-        | "T1499" | "T1529" | "T1561" => "Impact",
+        "T1485" | "T1486" | "T1489" | "T1490" | "T1491" | "T1498" | "T1499" | "T1529" | "T1561" => {
+            "Impact"
+        }
 
         // Resource Development (rarely in forensic output but
         // surface correctly if it appears)
         "T1583" | "T1584" | "T1585" | "T1586" | "T1587" | "T1588" => "Resource Development",
 
         // Reconnaissance
-        "T1595" | "T1592" | "T1589" | "T1590" | "T1591" | "T1593"
-        | "T1594" | "T1596" | "T1597" | "T1598" => "Reconnaissance",
+        "T1595" | "T1592" | "T1589" | "T1590" | "T1591" | "T1593" | "T1594" | "T1596" | "T1597"
+        | "T1598" => "Reconnaissance",
 
         // Privilege Escalation (overlap with Persistence — many
         // techniques fall into both; pick the most common
@@ -705,9 +685,11 @@ fn render_chain_of_custody(out: &mut String, metadata: &CaseMetadata) {
         ));
     }
     if metadata.started_utc.is_none() && metadata.finished_utc.is_none() {
-        out.push_str("| (not recorded) | (not recorded) | case-metadata.json \
+        out.push_str(
+            "| (not recorded) | (not recorded) | case-metadata.json \
              was not found or did not contain timestamp fields. Re-run \
-             `strata ingest run` to populate. |\n");
+             `strata ingest run` to populate. |\n",
+        );
     }
     out.push('\n');
     out.push_str(
@@ -742,10 +724,7 @@ fn render_examiner_certification(
         metadata.started_utc.as_deref().unwrap_or("(not recorded)"),
         metadata.finished_utc.as_deref().unwrap_or("(not recorded)"),
     ));
-    out.push_str(&format!(
-        "Report generated at {}.\n\n",
-        now.to_rfc3339(),
-    ));
+    out.push_str(&format!("Report generated at {}.\n\n", now.to_rfc3339(),));
     out.push_str("---\n\n");
     out.push_str("Examiner signature: _______________________\n\n");
     out.push_str("Date: _______________________\n\n");
@@ -935,11 +914,7 @@ mod tests {
         // Sprint 6.5 tripwire for finding G3. ATT&CK section lists
         // every unique MITRE technique ID observed, with per-
         // technique artifact count and inferred tactic.
-        let md = render_markdown(
-            &CaseMetadata::default(),
-            "Test",
-            &charlie_shape_artifacts(),
-        );
+        let md = render_markdown(&CaseMetadata::default(), "Test", &charlie_shape_artifacts());
         assert!(md.contains("## 3. MITRE ATT&CK Coverage"));
         // Each of the seven Sigma-firing techniques must appear.
         for t in [
@@ -1096,11 +1071,7 @@ mod tests {
         // Report structure tripwire: every section header must
         // appear, and they must appear in the documented order so
         // the report doesn't regress to a shuffled layout.
-        let md = render_markdown(
-            &CaseMetadata::default(),
-            "Test",
-            &charlie_shape_artifacts(),
-        );
+        let md = render_markdown(&CaseMetadata::default(), "Test", &charlie_shape_artifacts());
         let sections = [
             "## 1. Evidence Integrity",
             "## 2. Findings",
@@ -1112,9 +1083,9 @@ mod tests {
         ];
         let mut last_pos = 0;
         for section in sections {
-            let pos = md.find(section).unwrap_or_else(|| {
-                panic!("section {section} missing from report")
-            });
+            let pos = md
+                .find(section)
+                .unwrap_or_else(|| panic!("section {section} missing from report"));
             assert!(
                 pos >= last_pos,
                 "sections must appear in documented order; \

@@ -37,8 +37,7 @@ const VSS_CATALOG_MAGIC: &[u8] = b"MICROSOFT_VSS_CATALOG";
 
 /// VSS snapshot set GUID header pattern
 const VSS_SNAP_MAGIC: &[u8; 16] = &[
-    0x6B, 0x87, 0x08, 0x38, 0x76, 0xB1, 0x48, 0x4B, 0xB8, 0xD2, 0x1E, 0x25, 0x82, 0x44, 0xBE,
-    0xC8,
+    0x6B, 0x87, 0x08, 0x38, 0x76, 0xB1, 0x48, 0x4B, 0xB8, 0xD2, 0x1E, 0x25, 0x82, 0x44, 0xBE, 0xC8,
 ];
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -159,10 +158,7 @@ impl ArtifactParser for VssExtractionParser {
         for entry in &shadow_entries {
             let mut desc = format!(
                 "VSS Shadow Copy: {} (created: {})",
-                entry
-                    .snapshot_id
-                    .as_deref()
-                    .unwrap_or("unknown"),
+                entry.snapshot_id.as_deref().unwrap_or("unknown"),
                 entry
                     .creation_time
                     .map(|t| format!("epoch {}", t))

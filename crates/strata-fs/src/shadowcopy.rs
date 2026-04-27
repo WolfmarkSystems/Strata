@@ -51,8 +51,8 @@ const VSS_HEADER_OFFSET: u64 = 0x1E00;
 /// (Data1 LE, Data2 LE, Data3 LE, Data4 BE).
 const VSS_IDENTIFIER: [u8; 16] = [
     0x6B, 0x87, 0x08, 0x38, // Data1 LE
-    0x76, 0xB1,             // Data2 LE
-    0x4B, 0x48,             // Data3 LE
+    0x76, 0xB1, // Data2 LE
+    0x4B, 0x48, // Data3 LE
     0xB7, 0x15, 0x52, 0x13, 0x19, 0x53, 0x00, 0x3E, // Data4 BE
 ];
 
@@ -344,16 +344,15 @@ fn parse_snapshot_entry(entry: &[u8], index: usize) -> VssSnapshot {
     let ft_b = read_u64_le(entry, 0x48);
     let time_b = filetime_to_unix(ft_b);
 
-    let (creation_time, snapshot_id_offset, snapshot_set_id_offset) =
-        if time_a.is_some() {
-            (time_a, 0x38usize, 0x20usize)
-        } else if time_b.is_some() {
-            (time_b, 0x28usize, 0x10usize)
-        } else {
-            // Neither looks like a valid FILETIME — use layout A offsets and
-            // let the timestamp be None.
-            (None, 0x38usize, 0x20usize)
-        };
+    let (creation_time, snapshot_id_offset, snapshot_set_id_offset) = if time_a.is_some() {
+        (time_a, 0x38usize, 0x20usize)
+    } else if time_b.is_some() {
+        (time_b, 0x28usize, 0x10usize)
+    } else {
+        // Neither looks like a valid FILETIME — use layout A offsets and
+        // let the timestamp be None.
+        (None, 0x38usize, 0x20usize)
+    };
 
     let snapshot_id = if snapshot_id_offset + 16 <= entry.len() {
         format_guid(&entry[snapshot_id_offset..snapshot_id_offset + 16])
@@ -510,16 +509,16 @@ mod tests {
 
         // ── VSS Volume Header at 0x1E00 ──
         let hdr = 0x1E00;
-        c.write_bytes(hdr, &VSS_IDENTIFIER);         // identifier
-        c.write_u32_le(hdr + 0x10, 0x01);            // version
-        c.write_u64_le(hdr + 0x34, 0x4000);          // catalog_offset
-        c.write_u64_le(hdr + 0x3C, 0x1000_0000);     // max_size
+        c.write_bytes(hdr, &VSS_IDENTIFIER); // identifier
+        c.write_u32_le(hdr + 0x10, 0x01); // version
+        c.write_u64_le(hdr + 0x34, 0x4000); // catalog_offset
+        c.write_u64_le(hdr + 0x3C, 0x1000_0000); // max_size
 
         // ── Catalog block at 0x4000 ──
         let cat = 0x4000;
-        c.write_bytes(cat, &VSS_IDENTIFIER);          // block identifier
-        c.write_u32_le(cat + 0x10, 0x02);             // block_type = catalog
-        c.write_u64_le(cat + 0x2C, 0x00);             // next_block = 0 (end)
+        c.write_bytes(cat, &VSS_IDENTIFIER); // block identifier
+        c.write_u32_le(cat + 0x10, 0x02); // block_type = catalog
+        c.write_u64_le(cat + 0x2C, 0x00); // next_block = 0 (end)
 
         // ── Entry 0 (volume descriptor, type 0x02) at cat + 0x80 ──
         let e0 = cat + CATALOG_ENTRIES_OFFSET;
@@ -528,12 +527,12 @@ mod tests {
         // ── Entry 1 (snapshot, type 0x03) at cat + 0x100 ──
         let e1 = e0 + CATALOG_ENTRY_SIZE;
         c.write_u64_le(e1, ENTRY_TYPE_SNAPSHOT);
-        c.write_u64_le(e1 + 0x08, 0x8000);           // store_offset
+        c.write_u64_le(e1 + 0x08, 0x8000); // store_offset
 
         // Snapshot set GUID at 0x20
         let guid1_set: [u8; 16] = [
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x11,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
+            0x00, 0x11,
         ];
         c.write_bytes(e1 + 0x20, &guid1_set);
 
@@ -544,19 +543,19 @@ mod tests {
 
         // Snapshot GUID at 0x38
         let guid1_snap: [u8; 16] = [
-            0xAA, 0xBB, 0xCC, 0xDD, 0x11, 0x22, 0x33, 0x44,
-            0x55, 0x66, 0x77, 0x88, 0x99, 0x00, 0xAA, 0xBB,
+            0xAA, 0xBB, 0xCC, 0xDD, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00,
+            0xAA, 0xBB,
         ];
         c.write_bytes(e1 + 0x38, &guid1_snap);
 
         // ── Entry 2 (snapshot, type 0x03) at cat + 0x180 ──
         let e2 = e1 + CATALOG_ENTRY_SIZE;
         c.write_u64_le(e2, ENTRY_TYPE_SNAPSHOT);
-        c.write_u64_le(e2 + 0x08, 0xC000);           // store_offset
+        c.write_u64_le(e2 + 0x08, 0xC000); // store_offset
 
         let guid2_set: [u8; 16] = [
-            0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8,
-            0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8,
+            0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6,
+            0xA7, 0xA8,
         ];
         c.write_bytes(e2 + 0x20, &guid2_set);
 
@@ -565,8 +564,8 @@ mod tests {
         c.write_u64_le(e2 + 0x30, ft2);
 
         let guid2_snap: [u8; 16] = [
-            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-            0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00,
+            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE,
+            0xFF, 0x00,
         ];
         c.write_bytes(e2 + 0x38, &guid2_snap);
 
@@ -597,8 +596,12 @@ mod tests {
         assert!(snaps[0].snapshot_id.starts_with('{'));
         assert!(snaps[1].snapshot_id.starts_with('{'));
         // Verify creation times are within a plausible range (2024)
-        let t0 = snaps[0].creation_time.expect("snapshot 0 should have a timestamp");
-        let t1 = snaps[1].creation_time.expect("snapshot 1 should have a timestamp");
+        let t0 = snaps[0]
+            .creation_time
+            .expect("snapshot 0 should have a timestamp");
+        let t1 = snaps[1]
+            .creation_time
+            .expect("snapshot 1 should have a timestamp");
         assert!(t0 > 1_700_000_000 && t0 < 1_800_000_000, "t0={}", t0);
         assert!(t1 > 1_700_000_000 && t1 < 1_800_000_000, "t1={}", t1);
         assert!(t1 > t0, "snapshot 1 should be newer than snapshot 0");
@@ -657,8 +660,8 @@ mod tests {
     #[test]
     fn format_guid_produces_windows_style() {
         let bytes: [u8; 16] = [
-            0x38, 0x08, 0x87, 0x6B, 0xB1, 0x76, 0x48, 0x4B,
-            0xB7, 0x15, 0x52, 0x13, 0x19, 0x53, 0x00, 0x3E,
+            0x38, 0x08, 0x87, 0x6B, 0xB1, 0x76, 0x48, 0x4B, 0xB7, 0x15, 0x52, 0x13, 0x19, 0x53,
+            0x00, 0x3E,
         ];
         let s = format_guid(&bytes);
         assert!(s.starts_with('{'));

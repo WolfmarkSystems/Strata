@@ -5,8 +5,7 @@ use crate::features::FeatureExtractor;
 use crate::types::*;
 
 /// Advisory notice — always included in output. LOAD-BEARING.
-pub const ADVISORY_NOTICE: &str =
-    "These findings are ML-ASSISTED and ADVISORY ONLY. \
+pub const ADVISORY_NOTICE: &str = "These findings are ML-ASSISTED and ADVISORY ONLY. \
      Statistical anomalies require examiner review and independent \
      corroboration before inclusion in forensic reports. \
      Anomaly detection does not constitute a forensic finding.";
@@ -50,17 +49,12 @@ impl AnomalyEngine {
     }
 
     /// Run all detectors against a set of plugin outputs.
-    pub fn analyze(
-        &self,
-        case_id: &str,
-        outputs: &[PluginOutput],
-    ) -> AnomalyReport {
+    pub fn analyze(&self, case_id: &str, outputs: &[PluginOutput]) -> AnomalyReport {
         let timeline = FeatureExtractor::extract_timeline(outputs);
         let executions = FeatureExtractor::extract_executions(outputs);
         let transfers = FeatureExtractor::extract_transfers(outputs);
         let clusters = FeatureExtractor::extract_timestamp_clusters(outputs);
-        let baseline =
-            FeatureExtractor::build_baseline_summary(&timeline, &executions, &transfers);
+        let baseline = FeatureExtractor::build_baseline_summary(&timeline, &executions, &transfers);
 
         let mut all_findings: Vec<AnomalyFinding> = Vec::new();
 
@@ -70,21 +64,20 @@ impl AnomalyEngine {
         };
 
         if should_run(&AnomalyType::TemporalOutlier) {
-            all_findings.extend(
-                temporal::TemporalOutlierDetector::run(&timeline, &baseline),
-            );
+            all_findings.extend(temporal::TemporalOutlierDetector::run(&timeline, &baseline));
         }
 
         if should_run(&AnomalyType::StealthExecution) {
-            all_findings.extend(
-                stealth::StealthExecutionDetector::run(&executions, &timeline),
-            );
+            all_findings.extend(stealth::StealthExecutionDetector::run(
+                &executions,
+                &timeline,
+            ));
         }
 
         if should_run(&AnomalyType::TimestampManipulation) {
-            all_findings.extend(
-                timestamps::TimestampManipulationDetector::run(&clusters, &timeline),
-            );
+            all_findings.extend(timestamps::TimestampManipulationDetector::run(
+                &clusters, &timeline,
+            ));
         }
 
         if should_run(&AnomalyType::AntiForensicBehavior) {
@@ -258,9 +251,7 @@ mod tests {
             "Advisory notice must contain 'ML-ASSISTED'"
         );
         assert!(
-            report
-                .advisory_notice
-                .contains("examiner review"),
+            report.advisory_notice.contains("examiner review"),
             "Advisory notice must mention examiner review"
         );
     }

@@ -46,7 +46,11 @@ pub fn parse_click_to_do_line(line: &str) -> Option<ClickToDoEvent> {
     let ts = v.get("timestamp")?.as_str()?;
     let timestamp = DateTime::parse_from_rfc3339(ts).ok()?.with_timezone(&Utc);
     Some(ClickToDoEvent {
-        event_type: v.get("event").and_then(|x| x.as_str()).unwrap_or("click_to_do").into(),
+        event_type: v
+            .get("event")
+            .and_then(|x| x.as_str())
+            .unwrap_or("click_to_do")
+            .into(),
         timestamp,
         target_content_type: v
             .get("content_type")

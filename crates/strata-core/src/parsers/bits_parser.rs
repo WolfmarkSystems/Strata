@@ -58,12 +58,7 @@ impl ArtifactParser for BitsParser {
     }
 
     fn target_patterns(&self) -> Vec<&str> {
-        vec![
-            "qmgr0.dat",
-            "qmgr1.dat",
-            "QMGR0.DAT",
-            "QMGR1.DAT",
-        ]
+        vec!["qmgr0.dat", "qmgr1.dat", "QMGR0.DAT", "QMGR1.DAT"]
     }
 
     fn parse_file(&self, path: &Path, data: &[u8]) -> Result<Vec<ParsedArtifact>, ParserError> {
@@ -104,15 +99,17 @@ impl ArtifactParser for BitsParser {
                         || url_lower.contains(".ps1")
                         || url_lower.contains(".bat")
                     {
-                        forensic_flags.push("EXECUTABLE_DOWNLOAD — Downloads executable file".to_string());
+                        forensic_flags
+                            .push("EXECUTABLE_DOWNLOAD — Downloads executable file".to_string());
                     }
                     if url_lower.contains("pastebin")
                         || url_lower.contains("raw.githubusercontent")
                         || url_lower.contains("transfer.sh")
                         || url_lower.contains("file.io")
                     {
-                        forensic_flags
-                            .push("SUSPICIOUS_HOST — Known malware delivery/staging host".to_string());
+                        forensic_flags.push(
+                            "SUSPICIOUS_HOST — Known malware delivery/staging host".to_string(),
+                        );
                     }
 
                     // Try to find associated local path nearby

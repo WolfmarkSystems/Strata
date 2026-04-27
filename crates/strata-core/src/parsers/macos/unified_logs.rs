@@ -252,7 +252,9 @@ mod tests {
     fn parses_json_array_with_subsystem() {
         let json = r#"[{"timestamp":1700000000,"subsystem":"com.apple.security","category":"auth","eventMessage":"Auth succeeded","process":"securityd","pid":42}]"#;
         let parser = UnifiedLogsParser::new();
-        let arts = parser.parse_file(Path::new("unified.json"), json.as_bytes()).unwrap();
+        let arts = parser
+            .parse_file(Path::new("unified.json"), json.as_bytes())
+            .unwrap();
         assert!(!arts.is_empty());
         let a = &arts[0];
         assert!(a.description.contains("com.apple.security"));
@@ -263,7 +265,9 @@ mod tests {
     fn parses_ndjson_entries() {
         let ndjson = "{\"eventMessage\":\"login\",\"subsystem\":\"com.apple.loginwindow\"}\n{\"eventMessage\":\"logout\",\"subsystem\":\"com.apple.loginwindow\"}\n";
         let parser = UnifiedLogsParser::new();
-        let arts = parser.parse_file(Path::new("log.ndjson"), ndjson.as_bytes()).unwrap();
+        let arts = parser
+            .parse_file(Path::new("log.ndjson"), ndjson.as_bytes())
+            .unwrap();
         assert_eq!(arts.len(), 2);
     }
 
@@ -271,7 +275,9 @@ mod tests {
     fn parses_plaintext_lines() {
         let text = "2026-04-12 logd[1]: System started\n2026-04-12 kernel[0]: Something happened\n";
         let parser = UnifiedLogsParser::new();
-        let arts = parser.parse_file(Path::new("log.txt"), text.as_bytes()).unwrap();
+        let arts = parser
+            .parse_file(Path::new("log.txt"), text.as_bytes())
+            .unwrap();
         assert_eq!(arts.len(), 2);
     }
 
@@ -284,7 +290,10 @@ mod tests {
 
     #[test]
     fn extract_process_from_line() {
-        assert_eq!(extract_process("2026-04-12 securityd: auth"), Some("securityd".to_string()));
+        assert_eq!(
+            extract_process("2026-04-12 securityd: auth"),
+            Some("securityd".to_string())
+        );
         assert_eq!(extract_process("no colon here"), None);
     }
 
@@ -292,7 +301,9 @@ mod tests {
     fn parses_rfc3339_timestamp() {
         let json = r#"[{"timestamp":"2026-04-12T10:00:00Z","eventMessage":"hello"}]"#;
         let parser = UnifiedLogsParser::new();
-        let arts = parser.parse_file(Path::new("t.json"), json.as_bytes()).unwrap();
+        let arts = parser
+            .parse_file(Path::new("t.json"), json.as_bytes())
+            .unwrap();
         assert_eq!(arts.len(), 1);
         assert!(arts[0].timestamp.is_some());
     }

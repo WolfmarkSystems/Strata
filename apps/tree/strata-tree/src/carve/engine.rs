@@ -347,18 +347,15 @@ impl CarveEngine {
                         sig.extension
                     );
                     let out_path = self.output_dir.join(&out_name);
-                    let size = match extract_carved_to_file(
-                        &self.source_path,
-                        abs_offset,
-                        sig,
-                        &out_path,
-                    ) {
-                        Ok(s) => s,
-                        Err(_) => {
-                            let _ = std::fs::remove_file(&out_path);
-                            continue;
-                        }
-                    };
+                    let size =
+                        match extract_carved_to_file(&self.source_path, abs_offset, sig, &out_path)
+                        {
+                            Ok(s) => s,
+                            Err(_) => {
+                                let _ = std::fs::remove_file(&out_path);
+                                continue;
+                            }
+                        };
 
                     let carved_file = CarvedFile {
                         signature_name: sig.name.to_string(),
@@ -583,7 +580,11 @@ fn validate_jpeg(data: &[u8]) -> (bool, f32, String) {
             .filter(|w| w[0] == 0xFF && w[1] >= 0xC0 && w[1] != 0xFF)
             .count();
         if marker_count >= 3 {
-            (true, 0.95, format!("Valid JPEG with EOI ({} markers)", marker_count))
+            (
+                true,
+                0.95,
+                format!("Valid JPEG with EOI ({} markers)", marker_count),
+            )
         } else {
             (true, 0.6, "JPEG with EOI but few markers".to_string())
         }
@@ -608,12 +609,24 @@ fn validate_png(data: &[u8]) -> (bool, f32, String) {
             // Check for IEND at end
             let has_iend = data.len() >= 8 && &data[data.len() - 8..data.len() - 4] == b"IEND";
             if has_iend {
-                (true, 0.95, format!("Valid PNG {}x{} with IEND", width, height))
+                (
+                    true,
+                    0.95,
+                    format!("Valid PNG {}x{} with IEND", width, height),
+                )
             } else {
-                (true, 0.5, format!("PNG {}x{} without IEND — may be truncated", width, height))
+                (
+                    true,
+                    0.5,
+                    format!("PNG {}x{} without IEND — may be truncated", width, height),
+                )
             }
         } else {
-            (false, 0.2, format!("PNG with unreasonable dimensions {}x{}", width, height))
+            (
+                false,
+                0.2,
+                format!("PNG with unreasonable dimensions {}x{}", width, height),
+            )
         }
     } else {
         (false, 0.2, "PNG missing IHDR chunk".to_string())
@@ -633,7 +646,11 @@ fn validate_pdf(data: &[u8]) -> (bool, f32, String) {
     if has_eof {
         (true, 0.9, "Valid PDF with %%EOF".to_string())
     } else {
-        (true, 0.4, "PDF without %%EOF — may be truncated".to_string())
+        (
+            true,
+            0.4,
+            "PDF without %%EOF — may be truncated".to_string(),
+        )
     }
 }
 
@@ -661,7 +678,10 @@ fn validate_pe(data: &[u8]) -> (bool, f32, String) {
         return (false, 0.0, "Invalid MZ header".to_string());
     }
     let pe_offset = u32::from_le_bytes([data[0x3C], data[0x3D], data[0x3E], data[0x3F]]) as usize;
-    if pe_offset > 0 && pe_offset + 4 < data.len() && &data[pe_offset..pe_offset + 4] == b"PE\x00\x00" {
+    if pe_offset > 0
+        && pe_offset + 4 < data.len()
+        && &data[pe_offset..pe_offset + 4] == b"PE\x00\x00"
+    {
         (true, 0.9, "Valid PE with PE signature".to_string())
     } else {
         (true, 0.3, "MZ header but no PE signature".to_string())
@@ -677,7 +697,11 @@ fn validate_sqlite(data: &[u8]) -> (bool, f32, String) {
         if (512..=65536).contains(&page_size) && data.len() >= page_size {
             (true, 0.9, format!("Valid SQLite (page_size={})", page_size))
         } else {
-            (true, 0.5, "SQLite header but unexpected page size".to_string())
+            (
+                true,
+                0.5,
+                "SQLite header but unexpected page size".to_string(),
+            )
         }
     } else {
         (false, 0.0, "Invalid SQLite header".to_string())
@@ -690,8 +714,7 @@ mod tests {
 
     #[test]
     fn carving_writes_output_files_to_selected_directory() {
-        let root =
-            std::env::temp_dir().join(format!("strata_carve_test_{}", uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("strata_carve_test_{}", uuid::Uuid::new_v4()));
         let _ = std::fs::create_dir_all(&root);
         let source = root.join("source.bin");
         let output = root.join("carved_out");

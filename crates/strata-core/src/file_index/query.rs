@@ -163,7 +163,6 @@ fn placeholder_csv(n: usize) -> String {
     std::iter::repeat_n("?", n).collect::<Vec<_>>().join(", ")
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::super::database::FileIndexEntry;
@@ -196,7 +195,10 @@ mod tests {
             entry("/e/SYSTEM", "", 1, None, 3.0),
         ])
         .expect("ins");
-        let hits = QueryBuilder::new().filename("NTUSER.DAT").execute(&idx).expect("q");
+        let hits = QueryBuilder::new()
+            .filename("NTUSER.DAT")
+            .execute(&idx)
+            .expect("q");
         assert_eq!(hits.len(), 1);
     }
 
@@ -237,7 +239,13 @@ mod tests {
     fn path_contains_filter_searches_subpath() {
         let (_dir, mut idx) = open_tmp();
         idx.upsert_batch(&[
-            entry("/evidence/C/Windows/Prefetch/notepad.pf", "pf", 1, None, 4.0),
+            entry(
+                "/evidence/C/Windows/Prefetch/notepad.pf",
+                "pf",
+                1,
+                None,
+                4.0,
+            ),
             entry("/evidence/D/Users/alice/x.txt", "txt", 1, None, 4.0),
         ])
         .expect("ins");

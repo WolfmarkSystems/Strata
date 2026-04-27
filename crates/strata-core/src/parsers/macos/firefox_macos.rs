@@ -124,7 +124,11 @@ impl ArtifactParser for FirefoxMacOsParser {
             .to_lowercase();
 
         if file_name == "extensions.json" {
-            return Ok(parse_firefox_extensions_json(path, data, profile.as_deref()));
+            return Ok(parse_firefox_extensions_json(
+                path,
+                data,
+                profile.as_deref(),
+            ));
         }
 
         let mut artifacts = Vec::new();
@@ -146,10 +150,7 @@ impl ArtifactParser for FirefoxMacOsParser {
                                 url: row.get::<_, String>(0).unwrap_or_default(),
                                 title: row.get(1).ok(),
                                 visit_count: row.get::<_, i64>(2).unwrap_or(0),
-                                last_visit_date: row
-                                    .get::<_, i64>(3)
-                                    .ok()
-                                    .map(firefox_us_to_unix),
+                                last_visit_date: row.get::<_, i64>(3).ok().map(firefox_us_to_unix),
                                 typed: row.get::<_, i64>(4).unwrap_or(0) != 0,
                                 frecency: row.get::<_, i64>(5).unwrap_or(0),
                                 profile: profile.clone(),
@@ -179,14 +180,8 @@ impl ArtifactParser for FirefoxMacOsParser {
                             Ok(FirefoxBookmark {
                                 title: row.get(0).ok(),
                                 url: row.get(1).ok(),
-                                date_added: row
-                                    .get::<_, i64>(2)
-                                    .ok()
-                                    .map(firefox_us_to_unix),
-                                last_modified: row
-                                    .get::<_, i64>(3)
-                                    .ok()
-                                    .map(firefox_us_to_unix),
+                                date_added: row.get::<_, i64>(2).ok().map(firefox_us_to_unix),
+                                last_modified: row.get::<_, i64>(3).ok().map(firefox_us_to_unix),
                                 profile: profile.clone(),
                             })
                         })
@@ -218,10 +213,7 @@ impl ArtifactParser for FirefoxMacOsParser {
                             host: row.get::<_, String>(0).unwrap_or_default(),
                             name: row.get::<_, String>(1).unwrap_or_default(),
                             path: row.get::<_, String>(2).unwrap_or_default(),
-                            creation_time: row
-                                .get::<_, i64>(3)
-                                .ok()
-                                .map(firefox_us_to_unix),
+                            creation_time: row.get::<_, i64>(3).ok().map(firefox_us_to_unix),
                             // moz_cookies expiry is *seconds* not microseconds
                             expiry: row.get::<_, i64>(4).ok(),
                             is_secure: row.get::<_, i64>(5).unwrap_or(0) != 0,
@@ -250,14 +242,8 @@ impl ArtifactParser for FirefoxMacOsParser {
                             field_name: row.get::<_, String>(0).unwrap_or_default(),
                             value: row.get::<_, String>(1).unwrap_or_default(),
                             times_used: row.get::<_, i64>(2).unwrap_or(0),
-                            first_used: row
-                                .get::<_, i64>(3)
-                                .ok()
-                                .map(firefox_us_to_unix),
-                            last_used: row
-                                .get::<_, i64>(4)
-                                .ok()
-                                .map(firefox_us_to_unix),
+                            first_used: row.get::<_, i64>(3).ok().map(firefox_us_to_unix),
+                            last_used: row.get::<_, i64>(4).ok().map(firefox_us_to_unix),
                             profile: profile.clone(),
                         })
                     })
@@ -339,7 +325,10 @@ fn parse_firefox_extensions_json(
             .get("version")
             .and_then(|v| v.as_str())
             .map(String::from);
-        let active = addon.get("active").and_then(|v| v.as_bool()).unwrap_or(false);
+        let active = addon
+            .get("active")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
         let install_date = addon
             .get("installDate")
             .and_then(|v| v.as_i64())

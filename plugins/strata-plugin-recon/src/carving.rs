@@ -160,7 +160,9 @@ pub fn carve(bytes: &[u8]) -> Vec<CarvedFile> {
             let size = match sig.footer {
                 Some(foot) => {
                     let scan_end = (hit_start + sig.max_size).min(bytes.len());
-                    if let Some(rel_end) = find_in_range(bytes, hit_start + sig.header.len(), scan_end, foot) {
+                    if let Some(rel_end) =
+                        find_in_range(bytes, hit_start + sig.header.len(), scan_end, foot)
+                    {
                         rel_end + foot.len() - hit_start
                     } else {
                         sig.header.len().min(bytes.len() - hit_start)
@@ -214,9 +216,7 @@ fn memmem(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     if needle.is_empty() || needle.len() > haystack.len() {
         return None;
     }
-    haystack
-        .windows(needle.len())
-        .position(|w| w == needle)
+    haystack.windows(needle.len()).position(|w| w == needle)
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -299,7 +299,10 @@ mod tests {
             blob.push((x & 0xFF) as u8);
         }
         let hits = carve(&blob);
-        let pe = hits.iter().find(|h| h.file_type == "PE/EXE/DLL").expect("pe");
+        let pe = hits
+            .iter()
+            .find(|h| h.file_type == "PE/EXE/DLL")
+            .expect("pe");
         assert!(pe.entropy > 7.0, "entropy was {}", pe.entropy);
     }
 

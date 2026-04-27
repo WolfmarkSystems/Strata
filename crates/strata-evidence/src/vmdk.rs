@@ -211,7 +211,9 @@ impl EvidenceImage for VmdkImage {
                 let mut guard = file
                     .lock()
                     .map_err(|e| EvidenceError::Other(format!("poisoned: {e}")))?;
-                guard.seek(SeekFrom::Start(offset)).map_err(EvidenceError::Io)?;
+                guard
+                    .seek(SeekFrom::Start(offset))
+                    .map_err(EvidenceError::Io)?;
                 let max_len = (self.total_size - offset).min(buf.len() as u64) as usize;
                 guard
                     .read_exact(&mut buf[..max_len])
@@ -302,7 +304,8 @@ mod tests {
         let descriptor = tmp.path().join("missing.vmdk");
         {
             let mut f = File::create(&descriptor).expect("c");
-            f.write_all(b"# Disk DescriptorFile\ncreateType=monolithicFlat\n").expect("w");
+            f.write_all(b"# Disk DescriptorFile\ncreateType=monolithicFlat\n")
+                .expect("w");
         }
         match VmdkImage::open(&descriptor) {
             Err(EvidenceError::InvalidHeader { .. }) => {}

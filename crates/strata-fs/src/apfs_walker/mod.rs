@@ -144,8 +144,8 @@ pub fn probe_first_volume_encryption<R: Read + Seek>(
         .ok_or_else(|| ForensicError::MalformedData("apfs: no volume OIDs".into()))?;
 
     let block_size = nxsb.block_size;
-    let container_omap_root = read_omap_tree_root(reader, nxsb.omap_oid, block_size)
-        .map_err(apfs_error_to_forensic)?;
+    let container_omap_root =
+        read_omap_tree_root(reader, nxsb.omap_oid, block_size).map_err(apfs_error_to_forensic)?;
     let volume_block = omap_lookup(reader, container_omap_root, block_size, first_oid)
         .map_err(apfs_error_to_forensic)?;
 
@@ -379,7 +379,10 @@ mod fixture_tests {
         let mut f = std::fs::File::open(&path).expect("open fixture");
         let nxsb = read_container_superblock(&mut f).expect("read superblock");
         assert_eq!(nxsb.block_size, 4096);
-        assert!(!detect_fusion(&nxsb), "fixture must not be a fusion container");
+        assert!(
+            !detect_fusion(&nxsb),
+            "fixture must not be a fusion container"
+        );
         let oids = enumerate_volume_oids(&nxsb);
         assert!(
             !oids.is_empty(),

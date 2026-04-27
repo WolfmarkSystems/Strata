@@ -693,10 +693,7 @@ mod tests {
         );
         assert_eq!(CsamAuditAction::ScanStarted.file_path_column(), None);
         assert_eq!(
-            CsamAuditAction::HitReviewed {
-                hit_id: "x".into()
-            }
-            .file_path_column(),
+            CsamAuditAction::HitReviewed { hit_id: "x".into() }.file_path_column(),
             None
         );
     }

@@ -221,15 +221,9 @@ mod tests {
 
     #[test]
     fn classify_token_recognises_onion_and_ipv4() {
-        assert_eq!(
-            classify_token("3g2upl4pq6kufc4m.onion"),
-            Some("OnionUrl")
-        );
+        assert_eq!(classify_token("3g2upl4pq6kufc4m.onion"), Some("OnionUrl"));
         assert_eq!(classify_token("10.0.0.5"), Some("Ipv4"));
-        assert_eq!(
-            classify_token("https://example.com/x"),
-            Some("Url")
-        );
+        assert_eq!(classify_token("https://example.com/x"), Some("Url"));
         assert!(classify_token("just-text").is_none());
     }
 
@@ -246,7 +240,9 @@ mod tests {
         body.push(0u8);
         body.extend_from_slice(b"  10.0.0.5 again 192.0.2.1  ");
         let hits = carve(&body);
-        assert!(hits.iter().any(|h| h.value == "10.0.0.5" && h.occurrence_count >= 2));
+        assert!(hits
+            .iter()
+            .any(|h| h.value == "10.0.0.5" && h.occurrence_count >= 2));
         assert!(hits.iter().any(|h| h.value == "192.0.2.1"));
     }
 

@@ -61,10 +61,19 @@ pub fn read_mbr(image: &dyn EvidenceImage) -> EvidenceResult<Vec<MbrPartition>> 
     let mut extended: Vec<MbrPartition> = Vec::new();
     for p in &primary {
         if matches!(p.partition_type, 0x05 | 0x0F | 0x85) {
-            extended.extend(walk_ebr_chain(image, p.offset_bytes, p.offset_bytes, sector_size, p.index + 1)?);
+            extended.extend(walk_ebr_chain(
+                image,
+                p.offset_bytes,
+                p.offset_bytes,
+                sector_size,
+                p.index + 1,
+            )?);
         }
     }
-    let mut out = primary.into_iter().filter(|p| !matches!(p.partition_type, 0x05 | 0x0F | 0x85)).collect::<Vec<_>>();
+    let mut out = primary
+        .into_iter()
+        .filter(|p| !matches!(p.partition_type, 0x05 | 0x0F | 0x85))
+        .collect::<Vec<_>>();
     out.extend(extended);
     Ok(out)
 }
@@ -240,10 +249,7 @@ mod tests {
         //   LBA 30_000: EBR #2 — logical swap partition at +2048, no next pointer
         let sector_size = 512u64;
         let mut disk = vec![0u8; (40_000 * sector_size) as usize];
-        let primary = make_mbr(&[
-            (0, 0x07, 2048, 8_000),
-            (0, 0x05, 10_000, 30_000),
-        ]);
+        let primary = make_mbr(&[(0, 0x07, 2048, 8_000), (0, 0x05, 10_000, 30_000)]);
         disk[..512].copy_from_slice(&primary);
 
         let ebr1_offset = 10_000 * sector_size as usize;

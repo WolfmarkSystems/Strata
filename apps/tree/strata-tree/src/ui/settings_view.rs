@@ -28,16 +28,14 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
     ui.separator();
     ui.add_space(8.0);
 
-    egui::ScrollArea::vertical().show(ui, |ui| {
-        match state.settings_tab {
-            0 => render_appearance_tab(ui, state),
-            1 => render_examiner_tab(ui, state),
-            2 => render_hashsets_tab(ui, state),
-            3 => render_license_tab(ui, state),
-            4 => render_about_tab(ui, state),
-            5 if has_charges => super::charges_view::render(ui, state),
-            _ => {}
-        }
+    egui::ScrollArea::vertical().show(ui, |ui| match state.settings_tab {
+        0 => render_appearance_tab(ui, state),
+        1 => render_examiner_tab(ui, state),
+        2 => render_hashsets_tab(ui, state),
+        3 => render_license_tab(ui, state),
+        4 => render_about_tab(ui, state),
+        5 if has_charges => super::charges_view::render(ui, state),
+        _ => {}
     });
 }
 
@@ -48,46 +46,44 @@ fn render_appearance_tab(ui: &mut egui::Ui, state: &mut AppState) {
             .size(11.0)
             .strong(),
     );
-        ui.add_space(4.0);
-        ui.label(egui::RichText::new("Theme").color(TEXT_MUTED).size(9.5));
-        ui.add_space(4.0);
+    ui.add_space(4.0);
+    ui.label(egui::RichText::new("Theme").color(TEXT_MUTED).size(9.5));
+    ui.add_space(4.0);
 
-        ui.horizontal_wrapped(|ui| {
-            for (idx, theme) in crate::theme::THEMES.iter().enumerate() {
-                let selected = state.theme_index == idx;
-                let border_color = if selected { theme.active } else { theme.border };
-                let border_width = if selected { 2.5 } else { 1.0 };
+    ui.horizontal_wrapped(|ui| {
+        for (idx, theme) in crate::theme::THEMES.iter().enumerate() {
+            let selected = state.theme_index == idx;
+            let border_color = if selected { theme.active } else { theme.border };
+            let border_width = if selected { 2.5 } else { 1.0 };
 
-                let resp = egui::Frame::none()
-                    .fill(theme.bg)
-                    .stroke(egui::Stroke::new(border_width, border_color))
-                    .rounding(crate::theme::RADIUS_MD)
-                    .inner_margin(egui::Margin::symmetric(14.0, 12.0))
-                    .show(ui, |ui| {
-                        ui.set_min_size(egui::vec2(120.0, 46.0));
-                        ui.vertical(|ui| {
-                            ui.label(
-                                egui::RichText::new(theme.name)
-                                    .color(theme.text)
-                                    .size(14.0)
-                                    .strong(),
-                            );
-                            ui.label(
-                                egui::RichText::new(theme.subtitle)
-                                    .color(theme.secondary)
-                                    .size(11.0),
-                            );
-                        });
-                    })
-                    .response;
-                let click =
-                    ui.interact(resp.rect, resp.id.with("theme_click"), egui::Sense::click());
-                if click.clicked() {
-                    state.set_theme(idx);
-                }
+            let resp = egui::Frame::none()
+                .fill(theme.bg)
+                .stroke(egui::Stroke::new(border_width, border_color))
+                .rounding(crate::theme::RADIUS_MD)
+                .inner_margin(egui::Margin::symmetric(14.0, 12.0))
+                .show(ui, |ui| {
+                    ui.set_min_size(egui::vec2(120.0, 46.0));
+                    ui.vertical(|ui| {
+                        ui.label(
+                            egui::RichText::new(theme.name)
+                                .color(theme.text)
+                                .size(14.0)
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new(theme.subtitle)
+                                .color(theme.secondary)
+                                .size(11.0),
+                        );
+                    });
+                })
+                .response;
+            let click = ui.interact(resp.rect, resp.id.with("theme_click"), egui::Sense::click());
+            if click.clicked() {
+                state.set_theme(idx);
             }
-        });
-
+        }
+    });
 }
 
 fn render_examiner_tab(ui: &mut egui::Ui, state: &mut AppState) {
@@ -104,16 +100,36 @@ fn render_examiner_tab(ui: &mut egui::Ui, state: &mut AppState) {
         .spacing([8.0, 6.0])
         .show(ui, |ui| {
             ui.label(egui::RichText::new("Name").color(TEXT_MUTED).size(9.5));
-            ui.label(egui::RichText::new(&state.examiner_name).color(TEXT_PRI).size(10.0));
+            ui.label(
+                egui::RichText::new(&state.examiner_name)
+                    .color(TEXT_PRI)
+                    .size(10.0),
+            );
             ui.end_row();
             ui.label(egui::RichText::new("Agency").color(TEXT_MUTED).size(9.5));
-            ui.label(egui::RichText::new(&state.examiner_setup_dlg.agency).color(TEXT_PRI).size(10.0));
+            ui.label(
+                egui::RichText::new(&state.examiner_setup_dlg.agency)
+                    .color(TEXT_PRI)
+                    .size(10.0),
+            );
             ui.end_row();
-            ui.label(egui::RichText::new("Badge / ID").color(TEXT_MUTED).size(9.5));
-            ui.label(egui::RichText::new(&state.examiner_setup_dlg.badge).color(TEXT_PRI).size(10.0));
+            ui.label(
+                egui::RichText::new("Badge / ID")
+                    .color(TEXT_MUTED)
+                    .size(9.5),
+            );
+            ui.label(
+                egui::RichText::new(&state.examiner_setup_dlg.badge)
+                    .color(TEXT_PRI)
+                    .size(10.0),
+            );
             ui.end_row();
             ui.label(egui::RichText::new("Email").color(TEXT_MUTED).size(9.5));
-            ui.label(egui::RichText::new(&state.examiner_setup_dlg.email).color(TEXT_PRI).size(10.0));
+            ui.label(
+                egui::RichText::new(&state.examiner_setup_dlg.email)
+                    .color(TEXT_PRI)
+                    .size(10.0),
+            );
             ui.end_row();
         });
 
@@ -136,9 +152,25 @@ fn render_license_tab(ui: &mut egui::Ui, state: &mut AppState) {
             .strong(),
     );
     ui.add_space(4.0);
-    ui.label(egui::RichText::new(state.license_state.display_status()).color(TEXT_PRI).size(10.0));
-    ui.label(egui::RichText::new(format!("Expires: {}", state.license_state.expiry_display())).color(TEXT_MUTED).size(9.0));
-    ui.label(egui::RichText::new(format!("Machine ID: {}", state.license_state.machine_id_display())).color(TEXT_MUTED).size(8.5).monospace());
+    ui.label(
+        egui::RichText::new(state.license_state.display_status())
+            .color(TEXT_PRI)
+            .size(10.0),
+    );
+    ui.label(
+        egui::RichText::new(format!("Expires: {}", state.license_state.expiry_display()))
+            .color(TEXT_MUTED)
+            .size(9.0),
+    );
+    ui.label(
+        egui::RichText::new(format!(
+            "Machine ID: {}",
+            state.license_state.machine_id_display()
+        ))
+        .color(TEXT_MUTED)
+        .size(8.5)
+        .monospace(),
+    );
 }
 
 fn render_about_tab(ui: &mut egui::Ui, _state: &mut AppState) {
@@ -168,7 +200,10 @@ fn render_about_tab(ui: &mut egui::Ui, _state: &mut AppState) {
         let rect = ui.available_rect_before_wrap();
         let cx = rect.center().x;
         ui.painter().line_segment(
-            [egui::pos2(cx - 120.0, rect.top()), egui::pos2(cx + 120.0, rect.top())],
+            [
+                egui::pos2(cx - 120.0, rect.top()),
+                egui::pos2(cx + 120.0, rect.top()),
+            ],
             egui::Stroke::new(1.0, egui::Color32::from_rgb(0x14, 0x1c, 0x28)),
         );
         ui.add_space(12.0);

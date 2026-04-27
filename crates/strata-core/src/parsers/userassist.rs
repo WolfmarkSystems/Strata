@@ -119,14 +119,18 @@ impl ArtifactParser for UserAssistParser {
                                 || decoded_lower.contains("rundll32")
                                 || decoded_lower.contains("regsvr32")
                             {
-                                forensic_flags.push("LOLBIN — Living off the Land binary".to_string());
+                                forensic_flags
+                                    .push("LOLBIN — Living off the Land binary".to_string());
                             }
 
                             if decoded_lower.contains("\\temp\\")
                                 || decoded_lower.contains("\\tmp\\")
                                 || decoded_lower.contains("\\appdata\\")
                             {
-                                forensic_flags.push("SUSPICIOUS_PATH — Execution from temp/user directory".to_string());
+                                forensic_flags.push(
+                                    "SUSPICIOUS_PATH — Execution from temp/user directory"
+                                        .to_string(),
+                                );
                             }
 
                             // Try to read the value data after the name
@@ -152,10 +156,8 @@ impl ArtifactParser for UserAssistParser {
                                     forensic_flags: forensic_flags.clone(),
                                 };
 
-                                let mut desc = format!(
-                                    "UserAssist: {} (run {} times)",
-                                    decoded, run_count,
-                                );
+                                let mut desc =
+                                    format!("UserAssist: {} (run {} times)", decoded, run_count,);
                                 if let Some(ft) = focus_time {
                                     if ft > 0 {
                                         desc.push_str(&format!(" [focus: {}ms]", ft));
@@ -230,12 +232,7 @@ fn parse_userassist_value_v5(data: &[u8]) -> (u32, Option<u32>, Option<u32>, Opt
         None
     };
 
-    (
-        run_count,
-        Some(focus_count),
-        Some(focus_time),
-        last_exec,
-    )
+    (run_count, Some(focus_count), Some(focus_time), last_exec)
 }
 
 /// Parse UserAssist value data version 3 (Windows XP, 16 bytes)

@@ -90,12 +90,14 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         .plugin_host
         .list()
         .iter()
-        .map(|p| (
-            p.name().to_string(),
-            p.version().to_string(),
-            p.description().to_string(),
-            format!("{:?}", p.plugin_type()),
-        ))
+        .map(|p| {
+            (
+                p.name().to_string(),
+                p.version().to_string(),
+                p.description().to_string(),
+                format!("{:?}", p.plugin_type()),
+            )
+        })
         .collect();
 
     // ── Grid (left 60%) + Details (right 40%) ──────────────────────────────
@@ -109,75 +111,130 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
         ui.vertical(|ui| {
             ui.set_width(grid_w);
             ui.set_min_height(500.0);
-            egui::ScrollArea::vertical().id_source("plugin_grid_scroll").show(ui, |ui| {
-                let col_count = 3usize;
-                let card_w = (grid_w - 16.0) / col_count as f32;
+            egui::ScrollArea::vertical()
+                .id_source("plugin_grid_scroll")
+                .show(ui, |ui| {
+                    let col_count = 3usize;
+                    let card_w = (grid_w - 16.0) / col_count as f32;
 
-                // Chunk plugins into rows of 3
-                for row_plugins in plugin_infos.chunks(col_count) {
-                    ui.horizontal(|ui| {
-                        ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
-                        for (name, version, description, plugin_type) in row_plugins {
-                            let accent = plugin_accent_color(name);
-                            let icon = plugin_icon(name);
-                            let is_selected = state.selected_plugin.as_deref() == Some(name.as_str());
-                            let border = if is_selected { accent } else { t.border };
-                            let fill = if is_selected { t.elevated } else { t.card };
+                    // Chunk plugins into rows of 3
+                    for row_plugins in plugin_infos.chunks(col_count) {
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
+                            for (name, version, description, plugin_type) in row_plugins {
+                                let accent = plugin_accent_color(name);
+                                let icon = plugin_icon(name);
+                                let is_selected =
+                                    state.selected_plugin.as_deref() == Some(name.as_str());
+                                let border = if is_selected { accent } else { t.border };
+                                let fill = if is_selected { t.elevated } else { t.card };
 
-                            let already_ran = state.plugin_results.iter().any(|r| r.plugin_name == *name);
+                                let already_ran =
+                                    state.plugin_results.iter().any(|r| r.plugin_name == *name);
 
-                            let card = egui::Frame::none()
-                                .fill(fill)
-                                .stroke(egui::Stroke::new(1.0, border))
-                                .rounding(crate::theme::RADIUS_MD)
-                                .inner_margin(egui::Margin::symmetric(12.0, 10.0))
-                                .show(ui, |ui| {
-                                    ui.set_width(card_w - 32.0);
-                                    ui.set_min_height(120.0);
-                                    // Row 1: icon + name + version + type
-                                    ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new(icon).size(20.0).color(accent));
-                                        ui.label(egui::RichText::new(name.as_str()).color(accent).size(14.0).strong());
-                                        ui.label(egui::RichText::new(format!("v{}", version)).color(t.muted).size(11.0));
+                                let card = egui::Frame::none()
+                                    .fill(fill)
+                                    .stroke(egui::Stroke::new(1.0, border))
+                                    .rounding(crate::theme::RADIUS_MD)
+                                    .inner_margin(egui::Margin::symmetric(12.0, 10.0))
+                                    .show(ui, |ui| {
+                                        ui.set_width(card_w - 32.0);
+                                        ui.set_min_height(120.0);
+                                        // Row 1: icon + name + version + type
+                                        ui.horizontal(|ui| {
+                                            ui.label(
+                                                egui::RichText::new(icon).size(20.0).color(accent),
+                                            );
+                                            ui.label(
+                                                egui::RichText::new(name.as_str())
+                                                    .color(accent)
+                                                    .size(14.0)
+                                                    .strong(),
+                                            );
+                                            ui.label(
+                                                egui::RichText::new(format!("v{}", version))
+                                                    .color(t.muted)
+                                                    .size(11.0),
+                                            );
+                                        });
+                                        ui.label(
+                                            egui::RichText::new(format!("[{}]", plugin_type))
+                                                .color(t.muted)
+                                                .size(10.0),
+                                        );
+                                        ui.add_space(4.0);
+                                        // Row 2: description (truncated)
+                                        let desc_short = if description.len() > 80 {
+                                            &description[..80]
+                                        } else {
+                                            description.as_str()
+                                        };
+                                        ui.label(
+                                            egui::RichText::new(desc_short)
+                                                .color(t.secondary)
+                                                .size(12.0),
+                                        );
+                                        ui.add_space(6.0);
+                                        // Row 3: RUN button
+                                        let run_clicked = ui
+                                            .add_enabled(
+                                                has_evidence,
+                                                egui::Button::new(
+                                                    egui::RichText::new(if already_ran {
+                                                        "RE-RUN"
+                                                    } else {
+                                                        "RUN"
+                                                    })
+                                                    .color(t.text)
+                                                    .size(12.0)
+                                                    .strong(),
+                                                )
+                                                .fill(t.bg)
+                                                .rounding(3.0),
+                                            )
+                                            .clicked();
+                                        if run_clicked {
+                                            state.run_plugin(name);
+                                        }
                                     });
-                                    ui.label(egui::RichText::new(format!("[{}]", plugin_type)).color(t.muted).size(10.0));
-                                    ui.add_space(4.0);
-                                    // Row 2: description (truncated)
-                                    let desc_short = if description.len() > 80 { &description[..80] } else { description.as_str() };
-                                    ui.label(egui::RichText::new(desc_short).color(t.secondary).size(12.0));
-                                    ui.add_space(6.0);
-                                    // Row 3: RUN button
-                                    let run_clicked = ui.add_enabled(has_evidence, egui::Button::new(
-                                        egui::RichText::new(if already_ran { "RE-RUN" } else { "RUN" })
-                                            .color(t.text).size(12.0).strong(),
-                                    ).fill(t.bg).rounding(3.0)).clicked();
-                                    if run_clicked {
-                                        state.run_plugin(name);
-                                    }
-                                });
 
-                            // Paint accent left border
-                            let rect = card.response.rect;
-                            ui.painter().rect_filled(
-                                egui::Rect::from_min_size(rect.left_top(), egui::vec2(3.0, rect.height())),
-                                egui::Rounding { nw: crate::theme::RADIUS_MD, sw: crate::theme::RADIUS_MD, ..Default::default() },
-                                accent,
-                            );
+                                // Paint accent left border
+                                let rect = card.response.rect;
+                                ui.painter().rect_filled(
+                                    egui::Rect::from_min_size(
+                                        rect.left_top(),
+                                        egui::vec2(3.0, rect.height()),
+                                    ),
+                                    egui::Rounding {
+                                        nw: crate::theme::RADIUS_MD,
+                                        sw: crate::theme::RADIUS_MD,
+                                        ..Default::default()
+                                    },
+                                    accent,
+                                );
 
-                            let click = ui.interact(rect, egui::Id::new(format!("plugin_card_{}", name)), egui::Sense::click());
-                            if click.clicked() {
-                                clicked_builtin = Some(name.clone());
+                                let click = ui.interact(
+                                    rect,
+                                    egui::Id::new(format!("plugin_card_{}", name)),
+                                    egui::Sense::click(),
+                                );
+                                if click.clicked() {
+                                    clicked_builtin = Some(name.clone());
+                                }
                             }
-                        }
-                    });
-                    ui.add_space(4.0);
-                }
+                        });
+                        ui.add_space(4.0);
+                    }
 
-                if !has_evidence {
-                    ui.add_space(4.0);
-                    ui.label(egui::RichText::new("Load evidence to enable plugin execution.").color(t.muted).size(9.0));
-                }
-            });
+                    if !has_evidence {
+                        ui.add_space(4.0);
+                        ui.label(
+                            egui::RichText::new("Load evidence to enable plugin execution.")
+                                .color(t.muted)
+                                .size(9.0),
+                        );
+                    }
+                });
         });
 
         ui.add_space(8.0);
@@ -200,7 +257,6 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
     if let Some(name) = clicked_builtin {
         state.selected_plugin = Some(name);
     }
-
 }
 
 fn render_builtin_detail(
@@ -212,13 +268,23 @@ fn render_builtin_detail(
     let Some(selected) = state.selected_plugin.as_deref() else {
         ui.vertical_centered(|ui| {
             ui.add_space(ui.available_height() / 3.0);
-            ui.label(egui::RichText::new("Select a plugin to view details").color(t.muted).size(12.0));
+            ui.label(
+                egui::RichText::new("Select a plugin to view details")
+                    .color(t.muted)
+                    .size(12.0),
+            );
         });
         return;
     };
 
-    let Some((name, version, _description, plugin_type)) = plugin_infos.iter().find(|(n, ..)| n == selected) else {
-        ui.label(egui::RichText::new("Select a plugin to view details").color(t.muted).size(12.0));
+    let Some((name, version, _description, plugin_type)) =
+        plugin_infos.iter().find(|(n, ..)| n == selected)
+    else {
+        ui.label(
+            egui::RichText::new("Select a plugin to view details")
+                .color(t.muted)
+                .size(12.0),
+        );
         return;
     };
 
@@ -237,34 +303,64 @@ fn render_builtin_detail(
     let bar_rect = ui.available_rect_before_wrap();
     ui.painter().rect_filled(
         egui::Rect::from_min_size(bar_rect.left_top(), egui::vec2(bar_rect.width(), 3.0)),
-        2.0, accent,
+        2.0,
+        accent,
     );
     ui.add_space(6.0);
 
     // Name + version
     ui.horizontal(|ui| {
-        ui.label(egui::RichText::new(name.as_str()).color(t.text).size(16.0).strong());
-        ui.label(egui::RichText::new(format!("v{}", version)).color(t.muted).size(11.0));
+        ui.label(
+            egui::RichText::new(name.as_str())
+                .color(t.text)
+                .size(16.0)
+                .strong(),
+        );
+        ui.label(
+            egui::RichText::new(format!("v{}", version))
+                .color(t.muted)
+                .size(11.0),
+        );
     });
-    ui.label(egui::RichText::new(format!("Type: {}", plugin_type)).color(t.secondary).size(10.0));
+    ui.label(
+        egui::RichText::new(format!("Type: {}", plugin_type))
+            .color(t.secondary)
+            .size(10.0),
+    );
     ui.add_space(8.0);
 
     egui::ScrollArea::vertical().show(ui, |ui| {
         // Full description
-        ui.label(egui::RichText::new("WHAT IT DOES").color(t.muted).size(10.0));
+        ui.label(
+            egui::RichText::new("WHAT IT DOES")
+                .color(t.muted)
+                .size(10.0),
+        );
         ui.add_space(2.0);
-        ui.label(egui::RichText::new(plugin_full_description(name)).color(t.secondary).size(10.0));
+        ui.label(
+            egui::RichText::new(plugin_full_description(name))
+                .color(t.secondary)
+                .size(10.0),
+        );
         ui.add_space(10.0);
 
         // Categories
         let (categories, mitre) = plugin_categories_mitre(name);
-        ui.label(egui::RichText::new("FORENSIC CATEGORIES").color(t.muted).size(10.0));
+        ui.label(
+            egui::RichText::new("FORENSIC CATEGORIES")
+                .color(t.muted)
+                .size(10.0),
+        );
         ui.add_space(2.0);
         ui.label(egui::RichText::new(categories).color(t.secondary).size(9.5));
         ui.add_space(10.0);
 
         // MITRE
-        ui.label(egui::RichText::new("MITRE COVERAGE").color(t.muted).size(10.0));
+        ui.label(
+            egui::RichText::new("MITRE COVERAGE")
+                .color(t.muted)
+                .size(10.0),
+        );
         ui.add_space(2.0);
         ui.horizontal_wrapped(|ui| {
             for technique in mitre.split(", ") {
@@ -279,19 +375,28 @@ fn render_builtin_detail(
         ui.add_space(10.0);
 
         // Results if already ran
-        let result_count: usize = state.plugin_results.iter()
+        let result_count: usize = state
+            .plugin_results
+            .iter()
             .filter(|r| r.plugin_name == *name)
             .map(|r| r.artifacts.len())
             .sum();
         if result_count > 0 {
-            let sus_count = state.plugin_results.iter()
+            let sus_count = state
+                .plugin_results
+                .iter()
                 .filter(|r| r.plugin_name == *name)
                 .flat_map(|r| r.artifacts.iter())
                 .filter(|a| a.is_suspicious)
                 .count();
-            ui.label(egui::RichText::new(format!(
-                "Results: {} artifacts ({} suspicious)", result_count, sus_count
-            )).color(if sus_count > 0 { t.suspicious } else { t.clean }).size(10.0));
+            ui.label(
+                egui::RichText::new(format!(
+                    "Results: {} artifacts ({} suspicious)",
+                    result_count, sus_count
+                ))
+                .color(if sus_count > 0 { t.suspicious } else { t.clean })
+                .size(10.0),
+            );
             ui.add_space(10.0);
         }
 
@@ -307,10 +412,24 @@ fn render_builtin_detail(
         let has_evidence = !state.evidence_sources.is_empty();
         let already_ran = state.plugin_results.iter().any(|r| r.plugin_name == *name);
         ui.add_enabled_ui(has_evidence, |ui| {
-            if ui.add(egui::Button::new(
-                egui::RichText::new(if already_ran { "RE-RUN THIS PLUGIN" } else { "RUN THIS PLUGIN" })
-                    .color(t.text).strong().size(11.0),
-            ).fill(t.bg).stroke(egui::Stroke::new(1.0, accent)).rounding(6.0)).clicked() {
+            if ui
+                .add(
+                    egui::Button::new(
+                        egui::RichText::new(if already_ran {
+                            "RE-RUN THIS PLUGIN"
+                        } else {
+                            "RUN THIS PLUGIN"
+                        })
+                        .color(t.text)
+                        .strong()
+                        .size(11.0),
+                    )
+                    .fill(t.bg)
+                    .stroke(egui::Stroke::new(1.0, accent))
+                    .rounding(6.0),
+                )
+                .clicked()
+            {
                 state.run_plugin(name);
             }
         });
@@ -609,11 +728,7 @@ fn render_csam_detail(ui: &mut egui::Ui, state: &mut AppState) {
         .id_source("csam_detail_scroll")
         .show(ui, |ui| {
             // ── Hash sets section ──────────────────────────────────
-            ui.label(
-                egui::RichText::new("HASH SETS")
-                    .color(t.muted)
-                    .size(10.0),
-            );
+            ui.label(egui::RichText::new("HASH SETS").color(t.muted).size(10.0));
             ui.add_space(2.0);
             if state.csam_hash_dbs.is_empty() {
                 ui.label(
@@ -622,11 +737,9 @@ fn render_csam_detail(ui: &mut egui::Ui, state: &mut AppState) {
                         .size(10.0),
                 );
                 ui.label(
-                    egui::RichText::new(
-                        "Import NCMEC, Project VIC VICS, or generic hash files.",
-                    )
-                    .color(t.muted)
-                    .size(9.5),
+                    egui::RichText::new("Import NCMEC, Project VIC VICS, or generic hash files.")
+                        .color(t.muted)
+                        .size(9.5),
                 );
             } else {
                 for db in &state.csam_hash_dbs {
@@ -646,7 +759,10 @@ fn render_csam_detail(ui: &mut egui::Ui, state: &mut AppState) {
             if ui.button("[ IMPORT HASH SET ]").clicked() {
                 if let Some(path) = rfd::FileDialog::new()
                     .set_title("Select CSAM hash set file")
-                    .add_filter("Hash files", &["txt", "json", "list", "md5", "sha1", "sha256"])
+                    .add_filter(
+                        "Hash files",
+                        &["txt", "json", "list", "md5", "sha1", "sha256"],
+                    )
                     .add_filter("All files", &["*"])
                     .pick_file()
                 {
@@ -806,12 +922,9 @@ fn render_csam_detail(ui: &mut egui::Ui, state: &mut AppState) {
                             );
                             if let Some(d) = hit.perceptual_distance {
                                 ui.label(
-                                    egui::RichText::new(format!(
-                                        "Perceptual distance: {}",
-                                        d
-                                    ))
-                                    .color(t.muted)
-                                    .size(9.0),
+                                    egui::RichText::new(format!("Perceptual distance: {}", d))
+                                        .color(t.muted)
+                                        .size(9.0),
                                 );
                             }
                             ui.horizontal(|ui| {
@@ -953,35 +1066,35 @@ fn plugin_short_name(name: &str) -> &str {
 
 fn plugin_accent_color(name: &str) -> egui::Color32 {
     match plugin_short_name(name) {
-        "Remnant"   => egui::Color32::from_rgb(0x4a, 0x90, 0x60),
+        "Remnant" => egui::Color32::from_rgb(0x4a, 0x90, 0x60),
         "Chronicle" => egui::Color32::from_rgb(0xc8, 0xa0, 0x40),
-        "Cipher"    => egui::Color32::from_rgb(0xc0, 0x50, 0x50),
-        "Trace"     => egui::Color32::from_rgb(0x4a, 0x70, 0xc0),
-        "Specter"   => egui::Color32::from_rgb(0x80, 0x50, 0xc0),
-        "Conduit"   => egui::Color32::from_rgb(0x40, 0xa0, 0xa0),
-        "Nimbus"    => egui::Color32::from_rgb(0x60, 0x90, 0xd0),
-        "Wraith"    => egui::Color32::from_rgb(0x80, 0x90, 0xa0),
-        "Vector"    => egui::Color32::from_rgb(0xc0, 0x70, 0x40),
-        "Recon"     => egui::Color32::from_rgb(0xa0, 0xa0, 0x40),
-        "Sigma"     => egui::Color32::from_rgb(0xc0, 0x40, 0x80),
+        "Cipher" => egui::Color32::from_rgb(0xc0, 0x50, 0x50),
+        "Trace" => egui::Color32::from_rgb(0x4a, 0x70, 0xc0),
+        "Specter" => egui::Color32::from_rgb(0x80, 0x50, 0xc0),
+        "Conduit" => egui::Color32::from_rgb(0x40, 0xa0, 0xa0),
+        "Nimbus" => egui::Color32::from_rgb(0x60, 0x90, 0xd0),
+        "Wraith" => egui::Color32::from_rgb(0x80, 0x90, 0xa0),
+        "Vector" => egui::Color32::from_rgb(0xc0, 0x70, 0x40),
+        "Recon" => egui::Color32::from_rgb(0xa0, 0xa0, 0x40),
+        "Sigma" => egui::Color32::from_rgb(0xc0, 0x40, 0x80),
         _ => egui::Color32::from_rgb(0x88, 0x99, 0xaa),
     }
 }
 
 fn plugin_icon(name: &str) -> &'static str {
     match plugin_short_name(name) {
-        "Remnant"   => "\u{1F5D1}",  // 🗑
-        "Chronicle" => "\u{23F1}",   // ⏱
-        "Cipher"    => "\u{1F511}",  // 🔑
-        "Trace"     => "\u{1F43E}",  // 🐾
-        "Specter"   => "\u{1F4F1}",  // 📱
-        "Conduit"   => "\u{1F517}",  // 🔗
-        "Nimbus"    => "\u{2601}",   // ☁
-        "Wraith"    => "\u{1F4BE}",  // 💾
-        "Vector"    => "\u{1F6E1}",  // 🛡
-        "Recon"     => "\u{1F3AF}",  // 🎯
-        "Sigma"     => "\u{03A3}",   // Σ
-        _ => "\u{2699}",             // ⚙
+        "Remnant" => "\u{1F5D1}",  // 🗑
+        "Chronicle" => "\u{23F1}", // ⏱
+        "Cipher" => "\u{1F511}",   // 🔑
+        "Trace" => "\u{1F43E}",    // 🐾
+        "Specter" => "\u{1F4F1}",  // 📱
+        "Conduit" => "\u{1F517}",  // 🔗
+        "Nimbus" => "\u{2601}",    // ☁
+        "Wraith" => "\u{1F4BE}",   // 💾
+        "Vector" => "\u{1F6E1}",   // 🛡
+        "Recon" => "\u{1F3AF}",    // 🎯
+        "Sigma" => "\u{03A3}",     // Σ
+        _ => "\u{2699}",           // ⚙
     }
 }
 
@@ -1004,23 +1117,61 @@ fn plugin_full_description(name: &str) -> &'static str {
 
 fn plugin_categories_mitre(name: &str) -> (&'static str, &'static str) {
     match plugin_short_name(name) {
-        "Remnant"   => ("Deleted Files, File System, Anti-Forensics Detection", "T1070.004, T1485, T1083"),
-        "Chronicle" => ("User Activity, Application Execution, Timeline", "T1204, T1547, T1083"),
-        "Cipher"    => ("Credentials, Remote Access, Cloud Sync, Exfiltration", "T1552, T1078, T1567, T1021.001"),
-        "Trace"     => ("Execution History, Persistence, Anti-Forensics, Scheduled Tasks", "T1053, T1547, T1070.006, T1197"),
-        "Specter"   => ("Mobile Devices, Social Media, Communications, Messaging", "T1636, T1430, T1409"),
-        "Conduit"   => ("Network History, Remote Access, VPN, RDP, DNS", "T1021.001, T1071, T1090, T1018"),
-        "Nimbus"    => ("Cloud Storage, Enterprise Comms, File Uploads, Collaboration", "T1567, T1213, T1530"),
-        "Wraith"    => ("Memory Artifacts, Hibernation, Crash Dumps, Volatile Evidence", "T1005, T1212, T1083"),
-        "Vector"    => ("Malware Detection, Static Analysis, Indicators of Compromise", "T1059, T1027, T1055, T1566.001"),
-        "Recon"     => ("Identity, Account Artifacts, Infrastructure, Credentials", "T1087, T1589, T1552.001"),
-        "Sigma"     => ("Threat Intelligence, Kill Chain, ATT&CK Mapping, Correlation", "Cross-tactic correlation"),
+        "Remnant" => (
+            "Deleted Files, File System, Anti-Forensics Detection",
+            "T1070.004, T1485, T1083",
+        ),
+        "Chronicle" => (
+            "User Activity, Application Execution, Timeline",
+            "T1204, T1547, T1083",
+        ),
+        "Cipher" => (
+            "Credentials, Remote Access, Cloud Sync, Exfiltration",
+            "T1552, T1078, T1567, T1021.001",
+        ),
+        "Trace" => (
+            "Execution History, Persistence, Anti-Forensics, Scheduled Tasks",
+            "T1053, T1547, T1070.006, T1197",
+        ),
+        "Specter" => (
+            "Mobile Devices, Social Media, Communications, Messaging",
+            "T1636, T1430, T1409",
+        ),
+        "Conduit" => (
+            "Network History, Remote Access, VPN, RDP, DNS",
+            "T1021.001, T1071, T1090, T1018",
+        ),
+        "Nimbus" => (
+            "Cloud Storage, Enterprise Comms, File Uploads, Collaboration",
+            "T1567, T1213, T1530",
+        ),
+        "Wraith" => (
+            "Memory Artifacts, Hibernation, Crash Dumps, Volatile Evidence",
+            "T1005, T1212, T1083",
+        ),
+        "Vector" => (
+            "Malware Detection, Static Analysis, Indicators of Compromise",
+            "T1059, T1027, T1055, T1566.001",
+        ),
+        "Recon" => (
+            "Identity, Account Artifacts, Infrastructure, Credentials",
+            "T1087, T1589, T1552.001",
+        ),
+        "Sigma" => (
+            "Threat Intelligence, Kill Chain, ATT&CK Mapping, Correlation",
+            "Cross-tactic correlation",
+        ),
         _ => ("Unknown", "N/A"),
     }
 }
 
 fn run_all_plugins(state: &mut crate::state::AppState) {
-    let plugin_names: Vec<String> = state.plugin_host.list().iter().map(|p| p.name().to_string()).collect();
+    let plugin_names: Vec<String> = state
+        .plugin_host
+        .list()
+        .iter()
+        .map(|p| p.name().to_string())
+        .collect();
     let count = plugin_names.len();
 
     state.log_action("PLUGIN_RUN_ALL", &format!("Starting {} plugins", count));
@@ -1041,9 +1192,15 @@ fn run_all_plugins(state: &mut crate::state::AppState) {
 
     state.log_action(
         "PLUGIN_RUN_ALL_COMPLETE",
-        &format!("{} plugins — {} artifacts total, {} suspicious", count, total_artifacts, total_suspicious),
+        &format!(
+            "{} plugins — {} artifacts total, {} suspicious",
+            count, total_artifacts, total_suspicious
+        ),
     );
-    state.status = format!("All {} plugins complete — {} artifacts found", count, total_artifacts);
+    state.status = format!(
+        "All {} plugins complete — {} artifacts found",
+        count, total_artifacts
+    );
 }
 
 fn ensure_builtin_integrations() {
@@ -1229,10 +1386,7 @@ fn run_plugin_sandbox(plugin_path: &str, timeout: Duration) -> SandboxRunResult 
 /// Derive the plugin-specific FFI symbol name from a library path.
 #[allow(dead_code)]
 fn plugin_symbol_name(path: &Path) -> String {
-    let stem = path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("");
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
     let stem = stem.strip_prefix("lib").unwrap_or(stem);
     let name = stem
         .strip_prefix("strata_plugin_")

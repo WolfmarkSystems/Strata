@@ -81,9 +81,7 @@ impl ArtifactParser for AppleMailParser {
             body_preview: None,
             has_attachments: false,
             plist_metadata: None,
-            mailbox_path: path
-                .parent()
-                .map(|p| p.to_string_lossy().to_string()),
+            mailbox_path: path.parent().map(|p| p.to_string_lossy().to_string()),
             flags: None,
         };
 
@@ -148,7 +146,8 @@ impl ArtifactParser for AppleMailParser {
 
         // Check for attachments
         if let Some(ref ct) = entry.content_type {
-            entry.has_attachments = ct.contains("multipart/mixed") || ct.contains("multipart/related");
+            entry.has_attachments =
+                ct.contains("multipart/mixed") || ct.contains("multipart/related");
         }
 
         // Parse plist metadata if present

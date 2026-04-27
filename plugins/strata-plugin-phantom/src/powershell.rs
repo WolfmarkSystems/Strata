@@ -117,8 +117,12 @@ mod tests {
         assert_eq!(entries.len(), 3);
         let sus = suspicious_entries(&entries);
         assert_eq!(sus.len(), 2);
-        assert!(sus.iter().any(|e| e.suspicious_pattern.as_deref() == Some("encoded-command")));
-        assert!(sus.iter().any(|e| e.suspicious_pattern.as_deref() == Some("download-cradle")));
+        assert!(sus
+            .iter()
+            .any(|e| e.suspicious_pattern.as_deref() == Some("encoded-command")));
+        assert!(sus
+            .iter()
+            .any(|e| e.suspicious_pattern.as_deref() == Some("download-cradle")));
     }
 
     #[test]

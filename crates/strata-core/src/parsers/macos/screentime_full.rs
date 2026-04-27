@@ -194,10 +194,7 @@ mod tests {
         let safari = out
             .iter()
             .find(|a| {
-                a.json_data
-                    .get("bundle_id")
-                    .and_then(|v| v.as_str())
-                    == Some("com.apple.Safari")
+                a.json_data.get("bundle_id").and_then(|v| v.as_str()) == Some("com.apple.Safari")
             })
             .unwrap();
         assert_eq!(

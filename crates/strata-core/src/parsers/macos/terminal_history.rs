@@ -326,7 +326,10 @@ mod tests {
         let parser = MacosTerminalHistoryParser::new();
         let path = PathBuf::from("/Users/test/.zsh_history");
         let out = parser.parse_file(&path, b": 1700000000:0;ls").unwrap();
-        assert!(out.is_empty(), "shell_history covers .zsh_history exclusively");
+        assert!(
+            out.is_empty(),
+            "shell_history covers .zsh_history exclusively"
+        );
     }
 
     #[test]

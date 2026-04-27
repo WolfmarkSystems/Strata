@@ -52,12 +52,8 @@ fn stream_to_artifact_type(stream: &str) -> &str {
 fn stream_forensic_note(stream: &str) -> Option<&str> {
     match stream {
         s if s.contains("/app/inFocus") => Some("App in foreground — proves user interaction"),
-        s if s.contains("/device/isLocked") => {
-            Some("Device lock/unlock — proves physical access")
-        }
-        s if s.contains("/safari/history") => {
-            Some("Safari browsing — user web activity timeline")
-        }
+        s if s.contains("/device/isLocked") => Some("Device lock/unlock — proves physical access"),
+        s if s.contains("/safari/history") => Some("Safari browsing — user web activity timeline"),
         s if s.contains("/app/install") => Some("App installation event"),
         s if s.contains("/location/visit") => Some("Location visit — places user at location"),
         _ => None,

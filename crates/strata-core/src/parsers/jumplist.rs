@@ -214,14 +214,8 @@ impl ArtifactParser for JumpListParser {
         }
 
         // Extract AppID from filename (format: {AppID}.automaticDestinations-ms)
-        let app_id = filename
-            .split('.')
-            .next()
-            .map(|s| s.to_string());
-        let app_name = app_id
-            .as_deref()
-            .and_then(resolve_app_id)
-            .map(String::from);
+        let app_id = filename.split('.').next().map(|s| s.to_string());
+        let app_name = app_id.as_deref().and_then(resolve_app_id).map(String::from);
 
         let is_automatic = filename.contains("automaticDestinations");
 
@@ -324,10 +318,7 @@ impl JumpListParser {
                 lnk_entry.pin_status = Some(dl.pin_status.clone());
             }
 
-            let target = lnk_entry
-                .target_path
-                .as_deref()
-                .unwrap_or("unknown");
+            let target = lnk_entry.target_path.as_deref().unwrap_or("unknown");
             let mut desc = format!(
                 "Jump List: {} -> {} ",
                 app_name.as_deref().unwrap_or("Unknown App"),
@@ -411,9 +402,12 @@ impl JumpListParser {
 
         // Parse Link Info section for local/network paths
         if has_link_info && offset + 4 <= data.len() {
-            let link_info_size =
-                u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
-                    as usize;
+            let link_info_size = u32::from_le_bytes([
+                data[offset],
+                data[offset + 1],
+                data[offset + 2],
+                data[offset + 3],
+            ]) as usize;
             if link_info_size > 0 && offset + link_info_size <= data.len() {
                 if let Some(path) =
                     self.extract_path_from_link_info(&data[offset..offset + link_info_size])
@@ -460,7 +454,10 @@ impl JumpListParser {
 
         if local_base_path_offset > 0 && local_base_path_offset < data.len() {
             let path_bytes = &data[local_base_path_offset..];
-            let end = path_bytes.iter().position(|&b| b == 0).unwrap_or(path_bytes.len());
+            let end = path_bytes
+                .iter()
+                .position(|&b| b == 0)
+                .unwrap_or(path_bytes.len());
             if end > 0 {
                 let path = String::from_utf8_lossy(&path_bytes[..end]).to_string();
                 if !path.is_empty() {
@@ -507,11 +504,7 @@ impl JumpListParser {
     }
 
     /// Find and parse DestList stream within CFB data
-    fn find_and_parse_destlist(
-        &self,
-        data: &[u8],
-        _sector_size: usize,
-    ) -> Vec<DestListEntry> {
+    fn find_and_parse_destlist(&self, data: &[u8], _sector_size: usize) -> Vec<DestListEntry> {
         let mut entries = Vec::new();
 
         // DestList v3/v4 header magic: version (4 bytes), entry count (4 bytes), pinned count (4 bytes)
@@ -543,8 +536,12 @@ impl JumpListParser {
                                 data[try_offset + 7],
                             ]);
                             if count > 0 && count < 10000 {
-                                entries =
-                                    self.parse_destlist_entries(data, try_offset + 32, version, count);
+                                entries = self.parse_destlist_entries(
+                                    data,
+                                    try_offset + 32,
+                                    version,
+                                    count,
+                                );
                                 if !entries.is_empty() {
                                     return entries;
                                 }
@@ -735,7 +732,11 @@ impl JumpListParser {
                     let s = String::from_utf8_lossy(name_data)
                         .trim_end_matches('\0')
                         .to_string();
-                    if !s.is_empty() { Some(s) } else { None }
+                    if !s.is_empty() {
+                        Some(s)
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
@@ -746,7 +747,10 @@ impl JumpListParser {
                     // Short name starts at offset 14, null-terminated ASCII
                     let name_start = 14;
                     let name_bytes = &data[name_start..size.min(data.len())];
-                    let end = name_bytes.iter().position(|&b| b == 0).unwrap_or(name_bytes.len());
+                    let end = name_bytes
+                        .iter()
+                        .position(|&b| b == 0)
+                        .unwrap_or(name_bytes.len());
                     if end > 0 {
                         let name = String::from_utf8_lossy(&name_bytes[..end]).to_string();
                         if !name.is_empty() {
@@ -814,9 +818,15 @@ mod tests {
     fn resolve_app_id_finds_common_apps() {
         assert_eq!(resolve_app_id("1b4dd67f29cb1962"), Some("Windows Explorer"));
         assert_eq!(resolve_app_id("b91c07e03a5a0a35"), Some("Google Chrome"));
-        assert_eq!(resolve_app_id("a7bd71699cd38d1c"), Some("Microsoft Word 2016+"));
+        assert_eq!(
+            resolve_app_id("a7bd71699cd38d1c"),
+            Some("Microsoft Word 2016+")
+        );
         assert_eq!(resolve_app_id("bcc705e07d55efb0"), Some("PuTTY"));
-        assert_eq!(resolve_app_id("4975d6798a1a4326"), Some("Visual Studio Code"));
+        assert_eq!(
+            resolve_app_id("4975d6798a1a4326"),
+            Some("Visual Studio Code")
+        );
     }
 
     #[test]
@@ -870,12 +880,24 @@ mod tests {
     #[test]
     fn app_id_table_has_over_100_entries() {
         let test_ids = [
-            "1b4dd67f29cb1962", "b91c07e03a5a0a35", "5d696d521de238c3",
-            "a7bd71699cd38d1c", "d00655d2aa12ff6d", "9c7cc110ff56d1bd",
-            "4acae695c3029286", "ebd8c95c6e65992e", "1bc392b8e104a00e",
-            "bcc705e07d55efb0", "4975d6798a1a4326", "ee9f71d9828e153e",
-            "36801066f71b73c5", "5c450709f7ae4396", "23646679aaccfae0",
-            "81b31ab9f21a4def", "1eb796d87c32eff9", "63b7a85748e6c9f9",
+            "1b4dd67f29cb1962",
+            "b91c07e03a5a0a35",
+            "5d696d521de238c3",
+            "a7bd71699cd38d1c",
+            "d00655d2aa12ff6d",
+            "9c7cc110ff56d1bd",
+            "4acae695c3029286",
+            "ebd8c95c6e65992e",
+            "1bc392b8e104a00e",
+            "bcc705e07d55efb0",
+            "4975d6798a1a4326",
+            "ee9f71d9828e153e",
+            "36801066f71b73c5",
+            "5c450709f7ae4396",
+            "23646679aaccfae0",
+            "81b31ab9f21a4def",
+            "1eb796d87c32eff9",
+            "63b7a85748e6c9f9",
         ];
         let mut resolved = 0;
         for id in &test_ids {
@@ -883,6 +905,10 @@ mod tests {
                 resolved += 1;
             }
         }
-        assert!(resolved >= 15, "Expected at least 15 resolved, got {}", resolved);
+        assert!(
+            resolved >= 15,
+            "Expected at least 15 resolved, got {}",
+            resolved
+        );
     }
 }

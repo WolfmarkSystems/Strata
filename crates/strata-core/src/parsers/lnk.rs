@@ -52,19 +52,47 @@ pub struct LnkEntry {
 /// Decode Windows file attributes bitmask to a human-readable label.
 pub fn file_attributes_label(attrs: u32) -> String {
     let mut labels = Vec::new();
-    if attrs & 0x01 != 0 { labels.push("READONLY"); }
-    if attrs & 0x02 != 0 { labels.push("HIDDEN"); }
-    if attrs & 0x04 != 0 { labels.push("SYSTEM"); }
-    if attrs & 0x10 != 0 { labels.push("DIRECTORY"); }
-    if attrs & 0x20 != 0 { labels.push("ARCHIVE"); }
-    if attrs & 0x80 != 0 { labels.push("NORMAL"); }
-    if attrs & 0x100 != 0 { labels.push("TEMPORARY"); }
-    if attrs & 0x200 != 0 { labels.push("SPARSE"); }
-    if attrs & 0x400 != 0 { labels.push("REPARSE"); }
-    if attrs & 0x800 != 0 { labels.push("COMPRESSED"); }
-    if attrs & 0x2000 != 0 { labels.push("NOT_INDEXED"); }
-    if attrs & 0x4000 != 0 { labels.push("ENCRYPTED"); }
-    if labels.is_empty() { "NONE".to_string() } else { labels.join("|") }
+    if attrs & 0x01 != 0 {
+        labels.push("READONLY");
+    }
+    if attrs & 0x02 != 0 {
+        labels.push("HIDDEN");
+    }
+    if attrs & 0x04 != 0 {
+        labels.push("SYSTEM");
+    }
+    if attrs & 0x10 != 0 {
+        labels.push("DIRECTORY");
+    }
+    if attrs & 0x20 != 0 {
+        labels.push("ARCHIVE");
+    }
+    if attrs & 0x80 != 0 {
+        labels.push("NORMAL");
+    }
+    if attrs & 0x100 != 0 {
+        labels.push("TEMPORARY");
+    }
+    if attrs & 0x200 != 0 {
+        labels.push("SPARSE");
+    }
+    if attrs & 0x400 != 0 {
+        labels.push("REPARSE");
+    }
+    if attrs & 0x800 != 0 {
+        labels.push("COMPRESSED");
+    }
+    if attrs & 0x2000 != 0 {
+        labels.push("NOT_INDEXED");
+    }
+    if attrs & 0x4000 != 0 {
+        labels.push("ENCRYPTED");
+    }
+    if labels.is_empty() {
+        "NONE".to_string()
+    } else {
+        labels.join("|")
+    }
 }
 
 /// Format a drive type code to a human-readable label.
@@ -371,40 +399,73 @@ fn parse_extra_data(data: &[u8], mut offset: usize, entry: &mut LnkEntry) {
 // ── Binary reading helpers ──────────────────────────────────────────
 
 fn read_u16(data: &[u8], off: usize) -> u16 {
-    if off + 2 > data.len() { return 0; }
+    if off + 2 > data.len() {
+        return 0;
+    }
     u16::from_le_bytes([data[off], data[off + 1]])
 }
 
 fn read_u32(data: &[u8], off: usize) -> u32 {
-    if off + 4 > data.len() { return 0; }
+    if off + 4 > data.len() {
+        return 0;
+    }
     u32::from_le_bytes([data[off], data[off + 1], data[off + 2], data[off + 3]])
 }
 
 fn read_filetime(data: &[u8], off: usize) -> Option<i64> {
-    if off + 8 > data.len() { return None; }
+    if off + 8 > data.len() {
+        return None;
+    }
     let ft = i64::from_le_bytes([
-        data[off], data[off+1], data[off+2], data[off+3],
-        data[off+4], data[off+5], data[off+6], data[off+7],
+        data[off],
+        data[off + 1],
+        data[off + 2],
+        data[off + 3],
+        data[off + 4],
+        data[off + 5],
+        data[off + 6],
+        data[off + 7],
     ]);
-    if ft <= 0 { return None; }
+    if ft <= 0 {
+        return None;
+    }
     let unix = (ft - 116_444_736_000_000_000) / 10_000_000;
-    if unix < 0 { None } else { Some(unix) }
+    if unix < 0 {
+        None
+    } else {
+        Some(unix)
+    }
 }
 
 fn read_null_string(data: &[u8]) -> Option<String> {
-    let end = data.iter().position(|&b| b == 0).unwrap_or(data.len().min(260));
-    if end == 0 { return None; }
+    let end = data
+        .iter()
+        .position(|&b| b == 0)
+        .unwrap_or(data.len().min(260));
+    if end == 0 {
+        return None;
+    }
     let s = String::from_utf8_lossy(&data[..end]).to_string();
-    if s.is_empty() { None } else { Some(s) }
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
 }
 
 /// Read a counted string from StringData (u16 char count prefix).
 fn read_counted_string(data: &[u8], offset: usize, unicode: bool) -> Option<(String, usize)> {
-    if offset + 2 > data.len() { return None; }
+    if offset + 2 > data.len() {
+        return None;
+    }
     let char_count = read_u16(data, offset) as usize;
-    if char_count == 0 { return Some((String::new(), 2)); }
+    if char_count == 0 {
+        return Some((String::new(), 2));
+    }
     let byte_len = if unicode { char_count * 2 } else { char_count };
-    if offset + 2 + byte_len > data.len() { return None; }
+    if offset + 2 + byte_len > data.len() {
+        return None;
+    }
     let string_data = &data[offset + 2..offset + 2 + byte_len];
     let s = if unicode {
         let u16s: Vec<u16> = string_data
@@ -419,14 +480,15 @@ fn read_counted_string(data: &[u8], offset: usize, unicode: bool) -> Option<(Str
 }
 
 fn format_guid(data: &[u8]) -> String {
-    if data.len() < 16 { return String::new(); }
+    if data.len() < 16 {
+        return String::new();
+    }
     let d1 = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
     let d2 = u16::from_le_bytes([data[4], data[5]]);
     let d3 = u16::from_le_bytes([data[6], data[7]]);
     format!(
         "{{{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}}}",
-        d1, d2, d3, data[8], data[9], data[10], data[11],
-        data[12], data[13], data[14], data[15]
+        d1, d2, d3, data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15]
     )
 }
 
@@ -440,8 +502,8 @@ mod tests {
         buf[0..4].copy_from_slice(&0x4Cu32.to_le_bytes());
         // CLSID (16 bytes at offset 4)
         buf[4..20].copy_from_slice(&[
-            0x01, 0x14, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46,
+            0x01, 0x14, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x46,
         ]);
         // Flags
         buf[0x14..0x18].copy_from_slice(&flags.to_le_bytes());
@@ -468,10 +530,7 @@ mod tests {
         assert!(entry.access_time.is_some());
         assert_eq!(entry.file_size, Some(1024));
         assert_eq!(entry.file_attributes, Some(0x20));
-        assert_eq!(
-            entry.file_attributes_label.as_deref(),
-            Some("ARCHIVE")
-        );
+        assert_eq!(entry.file_attributes_label.as_deref(), Some("ARCHIVE"));
     }
 
     #[test]
@@ -496,9 +555,12 @@ mod tests {
         // Unicode: 3 chars "ABC"
         let mut buf = vec![0u8; 10];
         buf[0..2].copy_from_slice(&3u16.to_le_bytes());
-        buf[2] = b'A'; buf[3] = 0;
-        buf[4] = b'B'; buf[5] = 0;
-        buf[6] = b'C'; buf[7] = 0;
+        buf[2] = b'A';
+        buf[3] = 0;
+        buf[4] = b'B';
+        buf[5] = 0;
+        buf[6] = b'C';
+        buf[7] = 0;
         let (s, adv) = read_counted_string(&buf, 0, true).unwrap();
         assert_eq!(s, "ABC");
         assert_eq!(adv, 8); // 2 + 3*2
@@ -506,7 +568,9 @@ mod tests {
         // ANSI: 3 chars "XYZ"
         let mut buf2 = vec![0u8; 6];
         buf2[0..2].copy_from_slice(&3u16.to_le_bytes());
-        buf2[2] = b'X'; buf2[3] = b'Y'; buf2[4] = b'Z';
+        buf2[2] = b'X';
+        buf2[3] = b'Y';
+        buf2[4] = b'Z';
         let (s2, adv2) = read_counted_string(&buf2, 0, false).unwrap();
         assert_eq!(s2, "XYZ");
         assert_eq!(adv2, 5); // 2 + 3
@@ -518,31 +582,54 @@ mod tests {
         let mut block = vec![0u8; 96];
         block[0..4].copy_from_slice(&96u32.to_le_bytes()); // size
         block[4..8].copy_from_slice(&0xA000_0003u32.to_le_bytes()); // sig
-        // Machine ID at offset 16..32 (null-terminated ASCII)
+                                                                    // Machine ID at offset 16..32 (null-terminated ASCII)
         block[16..28].copy_from_slice(b"WORKSTATION1");
         // MAC at offset 80..86
-        block[80] = 0xAA; block[81] = 0xBB; block[82] = 0xCC;
-        block[83] = 0xDD; block[84] = 0xEE; block[85] = 0xFF;
+        block[80] = 0xAA;
+        block[81] = 0xBB;
+        block[82] = 0xCC;
+        block[83] = 0xDD;
+        block[84] = 0xEE;
+        block[85] = 0xFF;
 
         let mut entry = LnkEntry {
-            target_path: None, arguments: None, working_directory: None,
-            description: None, icon_location: None, creation_time: None,
-            modification_time: None, access_time: None, file_size: None,
-            file_attributes: None, file_attributes_label: None,
-            drive_type: None, drive_serial: None, volume_label: None,
-            local_base_path: None, network_share_name: None,
-            network_device_name: None, relative_path: None,
-            machine_id: None, tracker_machine_id: None,
-            tracker_mac_address: None, tracker_volume_droid: None,
-            tracker_file_droid: None, darwin_app_id: None,
-            known_folder_id: None, environment_variable_path: None,
-            reporter_program_name: None, header_flags: None,
+            target_path: None,
+            arguments: None,
+            working_directory: None,
+            description: None,
+            icon_location: None,
+            creation_time: None,
+            modification_time: None,
+            access_time: None,
+            file_size: None,
+            file_attributes: None,
+            file_attributes_label: None,
+            drive_type: None,
+            drive_serial: None,
+            volume_label: None,
+            local_base_path: None,
+            network_share_name: None,
+            network_device_name: None,
+            relative_path: None,
+            machine_id: None,
+            tracker_machine_id: None,
+            tracker_mac_address: None,
+            tracker_volume_droid: None,
+            tracker_file_droid: None,
+            darwin_app_id: None,
+            known_folder_id: None,
+            environment_variable_path: None,
+            reporter_program_name: None,
+            header_flags: None,
             link_clsid: None,
         };
         parse_extra_data(&block, 0, &mut entry);
 
         assert_eq!(entry.tracker_machine_id.as_deref(), Some("WORKSTATION1"));
-        assert_eq!(entry.tracker_mac_address.as_deref(), Some("AA:BB:CC:DD:EE:FF"));
+        assert_eq!(
+            entry.tracker_mac_address.as_deref(),
+            Some("AA:BB:CC:DD:EE:FF")
+        );
         assert_eq!(entry.machine_id.as_deref(), Some("WORKSTATION1"));
     }
 
@@ -563,11 +650,8 @@ mod tests {
     #[test]
     fn format_guid_produces_standard_format() {
         let guid_bytes: [u8; 16] = [
-            0x01, 0x14, 0x02, 0x00,
-            0x00, 0x00,
-            0x00, 0x00,
-            0xC0, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x46,
+            0x01, 0x14, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x46,
         ];
         let s = format_guid(&guid_bytes);
         assert_eq!(s, "{00021401-0000-0000-C000-000000000046}");

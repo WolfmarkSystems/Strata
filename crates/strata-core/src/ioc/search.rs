@@ -192,10 +192,7 @@ impl IocSearcher {
         for a in artifacts {
             for (field, value) in &a.data {
                 patterns.scan(value, |ioc_type, matched| {
-                    if seen
-                        .insert((ioc_type, matched.to_string()), ())
-                        .is_none()
-                    {
+                    if seen.insert((ioc_type, matched.to_string()), ()).is_none() {
                         out.push(Ioc {
                             ioc_type,
                             value: matched.to_string(),
@@ -283,7 +280,9 @@ fn is_ipv4(s: &str) -> bool {
         return false;
     }
     parts.iter().all(|p| {
-        !p.is_empty() && p.len() <= 3 && p.chars().all(|c| c.is_ascii_digit())
+        !p.is_empty()
+            && p.len() <= 3
+            && p.chars().all(|c| c.is_ascii_digit())
             && p.parse::<u16>().map(|n| n <= 255).unwrap_or(false)
     })
 }
@@ -292,13 +291,18 @@ fn is_domain(s: &str) -> bool {
     if !s.contains('.') || s.contains(' ') {
         return false;
     }
-    if s.chars().next().map(|c| !c.is_ascii_alphanumeric()).unwrap_or(true) {
+    if s.chars()
+        .next()
+        .map(|c| !c.is_ascii_alphanumeric())
+        .unwrap_or(true)
+    {
         return false;
     }
-    s.split('.')
-        .all(|label| !label.is_empty() && label.len() <= 63 && label
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-'))
+    s.split('.').all(|label| {
+        !label.is_empty()
+            && label.len() <= 63
+            && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+    })
 }
 
 /// Compiled regex pattern battery for extraction mode.
@@ -467,10 +471,7 @@ mod tests {
         a.add_field("detail", "reach out to https://malicious.test/payload");
         a.add_field("note", "also seen at https://malicious.test/payload");
         let iocs = IocSearcher::extract_from_artifacts(&[a]);
-        let urls: Vec<&Ioc> = iocs
-            .iter()
-            .filter(|i| i.ioc_type == IocType::Url)
-            .collect();
+        let urls: Vec<&Ioc> = iocs.iter().filter(|i| i.ioc_type == IocType::Url).collect();
         assert_eq!(urls.len(), 1);
         assert_eq!(urls[0].value, "https://malicious.test/payload");
     }
@@ -497,7 +498,10 @@ mod tests {
 
     #[test]
     fn default_confidence_ranks_hashes_highest() {
-        assert!(default_confidence(IocType::FileHash(HashType::Sha256)) > default_confidence(IocType::Domain));
+        assert!(
+            default_confidence(IocType::FileHash(HashType::Sha256))
+                > default_confidence(IocType::Domain)
+        );
         assert!(default_confidence(IocType::Username) < default_confidence(IocType::IpAddress));
     }
 }

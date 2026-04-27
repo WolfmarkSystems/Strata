@@ -238,10 +238,7 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                         if ui.button("Review Image").clicked() {
                             state.log_action(
                                 "CSAM_IMAGE_REVIEW",
-                                &format!(
-                                    "hit_id={} path={} sha256={}",
-                                    selected_id, path, sha256,
-                                ),
+                                &format!("hit_id={} path={} sha256={}", selected_id, path, sha256,),
                             );
                         }
                     });

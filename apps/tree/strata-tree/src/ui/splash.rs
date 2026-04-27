@@ -246,8 +246,14 @@ pub fn draw_chevron_stack(painter: &egui::Painter, rect: egui::Rect) {
     );
 
     // ── Gap 1 (dark line) ──────────────────────────────────────────────
-    poly(&[(10.0, 26.0), (10.0, 29.0), (40.0, 45.0), (40.0, 42.0)], bg);
-    poly(&[(70.0, 26.0), (70.0, 29.0), (40.0, 45.0), (40.0, 42.0)], bg);
+    poly(
+        &[(10.0, 26.0), (10.0, 29.0), (40.0, 45.0), (40.0, 42.0)],
+        bg,
+    );
+    poly(
+        &[(70.0, 26.0), (70.0, 29.0), (40.0, 45.0), (40.0, 42.0)],
+        bg,
+    );
 
     // ── Layer 1 ────────────────────────────────────────────────────────
     poly(
@@ -260,8 +266,14 @@ pub fn draw_chevron_stack(painter: &egui::Painter, rect: egui::Rect) {
     );
 
     // ── Gap 2 ──────────────────────────────────────────────────────────
-    poly(&[(10.0, 37.0), (10.0, 40.0), (40.0, 56.0), (40.0, 53.0)], bg);
-    poly(&[(70.0, 37.0), (70.0, 40.0), (40.0, 56.0), (40.0, 53.0)], bg);
+    poly(
+        &[(10.0, 37.0), (10.0, 40.0), (40.0, 56.0), (40.0, 53.0)],
+        bg,
+    );
+    poly(
+        &[(70.0, 37.0), (70.0, 40.0), (40.0, 56.0), (40.0, 53.0)],
+        bg,
+    );
 
     // ── Layer 2 ────────────────────────────────────────────────────────
     poly(
@@ -274,8 +286,14 @@ pub fn draw_chevron_stack(painter: &egui::Painter, rect: egui::Rect) {
     );
 
     // ── Gap 3 ──────────────────────────────────────────────────────────
-    poly(&[(10.0, 48.0), (10.0, 51.0), (40.0, 67.0), (40.0, 64.0)], bg);
-    poly(&[(70.0, 48.0), (70.0, 51.0), (40.0, 67.0), (40.0, 64.0)], bg);
+    poly(
+        &[(10.0, 48.0), (10.0, 51.0), (40.0, 67.0), (40.0, 64.0)],
+        bg,
+    );
+    poly(
+        &[(70.0, 48.0), (70.0, 51.0), (40.0, 67.0), (40.0, 64.0)],
+        bg,
+    );
 
     // ── Layer 3 (bottom) ───────────────────────────────────────────────
     poly(
@@ -290,14 +308,20 @@ pub fn draw_chevron_stack(painter: &egui::Painter, rect: egui::Rect) {
     // ── Top edge highlight (bright line along top diamond edges) ───────
     painter.add(egui::Shape::line(
         vec![p(10.0, 18.0), p(40.0, 2.0), p(70.0, 18.0)],
-        egui::Stroke::new(1.2 * sx.min(sy), egui::Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 140)),
+        egui::Stroke::new(
+            1.2 * sx.min(sy),
+            egui::Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 140),
+        ),
     ));
 
     // Subtle front edge highlights on each layer
     for &y in &[34.0, 45.0, 56.0, 67.0] {
         painter.line_segment(
             [p(10.0, y - 8.0), p(10.0, y)],
-            egui::Stroke::new(0.5 * sx.min(sy), egui::Color32::from_rgba_unmultiplied(0xb8, 0xc8, 0xd8, 50)),
+            egui::Stroke::new(
+                0.5 * sx.min(sy),
+                egui::Color32::from_rgba_unmultiplied(0xb8, 0xc8, 0xd8, 50),
+            ),
         );
     }
 }

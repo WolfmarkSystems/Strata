@@ -320,12 +320,7 @@ mod tests {
     use crate::hfsplus::HfsPlusRecordType;
     use std::io::Cursor;
 
-    fn mk_entry(
-        parent_cnid: u32,
-        name: &str,
-        cnid: u32,
-        is_dir: bool,
-    ) -> HfsPlusCatalogEntry {
+    fn mk_entry(parent_cnid: u32, name: &str, cnid: u32, is_dir: bool) -> HfsPlusCatalogEntry {
         HfsPlusCatalogEntry {
             record_type: if is_dir {
                 HfsPlusRecordType::CatalogFolder
@@ -508,7 +503,9 @@ mod tests {
         let entries = walker.list_dir("/").expect("list_dir");
         assert_eq!(entries.len(), 2);
         assert!(entries.iter().any(|e| e.name == "docs" && e.is_directory));
-        assert!(entries.iter().any(|e| e.name == "report.txt" && !e.is_directory));
+        assert!(entries
+            .iter()
+            .any(|e| e.name == "report.txt" && !e.is_directory));
     }
 
     #[test]

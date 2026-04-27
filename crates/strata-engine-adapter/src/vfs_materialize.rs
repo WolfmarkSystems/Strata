@@ -107,18 +107,18 @@ const TARGET_PATTERNS: &[&str] = &[
     // (MAX_TOTAL_BYTES) still protect against runaway materialization
     // — an APFS volume full of .mov files stops copying at the cap
     // with `hit_cap = true` surfaced in the report.
-    ".txt",    // plain-text notes, credentials, key material
-    ".pdf",    // scanned documents, printed evidence
-    ".jpg",    // photos (Apex EXIF relies on this)
+    ".txt", // plain-text notes, credentials, key material
+    ".pdf", // scanned documents, printed evidence
+    ".jpg", // photos (Apex EXIF relies on this)
     ".jpeg",
-    ".png",    // screenshots, iOS photo roll
-    ".heic",   // Apple photo default since iOS 11
-    ".mov",    // QuickTime video (iOS/macOS default)
-    ".mp4",    // mobile video
-    ".eml",    // email exports
-    ".mbox",   // Mail.app mailbox archives
-    ".ipa",    // iOS app packages
-    ".apk",    // Android app packages (paired with /data/app/)
+    ".png",  // screenshots, iOS photo roll
+    ".heic", // Apple photo default since iOS 11
+    ".mov",  // QuickTime video (iOS/macOS default)
+    ".mp4",  // mobile video
+    ".eml",  // email exports
+    ".mbox", // Mail.app mailbox archives
+    ".ipa",  // iOS app packages
+    ".apk",  // Android app packages (paired with /data/app/)
     // --- post-v16 Sprint 3 — close the loop on Trace + Chronicle
     // wiring against real Charlie. Sprint 3 wired BITS deep-parse
     // (qmgr0.dat / qmgr1.dat / qmgr.db) and XP recycler records
@@ -126,17 +126,17 @@ const TARGET_PATTERNS: &[&str] = &[
     // files as empty and the submodule parsers never see real
     // evidence — the wires pass unit tests but silent-no-op on
     // real cases.
-    "info2",         // XP recycler record blob (C:\RECYCLER\<SID>\INFO2)
-    "qmgr0.dat",     // BITS job queue (Win7–10 primary)
-    "qmgr1.dat",     // BITS job queue (Win7–10 rotation)
-    "qmgr.db",       // BITS job queue (Win11 SQLite replacement)
-    "pcaapplaunchdic.txt", // PCA launch dictionary (Win11 22H2+)
-    "pcageneraldb2.txt",   // PCA general database (Win11 22H2+)
+    "info2",                      // XP recycler record blob (C:\RECYCLER\<SID>\INFO2)
+    "qmgr0.dat",                  // BITS job queue (Win7–10 primary)
+    "qmgr1.dat",                  // BITS job queue (Win7–10 rotation)
+    "qmgr.db",                    // BITS job queue (Win11 SQLite replacement)
+    "pcaapplaunchdic.txt",        // PCA launch dictionary (Win11 22H2+)
+    "pcageneraldb2.txt",          // PCA general database (Win11 22H2+)
     "capabilityaccessmanager.db", // Win11 23H2+ CAM privacy audit
-    "/recycler/",    // XP recycler directory — ensures INFO2 path
-                     //   components are reached by the walker tree
-                     //   descent (Session-C $recycle.bin entry
-                     //   covered Vista+ only)
+    "/recycler/",                 // XP recycler directory — ensures INFO2 path
+                                  //   components are reached by the walker tree
+                                  //   descent (Session-C $recycle.bin entry
+                                  //   covered Vista+ only)
 ];
 
 /// Maximum file size to materialize (guards against accidentally
@@ -294,7 +294,9 @@ mod tests {
         assert!(is_target("/Users/alice/AppData/Roaming/.../qmgr1.dat"));
         assert!(is_target("/Windows/appcompat/pca/PcaAppLaunchDic.txt"));
         assert!(is_target("/Windows/appcompat/pca/PcaGeneralDb2.txt"));
-        assert!(is_target("/ProgramData/Microsoft/Windows/CapabilityAccessManager/CapabilityAccessManager.db"));
+        assert!(is_target(
+            "/ProgramData/Microsoft/Windows/CapabilityAccessManager/CapabilityAccessManager.db"
+        ));
     }
 
     #[test]
@@ -362,8 +364,7 @@ mod tests {
             b"regf\x00\x00\x00",
         )
         .expect("w");
-        std::fs::write(src.path().join("Windows/System32/config/random.bin"), b"x")
-            .expect("w");
+        std::fs::write(src.path().join("Windows/System32/config/random.bin"), b"x").expect("w");
 
         let vfs: Arc<dyn VirtualFilesystem> = Arc::new(HostVfs::new(src.path().to_path_buf()));
         let report = materialize_targets(&vfs, scratch.path()).expect("mat");

@@ -297,10 +297,9 @@ impl E01Image {
             .chunks
             .get(index as usize)
             .ok_or_else(|| EvidenceError::Other(format!("chunk index {index} out of range")))?;
-        let seg_mutex = self
-            .segment_files
-            .get(loc.segment_index)
-            .ok_or_else(|| EvidenceError::Other(format!("segment {} missing", loc.segment_index)))?;
+        let seg_mutex = self.segment_files.get(loc.segment_index).ok_or_else(|| {
+            EvidenceError::Other(format!("segment {} missing", loc.segment_index))
+        })?;
         let payload = {
             let mut guard = seg_mutex
                 .lock()
@@ -352,7 +351,11 @@ impl EvidenceImage for E01Image {
         meta.evidence_number = self.header.evidence_number.clone();
         meta.acquisition_date = self.header.acquisition_date;
         meta.acquisition_tool = self.header.acquisition_tool.clone();
-        meta.notes = self.header.notes.clone().or_else(|| self.header.description.clone());
+        meta.notes = self
+            .header
+            .notes
+            .clone()
+            .or_else(|| self.header.description.clone());
         meta.acquisition_hash_md5 = self.header.md5.clone();
         if let Some(sha1) = &self.header.sha1 {
             // Stored separately from SHA-256; we populate the SHA-256
@@ -415,10 +418,7 @@ impl EvidenceImage for E01Image {
     }
 
     fn warnings(&self) -> Vec<EvidenceWarning> {
-        self.warnings
-            .lock()
-            .map(|g| g.clone())
-            .unwrap_or_default()
+        self.warnings.lock().map(|g| g.clone()).unwrap_or_default()
     }
 }
 
@@ -539,11 +539,7 @@ fn walk_sections(
     Ok(())
 }
 
-fn read_section_header(
-    f: &mut File,
-    offset: u64,
-    len: u64,
-) -> EvidenceResult<Vec<String>> {
+fn read_section_header(f: &mut File, offset: u64, len: u64) -> EvidenceResult<Vec<String>> {
     f.seek(SeekFrom::Start(offset)).map_err(EvidenceError::Io)?;
     let mut compressed = vec![0u8; len as usize];
     f.read_exact(&mut compressed).map_err(EvidenceError::Io)?;
@@ -551,7 +547,10 @@ fn read_section_header(
     let text = String::from_utf8_lossy(&decompressed).into_owned();
     // Header is a CRLF-delimited, tab-separated category/value table.
     // We return the raw lines; the merge_header below interprets them.
-    Ok(text.split('\n').map(|s| s.trim_end_matches('\r').to_string()).collect())
+    Ok(text
+        .split('\n')
+        .map(|s| s.trim_end_matches('\r').to_string())
+        .collect())
 }
 
 fn merge_header(header: &mut EwfHeader, lines: &[String]) {
@@ -765,10 +764,7 @@ fn hex_encode(bytes: &[u8]) -> String {
 /// Find every `.Enn` sibling (E01, E02, …, EAA, EAB, … under the EWF
 /// naming convention). Callers pass the .E01 path.
 fn discover_ewf_siblings(primary: &Path) -> EvidenceResult<Vec<PathBuf>> {
-    let name = primary
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or("");
+    let name = primary.file_name().and_then(|s| s.to_str()).unwrap_or("");
     let parent = primary.parent().unwrap_or_else(|| Path::new(""));
     let stem_dot = name.rfind('.');
     let Some(idx) = stem_dot else {
@@ -1057,9 +1053,14 @@ mod tests {
         // Probe 1 KB into the trimmed zone.
         let probe = ceiling + 1024;
         let mut buf = vec![0u8; 4096];
-        let n = img.read_at(probe, &mut buf).expect("read succeeds with zeros");
+        let n = img
+            .read_at(probe, &mut buf)
+            .expect("read succeeds with zeros");
         // Read should succeed (not return an error) and yield zeros.
-        assert!(n > 0, "read_at past ceiling should still return bytes (zeros)");
+        assert!(
+            n > 0,
+            "read_at past ceiling should still return bytes (zeros)"
+        );
         assert!(
             buf[..n].iter().all(|b| *b == 0),
             "read past ceiling must be zero-filled"

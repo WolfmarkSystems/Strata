@@ -135,7 +135,11 @@ pub fn indicator_from_installation(
     installation_time: Option<DateTime<Utc>>,
     execution_times: Vec<DateTime<Utc>>,
 ) -> AndroidWipingIndicator {
-    let confidence = if execution_times.is_empty() { 0.55 } else { 0.85 };
+    let confidence = if execution_times.is_empty() {
+        0.55
+    } else {
+        0.85
+    };
     AndroidWipingIndicator {
         indicator_type: "installed_wiper".into(),
         wiper_app_detected: Some(package.to_string()),

@@ -18,7 +18,9 @@ fn index_throughput_smoke() {
     for i in 0..count {
         let sub = evidence_dir.path().join(format!("d{}", i % 10));
         fs::create_dir_all(&sub).expect("mkdir");
-        let body: Vec<u8> = (0..8192u32).map(|j| ((i as u32 * 31 + j) & 0xFF) as u8).collect();
+        let body: Vec<u8> = (0..8192u32)
+            .map(|j| ((i as u32 * 31 + j) & 0xFF) as u8)
+            .collect();
         fs::write(sub.join(format!("f{}.bin", i)), &body).expect("write");
     }
     let db_dir = tempfile::tempdir().expect("dbdir");

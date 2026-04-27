@@ -18,9 +18,12 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
                 let has_hash_match = file.as_ref().and_then(|f| f.hash_flag.as_ref()).is_some();
-                let has_knowledge = file.as_ref().map(|f| {
-                    strata_core::knowledge_bank::lookup_knowledge(&f.name, &f.path).is_some()
-                }).unwrap_or(false);
+                let has_knowledge = file
+                    .as_ref()
+                    .map(|f| {
+                        strata_core::knowledge_bank::lookup_knowledge(&f.name, &f.path).is_some()
+                    })
+                    .unwrap_or(false);
                 let mut tab_labels: Vec<&str> = vec!["META", "HEX", "TEXT", "IMAGE"];
                 if has_knowledge {
                     tab_labels.push("DETAILS");
@@ -46,7 +49,11 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                         t.muted
                     };
                     let pill_bg = if active {
-                        if is_hash_tab { hash_tab_color } else { t.active }
+                        if is_hash_tab {
+                            hash_tab_color
+                        } else {
+                            t.active
+                        }
                     } else {
                         egui::Color32::TRANSPARENT
                     };
@@ -117,7 +124,10 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
     if has_hash_match_flag {
         content_tabs.push("HASH");
     }
-    let active_label = content_tabs.get(state.preview_tab as usize).copied().unwrap_or("META");
+    let active_label = content_tabs
+        .get(state.preview_tab as usize)
+        .copied()
+        .unwrap_or("META");
 
     egui::ScrollArea::vertical().show(ui, |ui| {
         egui::Frame::none()
@@ -1296,17 +1306,23 @@ fn render_hash_match(
     // Banner
     egui::Frame::none()
         .fill(egui::Color32::from_rgba_unmultiplied(
-            banner_color.r(), banner_color.g(), banner_color.b(), 30,
+            banner_color.r(),
+            banner_color.g(),
+            banner_color.b(),
+            30,
         ))
         .stroke(egui::Stroke::new(1.0, banner_color))
         .inner_margin(egui::Margin::symmetric(12.0, 8.0))
         .rounding(6.0)
         .show(ui, |ui| {
             ui.label(
-                egui::RichText::new(format!("\u{26A0} HASH MATCH DETECTED — {}", flag.to_uppercase()))
-                    .color(banner_color)
-                    .size(12.0)
-                    .strong(),
+                egui::RichText::new(format!(
+                    "\u{26A0} HASH MATCH DETECTED — {}",
+                    flag.to_uppercase()
+                ))
+                .color(banner_color)
+                .size(12.0)
+                .strong(),
             );
         });
 
@@ -1369,11 +1385,13 @@ fn render_hash_match(
                 tag: flag.to_uppercase(),
                 examiner,
                 note: format!("Hash match: {}", flag),
-                created_utc: chrono::Utc::now()
-                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                created_utc: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             });
             state.mark_case_dirty();
-            state.log_action("HASH_MATCH_BOOKMARK", &format!("file={} flag={}", f.path, flag));
+            state.log_action(
+                "HASH_MATCH_BOOKMARK",
+                &format!("file={} flag={}", f.path, flag),
+            );
         }
         if ui.button("Add to Report").clicked() {
             state.bookmarks.push(crate::state::Bookmark {
@@ -1383,11 +1401,13 @@ fn render_hash_match(
                 tag: "REPORT".to_string(),
                 examiner: state.examiner_name.clone(),
                 note: format!("Hash match: {} — added to report", flag),
-                created_utc: chrono::Utc::now()
-                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                created_utc: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             });
             state.mark_case_dirty();
-            state.log_action("HASH_MATCH_REPORT", &format!("file={} flag={}", f.path, flag));
+            state.log_action(
+                "HASH_MATCH_REPORT",
+                &format!("file={} flag={}", f.path, flag),
+            );
         }
     });
 }
@@ -1497,23 +1517,14 @@ fn render_details_tab(
                     .rounding(3.0)
                     .inner_margin(egui::Margin::symmetric(5.0, 2.0))
                     .show(ui, |ui| {
-                        ui.label(
-                            egui::RichText::new(*artifact)
-                                .color(t.muted)
-                                .size(8.5),
-                        );
+                        ui.label(egui::RichText::new(*artifact).color(t.muted).size(8.5));
                     });
             }
         });
     }
 }
 
-fn details_section(
-    ui: &mut egui::Ui,
-    t: &crate::theme::StrataTheme,
-    heading: &str,
-    body: &str,
-) {
+fn details_section(ui: &mut egui::Ui, t: &crate::theme::StrataTheme, heading: &str, body: &str) {
     ui.label(
         egui::RichText::new(heading)
             .color(t.active)
@@ -1521,11 +1532,7 @@ fn details_section(
             .strong(),
     );
     ui.add_space(2.0);
-    ui.label(
-        egui::RichText::new(body)
-            .color(t.secondary)
-            .size(9.5),
-    );
+    ui.label(egui::RichText::new(body).color(t.secondary).size(9.5));
     ui.add_space(4.0);
     ui.separator();
     ui.add_space(4.0);

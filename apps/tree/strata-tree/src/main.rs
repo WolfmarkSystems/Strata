@@ -90,55 +90,147 @@ fn load_icon() -> egui::IconData {
     };
 
     // Draw a filled triangle using scanlines
-    let fill_tri = |set: &mut dyn FnMut(i32, i32, &[u8; 4]),
-                    pts: [(f32, f32); 3],
-                    color: &[u8; 4]| {
-        let min_y = pts.iter().map(|p| p.1 as i32).min().unwrap().max(0);
-        let max_y = pts.iter().map(|p| p.1 as i32).max().unwrap().min(size as i32 - 1);
-        for y in min_y..=max_y {
-            let yf = y as f32 + 0.5;
-            let mut xs = Vec::new();
-            for i in 0..3 {
-                let (x0, y0) = pts[i];
-                let (x1, y1) = pts[(i + 1) % 3];
-                if (y0 <= yf && y1 > yf) || (y1 <= yf && y0 > yf) {
-                    let t = (yf - y0) / (y1 - y0);
-                    xs.push((x0 + t * (x1 - x0)) as i32);
+    let fill_tri =
+        |set: &mut dyn FnMut(i32, i32, &[u8; 4]), pts: [(f32, f32); 3], color: &[u8; 4]| {
+            let min_y = pts.iter().map(|p| p.1 as i32).min().unwrap().max(0);
+            let max_y = pts
+                .iter()
+                .map(|p| p.1 as i32)
+                .max()
+                .unwrap()
+                .min(size as i32 - 1);
+            for y in min_y..=max_y {
+                let yf = y as f32 + 0.5;
+                let mut xs = Vec::new();
+                for i in 0..3 {
+                    let (x0, y0) = pts[i];
+                    let (x1, y1) = pts[(i + 1) % 3];
+                    if (y0 <= yf && y1 > yf) || (y1 <= yf && y0 > yf) {
+                        let t = (yf - y0) / (y1 - y0);
+                        xs.push((x0 + t * (x1 - x0)) as i32);
+                    }
+                }
+                if xs.len() >= 2 {
+                    xs.sort();
+                    for x in xs[0]..=*xs.last().unwrap() {
+                        set(x, y, color);
+                    }
                 }
             }
-            if xs.len() >= 2 {
-                xs.sort();
-                for x in xs[0]..=*xs.last().unwrap() {
-                    set(x, y, color);
-                }
-            }
-        }
-    };
+        };
 
     // Scale factor: 28 -> 32, offset 2
     let si = |v: f32| v * 32.0 / 28.0;
 
     // Left ear
-    fill_tri(&mut set, [(si(4.0), si(14.0)), (si(7.0), si(3.0)), (si(11.0), si(11.0))], &silver);
-    fill_tri(&mut set, [(si(5.0), si(13.0)), (si(7.0), si(5.0)), (si(10.0), si(11.0))], &bg);
+    fill_tri(
+        &mut set,
+        [
+            (si(4.0), si(14.0)),
+            (si(7.0), si(3.0)),
+            (si(11.0), si(11.0)),
+        ],
+        &silver,
+    );
+    fill_tri(
+        &mut set,
+        [
+            (si(5.0), si(13.0)),
+            (si(7.0), si(5.0)),
+            (si(10.0), si(11.0)),
+        ],
+        &bg,
+    );
     // Right ear
-    fill_tri(&mut set, [(si(24.0), si(14.0)), (si(21.0), si(3.0)), (si(17.0), si(11.0))], &silver);
-    fill_tri(&mut set, [(si(23.0), si(13.0)), (si(21.0), si(5.0)), (si(18.0), si(11.0))], &bg);
+    fill_tri(
+        &mut set,
+        [
+            (si(24.0), si(14.0)),
+            (si(21.0), si(3.0)),
+            (si(17.0), si(11.0)),
+        ],
+        &silver,
+    );
+    fill_tri(
+        &mut set,
+        [
+            (si(23.0), si(13.0)),
+            (si(21.0), si(5.0)),
+            (si(18.0), si(11.0)),
+        ],
+        &bg,
+    );
 
     // Head (simplified: fill a large diamond area)
-    fill_tri(&mut set, [(si(14.0), si(2.0)), (si(24.0), si(15.0)), (si(14.0), si(26.0))], &dark);
-    fill_tri(&mut set, [(si(14.0), si(2.0)), (si(4.0), si(15.0)), (si(14.0), si(26.0))], &dark);
+    fill_tri(
+        &mut set,
+        [
+            (si(14.0), si(2.0)),
+            (si(24.0), si(15.0)),
+            (si(14.0), si(26.0)),
+        ],
+        &dark,
+    );
+    fill_tri(
+        &mut set,
+        [
+            (si(14.0), si(2.0)),
+            (si(4.0), si(15.0)),
+            (si(14.0), si(26.0)),
+        ],
+        &dark,
+    );
 
     // Forehead plate
-    fill_tri(&mut set, [(si(14.0), si(4.0)), (si(18.0), si(8.0)), (si(10.0), si(8.0))], &steel);
-    fill_tri(&mut set, [(si(10.0), si(8.0)), (si(18.0), si(8.0)), (si(14.0), si(11.0))], &steel);
+    fill_tri(
+        &mut set,
+        [
+            (si(14.0), si(4.0)),
+            (si(18.0), si(8.0)),
+            (si(10.0), si(8.0)),
+        ],
+        &steel,
+    );
+    fill_tri(
+        &mut set,
+        [
+            (si(10.0), si(8.0)),
+            (si(18.0), si(8.0)),
+            (si(14.0), si(11.0)),
+        ],
+        &steel,
+    );
 
     // Eyes (bright white spots)
-    fill_tri(&mut set, [(si(9.0), si(11.0)), (si(11.0), si(10.5)), (si(10.0), si(13.0))], &eye);
-    fill_tri(&mut set, [(si(19.0), si(11.0)), (si(17.0), si(10.5)), (si(18.0), si(13.0))], &eye);
+    fill_tri(
+        &mut set,
+        [
+            (si(9.0), si(11.0)),
+            (si(11.0), si(10.5)),
+            (si(10.0), si(13.0)),
+        ],
+        &eye,
+    );
+    fill_tri(
+        &mut set,
+        [
+            (si(19.0), si(11.0)),
+            (si(17.0), si(10.5)),
+            (si(18.0), si(13.0)),
+        ],
+        &eye,
+    );
 
     // Nose
-    fill_tri(&mut set, [(si(13.5), si(15.0)), (si(14.5), si(15.0)), (si(14.0), si(17.0))], &steel);
+    fill_tri(
+        &mut set,
+        [
+            (si(13.5), si(15.0)),
+            (si(14.5), si(15.0)),
+            (si(14.0), si(17.0)),
+        ],
+        &steel,
+    );
 
     egui::IconData {
         rgba,

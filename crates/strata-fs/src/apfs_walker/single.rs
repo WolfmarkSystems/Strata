@@ -45,9 +45,7 @@ use std::sync::{Arc, Mutex};
 use apfs::{ApfsVolume, EntryKind as ApfsEntryKind};
 use strata_evidence::EvidenceImage;
 
-use super::{
-    detect_fusion, probe_first_volume_encryption, read_container_superblock,
-};
+use super::{detect_fusion, probe_first_volume_encryption, read_container_superblock};
 use crate::ntfs_walker::PartitionReader;
 use crate::vfs::{
     VfsAttributes, VfsEntry, VfsError, VfsMetadata, VfsResult, VfsSpecific, VirtualFilesystem,
@@ -63,7 +61,6 @@ pub struct ApfsSingleWalker {
     /// Volume label from the ApfsSuperblock. Informational;
     /// surfaced via `fs_label()` for CLI / UI consumption. Not
     /// used for path resolution.
-    #[allow(dead_code)]
     volume_label: String,
 }
 
@@ -93,28 +90,24 @@ impl ApfsSingleWalker {
         // Step 2: encryption probe against the first volume.
         // Reader state already advanced by the NxSuperblock read;
         // probe_first_volume_encryption seeks as needed.
-        let is_encrypted =
-            probe_first_volume_encryption(&mut reader, &nxsb).unwrap_or_else(|e| {
-                // Encryption misdetection is forensically less
-                // dangerous than refusing to walk a valid volume.
-                // Log the probe failure and proceed assuming
-                // unencrypted. The per-entry `encrypted = false`
-                // result tells the examiner to treat the volume
-                // flag as "unknown."
-                tracing::warn!(
-                    "apfs encryption probe failed, assuming unencrypted: {e}"
-                );
-                false
-            });
+        let is_encrypted = probe_first_volume_encryption(&mut reader, &nxsb).unwrap_or_else(|e| {
+            // Encryption misdetection is forensically less
+            // dangerous than refusing to walk a valid volume.
+            // Log the probe failure and proceed assuming
+            // unencrypted. The per-entry `encrypted = false`
+            // result tells the examiner to treat the volume
+            // flag as "unknown."
+            tracing::warn!("apfs encryption probe failed, assuming unencrypted: {e}");
+            false
+        });
 
         // Step 3: hand the reader to the external crate. Seek back
         // to byte 0 because ApfsVolume::open reads the container
         // superblock itself (ignoring our probe result — that's
         // fine, the reads are idempotent).
         reader.seek(SeekFrom::Start(0)).map_err(VfsError::Io)?;
-        let vol = ApfsVolume::open(reader).map_err(|e| {
-            VfsError::Other(format!("apfs ApfsVolume::open: {e:?}"))
-        })?;
+        let vol = ApfsVolume::open(reader)
+            .map_err(|e| VfsError::Other(format!("apfs ApfsVolume::open: {e:?}")))?;
         let volume_label = vol.volume_info().name.clone();
 
         Ok(Self {
@@ -134,12 +127,7 @@ impl ApfsSingleWalker {
         partition_size: u64,
     ) -> VfsResult<Self> {
         let sector_size = image.sector_size().max(512) as usize;
-        let reader = PartitionReader::new(
-            image,
-            partition_offset,
-            partition_size,
-            sector_size,
-        );
+        let reader = PartitionReader::new(image, partition_offset, partition_size, sector_size);
         Self::open(reader)
     }
 
@@ -302,14 +290,10 @@ mod tests {
             eprintln!("SKIP: apfs_small.img not committed");
             return None;
         }
-        let image: Arc<dyn EvidenceImage> = Arc::new(
-            RawImage::open(&path).expect("open raw image over fixture"),
-        );
+        let image: Arc<dyn EvidenceImage> =
+            Arc::new(RawImage::open(&path).expect("open raw image over fixture"));
         let size = image.size();
-        Some(
-            ApfsSingleWalker::open_on_partition(image, 0, size)
-                .expect("open walker on fixture"),
-        )
+        Some(ApfsSingleWalker::open_on_partition(image, 0, size).expect("open walker on fixture"))
     }
 
     // ── Send/Sync probe ────────────────────────────────────────
@@ -390,7 +374,9 @@ mod tests {
         let Some(walker) = open_walker_on_fixture() else {
             return;
         };
-        let d3 = walker.list_dir("/dir1/dir2/dir3").expect("list_dir depth 3");
+        let d3 = walker
+            .list_dir("/dir1/dir2/dir3")
+            .expect("list_dir depth 3");
         assert!(
             d3.iter().any(|e| e.name == "deep.txt"),
             "expected deep.txt at /dir1/dir2/dir3, got {:?}",
@@ -473,7 +459,10 @@ mod tests {
         let entries = walker.list_dir("/").expect("list /");
         for e in &entries {
             match &e.fs_specific {
-                VfsSpecific::Apfs { object_id, snapshot } => {
+                VfsSpecific::Apfs {
+                    object_id,
+                    snapshot,
+                } => {
                     assert!(*object_id > 0, "object_id should be populated");
                     assert!(
                         snapshot.is_none(),

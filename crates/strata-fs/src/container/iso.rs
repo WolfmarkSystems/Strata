@@ -112,13 +112,22 @@ impl IsoContainer {
             }
 
             let entry = &data[offset..offset + entry_len];
+            if entry.len() < 33 {
+                return Err(ForensicError::InvalidImageFormat);
+            }
             let name_len = entry[32] as usize;
             let flags = entry[25];
             let is_dir = (flags & 2) != 0;
-            let lba = u32::from_le_bytes(entry[2..6].try_into().unwrap());
-            let size = u32::from_le_bytes(entry[10..14].try_into().unwrap());
+            let lba = read_u32_le(entry, 2)?;
+            let size = read_u32_le(entry, 10)?;
 
-            let name_bytes = &entry[33..33 + name_len];
+            let name_end = 33usize
+                .checked_add(name_len)
+                .ok_or(ForensicError::InvalidImageFormat)?;
+            if name_end > entry.len() {
+                return Err(ForensicError::InvalidImageFormat);
+            }
+            let name_bytes = &entry[33..name_end];
             let name = if name_bytes == [0] {
                 ".".to_string()
             } else if name_bytes == [1] {
@@ -152,6 +161,15 @@ fn read_at(file: &File, offset: u64, buf: &mut [u8]) -> Result<usize, std::io::E
     {
         file.seek_read(buf, offset)
     }
+}
+
+fn read_u32_le(buf: &[u8], offset: usize) -> Result<u32, ForensicError> {
+    let bytes: [u8; 4] = buf
+        .get(offset..offset + 4)
+        .ok_or(ForensicError::InvalidImageFormat)?
+        .try_into()
+        .map_err(|_| ForensicError::InvalidImageFormat)?;
+    Ok(u32::from_le_bytes(bytes))
 }
 
 impl EvidenceContainerRO for IsoContainer {

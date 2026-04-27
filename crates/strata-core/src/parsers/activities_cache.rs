@@ -156,7 +156,10 @@ impl ArtifactParser for ActivitiesCacheParser {
                         .unwrap_or("Unknown");
 
                     let app_display = row.app_id.as_deref().unwrap_or("unknown");
-                    let mut desc = format!("Timeline: {} [{}] ({})", app_display, type_name, status_name);
+                    let mut desc = format!(
+                        "Timeline: {} [{}] ({})",
+                        app_display, type_name, status_name
+                    );
                     if let Some(ref text) = row.display_text {
                         if !text.is_empty() {
                             desc.push_str(&format!(" — {}", text));

@@ -50,30 +50,18 @@ pub struct ReportSkeletonArgs {
 /// report is generated — the legacy implementation produced
 /// empty reports that silently misled examiners.
 pub fn execute(_args: ReportSkeletonArgs) {
-    eprintln!(
-        "strata report-skeleton has been retired (Sprint 6.5)."
-    );
+    eprintln!("strata report-skeleton has been retired (Sprint 6.5).");
     eprintln!();
-    eprintln!(
-        "The legacy command queried ./forensic.db while `strata ingest run`"
-    );
-    eprintln!(
-        "writes <case-dir>/artifacts.sqlite. The two schemas never intersected,"
-    );
-    eprintln!(
-        "so report-skeleton silently produced all-zero reports on every case."
-    );
+    eprintln!("The legacy command queried ./forensic.db while `strata ingest run`");
+    eprintln!("writes <case-dir>/artifacts.sqlite. The two schemas never intersected,");
+    eprintln!("so report-skeleton silently produced all-zero reports on every case.");
     eprintln!();
     eprintln!("Use the replacement command:");
     eprintln!();
     eprintln!("    strata report --case-dir <case-dir>");
     eprintln!();
-    eprintln!(
-        "It reads artifacts.sqlite + case-metadata.json directly and renders"
-    );
-    eprintln!(
-        "a court-ready markdown report with Findings, MITRE ATT&CK coverage,"
-    );
+    eprintln!("It reads artifacts.sqlite + case-metadata.json directly and renders");
+    eprintln!("a court-ready markdown report with Findings, MITRE ATT&CK coverage,");
     eprintln!("Chain of Custody, and Examiner Certification sections.");
     std::process::exit(2);
 }

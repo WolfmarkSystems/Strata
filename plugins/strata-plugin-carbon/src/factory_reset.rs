@@ -84,7 +84,8 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
     };
     let mut caveats = vec![
         "Artifact availability depends on OEM and Android version".to_string(),
-        "Physical / FFS extraction required for most reset indicators; logical may miss them".to_string(),
+        "Physical / FFS extraction required for most reset indicators; logical may miss them"
+            .to_string(),
         "Some OEMs clear bootstat on reset — absence is inconclusive".to_string(),
     ];
     if name == "device_policies.xml" {
@@ -159,10 +160,18 @@ mod tests {
 
     #[test]
     fn is_factory_reset_path_matches_bootstat_file() {
-        assert!(is_factory_reset_path(Path::new("/data/misc/bootstat/factory_reset")));
-        assert!(is_factory_reset_path(Path::new("/data/misc/bootstat/persistent_boot_stat")));
-        assert!(is_factory_reset_path(Path::new("/data/system/device_policies.xml")));
-        assert!(!is_factory_reset_path(Path::new("/data/misc/other/factory_reset")));
+        assert!(is_factory_reset_path(Path::new(
+            "/data/misc/bootstat/factory_reset"
+        )));
+        assert!(is_factory_reset_path(Path::new(
+            "/data/misc/bootstat/persistent_boot_stat"
+        )));
+        assert!(is_factory_reset_path(Path::new(
+            "/data/system/device_policies.xml"
+        )));
+        assert!(!is_factory_reset_path(Path::new(
+            "/data/misc/other/factory_reset"
+        )));
         assert!(!is_factory_reset_path(Path::new("/tmp/random")));
     }
 
@@ -195,17 +204,27 @@ mod tests {
         )
         .expect("w");
         let out = scan(&path);
-        assert!(out
-            .iter()
-            .any(|a| a.data.get("caveat_extra").map(|s| s.contains("last_wipe_time"))
-                .unwrap_or(false)));
+        assert!(out.iter().any(|a| a
+            .data
+            .get("caveat_extra")
+            .map(|s| s.contains("last_wipe_time"))
+            .unwrap_or(false)));
     }
 
     #[test]
     fn oem_hint_recognises_samsung_and_pixel_path_fragments() {
-        assert_eq!(oem_hint(Path::new("/data/samsung/bootstat/factory_reset")), "Samsung");
-        assert_eq!(oem_hint(Path::new("/data/google/pixel/bootstat/factory_reset")), "Pixel");
-        assert_eq!(oem_hint(Path::new("/data/misc/bootstat/factory_reset")), "Unknown");
+        assert_eq!(
+            oem_hint(Path::new("/data/samsung/bootstat/factory_reset")),
+            "Samsung"
+        );
+        assert_eq!(
+            oem_hint(Path::new("/data/google/pixel/bootstat/factory_reset")),
+            "Pixel"
+        );
+        assert_eq!(
+            oem_hint(Path::new("/data/misc/bootstat/factory_reset")),
+            "Unknown"
+        );
     }
 
     #[test]

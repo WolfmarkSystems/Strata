@@ -40,7 +40,10 @@ impl AIActionType {
     /// Used to flag `is_suspicious=true` when the action is likely
     /// counter-surveillance / evidence-tampering adjacent.
     pub fn is_manipulation(&self) -> bool {
-        matches!(self, Self::BlurBackground | Self::EraseObjects | Self::RemoveBackground)
+        matches!(
+            self,
+            Self::BlurBackground | Self::EraseObjects | Self::RemoveBackground
+        )
     }
 }
 
@@ -109,10 +112,22 @@ mod tests {
 
     #[test]
     fn parses_canonical_action_names() {
-        assert_eq!(parse_action_name("VisualSearch"), AIActionType::VisualSearch);
-        assert_eq!(parse_action_name("blur_background"), AIActionType::BlurBackground);
-        assert_eq!(parse_action_name("generativeerase"), AIActionType::EraseObjects);
-        assert_eq!(parse_action_name("RemoveBackground"), AIActionType::RemoveBackground);
+        assert_eq!(
+            parse_action_name("VisualSearch"),
+            AIActionType::VisualSearch
+        );
+        assert_eq!(
+            parse_action_name("blur_background"),
+            AIActionType::BlurBackground
+        );
+        assert_eq!(
+            parse_action_name("generativeerase"),
+            AIActionType::EraseObjects
+        );
+        assert_eq!(
+            parse_action_name("RemoveBackground"),
+            AIActionType::RemoveBackground
+        );
         assert_eq!(parse_action_name("Unknown"), AIActionType::Other);
     }
 
@@ -145,7 +160,10 @@ mod tests {
         )
         .expect("built");
         assert_eq!(r.action_type, AIActionType::BlurBackground);
-        assert_eq!(r.source_file_path.as_deref(), Some("C:\\Users\\alice\\photo.jpg"));
+        assert_eq!(
+            r.source_file_path.as_deref(),
+            Some("C:\\Users\\alice\\photo.jpg")
+        );
     }
 
     #[test]

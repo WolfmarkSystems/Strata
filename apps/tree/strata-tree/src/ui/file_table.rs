@@ -231,14 +231,22 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                         for r in lo..=hi {
                                             if let Some(idx) = state.filtered_file_indices.get(r) {
                                                 if let Some(entry) = state.file_index.get(*idx) {
-                                                    state.file_table_state.selected_ids.push(entry.id.clone());
+                                                    state
+                                                        .file_table_state
+                                                        .selected_ids
+                                                        .push(entry.id.clone());
                                                 }
                                             }
                                         }
                                     }
                                 } else if modifiers.command {
                                     // Ctrl+Click: toggle individual
-                                    if let Some(pos) = state.file_table_state.selected_ids.iter().position(|id| id == &f.id) {
+                                    if let Some(pos) = state
+                                        .file_table_state
+                                        .selected_ids
+                                        .iter()
+                                        .position(|id| id == &f.id)
+                                    {
                                         state.file_table_state.selected_ids.remove(pos);
                                     } else {
                                         state.file_table_state.selected_ids.push(f.id.clone());
@@ -270,16 +278,23 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                 let multi_count = state.file_table_state.selected_ids.len();
                                 if multi_count > 1 {
                                     ui.label(
-                                        egui::RichText::new(format!("{} files selected", multi_count))
-                                            .strong()
-                                            .size(10.0),
+                                        egui::RichText::new(format!(
+                                            "{} files selected",
+                                            multi_count
+                                        ))
+                                        .strong()
+                                        .size(10.0),
                                     );
                                     ui.separator();
                                     if ui.button("Tag Selected as Notable").clicked() {
                                         let ids = state.file_table_state.selected_ids.clone();
                                         let examiner = state.examiner_name.clone();
                                         for fid in &ids {
-                                            if state.bookmarks.iter().all(|b| b.file_id.as_deref() != Some(fid)) {
+                                            if state
+                                                .bookmarks
+                                                .iter()
+                                                .all(|b| b.file_id.as_deref() != Some(fid))
+                                            {
                                                 state.bookmarks.push(crate::state::Bookmark {
                                                     id: uuid::Uuid::new_v4().to_string(),
                                                     file_id: Some(fid.clone()),
@@ -288,7 +303,10 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                                     examiner: examiner.clone(),
                                                     note: String::new(),
                                                     created_utc: chrono::Utc::now()
-                                                        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                                                        .to_rfc3339_opts(
+                                                            chrono::SecondsFormat::Secs,
+                                                            true,
+                                                        ),
                                                 });
                                             }
                                         }
@@ -325,7 +343,11 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                         let ids = state.file_table_state.selected_ids.clone();
                                         let examiner = state.examiner_name.clone();
                                         for fid in &ids {
-                                            if state.bookmarks.iter().all(|b| b.file_id.as_deref() != Some(fid)) {
+                                            if state
+                                                .bookmarks
+                                                .iter()
+                                                .all(|b| b.file_id.as_deref() != Some(fid))
+                                            {
                                                 state.bookmarks.push(crate::state::Bookmark {
                                                     id: uuid::Uuid::new_v4().to_string(),
                                                     file_id: Some(fid.clone()),
@@ -334,7 +356,10 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                                     examiner: examiner.clone(),
                                                     note: String::new(),
                                                     created_utc: chrono::Utc::now()
-                                                        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                                                        .to_rfc3339_opts(
+                                                            chrono::SecondsFormat::Secs,
+                                                            true,
+                                                        ),
                                                 });
                                             }
                                         }
@@ -396,9 +421,8 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                     ui.close_menu();
                                 }
                                 if ui.button("Export File").clicked() {
-                                    if let Some(dest) = rfd::FileDialog::new()
-                                        .set_file_name(&f.name)
-                                        .save_file()
+                                    if let Some(dest) =
+                                        rfd::FileDialog::new().set_file_name(&f.name).save_file()
                                     {
                                         if let Some(ctx) = &state.vfs_context {
                                             // Chunked export via read_range — never
@@ -406,10 +430,16 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                             let file_size = f.size.unwrap_or(0);
                                             match chunked_export(ctx, &f, &dest, file_size) {
                                                 Ok(()) => {
-                                                    state.status = format!("Exported: {}", dest.display());
-                                                    state.log_action("FILE_EXPORT", &format!("path={}", f.path));
+                                                    state.status =
+                                                        format!("Exported: {}", dest.display());
+                                                    state.log_action(
+                                                        "FILE_EXPORT",
+                                                        &format!("path={}", f.path),
+                                                    );
                                                 }
-                                                Err(e) => state.status = format!("Export failed: {}", e),
+                                                Err(e) => {
+                                                    state.status = format!("Export failed: {}", e)
+                                                }
                                             }
                                         }
                                     }
@@ -417,7 +447,11 @@ pub fn render(ui: &mut egui::Ui, state: &mut AppState) {
                                 }
                                 if ui.button("Add to Report").clicked() {
                                     let examiner = state.examiner_name.clone();
-                                    if state.bookmarks.iter().all(|b| b.file_id.as_deref() != Some(&f.id)) {
+                                    if state
+                                        .bookmarks
+                                        .iter()
+                                        .all(|b| b.file_id.as_deref() != Some(&f.id))
+                                    {
                                         state.bookmarks.push(crate::state::Bookmark {
                                             id: uuid::Uuid::new_v4().to_string(),
                                             file_id: Some(f.id.clone()),

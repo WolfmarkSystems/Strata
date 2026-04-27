@@ -192,7 +192,11 @@ pub(crate) fn is_ufdr_directory(path: &Path) -> bool {
     let Ok(head) = std::fs::read_to_string(&candidate) else {
         return false;
     };
-    let head_lower: String = head.chars().take(4096).collect::<String>().to_ascii_lowercase();
+    let head_lower: String = head
+        .chars()
+        .take(4096)
+        .collect::<String>()
+        .to_ascii_lowercase();
     head_lower.contains("cellebrite") || head_lower.contains("ufed")
 }
 

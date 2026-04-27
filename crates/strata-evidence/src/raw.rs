@@ -88,9 +88,11 @@ impl EvidenceImage for RawImage {
         let mut filled = 0usize;
         let mut cursor = offset;
         while filled < buf.len() && cursor < self.total_size {
-            let seg = match self.segments.iter().find(|s| {
-                cursor >= s.start && cursor < s.start.saturating_add(s.len)
-            }) {
+            let seg = match self
+                .segments
+                .iter()
+                .find(|s| cursor >= s.start && cursor < s.start.saturating_add(s.len))
+            {
                 Some(s) => s,
                 None => break,
             };
@@ -137,10 +139,7 @@ fn discover_split_siblings(primary: &Path) -> EvidenceResult<Vec<PathBuf>> {
     // Match the conventional .NNN suffix chain: given path ending in
     // .001, .002, .003, …, return all existing siblings in order.
     // For any other extension, just return the single file.
-    let name = primary
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or("");
+    let name = primary.file_name().and_then(|s| s.to_str()).unwrap_or("");
     let parent = primary.parent().unwrap_or_else(|| Path::new(""));
     let stem_idx = name.rfind('.');
     let Some(idx) = stem_idx else {

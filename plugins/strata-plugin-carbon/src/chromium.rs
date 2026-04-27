@@ -255,9 +255,7 @@ fn parse_history(path: &Path) -> Vec<ChromiumRecord> {
                 url: row.get::<_, Option<String>>(0)?.unwrap_or_default(),
                 title: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
                 visit_count: row.get::<_, Option<i64>>(2)?.unwrap_or(0),
-                last_visit_time: row
-                    .get::<_, Option<i64>>(3)?
-                    .and_then(decode_webkit),
+                last_visit_time: row.get::<_, Option<i64>>(3)?.and_then(decode_webkit),
             })
         });
         if let Ok(rows) = rows {
@@ -287,8 +285,8 @@ fn parse_history(path: &Path) -> Vec<ChromiumRecord> {
             }
         }
     }
-    if let Ok(mut stmt) = conn
-        .prepare("SELECT term, url_id FROM keyword_search_terms ORDER BY url_id ASC")
+    if let Ok(mut stmt) =
+        conn.prepare("SELECT term, url_id FROM keyword_search_terms ORDER BY url_id ASC")
     {
         let rows = stmt.query_map([], |row| {
             Ok(HistorySearchTerm {
@@ -415,9 +413,7 @@ mod tests {
 
     fn in_chromium_tempdir(name: &str) -> (tempfile::TempDir, std::path::PathBuf) {
         let dir = tempfile::tempdir().expect("tempdir");
-        let profile = dir
-            .path()
-            .join("Google/Chrome/User Data/Default");
+        let profile = dir.path().join("Google/Chrome/User Data/Default");
         std::fs::create_dir_all(&profile).expect("mkdirs");
         let path = profile.join(name);
         (dir, path)
@@ -466,9 +462,13 @@ mod tests {
         drop(conn);
 
         let records = parse(&path);
-        assert!(records.iter().any(|r| matches!(r, ChromiumRecord::HistoryUrl(h) if h.url == "https://example.com")));
+        assert!(records
+            .iter()
+            .any(|r| matches!(r, ChromiumRecord::HistoryUrl(h) if h.url == "https://example.com")));
         assert!(records.iter().any(|r| matches!(r, ChromiumRecord::HistoryDownload(d) if d.target_path.ends_with("file.exe"))));
-        assert!(records.iter().any(|r| matches!(r, ChromiumRecord::HistorySearchTerm(t) if t.term == "malware analysis")));
+        assert!(records.iter().any(
+            |r| matches!(r, ChromiumRecord::HistorySearchTerm(t) if t.term == "malware analysis")
+        ));
         // Verify WebKit conversion.
         let url_ts = records.iter().find_map(|r| match r {
             ChromiumRecord::HistoryUrl(h) => h.last_visit_time.map(|d| d.timestamp()),
@@ -492,7 +492,9 @@ mod tests {
         .expect("insert");
         drop(conn);
         let records = parse(&path_login);
-        assert!(records.iter().any(|r| matches!(r, ChromiumRecord::LoginData(l) if l.username_value == "alice@example.com")));
+        assert!(records.iter().any(
+            |r| matches!(r, ChromiumRecord::LoginData(l) if l.username_value == "alice@example.com")
+        ));
 
         let (_dir2, path_web) = in_chromium_tempdir("Web Data");
         let conn = Connection::open(&path_web).expect("web");
@@ -507,17 +509,17 @@ mod tests {
         .expect("insert");
         drop(conn);
         let records = parse(&path_web);
-        assert!(records.iter().any(|r| matches!(r, ChromiumRecord::Autofill(a) if a.name == "email")));
+        assert!(records
+            .iter()
+            .any(|r| matches!(r, ChromiumRecord::Autofill(a) if a.name == "email")));
     }
 
     #[test]
     fn parse_favicons_extracts_distinct_page_urls() {
         let (_dir, path) = in_chromium_tempdir("Favicons");
         let conn = Connection::open(&path).expect("open");
-        conn.execute_batch(
-            "CREATE TABLE icon_mapping (page_url TEXT);",
-        )
-        .expect("schema");
+        conn.execute_batch("CREATE TABLE icon_mapping (page_url TEXT);")
+            .expect("schema");
         conn.execute(
             "INSERT INTO icon_mapping VALUES ('https://example.com'), ('https://example.com'), ('https://other.test')",
             [],

@@ -14,7 +14,9 @@ pub struct SpecterPlugin {
 }
 
 impl Default for SpecterPlugin {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SpecterPlugin {
@@ -65,10 +67,18 @@ impl SpecterPlugin {
         let mut latest_ts: Option<i64> = None;
 
         for row_result in rows {
-            let Ok((is_from_me, wa_date, from_jid)) = row_result else { continue };
+            let Ok((is_from_me, wa_date, from_jid)) = row_result else {
+                continue;
+            };
             total += 1;
-            if is_from_me == 1 { sent += 1; } else { received += 1; }
-            if !from_jid.is_empty() { jids.insert(from_jid); }
+            if is_from_me == 1 {
+                sent += 1;
+            } else {
+                received += 1;
+            }
+            if !from_jid.is_empty() {
+                jids.insert(from_jid);
+            }
             let unix_ts = (wa_date as i64) + APPLE_EPOCH;
             match earliest_ts {
                 Some(e) if unix_ts < e => earliest_ts = Some(unix_ts),
@@ -96,7 +106,12 @@ impl SpecterPlugin {
 
         let detail = format!(
             "Messages: {} | Sent: {} | Received: {} | Contacts: {} | Date range: {} to {}",
-            total, sent, received, jids.len(), earliest_str, latest_str
+            total,
+            sent,
+            received,
+            jids.len(),
+            earliest_str,
+            latest_str
         );
         let mut a = Artifact::new("Communications", path_str);
         a.add_field("subcategory", "WhatsApp Messages (iOS)");
@@ -145,11 +160,21 @@ impl SpecterPlugin {
         let mut latest_ts: Option<i64> = None;
 
         for row_result in rows {
-            let Ok((key_from_me, timestamp_ms, remote_jid, media_mime)) = row_result else { continue };
+            let Ok((key_from_me, timestamp_ms, remote_jid, media_mime)) = row_result else {
+                continue;
+            };
             total += 1;
-            if key_from_me == 1 { sent += 1; } else { received += 1; }
-            if media_mime.as_ref().is_some_and(|m| !m.is_empty()) { media_count += 1; }
-            if !remote_jid.is_empty() { jids.insert(remote_jid); }
+            if key_from_me == 1 {
+                sent += 1;
+            } else {
+                received += 1;
+            }
+            if media_mime.as_ref().is_some_and(|m| !m.is_empty()) {
+                media_count += 1;
+            }
+            if !remote_jid.is_empty() {
+                jids.insert(remote_jid);
+            }
             let unix_ts = timestamp_ms / 1000;
             match earliest_ts {
                 Some(e) if unix_ts < e => earliest_ts = Some(unix_ts),
@@ -226,11 +251,19 @@ impl SpecterPlugin {
         let mut latest_ts: Option<i64> = None;
 
         for row_result in rows {
-            let Ok((msg_type, contact_phone, date_ms)) = row_result else { continue };
+            let Ok((msg_type, contact_phone, date_ms)) = row_result else {
+                continue;
+            };
             total += 1;
             // type 1=incoming, 2=outgoing
-            if msg_type == 2 { sent += 1; } else { received += 1; }
-            if !contact_phone.is_empty() { contacts.insert(contact_phone); }
+            if msg_type == 2 {
+                sent += 1;
+            } else {
+                received += 1;
+            }
+            if !contact_phone.is_empty() {
+                contacts.insert(contact_phone);
+            }
             let unix_ts = date_ms / 1000;
             match earliest_ts {
                 Some(e) if unix_ts < e => earliest_ts = Some(unix_ts),
@@ -256,7 +289,8 @@ impl SpecterPlugin {
         let earliest_str = earliest_ts.map(fmt_ts).unwrap_or_default();
         let latest_str = latest_ts.map(fmt_ts).unwrap_or_default();
 
-        let detail = format!(
+        let detail =
+            format!(
             "Messages: {} | Sent: {} | Received: {} | Unique contacts: {} | Date range: {} to {}",
             total, sent, received, contacts.len(), earliest_str, latest_str
         );
@@ -306,11 +340,19 @@ impl SpecterPlugin {
         let mut latest_ts: Option<i64> = None;
 
         for row_result in rows {
-            let Ok((msg_type, address, date_ms)) = row_result else { continue };
+            let Ok((msg_type, address, date_ms)) = row_result else {
+                continue;
+            };
             total += 1;
             // type 1=inbox, 2=sent
-            if msg_type == 2 { sent += 1; } else { received += 1; }
-            if !address.is_empty() { contacts.insert(address); }
+            if msg_type == 2 {
+                sent += 1;
+            } else {
+                received += 1;
+            }
+            if !address.is_empty() {
+                contacts.insert(address);
+            }
             let unix_ts = date_ms / 1000;
             match earliest_ts {
                 Some(e) if unix_ts < e => earliest_ts = Some(unix_ts),
@@ -336,7 +378,8 @@ impl SpecterPlugin {
         let earliest_str = earliest_ts.map(fmt_ts).unwrap_or_default();
         let latest_str = latest_ts.map(fmt_ts).unwrap_or_default();
 
-        let detail = format!(
+        let detail =
+            format!(
             "Messages: {} | Sent: {} | Received: {} | Unique contacts: {} | Date range: {} to {}",
             total, sent, received, contacts.len(), earliest_str, latest_str
         );
@@ -397,9 +440,13 @@ impl SpecterPlugin {
         let mut latest_ts: Option<i64> = None;
 
         for row_result in rows {
-            let Ok((date_unix, dialog_name)) = row_result else { continue };
+            let Ok((date_unix, dialog_name)) = row_result else {
+                continue;
+            };
             total += 1;
-            if !dialog_name.is_empty() { dialogs.insert(dialog_name); }
+            if !dialog_name.is_empty() {
+                dialogs.insert(dialog_name);
+            }
             match earliest_ts {
                 Some(e) if date_unix < e => earliest_ts = Some(date_unix),
                 None => earliest_ts = Some(date_unix),
@@ -426,7 +473,10 @@ impl SpecterPlugin {
 
         let detail = format!(
             "Messages: {} | Unique dialogs: {} | Date range: {} to {}",
-            total, dialogs.len(), earliest_str, latest_str
+            total,
+            dialogs.len(),
+            earliest_str,
+            latest_str
         );
         let mut a = Artifact::new("Communications", &path_str);
         a.add_field("subcategory", "Telegram Messages");
@@ -467,13 +517,16 @@ impl SpecterPlugin {
         let mut results = Vec::new();
         let name_lower = name.to_lowercase();
         let path_lower = path_str.to_lowercase();
-        
+
         // iOS KnowledgeC
         if name_lower == "knowledgec.db" {
             let mut a = Artifact::new("iOS App Usage", path_str);
             a.add_field("subcategory", "iOS App Usage (KnowledgeC)");
             a.add_field("title", "KnowledgeC database");
-            a.add_field("detail", "iOS app usage database — contains app activity timeline");
+            a.add_field(
+                "detail",
+                "iOS app usage database — contains app activity timeline",
+            );
             a.add_field("mitre", "T1636");
             results.push(a);
         }
@@ -539,7 +592,9 @@ impl SpecterPlugin {
             }
         }
         // Facebook Android
-        if path_lower.contains("com.facebook") && (name_lower.ends_with(".db") || name_lower.ends_with(".sqlite")) {
+        if path_lower.contains("com.facebook")
+            && (name_lower.ends_with(".db") || name_lower.ends_with(".sqlite"))
+        {
             let mut a = Artifact::new("Social Media", path_str);
             a.add_field("subcategory", "Facebook Data (Android)");
             a.add_field("title", &format!("Facebook: {}", name));
@@ -645,7 +700,14 @@ impl SpecterPlugin {
                     "MobileInstallation log — record of every app install/uninstall on the device",
                 );
                 a.add_field("file_type", "iOS App Install Log");
-                a.add_field("forensic_value", if uninstall_count > 0 { "High" } else { "Medium" });
+                a.add_field(
+                    "forensic_value",
+                    if uninstall_count > 0 {
+                        "High"
+                    } else {
+                        "Medium"
+                    },
+                );
                 a.add_field("mitre", "T1070");
                 if uninstall_count > 5 {
                     a.add_field("suspicious", "true");
@@ -677,9 +739,7 @@ impl SpecterPlugin {
         }
 
         // ── Android last_boot_time_utc ────────────────────────────────────
-        if name_lower == "last_boot_time_utc"
-            && path_lower.contains("bootstat")
-        {
+        if name_lower == "last_boot_time_utc" && path_lower.contains("bootstat") {
             if let Ok(text) = std::fs::read_to_string(path) {
                 let trimmed = text.trim();
                 let mut a = Artifact::new("Android Boot Time", path_str);
@@ -693,9 +753,7 @@ impl SpecterPlugin {
         }
 
         // ── Android setup wizard info ─────────────────────────────────────
-        if name_lower == "setup_wizard_info.xml"
-            && path_lower.contains("settings.intelligence")
-        {
+        if name_lower == "setup_wizard_info.xml" && path_lower.contains("settings.intelligence") {
             let mut a = Artifact::new("Android Setup", path_str);
             a.add_field("subcategory", "Setup Wizard Info");
             a.add_field("title", "Android Setup Wizard Info");
@@ -730,7 +788,10 @@ impl SpecterPlugin {
                         "Computer that connected to this Android device via ADB. Note: forensic tools also leave ADB keys.",
                     );
                     a.add_field("file_type", "Android ADB Key");
-                    a.add_field("forensic_value", if host_count > 3 { "High" } else { "Medium" });
+                    a.add_field(
+                        "forensic_value",
+                        if host_count > 3 { "High" } else { "Medium" },
+                    );
                     a.add_field("mitre", "T1219");
                     if host_count > 3 {
                         a.add_field("suspicious", "true");
@@ -784,7 +845,10 @@ impl SpecterPlugin {
                             let mut a = Artifact::new("Android Usage Stats", path_str);
                             a.add_field("subcategory", "App Usage");
                             a.add_field("title", &format!("Android app usage: {}", pkg));
-                            a.add_field("detail", "From usagestats XML — package launched/foregrounded");
+                            a.add_field(
+                                "detail",
+                                "From usagestats XML — package launched/foregrounded",
+                            );
                             a.add_field("file_type", "Android Usage Stats");
                             a.add_field("forensic_value", "Medium");
                             a.add_field("mitre", "T1422");
@@ -852,27 +916,45 @@ impl SpecterPlugin {
 }
 
 impl StrataPlugin for SpecterPlugin {
-    fn name(&self) -> &str { &self.name }
-    fn version(&self) -> &str { &self.version }
-    fn supported_inputs(&self) -> Vec<String> { vec!["*".to_string()] }
-    fn plugin_type(&self) -> PluginType { PluginType::Analyzer }
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn version(&self) -> &str {
+        &self.version
+    }
+    fn supported_inputs(&self) -> Vec<String> {
+        vec!["*".to_string()]
+    }
+    fn plugin_type(&self) -> PluginType {
+        PluginType::Analyzer
+    }
     fn capabilities(&self) -> Vec<PluginCapability> {
         vec![PluginCapability::ArtifactExtraction]
     }
-    fn description(&self) -> &str { "Mobile device artifact analysis" }
+    fn description(&self) -> &str {
+        "Mobile device artifact analysis"
+    }
 
     fn run(&self, ctx: PluginContext) -> PluginResult {
         let mut results = Vec::new();
         let root = Path::new(&ctx.root_path);
         if root.is_dir() {
             fn walk(dir: &Path, results: &mut Vec<Artifact>) {
-                let Ok(entries) = std::fs::read_dir(dir) else { return };
+                let Ok(entries) = std::fs::read_dir(dir) else {
+                    return;
+                };
                 for entry in entries.flatten() {
                     let path = entry.path();
-                    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+                    let name = path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("")
+                        .to_string();
                     let path_str = path.to_string_lossy().to_string();
                     results.extend(SpecterPlugin::detect_artifacts(&path, &name, &path_str));
-                    if path.is_dir() && results.len() < 50000 { walk(&path, results); }
+                    if path.is_dir() && results.len() < 50000 {
+                        walk(&path, results);
+                    }
                 }
             }
             walk(root, &mut results);
@@ -880,27 +962,61 @@ impl StrataPlugin for SpecterPlugin {
         Ok(results)
     }
 
-    fn execute(&self, context: PluginContext) -> Result<PluginOutput, strata_plugin_sdk::PluginError> {
+    fn execute(
+        &self,
+        context: PluginContext,
+    ) -> Result<PluginOutput, strata_plugin_sdk::PluginError> {
         let start = std::time::Instant::now();
         let artifacts_raw = self.run(context)?;
         let mut records = Vec::new();
         for a in &artifacts_raw {
-            let subcat = a.data.get("subcategory").cloned().unwrap_or_else(|| a.category.clone());
-            let is_sus = a.data.get("suspicious").map(|v| v == "true").unwrap_or(false);
+            let subcat = a
+                .data
+                .get("subcategory")
+                .cloned()
+                .unwrap_or_else(|| a.category.clone());
+            let is_sus = a
+                .data
+                .get("suspicious")
+                .map(|v| v == "true")
+                .unwrap_or(false);
             let mitre = a.data.get("mitre").cloned();
             let cat = match subcat.as_str() {
-                s if s.contains("iOS") || s.contains("Android") || s.contains("WhatsApp") || s.contains("Signal") || s.contains("Telegram") || s.contains("Gmail") || s.contains("Discord") || s.contains("ADB") => ArtifactCategory::Communications,
-                s if s.contains("Snapchat") || s.contains("Facebook") || s.contains("Instagram") => ArtifactCategory::SocialMedia,
+                s if s.contains("iOS")
+                    || s.contains("Android")
+                    || s.contains("WhatsApp")
+                    || s.contains("Signal")
+                    || s.contains("Telegram")
+                    || s.contains("Gmail")
+                    || s.contains("Discord")
+                    || s.contains("ADB") =>
+                {
+                    ArtifactCategory::Communications
+                }
+                s if s.contains("Snapchat")
+                    || s.contains("Facebook")
+                    || s.contains("Instagram") =>
+                {
+                    ArtifactCategory::SocialMedia
+                }
                 s if s.contains("Network") => ArtifactCategory::NetworkArtifacts,
                 _ => ArtifactCategory::UserActivity,
             };
             let fv_field = a.data.get("forensic_value").map(|s| s.as_str());
-            let fv = if is_sus || fv_field == Some("Critical") { ForensicValue::Critical } else { ForensicValue::High };
+            let fv = if is_sus || fv_field == Some("Critical") {
+                ForensicValue::Critical
+            } else {
+                ForensicValue::High
+            };
             records.push(ArtifactRecord {
                 category: cat,
                 subcategory: subcat.clone(),
                 timestamp: a.timestamp.map(|t| t as i64),
-                title: a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()),
+                title: a
+                    .data
+                    .get("title")
+                    .cloned()
+                    .unwrap_or_else(|| a.source.clone()),
                 detail: a.data.get("detail").cloned().unwrap_or_default(),
                 source_path: a.source.clone(),
                 forensic_value: fv,
@@ -921,7 +1037,12 @@ impl StrataPlugin for SpecterPlugin {
                 total_artifacts: artifacts_raw.len(),
                 suspicious_count: sus,
                 categories_populated: vec![],
-                headline: format!("{}: {} artifacts ({} suspicious)", self.name(), artifacts_raw.len(), sus),
+                headline: format!(
+                    "{}: {} artifacts ({} suspicious)",
+                    self.name(),
+                    artifacts_raw.len(),
+                    sus
+                ),
             },
             warnings: vec![],
         })
@@ -960,8 +1081,11 @@ mod sprint75_backfill_tests {
                 .unwrap_or(0),
         ));
         std::fs::create_dir_all(&dir).expect("mkdir");
-        std::fs::write(dir.join("garbage.bin"), [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
-            .expect("write garbage");
+        std::fs::write(
+            dir.join("garbage.bin"),
+            [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF],
+        )
+        .expect("write garbage");
         PluginContext {
             root_path: dir.to_string_lossy().into_owned(),
             vfs: None,

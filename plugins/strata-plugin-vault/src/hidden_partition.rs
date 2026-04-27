@@ -124,7 +124,10 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
         ),
     );
     a.add_field("file_type", "Hidden Storage Indicator");
-    a.add_field("detection_type", HiddenStorageType::AnomalousFileSize.as_str());
+    a.add_field(
+        "detection_type",
+        HiddenStorageType::AnomalousFileSize.as_str(),
+    );
     a.add_field("location", &path_str);
     a.add_field("stat_score", &format!("{:.4}", ratio));
     a.add_field(
@@ -151,14 +154,10 @@ pub fn mbr_gaps(mbr: &[u8]) -> Vec<(u64, u64)> {
     for i in 0..4 {
         let off = 446 + i * 16;
         let part_type = mbr[off + 4];
-        let lba = u32::from_le_bytes([mbr[off + 8], mbr[off + 9], mbr[off + 10], mbr[off + 11]])
-            as u64;
-        let sectors = u32::from_le_bytes([
-            mbr[off + 12],
-            mbr[off + 13],
-            mbr[off + 14],
-            mbr[off + 15],
-        ]) as u64;
+        let lba =
+            u32::from_le_bytes([mbr[off + 8], mbr[off + 9], mbr[off + 10], mbr[off + 11]]) as u64;
+        let sectors =
+            u32::from_le_bytes([mbr[off + 12], mbr[off + 13], mbr[off + 14], mbr[off + 15]]) as u64;
         if part_type == 0 && (lba != 0 || sectors != 0) {
             gaps.push((lba, sectors));
             continue;
@@ -210,9 +209,11 @@ mod tests {
         }
         std::fs::write(&path, &blob).expect("write");
         let out = scan(&path);
-        assert!(out.iter().any(
-            |a| a.data.get("detection_type").map(|s| s.as_str()) == Some("AnomalousFileSize")
-        ));
+        assert!(
+            out.iter()
+                .any(|a| a.data.get("detection_type").map(|s| s.as_str())
+                    == Some("AnomalousFileSize"))
+        );
     }
 
     #[test]

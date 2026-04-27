@@ -60,9 +60,11 @@ export default function PluginDetailPane({
   }
 
   const accent = plugin.accent_color
-  const runDisabled = !evidenceLoaded || isRunning
+  const runDisabled = !evidenceLoaded || isRunning || plugin.generic_run_disabled === true
   const runLabel = isRunning
     ? `RUNNING ${status?.progress ?? 0}%`
+    : plugin.generic_run_disabled
+      ? 'DEDICATED WORKFLOW'
     : isComplete
       ? `RE-RUN STRATA ${plugin.name.toUpperCase()}`
       : `RUN STRATA ${plugin.name.toUpperCase()}`

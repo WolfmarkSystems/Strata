@@ -35,7 +35,11 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
 
             // Size range
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Min size (bytes):").color(TEXT_SEC).size(9.5));
+                ui.label(
+                    egui::RichText::new("Min size (bytes):")
+                        .color(TEXT_SEC)
+                        .size(9.5),
+                );
                 ui.text_edit_singleline(&mut state.adv_search_min_size);
                 ui.label(egui::RichText::new("Max:").color(TEXT_SEC).size(9.5));
                 ui.text_edit_singleline(&mut state.adv_search_max_size);
@@ -43,7 +47,11 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
 
             // Date range
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Modified after:").color(TEXT_SEC).size(9.5));
+                ui.label(
+                    egui::RichText::new("Modified after:")
+                        .color(TEXT_SEC)
+                        .size(9.5),
+                );
                 ui.text_edit_singleline(&mut state.adv_search_date_after);
                 ui.label(egui::RichText::new("Before:").color(TEXT_SEC).size(9.5));
                 ui.text_edit_singleline(&mut state.adv_search_date_before);
@@ -64,13 +72,21 @@ pub fn render(ctx: &egui::Context, state: &mut AppState) {
 
             // Hash search
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Hash (MD5/SHA256):").color(TEXT_SEC).size(9.5));
+                ui.label(
+                    egui::RichText::new("Hash (MD5/SHA256):")
+                        .color(TEXT_SEC)
+                        .size(9.5),
+                );
                 ui.text_edit_singleline(&mut state.adv_search_hash);
             });
 
             // Full-text content search
             ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Content contains:").color(TEXT_SEC).size(9.5));
+                ui.label(
+                    egui::RichText::new("Content contains:")
+                        .color(TEXT_SEC)
+                        .size(9.5),
+                );
                 ui.text_edit_singleline(&mut state.adv_search_content);
             });
 

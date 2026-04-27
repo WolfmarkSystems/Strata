@@ -111,8 +111,7 @@ fn looks_like_email(s: &str) -> bool {
     if local.is_empty() || !domain.contains('.') {
         return false;
     }
-    local.chars().all(|c| c.is_ascii_graphic())
-        && domain.chars().all(|c| c.is_ascii_graphic())
+    local.chars().all(|c| c.is_ascii_graphic()) && domain.chars().all(|c| c.is_ascii_graphic())
 }
 
 fn looks_like_subject(s: &str) -> bool {
@@ -166,8 +165,12 @@ mod tests {
         blob.extend_from_slice(&[0u8; 8]);
         blob.extend_from_slice(&utf16le("garbage not email"));
         let hits = carve(&blob);
-        assert!(hits.iter().any(|h| h.kind == "email" && h.value == "alice@example.com"));
-        assert!(hits.iter().any(|h| h.kind == "subject" && h.value.starts_with("RE:")));
+        assert!(hits
+            .iter()
+            .any(|h| h.kind == "email" && h.value == "alice@example.com"));
+        assert!(hits
+            .iter()
+            .any(|h| h.kind == "subject" && h.value.starts_with("RE:")));
     }
 
     #[test]

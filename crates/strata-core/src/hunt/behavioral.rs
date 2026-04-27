@@ -101,11 +101,8 @@ pub fn detect_beaconing(artifacts: &[Artifact]) -> Vec<BeaconingIndicator> {
         if mean <= 0.0 {
             continue;
         }
-        let variance = intervals
-            .iter()
-            .map(|v| (v - mean).powi(2))
-            .sum::<f64>()
-            / intervals.len() as f64;
+        let variance =
+            intervals.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / intervals.len() as f64;
         let std_dev = variance.sqrt();
         let cv = std_dev / mean;
         if cv >= 0.3 {
@@ -120,7 +117,12 @@ pub fn detect_beaconing(artifacts: &[Artifact]) -> Vec<BeaconingIndicator> {
             last_seen: *timestamps.last().unwrap_or(&Utc::now()),
             source_artifacts: group
                 .iter()
-                .map(|a| a.data.get("title").cloned().unwrap_or_else(|| a.source.clone()))
+                .map(|a| {
+                    a.data
+                        .get("title")
+                        .cloned()
+                        .unwrap_or_else(|| a.source.clone())
+                })
                 .collect(),
         });
     }
@@ -129,9 +131,7 @@ pub fn detect_beaconing(artifacts: &[Artifact]) -> Vec<BeaconingIndicator> {
 
 /// Detect credential-harvesting indicator combinations within a
 /// 60-minute rolling window.
-pub fn detect_credential_harvesting(
-    artifacts: &[Artifact],
-) -> Vec<CredentialHarvestingIndicator> {
+pub fn detect_credential_harvesting(artifacts: &[Artifact]) -> Vec<CredentialHarvestingIndicator> {
     let mut out = Vec::new();
     let tools: &[&str] = &["mimikatz.exe", "sekurlsa", "lsass.exe", "procdump.exe"];
     let hits: Vec<&Artifact> = artifacts
@@ -198,8 +198,7 @@ pub fn build_chain(hops: Vec<LateralHop>) -> Option<LateralMovementChain> {
     }
     let mut sorted = hops;
     sorted.sort_by_key(|h| h.timestamp);
-    let total = (sorted.last()?.timestamp - sorted.first()?.timestamp).num_seconds() as f64
-        / 60.0;
+    let total = (sorted.last()?.timestamp - sorted.first()?.timestamp).num_seconds() as f64 / 60.0;
     Some(LateralMovementChain {
         chain_length: sorted.len(),
         total_duration_minutes: total,
@@ -219,10 +218,7 @@ pub fn hypothesis_mitre(hypothesis: HuntHypothesis) -> Vec<&'static str> {
     }
 }
 
-pub fn filter_for_hypothesis(
-    hypothesis: HuntHypothesis,
-    artifacts: &[Artifact],
-) -> Vec<&Artifact> {
+pub fn filter_for_hypothesis(hypothesis: HuntHypothesis, artifacts: &[Artifact]) -> Vec<&Artifact> {
     let wanted = hypothesis_mitre(hypothesis);
     let mut out: Vec<&Artifact> = artifacts
         .iter()
@@ -319,11 +315,7 @@ mod tests {
     #[test]
     fn filter_for_hypothesis_sorts_by_forensic_value() {
         let arts = vec![
-            art(
-                "A",
-                1,
-                &[("mitre", "T1021"), ("forensic_value", "Medium")],
-            ),
+            art("A", 1, &[("mitre", "T1021"), ("forensic_value", "Medium")]),
             art(
                 "B",
                 2,

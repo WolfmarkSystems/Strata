@@ -52,21 +52,29 @@ fn walker_lists_root_with_committed_structure() {
     // Private Data directory exists on the volume but is hidden
     // by the walker's default filter.
     assert!(
-        root_entries.iter().any(|e| e.name == "readme.txt" && !e.is_directory),
+        root_entries
+            .iter()
+            .any(|e| e.name == "readme.txt" && !e.is_directory),
         "fixture must contain /readme.txt"
     );
     assert!(
-        root_entries.iter().any(|e| e.name == "forky.txt" && !e.is_directory),
+        root_entries
+            .iter()
+            .any(|e| e.name == "forky.txt" && !e.is_directory),
         "fixture must contain /forky.txt"
     );
     assert!(
-        root_entries.iter().any(|e| e.name == "docs" && e.is_directory),
+        root_entries
+            .iter()
+            .any(|e| e.name == "docs" && e.is_directory),
         "fixture must contain /docs (directory)"
     );
 
     // HFS+ Private Data (always created by newfs_hfs) must NOT appear.
     assert!(
-        !root_entries.iter().any(|e| e.name.contains("HFS+ Private Data")),
+        !root_entries
+            .iter()
+            .any(|e| e.name.contains("HFS+ Private Data")),
         "walker default filter must hide HFS+ Private Data"
     );
 }
@@ -87,9 +95,13 @@ fn walker_descends_into_nested_docs_directory() {
         "/docs must contain nested/"
     );
 
-    let nested = walker.list_dir("/docs/nested").expect("list_dir /docs/nested");
+    let nested = walker
+        .list_dir("/docs/nested")
+        .expect("list_dir /docs/nested");
     assert!(
-        nested.iter().any(|e| e.name == "buried.txt" && !e.is_directory),
+        nested
+            .iter()
+            .any(|e| e.name == "buried.txt" && !e.is_directory),
         "/docs/nested must contain buried.txt"
     );
 }
@@ -152,8 +164,7 @@ fn walker_reads_readme_txt_matches_populated_bytes() {
     let walker = HfsPlusWalker::open(file).expect("open walker");
     let content = walker.read_file("/readme.txt").expect("read_file");
     assert_eq!(
-        content,
-        b"hello hfs+\n",
+        content, b"hello hfs+\n",
         "data fork content must match the bytes mkhfsplus.sh wrote"
     );
 }

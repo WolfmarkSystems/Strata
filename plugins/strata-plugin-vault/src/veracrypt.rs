@@ -231,7 +231,9 @@ mod tests {
         }
         std::fs::write(&path, &bytes).expect("write");
         let out = scan(&path);
-        assert!(out.iter().any(|a| a.data.get("file_type").map(|s| s.as_str()) == Some("VeraCrypt Volume")));
+        assert!(out
+            .iter()
+            .any(|a| a.data.get("file_type").map(|s| s.as_str()) == Some("VeraCrypt Volume")));
     }
 
     #[test]
@@ -260,7 +262,10 @@ mod tests {
             a.data.get("file_type").map(|s| s.as_str()),
             Some("VeraCrypt Preferences")
         );
-        assert_eq!(a.data.get("last_mount").map(|s| s.as_str()), Some("C:\\secret.vc"));
+        assert_eq!(
+            a.data.get("last_mount").map(|s| s.as_str()),
+            Some("C:\\secret.vc")
+        );
     }
 
     #[test]

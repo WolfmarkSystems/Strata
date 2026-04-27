@@ -82,7 +82,8 @@ impl ArtifactParser for VpnArtifactsParser {
             self.parse_wireguard_config(path, &text)
         } else if filename.contains("openvpn") && filename.contains("log") {
             self.parse_openvpn_log(path, &text)
-        } else if text.contains("[Interface]") && text.contains("PrivateKey")
+        } else if text.contains("[Interface]")
+            && text.contains("PrivateKey")
             && (path_str.contains("wireguard") || path_str.contains("wg"))
         {
             self.parse_wireguard_config(path, &text)
@@ -157,7 +158,9 @@ impl VpnArtifactsParser {
         }
 
         if entry.private_key_present {
-            entry.forensic_flags.push("PRIVATE_KEY_EMBEDDED — Key material in config file".to_string());
+            entry
+                .forensic_flags
+                .push("PRIVATE_KEY_EMBEDDED — Key material in config file".to_string());
         }
 
         let server = entry.server.as_deref().unwrap_or("unknown");
@@ -229,7 +232,9 @@ impl VpnArtifactsParser {
                 match key.as_str() {
                     "privatekey" => {
                         entry.private_key_present = true;
-                        entry.forensic_flags.push("PRIVATE_KEY — WireGuard private key present".to_string());
+                        entry
+                            .forensic_flags
+                            .push("PRIVATE_KEY — WireGuard private key present".to_string());
                     }
                     "dns" => {
                         for dns in value.split(',') {
@@ -247,7 +252,9 @@ impl VpnArtifactsParser {
                             entry.routes.push(route.trim().to_string());
                         }
                         if value.contains("0.0.0.0/0") || value.contains("::/0") {
-                            entry.forensic_flags.push("FULL_TUNNEL — All traffic routed through VPN".to_string());
+                            entry
+                                .forensic_flags
+                                .push("FULL_TUNNEL — All traffic routed through VPN".to_string());
                         }
                     }
                     _ => {}

@@ -192,9 +192,7 @@ mod tests {
 
     #[test]
     fn is_cam_db_path_matches_filename() {
-        assert!(is_cam_db_path(Path::new(
-            "/x/CapabilityAccessManager.db"
-        )));
+        assert!(is_cam_db_path(Path::new("/x/CapabilityAccessManager.db")));
         assert!(!is_cam_db_path(Path::new("/x/other.db")));
     }
 

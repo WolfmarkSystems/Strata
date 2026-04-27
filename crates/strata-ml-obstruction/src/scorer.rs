@@ -7,18 +7,54 @@ use serde::{Deserialize, Serialize};
 /// Base weights for each anti-forensic behavior.
 const WEIGHTS: &[(&str, u32, &str)] = &[
     ("VSS_DELETION", 35, "Volume Shadow Copy deletion"),
-    ("EVTX_SECURITY_CLEAR", 22, "Windows Security Event Log cleared"),
+    (
+        "EVTX_SECURITY_CLEAR",
+        22,
+        "Windows Security Event Log cleared",
+    ),
     ("EVTX_SYSTEM_CLEAR", 15, "Windows System Event Log cleared"),
-    ("SECURE_DELETE_TOOL", 15, "Secure deletion tool executed (CCleaner, Eraser, SDelete)"),
-    ("TIMESTAMP_STOMP", 10, "File timestamp manipulation detected ($SI/$FN mismatch)"),
-    ("BROWSER_HIST_CLEAR", 5, "Browser history cleared selectively"),
-    ("RECYCLE_MASS_DELETE", 8, "Mass deletion from Recycle Bin in short window"),
-    ("MFT_LOG_GAP", 12, "USN Journal sequence gap (journal cleared)"),
+    (
+        "SECURE_DELETE_TOOL",
+        15,
+        "Secure deletion tool executed (CCleaner, Eraser, SDelete)",
+    ),
+    (
+        "TIMESTAMP_STOMP",
+        10,
+        "File timestamp manipulation detected ($SI/$FN mismatch)",
+    ),
+    (
+        "BROWSER_HIST_CLEAR",
+        5,
+        "Browser history cleared selectively",
+    ),
+    (
+        "RECYCLE_MASS_DELETE",
+        8,
+        "Mass deletion from Recycle Bin in short window",
+    ),
+    (
+        "MFT_LOG_GAP",
+        12,
+        "USN Journal sequence gap (journal cleared)",
+    ),
     ("HIBERNATE_DISABLED", 5, "Hibernation file disabled/deleted"),
     ("PAGEFILE_CLEAR", 5, "Page file cleared on shutdown"),
-    ("EVENT_LOG_AUDIT_OFF", 8, "Security auditing disabled via Group Policy"),
-    ("ENCRYPTED_CONTAINER", 3, "VeraCrypt/BitLocker container created near deletion"),
-    ("ANTIFORENSIC_SEARCH", 10, "Browser searches for anti-forensic techniques"),
+    (
+        "EVENT_LOG_AUDIT_OFF",
+        8,
+        "Security auditing disabled via Group Policy",
+    ),
+    (
+        "ENCRYPTED_CONTAINER",
+        3,
+        "VeraCrypt/BitLocker container created near deletion",
+    ),
+    (
+        "ANTIFORENSIC_SEARCH",
+        10,
+        "Browser searches for anti-forensic techniques",
+    ),
 ];
 
 const ADVISORY_NOTICE: &str = "ADVISORY \u{2014} This score is an investigative tool. \
@@ -100,9 +136,9 @@ impl ObstructionScorer {
         let mut factors: Vec<ScoringFactor> = Vec::new();
 
         let has_vss = behaviors.iter().any(|b| b.factor_id == "VSS_DELETION");
-        let has_evtx = behaviors.iter().any(|b| {
-            b.factor_id == "EVTX_SECURITY_CLEAR" || b.factor_id == "EVTX_SYSTEM_CLEAR"
-        });
+        let has_evtx = behaviors
+            .iter()
+            .any(|b| b.factor_id == "EVTX_SECURITY_CLEAR" || b.factor_id == "EVTX_SYSTEM_CLEAR");
 
         let timestamps: Vec<Option<DateTime<Utc>>> =
             behaviors.iter().map(|b| b.timestamp).collect();
@@ -120,8 +156,17 @@ impl ObstructionScorer {
             // VSS + EVTX within 60 minutes → 1.3x both
             if ((behavior.factor_id == "VSS_DELETION" && has_evtx)
                 || (behavior.factor_id.starts_with("EVTX_") && has_vss))
-                && (Self::factors_within_minutes(behaviors, "VSS_DELETION", "EVTX_SECURITY_CLEAR", 60)
-                    || Self::factors_within_minutes(behaviors, "VSS_DELETION", "EVTX_SYSTEM_CLEAR", 60))
+                && (Self::factors_within_minutes(
+                    behaviors,
+                    "VSS_DELETION",
+                    "EVTX_SECURITY_CLEAR",
+                    60,
+                ) || Self::factors_within_minutes(
+                    behaviors,
+                    "VSS_DELETION",
+                    "EVTX_SYSTEM_CLEAR",
+                    60,
+                ))
             {
                 applied = (applied as f64 * 1.3) as u32;
                 multiplier_desc.push("VSS+EVTX within 60 min (1.3x)".into());
@@ -274,12 +319,8 @@ impl ObstructionScorer {
             assessment.severity.label()
         ));
         lines.push(String::new());
-        lines.push(
-            "This score represents the degree to which digital evidence suggests".into(),
-        );
-        lines.push(
-            "deliberate anti-forensic activity was conducted on this device.".into(),
-        );
+        lines.push("This score represents the degree to which digital evidence suggests".into());
+        lines.push("deliberate anti-forensic activity was conducted on this device.".into());
         lines.push(String::new());
         lines.push("CONTRIBUTING FACTORS (highest weight first):".into());
         lines.push(String::new());
@@ -305,7 +346,9 @@ impl ObstructionScorer {
         lines.push("  21-40:  Low \u{2014} minor indicators, likely non-deliberate".into());
         lines.push("  41-60:  Moderate \u{2014} some deliberate cleanup activity".into());
         lines.push("  61-80:  High \u{2014} significant deliberate evidence destruction".into());
-        lines.push("  81-100: Significant \u{2014} coordinated, systematic evidence destruction".into());
+        lines.push(
+            "  81-100: Significant \u{2014} coordinated, systematic evidence destruction".into(),
+        );
         lines.push(String::new());
         lines.push("\u{2501}".repeat(60));
         lines.push(assessment.advisory_notice.clone());
@@ -321,10 +364,7 @@ mod tests {
     use crate::detector::DetectedBehavior;
     use chrono::TimeZone;
 
-    fn make_behavior(
-        factor_id: &'static str,
-        ts: Option<DateTime<Utc>>,
-    ) -> DetectedBehavior {
+    fn make_behavior(factor_id: &'static str, ts: Option<DateTime<Utc>>) -> DetectedBehavior {
         DetectedBehavior {
             factor_id,
             timestamp: ts,
@@ -392,16 +432,46 @@ mod tests {
 
     #[test]
     fn severity_correct_for_each_range() {
-        assert_eq!(ObstructionSeverity::from_score(0), ObstructionSeverity::Minimal);
-        assert_eq!(ObstructionSeverity::from_score(20), ObstructionSeverity::Minimal);
-        assert_eq!(ObstructionSeverity::from_score(21), ObstructionSeverity::Low);
-        assert_eq!(ObstructionSeverity::from_score(40), ObstructionSeverity::Low);
-        assert_eq!(ObstructionSeverity::from_score(41), ObstructionSeverity::Moderate);
-        assert_eq!(ObstructionSeverity::from_score(60), ObstructionSeverity::Moderate);
-        assert_eq!(ObstructionSeverity::from_score(61), ObstructionSeverity::High);
-        assert_eq!(ObstructionSeverity::from_score(80), ObstructionSeverity::High);
-        assert_eq!(ObstructionSeverity::from_score(81), ObstructionSeverity::Significant);
-        assert_eq!(ObstructionSeverity::from_score(100), ObstructionSeverity::Significant);
+        assert_eq!(
+            ObstructionSeverity::from_score(0),
+            ObstructionSeverity::Minimal
+        );
+        assert_eq!(
+            ObstructionSeverity::from_score(20),
+            ObstructionSeverity::Minimal
+        );
+        assert_eq!(
+            ObstructionSeverity::from_score(21),
+            ObstructionSeverity::Low
+        );
+        assert_eq!(
+            ObstructionSeverity::from_score(40),
+            ObstructionSeverity::Low
+        );
+        assert_eq!(
+            ObstructionSeverity::from_score(41),
+            ObstructionSeverity::Moderate
+        );
+        assert_eq!(
+            ObstructionSeverity::from_score(60),
+            ObstructionSeverity::Moderate
+        );
+        assert_eq!(
+            ObstructionSeverity::from_score(61),
+            ObstructionSeverity::High
+        );
+        assert_eq!(
+            ObstructionSeverity::from_score(80),
+            ObstructionSeverity::High
+        );
+        assert_eq!(
+            ObstructionSeverity::from_score(81),
+            ObstructionSeverity::Significant
+        );
+        assert_eq!(
+            ObstructionSeverity::from_score(100),
+            ObstructionSeverity::Significant
+        );
     }
 
     #[test]
@@ -450,8 +520,7 @@ mod tests {
                 Some(base + chrono::Duration::hours(4)),
             ),
         ];
-        let assessment_without =
-            ObstructionScorer::score("CASE-007", &behaviors_spread, None);
+        let assessment_without = ObstructionScorer::score("CASE-007", &behaviors_spread, None);
 
         assert!(assessment_with.score > assessment_without.score);
     }

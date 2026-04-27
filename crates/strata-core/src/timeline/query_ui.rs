@@ -55,12 +55,9 @@ impl TimelineQuery {
                 }
                 if let Some(q) = &self.text_search {
                     let lower = q.to_ascii_lowercase();
-                    let haystack = format!(
-                        "{} {}",
-                        e.description,
-                        e.raw_data.as_deref().unwrap_or("")
-                    )
-                    .to_ascii_lowercase();
+                    let haystack =
+                        format!("{} {}", e.description, e.raw_data.as_deref().unwrap_or(""))
+                            .to_ascii_lowercase();
                     if !haystack.contains(&lower) {
                         return false;
                     }
@@ -84,7 +81,9 @@ impl TimelineQuery {
 
 pub fn render_table(entries: &[&TimelineEntry]) -> String {
     let mut out = String::new();
-    out.push_str("TIMESTAMP (UTC)          TYPE                    PLUGIN      MITRE    SUSPICIOUS\n");
+    out.push_str(
+        "TIMESTAMP (UTC)          TYPE                    PLUGIN      MITRE    SUSPICIOUS\n",
+    );
     for e in entries {
         let ts = DateTime::<Utc>::from_timestamp_micros(e.timestamp_us).unwrap_or_default();
         out.push_str(&format!(
@@ -166,7 +165,12 @@ pub fn density_chart(entries: &[&TimelineEntry]) -> String {
             (*count * 40 / max).max(1)
         };
         let bar: String = "\u{2588}".repeat(bar_len);
-        out.push_str(&format!("{}  {} {}\n", ts.format("%Y-%m-%d %H:%M"), bar, count));
+        out.push_str(&format!(
+            "{}  {} {}\n",
+            ts.format("%Y-%m-%d %H:%M"),
+            bar,
+            count
+        ));
     }
     out
 }
@@ -180,7 +184,9 @@ fn truncate(s: &str, n: usize) -> String {
 }
 
 fn escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 #[cfg(test)]
@@ -211,9 +217,7 @@ mod tests {
         ];
         let q = TimelineQuery {
             suspicious_only: true,
-            start: Some(
-                DateTime::<Utc>::from_timestamp(1_717_243_000, 0).expect("ts"),
-            ),
+            start: Some(DateTime::<Utc>::from_timestamp(1_717_243_000, 0).expect("ts")),
             ..Default::default()
         };
         let hits = q.filter_in_memory(&entries);

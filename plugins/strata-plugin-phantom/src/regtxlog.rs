@@ -234,7 +234,7 @@ mod tests {
         blob.extend_from_slice(&sequence.to_le_bytes()); // sequence_number
         blob.extend_from_slice(&0u32.to_le_bytes()); // sub_version
         blob.extend_from_slice(&dirty_pages.to_le_bytes()); // dirty_pages_count
-        // Ensure the body is exactly record-size aligned.
+                                                            // Ensure the body is exactly record-size aligned.
         let body_len = blob.len() - REGF_BASE_HEADER_BYTES;
         let modulo = body_len % record_size as usize;
         if modulo != 0 {

@@ -10,6 +10,4 @@ pub mod detector;
 pub mod scorer;
 
 pub use detector::{AntiForensicDetector, DetectedBehavior};
-pub use scorer::{
-    ObstructionAssessment, ObstructionScorer, ObstructionSeverity, ScoringFactor,
-};
+pub use scorer::{ObstructionAssessment, ObstructionScorer, ObstructionSeverity, ScoringFactor};

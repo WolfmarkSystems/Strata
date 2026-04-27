@@ -278,9 +278,9 @@ fn has_artifact_matching(outputs: &[PluginOutput], keywords: &[&str]) -> Vec<Sup
                         plugin_name: output.plugin_name.clone(),
                         artifact_description: record.title.clone(),
                         artifact_id: record.subcategory.clone(),
-                        timestamp: record
-                            .timestamp
-                            .and_then(|t| chrono::DateTime::from_timestamp(t, 0).map(|d| d.to_rfc3339())),
+                        timestamp: record.timestamp.and_then(|t| {
+                            chrono::DateTime::from_timestamp(t, 0).map(|d| d.to_rfc3339())
+                        }),
                         relevance_explanation: format!("Matched pattern: {}", kw),
                     });
                     break;
@@ -292,78 +292,145 @@ fn has_artifact_matching(outputs: &[PluginOutput], keywords: &[&str]) -> Vec<Sup
 }
 
 fn check_anti_forensic_chain(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "vssadmin delete", "wevtutil cl", "shadow copy", "log clearing",
-        "anti-forensic chain",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            "vssadmin delete",
+            "wevtutil cl",
+            "shadow copy",
+            "log clearing",
+            "anti-forensic chain",
+        ],
+    )
 }
 
 fn check_wire_fraud(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "phishing", "fraudulent", "wire transfer", "invoice fraud",
-        "business email compromise", "bec",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            "phishing",
+            "fraudulent",
+            "wire transfer",
+            "invoice fraud",
+            "business email compromise",
+            "bec",
+        ],
+    )
 }
 
 fn check_trade_secret_exfil(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "exfiltration", "abnormal data transfer", "cloud upload",
-        "usb mass storage", "large outbound",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            "exfiltration",
+            "abnormal data transfer",
+            "cloud upload",
+            "usb mass storage",
+            "large outbound",
+        ],
+    )
 }
 
 fn check_unauthorized_access(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "unauthorized", "vpn", "brute force", "failed logon",
-        "credential stuffing", "network share",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            "unauthorized",
+            "vpn",
+            "brute force",
+            "failed logon",
+            "credential stuffing",
+            "network share",
+        ],
+    )
 }
 
 fn check_dark_web_narcotics(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "tor browser", ".onion", "dark web", "narcotics", "drug",
-    ])
+    has_artifact_matching(
+        outputs,
+        &["tor browser", ".onion", "dark web", "narcotics", "drug"],
+    )
 }
 
 fn check_cryptocurrency(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "bitcoin", "ethereum", "cryptocurrency", "wallet.dat",
-        "crypto wallet", "blockchain",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            "bitcoin",
+            "ethereum",
+            "cryptocurrency",
+            "wallet.dat",
+            "crypto wallet",
+            "blockchain",
+        ],
+    )
 }
 
 fn check_stalking_apps(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "spyware", "stalkerware", "mspy", "flexispy", "cocospy",
-        "cerberus", "track", "spy",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            "spyware",
+            "stalkerware",
+            "mspy",
+            "flexispy",
+            "cocospy",
+            "cerberus",
+            "track",
+            "spy",
+        ],
+    )
 }
 
 fn check_identity_theft(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "identity", "ssn", "social security", "credit card",
-        "access device", "skimmer", "fullz",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            "identity",
+            "ssn",
+            "social security",
+            "credit card",
+            "access device",
+            "skimmer",
+            "fullz",
+        ],
+    )
 }
 
 fn check_terrorism_support(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "terrorism", "jihad", "ied", "radicalization", "isis", "al-qaeda",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            "terrorism",
+            "jihad",
+            "ied",
+            "radicalization",
+            "isis",
+            "al-qaeda",
+        ],
+    )
 }
 
 fn check_mil_unauthorized_access(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        ".mil", "government computer", "on-post", "unauthorized access",
-        "cac", "sipr",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            ".mil",
+            "government computer",
+            "on-post",
+            "unauthorized access",
+            "cac",
+            "sipr",
+        ],
+    )
 }
 
 fn check_espionage(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
     let mil = has_artifact_matching(outputs, &[".mil", "sipr", "classified"]);
-    let transfer = has_artifact_matching(outputs, &[
-        "encrypted", "anomalous transfer", "exfiltration",
-    ]);
+    let transfer = has_artifact_matching(
+        outputs,
+        &["encrypted", "anomalous transfer", "exfiltration"],
+    );
     if !mil.is_empty() && !transfer.is_empty() {
         let mut combined = mil;
         combined.extend(transfer);
@@ -374,26 +441,41 @@ fn check_espionage(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
 }
 
 fn check_personal_device_classified(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "personal device", "unauthorized device", "byod",
-        "classified network", "siprnet",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            "personal device",
+            "unauthorized device",
+            "byod",
+            "classified network",
+            "siprnet",
+        ],
+    )
 }
 
 fn check_subordinate_contact(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    has_artifact_matching(outputs, &[
-        "dating app", "tinder", "bumble", "hinge", "subordinate",
-        "fraternization",
-    ])
+    has_artifact_matching(
+        outputs,
+        &[
+            "dating app",
+            "tinder",
+            "bumble",
+            "hinge",
+            "subordinate",
+            "fraternization",
+        ],
+    )
 }
 
 fn check_foreign_comms(outputs: &[PluginOutput]) -> Vec<SupportingArtifact> {
-    let foreign = has_artifact_matching(outputs, &[
-        "foreign national", "foreign contact", "international",
-    ]);
-    let sensitive = has_artifact_matching(outputs, &[
-        "classified", "sensitive", "secret", "top secret",
-    ]);
+    let foreign = has_artifact_matching(
+        outputs,
+        &["foreign national", "foreign contact", "international"],
+    );
+    let sensitive = has_artifact_matching(
+        outputs,
+        &["classified", "sensitive", "secret", "top secret"],
+    );
     if !foreign.is_empty() && !sensitive.is_empty() {
         let mut combined = foreign;
         combined.extend(sensitive);

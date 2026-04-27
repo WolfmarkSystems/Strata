@@ -389,7 +389,10 @@ mod context_helper_tests {
         let tmp = tempfile::tempdir().expect("tmp");
         std::fs::write(tmp.path().join("a.txt"), b"hello").expect("w");
         let ctx = ctx_for(tmp.path());
-        assert_eq!(ctx.read_file("/a.txt").as_deref(), Some(b"hello".as_slice()));
+        assert_eq!(
+            ctx.read_file("/a.txt").as_deref(),
+            Some(b"hello".as_slice())
+        );
     }
 
     #[test]
@@ -662,11 +665,7 @@ pub trait StrataPlugin: Send + Sync {
                     .get("title")
                     .cloned()
                     .unwrap_or_else(|| artifact.source.clone()),
-                detail: artifact
-                    .data
-                    .get("detail")
-                    .cloned()
-                    .unwrap_or_default(),
+                detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                 source_path: artifact.source.clone(),
                 forensic_value: ForensicValue::Medium,
                 mitre_technique: artifact.data.get("mitre").cloned(),

@@ -89,7 +89,10 @@ impl FindingExtractor {
         for output in outputs {
             for artifact in &output.artifacts {
                 if !artifact.is_suspicious
-                    && !matches!(artifact.forensic_value, ForensicValue::Critical | ForensicValue::High)
+                    && !matches!(
+                        artifact.forensic_value,
+                        ForensicValue::Critical | ForensicValue::High
+                    )
                 {
                     continue;
                 }
@@ -122,10 +125,7 @@ impl FindingExtractor {
                             .unwrap_or_else(|| format!("epoch:{}", ts))
                     }),
                     source_plugin: output.plugin_name.clone(),
-                    artifact_ids: vec![format!(
-                        "{}:{}",
-                        output.plugin_name, artifact.source_path
-                    )],
+                    artifact_ids: vec![format!("{}:{}", output.plugin_name, artifact.source_path)],
                     charge_citations: matching_charges,
                 });
             }
@@ -138,11 +138,20 @@ impl FindingExtractor {
     /// Extract evidence destruction events.
     pub fn extract_destruction_events(outputs: &[PluginOutput]) -> Vec<DestructionEvent> {
         let destruction_keywords = [
-            "vss", "shadow cop", "deleted shadow",
-            "log clear", "event log", "wevtutil",
-            "ccleaner", "bleachbit", "sdelete",
-            "cipher /w", "eraser", "dban",
-            "timestomp", "timestamp manipulat",
+            "vss",
+            "shadow cop",
+            "deleted shadow",
+            "log clear",
+            "event log",
+            "wevtutil",
+            "ccleaner",
+            "bleachbit",
+            "sdelete",
+            "cipher /w",
+            "eraser",
+            "dban",
+            "timestomp",
+            "timestamp manipulat",
         ];
 
         let mut events = Vec::new();
@@ -338,13 +347,19 @@ impl FindingExtractor {
 fn classify_destruction(detail: &str) -> String {
     if detail.contains("vss") || detail.contains("shadow cop") {
         "VSS Deletion".into()
-    } else if detail.contains("log clear") || detail.contains("wevtutil") || detail.contains("event log") {
+    } else if detail.contains("log clear")
+        || detail.contains("wevtutil")
+        || detail.contains("event log")
+    {
         "Log Clearing".into()
     } else if detail.contains("ccleaner") || detail.contains("bleachbit") {
         "Anti-forensic Tool".into()
     } else if detail.contains("timestomp") || detail.contains("timestamp") {
         "Timestamp Manipulation".into()
-    } else if detail.contains("sdelete") || detail.contains("cipher /w") || detail.contains("eraser") {
+    } else if detail.contains("sdelete")
+        || detail.contains("cipher /w")
+        || detail.contains("eraser")
+    {
         "Secure Deletion".into()
     } else {
         "Evidence Destruction".into()
@@ -434,7 +449,9 @@ mod tests {
         let findings = FindingExtractor::extract_charge_relevant(&outputs, &charges);
         assert!(!findings.is_empty());
         assert_eq!(findings[0].finding_type, FindingType::ChargeRelevant);
-        assert!(findings[0].charge_citations.contains(&"18 U.S.C. § 2252".to_string()));
+        assert!(findings[0]
+            .charge_citations
+            .contains(&"18 U.S.C. § 2252".to_string()));
     }
 
     #[test]
@@ -455,7 +472,11 @@ mod tests {
             artifact_tags: vec!["Media".into()],
         }];
         let recs = FindingExtractor::generate_focus_recommendations(&outputs, None, &charges);
-        assert!(recs.len() >= 2, "expected media + recovery recs, got {}", recs.len());
+        assert!(
+            recs.len() >= 2,
+            "expected media + recovery recs, got {}",
+            recs.len()
+        );
         assert!(recs.iter().any(|r| r.area.contains("Media")));
         assert!(recs.iter().any(|r| r.area.contains("Deleted file")));
     }

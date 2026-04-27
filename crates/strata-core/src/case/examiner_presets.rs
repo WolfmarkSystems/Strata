@@ -297,7 +297,9 @@ mod fix3_integrity_violations_tests {
         )
         .expect("insert");
         let n: i64 = conn
-            .query_row("SELECT COUNT(*) FROM integrity_violations", [], |r| r.get(0))
+            .query_row("SELECT COUNT(*) FROM integrity_violations", [], |r| {
+                r.get(0)
+            })
             .expect("q");
         assert_eq!(n, 1);
     }

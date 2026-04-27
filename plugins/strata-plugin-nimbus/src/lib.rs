@@ -33,17 +33,19 @@ impl NimbusPlugin {
         let mut results = Vec::new();
         let path_str = path.to_string_lossy();
         let path_lower = path_str.to_lowercase();
-        let name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let name_lower = name.to_lowercase();
 
         // OneDrive Activity
-        if path_lower.contains("onedrive") && (name_lower.contains("log") || name_lower.contains(".dat")) {
+        if path_lower.contains("onedrive")
+            && (name_lower.contains("log") || name_lower.contains(".dat"))
+        {
             let mut artifact = Artifact::new("CloudSync", &path_str);
             artifact.add_field("title", &format!("OneDrive Activity: {}", name));
-            artifact.add_field("detail", "OneDrive sync log or data file — may reveal exfiltration or staging activity");
+            artifact.add_field(
+                "detail",
+                "OneDrive sync log or data file — may reveal exfiltration or staging activity",
+            );
             artifact.add_field("file_type", "OneDrive Activity");
             artifact.add_field("mitre", "T1567.002");
             results.push(artifact);
@@ -53,7 +55,10 @@ impl NimbusPlugin {
         if path_lower.contains("google/drivefs") || path_lower.contains("google\\drivefs") {
             let mut artifact = Artifact::new("CloudSync", &path_str);
             artifact.add_field("title", &format!("Google Drive Activity: {}", name));
-            artifact.add_field("detail", "Google DriveFS artifact — cloud sync and potential data exfiltration path");
+            artifact.add_field(
+                "detail",
+                "Google DriveFS artifact — cloud sync and potential data exfiltration path",
+            );
             artifact.add_field("file_type", "Google Drive Activity");
             artifact.add_field("mitre", "T1567.002");
             results.push(artifact);
@@ -63,7 +68,10 @@ impl NimbusPlugin {
         if path_lower.contains("dropbox") && name_lower.ends_with(".sqlite") {
             let mut artifact = Artifact::new("CloudSync", &path_str);
             artifact.add_field("title", &format!("Dropbox Sync Event: {}", name));
-            artifact.add_field("detail", "Dropbox SQLite database — contains file sync history and account metadata");
+            artifact.add_field(
+                "detail",
+                "Dropbox SQLite database — contains file sync history and account metadata",
+            );
             artifact.add_field("file_type", "Dropbox Sync Event");
             results.push(artifact);
         }
@@ -72,14 +80,19 @@ impl NimbusPlugin {
         if path_lower.contains("microsoft/teams") || path_lower.contains("microsoft\\teams") {
             let mut artifact = Artifact::new("Communications", &path_str);
             artifact.add_field("title", &format!("Microsoft Teams Activity: {}", name));
-            artifact.add_field("detail", "Microsoft Teams data — chat messages, file transfers, meeting records");
+            artifact.add_field(
+                "detail",
+                "Microsoft Teams data — chat messages, file transfers, meeting records",
+            );
             artifact.add_field("file_type", "Microsoft Teams Activity");
             artifact.add_field("mitre", "T1213.003");
             results.push(artifact);
         }
 
         // Slack Activity
-        if path_lower.contains("slack") && (name_lower.contains("indexeddb") || name_lower.contains("cache")) {
+        if path_lower.contains("slack")
+            && (name_lower.contains("indexeddb") || name_lower.contains("cache"))
+        {
             let mut artifact = Artifact::new("Communications", &path_str);
             artifact.add_field("title", &format!("Slack Activity: {}", name));
             artifact.add_field("detail", "Slack cached data — may contain message history, file references, and channel metadata");
@@ -88,10 +101,15 @@ impl NimbusPlugin {
         }
 
         // Zoom Activity
-        if path_lower.contains("zoom") && (name_lower.contains("log") || path_lower.contains("zoom/")) {
+        if path_lower.contains("zoom")
+            && (name_lower.contains("log") || path_lower.contains("zoom/"))
+        {
             let mut artifact = Artifact::new("Communications", &path_str);
             artifact.add_field("title", &format!("Zoom Activity: {}", name));
-            artifact.add_field("detail", "Zoom meeting log or cache — meeting IDs, participants, timestamps");
+            artifact.add_field(
+                "detail",
+                "Zoom meeting log or cache — meeting IDs, participants, timestamps",
+            );
             artifact.add_field("file_type", "Zoom Activity");
             results.push(artifact);
         }
@@ -118,9 +136,7 @@ impl StrataPlugin for NimbusPlugin {
     }
 
     fn capabilities(&self) -> Vec<PluginCapability> {
-        vec![
-            PluginCapability::ArtifactExtraction,
-        ]
+        vec![PluginCapability::ArtifactExtraction]
     }
 
     fn description(&self) -> &str {
@@ -152,7 +168,9 @@ impl StrataPlugin for NimbusPlugin {
                 "OneDrive Activity" => (ArtifactCategory::CloudSync, ForensicValue::High),
                 "Google Drive Activity" => (ArtifactCategory::CloudSync, ForensicValue::High),
                 "Dropbox Sync Event" => (ArtifactCategory::CloudSync, ForensicValue::Medium),
-                "Microsoft Teams Activity" => (ArtifactCategory::Communications, ForensicValue::High),
+                "Microsoft Teams Activity" => {
+                    (ArtifactCategory::Communications, ForensicValue::High)
+                }
                 "Slack Activity" => (ArtifactCategory::Communications, ForensicValue::Medium),
                 "Zoom Activity" => (ArtifactCategory::Communications, ForensicValue::Medium),
                 _ => (ArtifactCategory::CloudSync, ForensicValue::Medium),
@@ -167,11 +185,7 @@ impl StrataPlugin for NimbusPlugin {
                     .get("title")
                     .cloned()
                     .unwrap_or_else(|| artifact.source.clone()),
-                detail: artifact
-                    .data
-                    .get("detail")
-                    .cloned()
-                    .unwrap_or_default(),
+                detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                 source_path: artifact.source.clone(),
                 forensic_value,
                 mitre_technique: artifact.data.get("mitre").cloned(),
@@ -267,8 +281,11 @@ mod sprint75_backfill_tests {
                 .unwrap_or(0),
         ));
         std::fs::create_dir_all(&dir).expect("mkdir");
-        std::fs::write(dir.join("garbage.bin"), [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
-            .expect("write garbage");
+        std::fs::write(
+            dir.join("garbage.bin"),
+            [0xFFu8, 0x00, 0xDE, 0xAD, 0xBE, 0xEF],
+        )
+        .expect("write garbage");
         PluginContext {
             root_path: dir.to_string_lossy().into_owned(),
             vfs: None,

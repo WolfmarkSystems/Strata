@@ -119,7 +119,17 @@ pub fn parse(path: &Path) -> Vec<OneDriveFile> {
             continue;
         };
         for r in rows.flatten() {
-            let (local_path, server_path, qxh_hex, sha_hex, size, mtime, dtime, status_int, status_str) = r;
+            let (
+                local_path,
+                server_path,
+                qxh_hex,
+                sha_hex,
+                size,
+                mtime,
+                dtime,
+                status_int,
+                status_str,
+            ) = r;
             let Some(local_path) = local_path else {
                 continue;
             };

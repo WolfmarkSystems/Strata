@@ -95,12 +95,7 @@ pub fn parse_yaml(body: &str) -> Result<SigmaRule, SigmaError> {
             }
         } else if in_detection {
             if trimmed.starts_with("condition:") {
-                condition = Some(
-                    trimmed
-                        .trim_start_matches("condition:")
-                        .trim()
-                        .to_string(),
-                );
+                condition = Some(trimmed.trim_start_matches("condition:").trim().to_string());
                 current_selection = None;
                 current_field = None;
             } else if indent == 2 {
@@ -245,7 +240,9 @@ fn selection_matches(
             return false;
         };
         let matched = values.iter().any(|v| match modifier {
-            Some("contains") => actual.to_ascii_lowercase().contains(&v.to_ascii_lowercase()),
+            Some("contains") => actual
+                .to_ascii_lowercase()
+                .contains(&v.to_ascii_lowercase()),
             Some("startswith") => actual
                 .to_ascii_lowercase()
                 .starts_with(&v.to_ascii_lowercase()),
@@ -295,7 +292,10 @@ detection:
         assert_eq!(rule.id, "abc-123");
         assert_eq!(rule.level.as_deref(), Some("high"));
         assert_eq!(rule.product.as_deref(), Some("windows"));
-        assert!(rule.mitre_techniques.iter().any(|t| t.contains("T1059.001")));
+        assert!(rule
+            .mitre_techniques
+            .iter()
+            .any(|t| t.contains("T1059.001")));
     }
 
     #[test]

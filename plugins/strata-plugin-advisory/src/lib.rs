@@ -166,11 +166,7 @@ impl StrataPlugin for AdvisoryPlugin {
                 selected_charges: Vec::<ChargeRef>::new(),
                 plugin_outputs: ctx.prior_results.clone(),
                 anomaly_report: Some(bridge),
-                artifact_count: ctx
-                    .prior_results
-                    .iter()
-                    .map(|o| o.artifacts.len())
-                    .sum(),
+                artifact_count: ctx.prior_results.iter().map(|o| o.artifacts.len()).sum(),
                 generated_at: Utc::now().to_rfc3339(),
             };
             if let Ok(summary) = generator.generate(&input) {
@@ -192,11 +188,7 @@ impl StrataPlugin for AdvisoryPlugin {
         let mut cats: HashSet<String> = HashSet::new();
         let mut suspicious = 0usize;
         for a in &artifacts {
-            let subcategory = a
-                .data
-                .get("subcategory")
-                .cloned()
-                .unwrap_or_default();
+            let subcategory = a.data.get("subcategory").cloned().unwrap_or_default();
             // Advisory analytics findings flow under SystemActivity —
             // they analyse system-wide behavioural signals. The
             // `subcategory` string (ML Anomaly / ML Obstruction / ML
@@ -275,13 +267,19 @@ fn anomaly_finding_to_artifact(finding: &AnomalyFinding) -> Artifact {
         detection_method_label(&finding.detection_method),
         finding.explanation
     );
-    let mut a = Artifact::new(finding.anomaly_type.label(), &finding.artifact_ref.plugin_name);
-    a.add_field("subcategory", SUBCATEGORY_ANOMALY);
-    a.add_field("title", &format!(
-        "Anomaly: {} ({})",
+    let mut a = Artifact::new(
         finding.anomaly_type.label(),
-        variant_name
-    ));
+        &finding.artifact_ref.plugin_name,
+    );
+    a.add_field("subcategory", SUBCATEGORY_ANOMALY);
+    a.add_field(
+        "title",
+        &format!(
+            "Anomaly: {} ({})",
+            finding.anomaly_type.label(),
+            variant_name
+        ),
+    );
     a.add_field("detail", &detail);
     a.add_field("suspicious", "true");
     let fv = if finding.confidence >= 0.85 {

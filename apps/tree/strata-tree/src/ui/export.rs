@@ -217,11 +217,7 @@ pub fn export_timeline_pdf(state: &AppState, out_path: &Path) -> Result<()> {
         .as_ref()
         .map(|c| c.name.as_str())
         .unwrap_or("No Case");
-    let case_id = state
-        .case
-        .as_ref()
-        .map(|c| c.id.as_str())
-        .unwrap_or("-");
+    let case_id = state.case.as_ref().map(|c| c.id.as_str()).unwrap_or("-");
     let generated = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
 
     // Build header lines (6 items — always small).
@@ -268,9 +264,7 @@ pub fn export_timeline_pdf(state: &AppState, out_path: &Path) -> Result<()> {
                 font: PdfFontHandle::Builtin(BuiltinFont::Courier),
                 size: Pt(8.5),
             },
-            Op::SetLineHeight {
-                lh: Pt(9.5),
-            },
+            Op::SetLineHeight { lh: Pt(9.5) },
             Op::SetTextCursor {
                 pos: Point::new(Mm(15.0), Mm(280.0)),
             },
@@ -967,10 +961,7 @@ fn build_obstruction_html(state: &AppState) -> String {
     let mut factor_rows = String::new();
     for f in &assessment.factors {
         let ts = f.timestamp.as_deref().unwrap_or("-");
-        let mult = f
-            .multiplier_applied
-            .as_deref()
-            .unwrap_or("none");
+        let mult = f.multiplier_applied.as_deref().unwrap_or("none");
         factor_rows.push_str(&format!(
             "<tr><td>+{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
             f.applied_weight,
@@ -1029,10 +1020,8 @@ mod tests {
 
     #[test]
     fn html_report_contains_eight_sections_and_audit_appendix() {
-        let root = std::env::temp_dir().join(format!(
-            "strata_export_html_test_{}",
-            uuid::Uuid::new_v4()
-        ));
+        let root =
+            std::env::temp_dir().join(format!("strata_export_html_test_{}", uuid::Uuid::new_v4()));
         let _ = std::fs::create_dir_all(&root);
         let out_path = root.join("case_report.html");
 

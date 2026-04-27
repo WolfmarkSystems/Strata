@@ -150,7 +150,11 @@ impl AuditLogger {
     pub fn record(&mut self, event: AuditEvent) -> Result<AuditEntry, AuditError> {
         let entry = self.build_entry(event)?;
         let json = serde_json::to_string(&entry)?;
-        match OpenOptions::new().create(true).append(true).open(&self.path) {
+        match OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.path)
+        {
             Ok(mut f) => {
                 writeln!(f, "{}", json)?;
             }
@@ -304,7 +308,10 @@ mod tests {
         let body = fs::read_to_string(&path).expect("read");
         let tampered = body.replacen("suspicious", "benign____", 1);
         fs::write(&path, tampered).expect("write");
-        assert!(matches!(verify_log(&path), Err(AuditError::ChainBroken { .. })));
+        assert!(matches!(
+            verify_log(&path),
+            Err(AuditError::ChainBroken { .. })
+        ));
     }
 
     #[test]

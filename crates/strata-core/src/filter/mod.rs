@@ -64,16 +64,10 @@ impl ArtifactFilter {
             parts.push("suspicious only".into());
         }
         if let Some(dt) = self.date_from {
-            parts.push(format!(
-                "from {}",
-                dt.format("%Y-%m-%d %H:%M:%S UTC")
-            ));
+            parts.push(format!("from {}", dt.format("%Y-%m-%d %H:%M:%S UTC")));
         }
         if let Some(dt) = self.date_to {
-            parts.push(format!(
-                "to {}",
-                dt.format("%Y-%m-%d %H:%M:%S UTC")
-            ));
+            parts.push(format!("to {}", dt.format("%Y-%m-%d %H:%M:%S UTC")));
         }
         if let Some(q) = &self.text_search {
             parts.push(format!("text contains '{}'", q));
@@ -124,7 +118,10 @@ impl ArtifactFilter {
         }
         if let Some(mitres) = &self.mitre_techniques {
             let mitre = a.data.get("mitre").cloned().unwrap_or_default();
-            if !mitres.iter().any(|needle| mitre == *needle || mitre.starts_with(&format!("{}.", needle))) {
+            if !mitres
+                .iter()
+                .any(|needle| mitre == *needle || mitre.starts_with(&format!("{}.", needle)))
+            {
                 return false;
             }
         }
@@ -241,12 +238,7 @@ pub fn preset(name: &str) -> Option<ArtifactFilter> {
 mod tests {
     use super::*;
 
-    fn artifact(
-        file_type: &str,
-        mitre: &str,
-        suspicious: bool,
-        value: &str,
-    ) -> Artifact {
+    fn artifact(file_type: &str, mitre: &str, suspicious: bool, value: &str) -> Artifact {
         let mut a = Artifact::new(file_type, "/evidence/x");
         a.add_field("file_type", file_type);
         a.add_field("mitre", mitre);

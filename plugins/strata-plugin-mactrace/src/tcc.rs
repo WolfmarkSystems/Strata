@@ -357,8 +357,8 @@ pub fn parse_connection(conn: &Connection) -> Vec<TccEntry> {
             3 => TccAuthValue::Limited,
             other => TccAuthValue::Other(other),
         };
-        let last_modified = DateTime::<Utc>::from_timestamp(last_modified_i, 0)
-            .unwrap_or_else(|| DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_default());
+        let last_modified =
+            DateTime::<Utc>::from_timestamp(last_modified_i, 0).unwrap_or_else(unix_epoch);
         let service_friendly = friendly_service_name(&service);
         out.push(TccEntry {
             service,
@@ -372,6 +372,10 @@ pub fn parse_connection(conn: &Connection) -> Vec<TccEntry> {
         });
     }
     out
+}
+
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
 }
 
 // ── tests ────────────────────────────────────────────────────────────────

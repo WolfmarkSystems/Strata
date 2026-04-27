@@ -204,9 +204,7 @@ mod tests {
         let j = BitsJob {
             job_id: "{Y}".into(),
             display_name: None,
-            source_url: Some(
-                "https://download.windowsupdate.com/something".into(),
-            ),
+            source_url: Some("https://download.windowsupdate.com/something".into()),
             destination_path: Some("C:\\Windows\\SoftwareDistribution\\x".into()),
             state: None,
             created: None,

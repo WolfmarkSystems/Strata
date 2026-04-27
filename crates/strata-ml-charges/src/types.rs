@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use strata_charges::{ChargeEntry, ChargeSet, ChargeSeverity};
 
-pub const ADVISORY_NOTICE: &str =
-    "ADVISORY \u{2014} For investigative guidance only. \
+pub const ADVISORY_NOTICE: &str = "ADVISORY \u{2014} For investigative guidance only. \
      Charging decisions require review by legal counsel.";
 
 /// Full charge-evidence analysis result.

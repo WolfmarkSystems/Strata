@@ -44,10 +44,7 @@ impl CipherPlugin {
     }
 
     fn classify_file(path: &Path) -> Option<(&'static str, &'static str)> {
-        let name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         let lower_name = name.to_lowercase();
         let lower_ext = ext.to_lowercase();
@@ -85,9 +82,7 @@ impl CipherPlugin {
 
     /// Extract credentials from Chrome/Chromium Login Data or Web Data SQLite databases.
     /// Returns Vec of (url, username, detail, optional_unix_timestamp).
-    fn extract_chrome_credentials(
-        path: &Path,
-    ) -> Vec<(String, String, String, Option<i64>)> {
+    fn extract_chrome_credentials(path: &Path) -> Vec<(String, String, String, Option<i64>)> {
         let mut results = Vec::new();
 
         let conn = match rusqlite::Connection::open_with_flags(
@@ -127,10 +122,7 @@ impl CipherPlugin {
                     None
                 };
 
-                let detail = format!(
-                    "Used {} times | Password: [DPAPI encrypted]",
-                    times_used
-                );
+                let detail = format!("Used {} times | Password: [DPAPI encrypted]", times_used);
 
                 results.push((url, username, detail, unix_ts));
             }
@@ -143,9 +135,7 @@ impl CipherPlugin {
 
     /// Extract credentials from Firefox logins.json.
     /// Returns Vec of (hostname, encrypted_username_placeholder, detail, optional_unix_timestamp).
-    fn extract_firefox_credentials(
-        path: &Path,
-    ) -> Vec<(String, String, String, Option<i64>)> {
+    fn extract_firefox_credentials(path: &Path) -> Vec<(String, String, String, Option<i64>)> {
         let mut results = Vec::new();
 
         let content = match read_text_gated(path) {
@@ -180,10 +170,7 @@ impl CipherPlugin {
                 .and_then(|v| v.as_i64())
                 .unwrap_or(0);
 
-            let times_used = login
-                .get("timesUsed")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
+            let times_used = login.get("timesUsed").and_then(|v| v.as_i64()).unwrap_or(0);
 
             // timeCreated is milliseconds since epoch
             let unix_ts = if time_created > 0 {
@@ -192,10 +179,7 @@ impl CipherPlugin {
                 None
             };
 
-            let detail = format!(
-                "Password: [NSS encrypted] | Used: {} times",
-                times_used
-            );
+            let detail = format!("Password: [NSS encrypted] | Used: {} times", times_used);
 
             results.push((hostname, "[encrypted]".to_string(), detail, unix_ts));
         }
@@ -372,7 +356,9 @@ impl CipherPlugin {
         let lower_name = name.to_lowercase();
         let mut results = Vec::new();
 
-        if path_str.contains("OneDrive") && (lower_name.contains("log") || lower_name.contains("sync")) {
+        if path_str.contains("OneDrive")
+            && (lower_name.contains("log") || lower_name.contains("sync"))
+        {
             let mut artifact = Artifact::new("Cloud & Sync", &path_str);
             artifact.add_field("title", "OneDrive Sync Activity");
             artifact.add_field("subcategory", "OneDrive Sync Activity");
@@ -481,7 +467,10 @@ impl CipherPlugin {
                 artifact.add_field("title", &format!("FTP: {}@{}", user, host));
                 artifact.add_field(
                     "detail",
-                    &format!("FileZilla saved credential — host: {}, user: {}", host, user),
+                    &format!(
+                        "FileZilla saved credential — host: {}, user: {}",
+                        host, user
+                    ),
                 );
                 artifact.add_field("file_type", "FTP Saved Credential");
                 artifact.add_field("forensic_value", "Critical");
@@ -584,10 +573,7 @@ impl CipherPlugin {
                 let local_user = fields.get(4).map(|s| s.trim()).unwrap_or("unknown");
 
                 let mut artifact = Artifact::new("TeamViewer Session", path_str);
-                artifact.add_field(
-                    "title",
-                    &format!("TeamViewer: {} ({})", id, display_name),
-                );
+                artifact.add_field("title", &format!("TeamViewer: {} ({})", id, display_name));
                 artifact.add_field(
                     "detail",
                     &format!(
@@ -776,7 +762,11 @@ impl StrataPlugin for CipherPlugin {
                                 artifact.add_field("title", file_type);
                                 artifact.add_field(
                                     "detail",
-                                    &format!("{}: {} (no rows extracted)", file_type, entry_path.display()),
+                                    &format!(
+                                        "{}: {} (no rows extracted)",
+                                        file_type,
+                                        entry_path.display()
+                                    ),
                                 );
                                 artifact.add_field("file_type", file_type);
                                 results.push(artifact);
@@ -810,7 +800,11 @@ impl StrataPlugin for CipherPlugin {
                                 artifact.add_field("title", file_type);
                                 artifact.add_field(
                                     "detail",
-                                    &format!("{}: {} (no logins found)", file_type, entry_path.display()),
+                                    &format!(
+                                        "{}: {} (no logins found)",
+                                        file_type,
+                                        entry_path.display()
+                                    ),
                                 );
                                 artifact.add_field("file_type", file_type);
                                 results.push(artifact);
@@ -821,8 +815,7 @@ impl StrataPlugin for CipherPlugin {
                                     if let Some(t) = ts {
                                         artifact.timestamp = Some(*t as u64);
                                     }
-                                    let title =
-                                        format!("Firefox: {} — {}", username, hostname);
+                                    let title = format!("Firefox: {} — {}", username, hostname);
                                     artifact.add_field("title", &title);
                                     artifact.add_field("detail", detail);
                                     artifact.add_field("url", hostname);
@@ -854,18 +847,15 @@ impl StrataPlugin for CipherPlugin {
                                     let mut artifact =
                                         Artifact::new(category, &entry_path.to_string_lossy());
                                     let title = format!("SSH -> {}", hostname);
-                                    let detail = format!(
-                                        "Key type: {} | Host: {}",
-                                        key_type, hostname
-                                    );
+                                    let detail =
+                                        format!("Key type: {} | Host: {}", key_type, hostname);
                                     artifact.add_field("title", &title);
                                     artifact.add_field("detail", &detail);
                                     artifact.add_field("hostname", hostname);
                                     artifact.add_field("key_type", key_type);
                                     artifact.add_field("file_type", file_type);
                                     // Flag .onion hostnames
-                                    if hostname.ends_with(".onion")
-                                        || hostname.contains(".onion,")
+                                    if hostname.ends_with(".onion") || hostname.contains(".onion,")
                                     {
                                         artifact.add_field("suspicious", "true");
                                     }
@@ -953,9 +943,9 @@ impl StrataPlugin for CipherPlugin {
 
                             // Skip common known extensions
                             let known_exts = [
-                                "exe", "dll", "so", "dylib", "zip", "gz", "tar", "jpg",
-                                "jpeg", "png", "gif", "bmp", "mp4", "avi", "mov", "pdf",
-                                "doc", "docx", "xls", "xlsx",
+                                "exe", "dll", "so", "dylib", "zip", "gz", "tar", "jpg", "jpeg",
+                                "png", "gif", "bmp", "mp4", "avi", "mov", "pdf", "doc", "docx",
+                                "xls", "xlsx",
                             ];
                             if !known_exts.contains(&ext.as_str()) {
                                 // Read first 1 MB
@@ -963,8 +953,7 @@ impl StrataPlugin for CipherPlugin {
                                     let mut buf = vec![0u8; 1_048_576];
                                     let bytes_read = file.read(&mut buf).unwrap_or_default();
                                     if bytes_read > 0 {
-                                        let entropy =
-                                            Self::calculate_entropy(&buf[..bytes_read]);
+                                        let entropy = Self::calculate_entropy(&buf[..bytes_read]);
                                         if entropy > 7.9 {
                                             let mut artifact = Artifact::new(
                                                 "Certificates",
@@ -982,8 +971,7 @@ impl StrataPlugin for CipherPlugin {
                                                     meta.len()
                                                 ),
                                             );
-                                            artifact
-                                                .add_field("file_type", "Encrypted Container");
+                                            artifact.add_field("file_type", "Encrypted Container");
                                             artifact.add_field("suspicious", "true");
                                             results.push(artifact);
                                         }
@@ -1012,11 +1000,7 @@ impl StrataPlugin for CipherPlugin {
                     && file_name.to_lowercase().ends_with(".xml")
                 {
                     if let Ok(data) = std::fs::read(&entry_path) {
-                        results.extend(Self::parse_wifi_profile_xml(
-                            &entry_path,
-                            file_name,
-                            &data,
-                        ));
+                        results.extend(Self::parse_wifi_profile_xml(&entry_path, file_name, &data));
                     }
                 }
 
@@ -1149,11 +1133,7 @@ impl StrataPlugin for CipherPlugin {
                     .get("title")
                     .cloned()
                     .unwrap_or_else(|| artifact.source.clone()),
-                detail: artifact
-                    .data
-                    .get("detail")
-                    .cloned()
-                    .unwrap_or_default(),
+                detail: artifact.data.get("detail").cloned().unwrap_or_default(),
                 source_path: artifact.source.clone(),
                 forensic_value,
                 mitre_technique: mitre,
@@ -1261,7 +1241,8 @@ mod sprint4_cipher_audit_tests {
             })
             .collect();
         assert_eq!(
-            entries, vec!["lib.rs"],
+            entries,
+            vec!["lib.rs"],
             "Cipher must remain a single-file plugin per the Sprint 4 audit. \
              If submodules have been added (got {entries:?}), re-audit for \
              Scenario B / C wiring gaps and update this tripwire."
