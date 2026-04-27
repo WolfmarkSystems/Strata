@@ -4,10 +4,12 @@ Strata is a Rust/Tauri digital forensics platform for court-ready evidence analy
 
 ---
 
-## Key numbers (post-v0.16 Sprint 7 demo rehearsal, 2026-04-21)
+## Key numbers (post-Sprint 21 integration audit, 2026-04-27)
 
-- **Test count:** 3,699 passing across `cargo test --workspace` (actual measured count post-Sprint 7.5 P2 plugin-test backfill; supersedes the prior 3,896 figure which didn't reconcile to a workspace-wide run)
-- **Charlie end-to-end demo output:** 3,756 artifacts extracted, 7 Sigma findings fire (USB Exfiltration + 6 persistence techniques — Active Setup / Winlogon / BHO / IFEO / Boot Execute / Shell Execute Hook), 42 distinct MITRE ATT&CK techniques surface with tactic mapping.
+- **Current version:** latest git tag is `v1.5.0-dev11`; CLI crate version remains `0.16.0`.
+- **Test count:** 4,024 passing across `cargo test --workspace` after Sprint 21 integration-audit tripwires.
+- **Charlie end-to-end demo output:** `charlie-2009-11-12.E01` extracted 3,757 artifacts in the Sprint 21 fixture run; 24/24 plugins completed, 0 failed. Sigma emitted 9 findings.
+- **MacBookPro fixture output:** `Test Material/MacBookPro` extracted 8,097 artifacts in the Sprint 21 fixture run; 13/13 recommended plugins completed, 0 failed. The first run exposed an `nt-hive` assertion panic in Phantom; Sprint 21 routed all hive opens through the panic-safe helper and the rerun completed without panic output.
 - **Examiner-facing report command:** `strata report --case-dir <path>` — consumes plugin SQLite + case metadata directly, renders 7 sections (Evidence Integrity, Findings, MITRE ATT&CK Coverage, Per-Plugin Summary, Chain of Custody, Examiner Certification, Limitations). Replaced legacy `report-skeleton` (retired in Sprint 6.5 after producing all-zero reports against the wrong database schema).
 - **Filesystem walkers live through the dispatcher:**
   - NTFS (since v11, `strata-fs::ntfs_walker`)
@@ -24,7 +26,7 @@ Strata is a Rust/Tauri digital forensics platform for court-ready evidence analy
   - APFS snapshot enumeration — current-state only per `apfs_walker_walks_current_state_only_pending_snapshot_enumeration` (v17 candidate)
   - APFS fusion drives — `"APFS fusion drives not yet supported"` rejected at walker open()
   - APFS decryption — examiner offline key recovery out of scope permanently
-- **AST quality gate baseline** (enforced by `tools/strata-verify-quality`): 470 library `.unwrap()` / 5 `unsafe{}` (VHD/VMDK FFI waiver) / 5 `println!`. Every commit since v14 — including all five v16 sessions — has shipped zero new violations. The ratchet holds.
+- **AST quality gate baseline** (enforced by `tools/strata-verify-quality`): 398 library `.unwrap()` / 5 `unsafe{}` (VHD/VMDK FFI waiver) / 4 `println!`. Sprint 21 ratcheted the waiver down to the measured codebase state; do not raise it to hide new violations.
 - **9 load-bearing tests preserved** (see below).
 
 ---
@@ -166,6 +168,35 @@ is_advisory_always_true (strata-ml-charges)
 
 ---
 
+## Sprint 14-20 Feature Inventory
+
+These features are shipped and wired as of the Sprint 21 integration audit:
+
+- Timeline view and `get_artifacts_timeline` Tauri/IPC path
+- IOC hunt and `search_iocs` Tauri/IPC path
+- Chain-of-custody log and `get_custody_log` Tauri/IPC path
+- Evidence integrity verification and `verify_evidence_integrity` Tauri/IPC path
+- NSRL hash-set import/list/delete/stats Tauri/IPC path
+- Artifact notes save/load/list Tauri/IPC path
+- Court-ready report system with dynamic artifact-category sections
+- Artifact confidence score/basis display
+- Advisory artifact banner display for ML/AUGUR-derived findings
+- macOS keychain depth for `genp`, `inet`, and `cert`
+- AmCache.hve parser
+- Full USB device artifact chain
+- EVTX structured analytics
+- MRU registry keys: RecentDocs, OpenSavePidlMRU, LastVisitedPidlMRU, RunMRU, Office MRU
+- Zone.Identifier ADS parser
+- Thumbcache parser
+- LNK deep parsing
+- AUGUR bridge plugin for advisory translation workflow
+- ARBOR plugin for Linux and ChromeOS forensics
+- Cryptocurrency artifact detection
+- Tor/dark web artifact detection
+- Financial artifact detection
+
+---
+
 ## Project Structure
 
 ```
@@ -207,7 +238,7 @@ This is the canonical assignment. When adding or moving a parser, put it in the 
 | Plugin | Covers | Examples |
 |--------|--------|---------|
 | **Apex** | Apple-built app artifacts | Mail.app, Calendar.app, Contacts.app, Maps, Siri, iCloud Drive internals, Apple Notes (native), FaceTime logs |
-| **Arbor** | Linux / ChromeOS system artifacts | systemd persistence, crontab, shell_artifacts, containers, ChromeOS user data, /var/log |
+| **ARBOR** | Linux / ChromeOS system artifacts | systemd persistence, crontab, shell history, `/etc/passwd`, `/etc/shadow`, `/etc/hosts`, `/proc/net/tcp`, auth/syslog, containers, ChromeOS user data, `/var/log` |
 | **Carbon** | Google-built app artifacts | Chrome (desktop), Gmail, Google Drive, Google Maps, Google Photos, Android system apps built by Google |
 | **Pulse** | Third-party user-installed apps (iOS + Android) | WhatsApp, Signal, Telegram, Snapchat, Instagram, TikTok, Facebook, third-party browsers |
 | **MacTrace** | macOS system-layer artifacts | LaunchAgents/Daemons, FSEvents, Unified Log, Gatekeeper, Quarantine, Time Machine, Biome, TCC, KnowledgeC |
@@ -221,18 +252,52 @@ This is the canonical assignment. When adding or moving a parser, put it in the 
 | **Nimbus** | Cloud service artifacts | OneDrive, Teams, Slack, M365 UAL, AWS CloudTrail, Azure |
 | **Conduit** | Network configuration artifacts | WiFi profiles, RDP history, VPN artifacts, DNS cache |
 | **NetFlow** | Network traffic and server logs | PCAP/PCAPNG, IIS/Apache/Nginx logs, exfil tool detection |
-| **Vector** | Malicious file analysis | PE headers, VBA macros, PowerShell obfuscation, Cobalt Strike/Mimikatz detection |
+| **Vector** | Malicious file analysis and dark-web indicators | PE headers, VBA macros, PowerShell obfuscation, Cobalt Strike/Mimikatz detection, Tor Browser `.onion` history, Tor state, I2P, ProxyChains, VPN artifacts |
 | **Wraith** | Memory and crash artifacts | hiberfil.sys, LSASS dumps, crash dump analysis |
 | **Recon** | Extracted IOC data | Usernames, emails, IPs, AWS AKIA keys, SID history |
 | **Specter** | Android backup artifacts | `.ab` backup parsing, package inventory, Wi-Fi config |
-| **Sigma** | Correlation engine | Runs last; receives all prior plugin results; applies 34 MITRE ATT&CK kill-chain rules |
+| **Vault** | Hidden storage, crypto, and financial artifacts | VeraCrypt/TrueCrypt, hidden partitions, photo vaults, crypto wallets, exchange exports, hardware wallets, QuickBooks/QBO/OFX, financial statements, wire-transfer CSVs |
+| **AUGUR** | Translation advisory bridge | Foreign-language audio/video/image/document triage; advisory only until certified human review |
+| **Advisory Analytics** | ML advisory findings | anomaly, obstruction, summary, and charge/offense advisory artifacts; always `is_advisory = true` |
+| **Sigma** | Correlation engine | Runs last; receives all prior plugin results; applies MITRE ATT&CK kill-chain rules |
 | **CSAM** | Child exploitation detection | Hash + dHash perceptual matching, NCMEC/Project VIC import, immutable audit log |
 
-**Total plugin crates:** 24 under `plugins/`. The 21 forensic plugins are listed above. The remaining three are internal infrastructure (not forensic analysers):
+**Total plugin directories:** 25 under `plugins/`.
+**Static backend registry entries:** 24 in `strata-engine-adapter::plugins::build_plugins()`.
+**Frontend plugin cards:** 24 in `apps/strata-ui/src/types/index.ts::PLUGIN_DATA`.
+
+The count difference is intentional: `strata-plugin-index` is a cdylib-only dynamic-loader scaffold, `strata-plugin-tree-example` is a reference/template plugin, and `AUGUR` is a static bridge entry without a local `plugins/strata-plugin-augur` directory.
+
+The 23 local plugin directories that participate in the forensic/advisory fleet are:
+
+- `strata-plugin-advisory`
+- `strata-plugin-apex`
+- `strata-plugin-arbor`
+- `strata-plugin-carbon`
+- `strata-plugin-chronicle`
+- `strata-plugin-cipher`
+- `strata-plugin-conduit`
+- `strata-plugin-csam`
+- `strata-plugin-guardian`
+- `strata-plugin-mactrace`
+- `strata-plugin-netflow`
+- `strata-plugin-nimbus`
+- `strata-plugin-phantom`
+- `strata-plugin-pulse`
+- `strata-plugin-recon`
+- `strata-plugin-remnant`
+- `strata-plugin-sentinel`
+- `strata-plugin-sigma`
+- `strata-plugin-specter`
+- `strata-plugin-trace`
+- `strata-plugin-vault`
+- `strata-plugin-vector`
+- `strata-plugin-wraith`
+
+The remaining two plugin directories are infrastructure:
 
 - `strata-plugin-index` — builds the full-text / metadata index consumed by the UI
 - `strata-plugin-tree-example` — reference / template plugin for the tree SDK
-- `strata-plugin-csam` — kept separate for restricted-distribution build flags (not in the mapping table above for the same reason; see `strata-csam` crate for the underlying engine)
 
 **Rule:** Sigma always runs last. Do not add correlation logic to other plugins — put cross-artifact rules in Sigma.
 
