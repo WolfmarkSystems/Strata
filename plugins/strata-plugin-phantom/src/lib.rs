@@ -283,7 +283,7 @@ impl StrataPlugin for PhantomPlugin {
                     // Typed MRU parser — RecentDocs / OpenSave /
                     // LastVisited / RunMRU. See `crate::mru`.
                     let path_str = path.to_string_lossy().to_string();
-                    if let Ok(hive) = nt_hive::Hive::new(data.as_slice()) {
+                    if let Some(hive) = parsers::open_hive(data.as_slice()) {
                         if let Ok(root) = hive.root_key_node() {
                             let parsed = crate::mru::parse(&root);
                             for e in &parsed.entries {
@@ -1025,6 +1025,9 @@ impl StrataPlugin for PhantomPlugin {
 
 mod parsers {
     use super::*;
+    use std::panic::{self, AssertUnwindSafe};
+
+    static HIVE_PANIC_HOOK_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     /// Convert a Windows FILETIME (100ns ticks since 1601-01-01) to a Unix
     /// timestamp in seconds. Returns None for zero or pre-epoch values.
@@ -1061,7 +1064,17 @@ mod parsers {
     /// lifetime of any derived `KeyNode` since `root_key_node()` borrows the
     /// hive.
     pub(super) fn open_hive(data: &[u8]) -> Option<nt_hive::Hive<&[u8]>> {
-        nt_hive::Hive::new(data).ok()
+        let Ok(_guard) = HIVE_PANIC_HOOK_LOCK.lock() else {
+            return panic::catch_unwind(AssertUnwindSafe(|| nt_hive::Hive::new(data).ok()))
+                .ok()
+                .flatten();
+        };
+
+        let previous_hook = panic::take_hook();
+        panic::set_hook(Box::new(|_| {}));
+        let result = panic::catch_unwind(AssertUnwindSafe(|| nt_hive::Hive::new(data).ok()));
+        panic::set_hook(previous_hook);
+        result.ok().flatten()
     }
 
     pub mod system {

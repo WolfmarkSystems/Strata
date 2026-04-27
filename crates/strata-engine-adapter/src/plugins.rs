@@ -1,5 +1,5 @@
 //! Plugin runner. Wraps the existing strata-plugin-sdk `StrataPlugin` trait
-//! and the 11 statically linked built-in plugins, exposing a JSON-friendly
+//! and the statically linked built-in plugins, exposing a JSON-friendly
 //! result type that the desktop UI can consume.
 
 use crate::store::get_evidence;
@@ -23,6 +23,9 @@ use once_cell::sync::Lazy;
 /// forwards this as a `materialize-progress` event rather than a
 /// per-plugin status update.
 pub const MATERIALIZE_EVENT_NAME: &str = "__materialize__";
+
+#[cfg(test)]
+const EXPECTED_STATIC_PLUGIN_COUNT: usize = 24;
 
 /// Per-evidence scratch directory used by the UI path. Mirrors the
 /// CLI's `<case_dir>/extracted` convention but rooted in the system
@@ -421,25 +424,12 @@ pub fn get_artifact_categories(evidence_id: &str) -> AdapterResult<Vec<ArtifactC
         }
     }
 
-    // Always emit the standard 12 categories so the Artifacts panel layout
+    // Always emit the standard categories so the Artifacts panel layout
     // stays consistent even before plugins have run.
-    let standard = [
-        ("User Activity", "\u{1F464}", "#c8a040"),
-        ("Execution History", "\u{25B6}", "#4a70c0"),
-        ("Deleted & Recovered", "\u{1F5D1}", "#4a9060"),
-        ("Network Artifacts", "\u{1F517}", "#40a0a0"),
-        ("Identity & Accounts", "\u{1FAAA}", "#a0a040"),
-        ("Credentials", "\u{1F511}", "#c05050"),
-        ("Malware Indicators", "\u{1F6E1}", "#c07040"),
-        ("Cloud & Sync", "\u{2601}", "#6090d0"),
-        ("Memory Artifacts", "\u{1F4BE}", "#8090a0"),
-        ("Communications", "\u{1F4AC}", "#8050c0"),
-        ("Social Media", "\u{1F4F1}", "#8050c0"),
-        ("Web Activity", "\u{1F310}", "#4a7890"),
-    ];
+    let standard = standard_artifact_categories();
 
-    let mut out = Vec::with_capacity(standard.len());
-    for (name, icon, color) in standard.iter() {
+    let mut out = Vec::with_capacity(standard.len() + counts.len());
+    for (name, icon, color) in standard {
         out.push(ArtifactCategoryInfo {
             name: name.to_string(),
             icon: icon.to_string(),
@@ -447,7 +437,57 @@ pub fn get_artifact_categories(evidence_id: &str) -> AdapterResult<Vec<ArtifactC
             count: counts.get(*name).copied().unwrap_or(0),
         });
     }
+    let known: std::collections::HashSet<&str> =
+        standard.iter().map(|(name, _, _)| *name).collect();
+    let mut dynamic: Vec<&String> = counts
+        .keys()
+        .filter(|name| !known.contains(name.as_str()))
+        .collect();
+    dynamic.sort();
+    for name in dynamic {
+        let (icon, color) = artifact_category_display(name);
+        out.push(ArtifactCategoryInfo {
+            name: name.clone(),
+            icon: icon.to_string(),
+            color: color.to_string(),
+            count: counts.get(name).copied().unwrap_or(0),
+        });
+    }
     Ok(out)
+}
+
+fn standard_artifact_categories() -> &'static [(&'static str, &'static str, &'static str)] {
+    &[
+        ("User Activity", "\u{1F464}", "#c8a040"),
+        ("Execution History", "\u{25B6}", "#4a70c0"),
+        ("Deleted & Recovered", "\u{1F5D1}", "#4a9060"),
+        ("Network Artifacts", "\u{1F517}", "#40a0a0"),
+        ("Network Forensics", "\u{1F517}", "#10b981"),
+        ("Identity & Accounts", "\u{1FAAA}", "#a0a040"),
+        ("Accounts & Credentials", "\u{1F511}", "#c05050"),
+        ("Credentials", "\u{1F511}", "#c05050"),
+        ("Cryptocurrency", "\u{1FA99}", "#805040"),
+        ("Financial", "\u{1F4B5}", "#b87840"),
+        ("Malware Indicators", "\u{1F6E1}", "#c07040"),
+        ("Dark Web", "\u{26A0}", "#8b5cf6"),
+        ("Linux System", "\u{1F5A5}", "#84cc16"),
+        ("System Activity", "\u{2699}", "#8090a0"),
+        ("Cloud & Sync", "\u{2601}", "#6090d0"),
+        ("Memory Artifacts", "\u{1F4BE}", "#8090a0"),
+        ("Communications", "\u{1F4AC}", "#8050c0"),
+        ("Social Media", "\u{1F4F1}", "#8050c0"),
+        ("Web Activity", "\u{1F310}", "#4a7890"),
+        ("Media", "\u{1F5BC}", "#c07040"),
+        ("Encryption Key Material", "\u{1F5DD}", "#a855f7"),
+    ]
+}
+
+fn artifact_category_display(name: &str) -> (&'static str, &'static str) {
+    standard_artifact_categories()
+        .iter()
+        .find(|(category, _, _)| *category == name)
+        .map(|(_, icon, color)| (*icon, *color))
+        .unwrap_or(("\u{25A3}", "#708090"))
 }
 
 /// Return cached artifacts for a given category (across all plugins).
@@ -1154,9 +1194,10 @@ fn convert_output(output: &PluginOutput, plugin_name: &str) -> Vec<PluginArtifac
         .iter()
         .map(|rec| {
             let (is_advisory, advisory_notice) = advisory_fields_for(plugin_name, rec);
+            let category = artifact_category_for(plugin_name, rec);
             PluginArtifact {
-                id: deterministic_artifact_id(&rec.source_path, rec.category.as_str(), &rec.detail),
-                category: rec.category.as_str().to_string(),
+                id: deterministic_artifact_id(&rec.source_path, category, &rec.detail),
+                category: category.to_string(),
                 name: rec.title.clone(),
                 value: rec.detail.clone(),
                 timestamp: rec.timestamp.map(|t| t.to_string()),
@@ -1198,7 +1239,7 @@ fn crypto_address_artifacts_for(parent: &PluginArtifact) -> Vec<PluginArtifact> 
                     "Cryptocurrency Address",
                     &hit.address,
                 ),
-                category: "Credentials".to_string(),
+                category: "Cryptocurrency".to_string(),
                 name: format!("Cryptocurrency Address Detected ({currency})"),
                 value: hit.address,
                 timestamp: parent.timestamp.clone(),
@@ -1219,6 +1260,29 @@ fn crypto_address_artifacts_for(parent: &PluginArtifact) -> Vec<PluginArtifact> 
             }
         })
         .collect()
+}
+
+fn artifact_category_for(plugin_name: &str, rec: &ArtifactRecord) -> &'static str {
+    let plugin_lower = plugin_name.to_ascii_lowercase();
+    match rec.subcategory.as_str() {
+        "Crypto Wallet"
+        | "Exchange Browser Artifact"
+        | "Crypto Hardware Wallet"
+        | "Exchange Export" => "Cryptocurrency",
+        "Financial Artifact"
+        | "Financial Transaction"
+        | "Financial Statement"
+        | "Wire Transfer Artifact" => "Financial",
+        "Tor Dark Web Advisory"
+        | "Tor Browser Artifact"
+        | "Tor State File"
+        | "I2P Artifact"
+        | "ProxyChains Configuration"
+        | "VPN Artifact" => "Dark Web",
+        _ if plugin_lower.contains("arbor") => "Linux System",
+        _ if plugin_lower.contains("netflow") => "Network Forensics",
+        _ => rec.category.as_str(),
+    }
 }
 
 fn advisory_fields_for(plugin_name: &str, rec: &ArtifactRecord) -> (bool, Option<String>) {
@@ -2264,5 +2328,70 @@ mod sprint10_panic_sandbox_tests {
         assert!(plugin_name_matches("Strata Remnant", "Strata Remnant"));
         assert!(plugin_name_matches("Strata Remnant", "Remnant"));
         assert!(!plugin_name_matches("Strata Remnant", "Trace"));
+    }
+}
+
+#[cfg(test)]
+mod plugin_registry_audit_tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn all_registered_plugins_have_valid_names() {
+        let plugins = build_plugins();
+        for plugin in plugins.iter() {
+            assert!(!plugin.name().is_empty());
+            assert!(!plugin.version().is_empty());
+        }
+    }
+
+    #[test]
+    fn plugin_count_matches_expected() {
+        let plugins = build_plugins();
+        assert_eq!(plugins.len(), EXPECTED_STATIC_PLUGIN_COUNT);
+    }
+
+    #[test]
+    fn sigma_runs_last_and_names_are_unique() {
+        let plugins = build_plugins();
+        let names: Vec<&str> = plugins.iter().map(|plugin| plugin.name()).collect();
+        assert_eq!(names.last().copied(), Some("Strata Sigma"));
+
+        let unique: HashSet<&str> = names.iter().copied().collect();
+        assert_eq!(unique.len(), names.len());
+    }
+
+    #[test]
+    fn all_artifact_categories_have_display_names() {
+        let required = [
+            ArtifactCategory::Communications.as_str(),
+            ArtifactCategory::SocialMedia.as_str(),
+            ArtifactCategory::WebActivity.as_str(),
+            ArtifactCategory::UserActivity.as_str(),
+            ArtifactCategory::SystemActivity.as_str(),
+            ArtifactCategory::CloudSync.as_str(),
+            ArtifactCategory::AccountsCredentials.as_str(),
+            ArtifactCategory::Media.as_str(),
+            ArtifactCategory::DeletedRecovered.as_str(),
+            ArtifactCategory::ExecutionHistory.as_str(),
+            ArtifactCategory::NetworkArtifacts.as_str(),
+            ArtifactCategory::EncryptionKeyMaterial.as_str(),
+            "Linux System",
+            "Cryptocurrency",
+            "Dark Web",
+            "Financial",
+            "Network Forensics",
+        ];
+
+        let display_names: HashSet<&str> = standard_artifact_categories()
+            .iter()
+            .map(|(name, _, _)| *name)
+            .collect();
+        for category in required {
+            assert!(
+                display_names.contains(category),
+                "missing frontend display metadata for category {category}"
+            );
+        }
     }
 }

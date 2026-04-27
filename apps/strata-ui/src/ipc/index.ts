@@ -807,14 +807,23 @@ const MOCK_ARTIFACT_CATEGORIES: ArtifactCategory[] = [
   { name: 'Execution History',   icon: '\u{25B6}',  count: 89,  color: '#4a70c0' },
   { name: 'Deleted & Recovered', icon: '\u{1F5D1}', count: 47,  color: '#4a9060' },
   { name: 'Network Artifacts',   icon: '\u{1F517}', count: 34,  color: '#40a0a0' },
+  { name: 'Network Forensics',   icon: '\u{1F517}', count: 0,   color: '#10b981' },
   { name: 'Identity & Accounts', icon: '\u{1FAAA}', count: 23,  color: '#a0a040' },
+  { name: 'Accounts & Credentials', icon: '\u{1F511}', count: 0, color: '#c05050' },
   { name: 'Credentials',         icon: '\u{1F511}', count: 12,  color: '#c05050' },
+  { name: 'Cryptocurrency',      icon: '\u{1FA99}', count: 0,   color: '#805040' },
+  { name: 'Financial',           icon: '\u{1F4B5}', count: 0,   color: '#b87840' },
   { name: 'Malware Indicators',  icon: '\u{1F6E1}', count: 8,   color: '#c07040' },
+  { name: 'Dark Web',            icon: '\u{26A0}',  count: 0,   color: '#8b5cf6' },
+  { name: 'Linux System',        icon: '\u{1F5A5}', count: 0,   color: '#84cc16' },
+  { name: 'System Activity',     icon: '\u{2699}',  count: 0,   color: '#8090a0' },
   { name: 'Cloud & Sync',        icon: '\u{2601}',  count: 5,   color: '#6090d0' },
   { name: 'Memory Artifacts',    icon: '\u{1F4BE}', count: 2,   color: '#8090a0' },
   { name: 'Communications',      icon: '\u{1F4AC}', count: 0,   color: '#8050c0' },
   { name: 'Social Media',        icon: '\u{1F4F1}', count: 0,   color: '#8050c0' },
   { name: 'Web Activity',        icon: '\u{1F310}', count: 0,   color: '#4a7890' },
+  { name: 'Media',               icon: '\u{1F5BC}', count: 0,   color: '#c07040' },
+  { name: 'Encryption Key Material', icon: '\u{1F5DD}', count: 0, color: '#a855f7' },
 ]
 
 const MOCK_ARTIFACTS: Record<string, Artifact[]> = {

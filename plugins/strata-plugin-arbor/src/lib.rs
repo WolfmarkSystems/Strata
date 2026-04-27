@@ -172,11 +172,39 @@ pub fn walk_dir(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn plugin_metadata_shape() {
         let p = ArborPlugin::new();
         assert_eq!(p.name(), "Strata ARBOR");
         assert_eq!(color(), "#84cc16");
+    }
+
+    #[test]
+    fn arbor_plugin_produces_artifacts_on_linux_paths() -> Result<(), Box<dyn std::error::Error>> {
+        let tmp = tempfile::tempdir()?;
+        let etc = tmp.path().join("etc");
+        std::fs::create_dir_all(&etc)?;
+        std::fs::write(
+            etc.join("passwd"),
+            "root:x:0:0:root:/root:/bin/bash\nsvc:x:0:0:svc:/srv:/bin/sh\n",
+        )?;
+
+        let plugin = ArborPlugin::new();
+        let artifacts = plugin.run(PluginContext {
+            root_path: tmp.path().to_string_lossy().into_owned(),
+            vfs: None,
+            config: HashMap::new(),
+            prior_results: Vec::new(),
+        })?;
+
+        assert!(
+            artifacts
+                .iter()
+                .any(|artifact| artifact.source.ends_with("/etc/passwd")),
+            "ARBOR should emit at least one artifact for synthetic /etc/passwd"
+        );
+        Ok(())
     }
 }

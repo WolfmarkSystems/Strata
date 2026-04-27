@@ -137,4 +137,13 @@ mod tests {
         let addrs = scan_for_crypto_addresses(text);
         assert!(addrs.is_empty());
     }
+
+    #[test]
+    fn vault_crypto_module_detects_btc_address() {
+        let text = "wallet note: 1BoatSLRHtKNngkdXEeobR76b53LETtpyT";
+        let addrs = scan_for_crypto_addresses(text);
+        assert!(addrs
+            .iter()
+            .any(|addr| matches!(addr.currency, CryptoCurrency::Bitcoin)));
+    }
 }

@@ -265,4 +265,38 @@ mod tests {
             .map(|s| s.contains("DARK WEB ACCESS"))
             .unwrap_or(false));
     }
+
+    #[test]
+    fn vector_tor_module_detects_onion_url() -> Result<(), Box<dyn std::error::Error>> {
+        let root = std::env::temp_dir().join(format!(
+            "strata_tor_test_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_nanos()
+        ));
+        let profile = root.join("TorBrowser-Data/Browser/profile.default");
+        std::fs::create_dir_all(&profile)?;
+        let db_path = profile.join("places.sqlite");
+        {
+            let conn = rusqlite::Connection::open(&db_path)?;
+            conn.execute("CREATE TABLE moz_places (url TEXT)", [])?;
+            conn.execute(
+                "INSERT INTO moz_places (url) VALUES (?1)",
+                ["http://examplehiddenservice.onion/login"],
+            )?;
+        }
+
+        let artifacts = scan(&db_path);
+        std::fs::remove_dir_all(&root)?;
+
+        assert!(artifacts.iter().any(|artifact| {
+            artifact
+                .data
+                .get("title")
+                .map(|title| title == "DARK WEB ACCESS CONFIRMED")
+                .unwrap_or(false)
+        }));
+        Ok(())
+    }
 }
