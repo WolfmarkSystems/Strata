@@ -167,21 +167,26 @@ mod tests {
     fn verification_type_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("verification_type='active_military'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("verification_type='active_military'")));
     }
 
     #[test]
     fn shipping_address_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("shipping_address='123 Main St, Fort Meade MD'")));
+        assert!(r.iter().any(|a| a
+            .detail
+            .contains("shipping_address='123 Main St, Fort Meade MD'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

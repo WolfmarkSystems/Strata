@@ -162,8 +162,14 @@ mod tests {
     fn parses_wallets_and_transactions() {
         let db = make_db();
         let r = parse(db.path());
-        let wallets: Vec<_> = r.iter().filter(|a| a.subcategory == "Coinomi Wallet").collect();
-        let txs: Vec<_> = r.iter().filter(|a| a.subcategory == "Coinomi Transaction").collect();
+        let wallets: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Coinomi Wallet")
+            .collect();
+        let txs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Coinomi Transaction")
+            .collect();
         assert_eq!(wallets.len(), 3);
         assert_eq!(txs.len(), 1);
     }
@@ -172,7 +178,9 @@ mod tests {
     fn wallet_coin_and_balance_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("coin='BTC'") && a.detail.contains("balance='0.5'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("coin='BTC'") && a.detail.contains("balance='0.5'")));
     }
 
     #[test]
@@ -186,7 +194,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

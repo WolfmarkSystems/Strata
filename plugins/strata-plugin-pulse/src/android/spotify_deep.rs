@@ -60,7 +60,9 @@ fn read_history(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Ar
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (track_uri, track_name, artist_name, album_name, ts_ms, duration_ms, completed) in rows.flatten() {
+    for (track_uri, track_name, artist_name, album_name, ts_ms, duration_ms, completed) in
+        rows.flatten()
+    {
         let track_uri = track_uri.unwrap_or_default();
         let track_name = track_name.unwrap_or_else(|| "(unknown)".to_string());
         let artist_name = artist_name.unwrap_or_default();
@@ -239,21 +241,26 @@ mod tests {
     fn track_uri_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("track_uri='spotify:track:abc'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("track_uri='spotify:track:abc'")));
     }
 
     #[test]
     fn playlist_num_tracks_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("Road Trip") && a.title.contains("45 tracks")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Road Trip") && a.title.contains("45 tracks")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

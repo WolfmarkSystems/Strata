@@ -22,7 +22,9 @@
 //! investigator gold. Any non-Google accounts still surface but at a
 //! lower forensic value.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
@@ -151,9 +153,14 @@ mod tests {
         let records = parse(db.path());
         assert_eq!(records.len(), 3);
         // 2 Google accounts flagged High
-        let google: Vec<_> = records.iter().filter(|r| r.title.starts_with("Google")).collect();
+        let google: Vec<_> = records
+            .iter()
+            .filter(|r| r.title.starts_with("Google"))
+            .collect();
         assert_eq!(google.len(), 2);
-        assert!(google.iter().all(|r| r.forensic_value == ForensicValue::High));
+        assert!(google
+            .iter()
+            .all(|r| r.forensic_value == ForensicValue::High));
     }
 
     #[test]
@@ -184,7 +191,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let conn = Connection::open(tmp.path()).unwrap();
-        conn.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        conn.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(conn);
         assert!(parse(tmp.path()).is_empty());
     }

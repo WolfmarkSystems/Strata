@@ -71,7 +71,11 @@ fn read_history(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord>
             detail,
             path,
             ts,
-            if suspicious { ForensicValue::Critical } else { ForensicValue::Medium },
+            if suspicious {
+                ForensicValue::Critical
+            } else {
+                ForensicValue::Medium
+            },
             suspicious,
         ));
     }
@@ -106,7 +110,9 @@ fn read_places_only(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRec
         let title_str = format!("Firefox: {}", display);
         let detail = format!(
             "Firefox history url='{}' title='{}' visit_count={}",
-            url, title, count.unwrap_or(0)
+            url,
+            title,
+            count.unwrap_or(0)
         );
         let suspicious = is_suspicious_url(&url);
         out.push(build_record(
@@ -116,7 +122,11 @@ fn read_places_only(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRec
             detail,
             path,
             ts,
-            if suspicious { ForensicValue::Critical } else { ForensicValue::Medium },
+            if suspicious {
+                ForensicValue::Critical
+            } else {
+                ForensicValue::Medium
+            },
             suspicious,
         ));
     }
@@ -218,8 +228,14 @@ mod tests {
     fn parses_history_and_bookmarks() {
         let db = make_db();
         let r = parse(db.path());
-        let hist: Vec<_> = r.iter().filter(|a| a.subcategory == "Firefox History").collect();
-        let bkmk: Vec<_> = r.iter().filter(|a| a.subcategory == "Firefox Bookmark").collect();
+        let hist: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Firefox History")
+            .collect();
+        let bkmk: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Firefox Bookmark")
+            .collect();
         assert_eq!(hist.len(), 3);
         assert_eq!(bkmk.len(), 1);
     }
@@ -237,7 +253,9 @@ mod tests {
     fn url_and_title_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("url='https://example.com'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("url='https://example.com'")));
         assert!(r.iter().any(|a| a.detail.contains("title='Daily News'")));
     }
 
@@ -245,7 +263,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -14,9 +14,9 @@
 //! range. Proves the user was wearing the device / tracking health at
 //! specific times.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 const TYPE_NAMES: &[(i64, &str)] = &[
     (5, "StepCount"),
@@ -36,7 +36,11 @@ const TYPE_NAMES: &[(i64, &str)] = &[
 ];
 
 fn type_label(id: i64) -> &'static str {
-    TYPE_NAMES.iter().find(|(k, _)| *k == id).map(|(_, v)| *v).unwrap_or("Other")
+    TYPE_NAMES
+        .iter()
+        .find(|(k, _)| *k == id)
+        .map(|(_, v)| *v)
+        .unwrap_or("Other")
 }
 
 pub fn matches(path: &Path) -> bool {
@@ -45,28 +49,36 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "samples") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "samples") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
 
     let by_type = conn
         .prepare(
             "SELECT data_type, COUNT(*), MIN(start_date), MAX(start_date) \
              FROM samples WHERE data_type IS NOT NULL \
-             GROUP BY data_type ORDER BY COUNT(*) DESC LIMIT 20"
+             GROUP BY data_type ORDER BY COUNT(*) DESC LIMIT 20",
         )
         .and_then(|mut s| {
-            let r = s.query_map([], |row| Ok((
-                row.get::<_, i64>(0)?,
-                row.get::<_, i64>(1)?,
-                row.get::<_, Option<f64>>(2)?,
-                row.get::<_, Option<f64>>(3)?,
-            )))?;
+            let r = s.query_map([], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, Option<f64>>(2)?,
+                    row.get::<_, Option<f64>>(3)?,
+                ))
+            })?;
             Ok(r.flatten().collect::<Vec<_>>())
         })
         .unwrap_or_default();
 
-    if by_type.is_empty() { return out; }
+    if by_type.is_empty() {
+        return out;
+    }
 
     for (dt, count, first, last) in by_type {
         let label = type_label(dt);
@@ -82,7 +94,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 count, dt, label, first_unix, last_unix
             ),
             source_path: source.clone(),
-            forensic_value: if label == "HeartRate" || label == "StepCount" || label == "SleepAnalysis" {
+            forensic_value: if label == "HeartRate"
+                || label == "StepCount"
+                || label == "SleepAnalysis"
+            {
                 ForensicValue::High
             } else {
                 ForensicValue::Medium
@@ -111,7 +126,8 @@ mod tests {
                 c.execute(
                     "INSERT INTO samples (data_type, start_date, end_date) VALUES (?1, ?2, ?3)",
                     rusqlite::params![*dt, 700_000_000.0 + i as f64, 700_000_010.0 + i as f64],
-                ).unwrap();
+                )
+                .unwrap();
             }
         }
         tmp
@@ -121,16 +137,25 @@ mod tests {
     fn parses_per_type_breakdown() {
         let tmp = make_health_samples(&[(5, 10), (7, 20), (63, 5)]);
         let recs = parse(tmp.path());
-        assert!(recs.iter().any(|r| r.subcategory == "HealthKit StepCount" && r.detail.contains("10 samples")));
-        assert!(recs.iter().any(|r| r.subcategory == "HealthKit HeartRate" && r.detail.contains("20 samples")));
-        assert!(recs.iter().any(|r| r.subcategory == "HealthKit SleepAnalysis"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "HealthKit StepCount" && r.detail.contains("10 samples")));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "HealthKit HeartRate" && r.detail.contains("20 samples")));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "HealthKit SleepAnalysis"));
     }
 
     #[test]
     fn heart_rate_is_high_forensic_value() {
         let tmp = make_health_samples(&[(7, 1)]);
         let recs = parse(tmp.path());
-        let hr = recs.iter().find(|r| r.subcategory == "HealthKit HeartRate").unwrap();
+        let hr = recs
+            .iter()
+            .find(|r| r.subcategory == "HealthKit HeartRate")
+            .unwrap();
         assert_eq!(hr.forensic_value, ForensicValue::High);
     }
 

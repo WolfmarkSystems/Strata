@@ -133,21 +133,26 @@ mod tests {
     fn confirmation_number_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("confirmation='HTL-88821'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("confirmation='HTL-88821'")));
     }
 
     #[test]
     fn room_type_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("room_type='King Suite'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("room_type='King Suite'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

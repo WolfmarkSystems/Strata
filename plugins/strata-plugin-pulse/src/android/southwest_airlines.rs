@@ -201,7 +201,10 @@ mod tests {
     fn parses_boarding_pass() {
         let db = make_db();
         let r = parse(db.path());
-        let bp: Vec<_> = r.iter().filter(|a| a.subcategory == "Southwest Boarding Pass").collect();
+        let bp: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Southwest Boarding Pass")
+            .collect();
         assert_eq!(bp.len(), 1);
         assert!(bp[0].detail.contains("pnr='QPLM8X'"));
         assert!(bp[0].detail.contains("boarding_position='A32'"));
@@ -211,7 +214,10 @@ mod tests {
     fn parses_rapid_rewards() {
         let db = make_db();
         let r = parse(db.path());
-        let rr: Vec<_> = r.iter().filter(|a| a.subcategory == "Rapid Rewards Account").collect();
+        let rr: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Rapid Rewards Account")
+            .collect();
         assert_eq!(rr.len(), 1);
         assert!(rr[0].detail.contains("points=34000"));
         assert!(rr[0].detail.contains("status='A-List'"));
@@ -221,15 +227,21 @@ mod tests {
     fn boarding_pass_forensic_value_is_critical() {
         let db = make_db();
         let r = parse(db.path());
-        let bp: Vec<_> = r.iter().filter(|a| a.subcategory == "Southwest Boarding Pass").collect();
-        assert!(bp.iter().all(|a| a.forensic_value == ForensicValue::Critical));
+        let bp: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Southwest Boarding Pass")
+            .collect();
+        assert!(bp
+            .iter()
+            .all(|a| a.forensic_value == ForensicValue::Critical));
     }
 
     #[test]
     fn missing_tables_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -3,9 +3,9 @@
 //! Firefox iOS uses `browser.db` with `history`, `visits`, `bookmarks`.
 //! Same forensic value as Chrome/Safari history.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     let scope = util::path_contains(path, "firefox") || util::path_contains(path, "org.mozilla");
@@ -14,7 +14,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
 
     for (table, label) in [
@@ -50,7 +52,9 @@ mod tests {
 
     #[test]
     fn matches_firefox() {
-        assert!(matches(Path::new("/var/mobile/Containers/Data/Application/UUID/Library/org.mozilla.firefox/browser.db")));
+        assert!(matches(Path::new(
+            "/var/mobile/Containers/Data/Application/UUID/Library/org.mozilla.firefox/browser.db"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
     #[test]
@@ -60,10 +64,23 @@ mod tests {
         std::fs::create_dir_all(&root).unwrap();
         let p = root.join("browser.db");
         let c = Connection::open(&p).unwrap();
-        c.execute("CREATE TABLE history (id INTEGER PRIMARY KEY, url TEXT)", []).unwrap();
-        c.execute("CREATE TABLE visits (id INTEGER PRIMARY KEY, siteID INTEGER, date REAL)", []).unwrap();
-        c.execute("INSERT INTO history (url) VALUES ('https://a.com')", []).unwrap();
-        c.execute("INSERT INTO visits (siteID, date) VALUES (1, 1700000000.0)", []).unwrap();
+        c.execute(
+            "CREATE TABLE history (id INTEGER PRIMARY KEY, url TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE visits (id INTEGER PRIMARY KEY, siteID INTEGER, date REAL)",
+            [],
+        )
+        .unwrap();
+        c.execute("INSERT INTO history (url) VALUES ('https://a.com')", [])
+            .unwrap();
+        c.execute(
+            "INSERT INTO visits (siteID, date) VALUES (1, 1700000000.0)",
+            [],
+        )
+        .unwrap();
         let recs = parse(&p);
         assert!(recs.iter().any(|r| r.subcategory == "Firefox history"));
         assert!(recs.iter().any(|r| r.subcategory == "Firefox visits"));

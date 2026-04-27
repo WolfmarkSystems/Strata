@@ -199,16 +199,10 @@ mod tests {
             [t2],
         )
         .unwrap();
-        c.execute(
-            "INSERT INTO visits VALUES (1,1,?1,0,805306368,0,0)",
-            [t1],
-        )
-        .unwrap();
-        c.execute(
-            "INSERT INTO visits VALUES (2,2,?1,0,805306368,0,0)",
-            [t2],
-        )
-        .unwrap();
+        c.execute("INSERT INTO visits VALUES (1,1,?1,0,805306368,0,0)", [t1])
+            .unwrap();
+        c.execute("INSERT INTO visits VALUES (2,2,?1,0,805306368,0,0)", [t2])
+            .unwrap();
         tmp
     }
 
@@ -217,7 +211,9 @@ mod tests {
         let db = make_db();
         let r = parse(db.path());
         assert_eq!(r.len(), 2);
-        assert!(r.iter().all(|c| c.category == ArtifactCategory::WebActivity));
+        assert!(r
+            .iter()
+            .all(|c| c.category == ArtifactCategory::WebActivity));
     }
 
     #[test]

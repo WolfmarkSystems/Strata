@@ -159,8 +159,14 @@ mod tests {
     fn parses_messages_and_calls() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "TextNow Message").collect();
-        let calls: Vec<_> = r.iter().filter(|a| a.subcategory == "TextNow Call").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "TextNow Message")
+            .collect();
+        let calls: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "TextNow Call")
+            .collect();
         assert_eq!(msgs.len(), 2);
         assert_eq!(calls.len(), 2);
     }
@@ -169,22 +175,29 @@ mod tests {
     fn direction_is_correct() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("incoming") && a.title.contains("Hello")));
-        assert!(r.iter().any(|a| a.title.contains("outgoing") && a.title.contains("Reply")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("incoming") && a.title.contains("Hello")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("outgoing") && a.title.contains("Reply")));
     }
 
     #[test]
     fn contact_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("contact='+15551234567'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("contact='+15551234567'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

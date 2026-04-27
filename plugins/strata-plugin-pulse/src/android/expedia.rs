@@ -200,8 +200,14 @@ mod tests {
     fn parses_trip_and_segments() {
         let db = make_db();
         let r = parse(db.path());
-        let trips: Vec<_> = r.iter().filter(|a| a.subcategory == "Expedia Trip").collect();
-        let segs: Vec<_> = r.iter().filter(|a| a.subcategory == "Expedia Segment").collect();
+        let trips: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Expedia Trip")
+            .collect();
+        let segs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Expedia Segment")
+            .collect();
         assert_eq!(trips.len(), 1);
         assert_eq!(segs.len(), 2);
     }
@@ -210,22 +216,30 @@ mod tests {
     fn flight_segment_has_confirmation() {
         let db = make_db();
         let r = parse(db.path());
-        let segs: Vec<_> = r.iter().filter(|a| a.subcategory == "Expedia Segment").collect();
-        assert!(segs.iter().any(|a| a.detail.contains("confirmation='EXP-7712'")));
+        let segs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Expedia Segment")
+            .collect();
+        assert!(segs
+            .iter()
+            .any(|a| a.detail.contains("confirmation='EXP-7712'")));
     }
 
     #[test]
     fn segment_origin_destination_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("LAX") && a.title.contains("JFK")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("LAX") && a.title.contains("JFK")));
     }
 
     #[test]
     fn missing_tables_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

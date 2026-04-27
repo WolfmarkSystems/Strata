@@ -68,8 +68,8 @@ fn read_events(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Art
             "SmartThings device event id='{}' device_id='{}' capability='{}' attribute='{}' value='{}'",
             id, device_id, capability, attribute, value
         );
-        let suspicious = attribute == "motion" && value == "active"
-            || attribute == "contact" && value == "open";
+        let suspicious =
+            attribute == "motion" && value == "active" || attribute == "contact" && value == "open";
         out.push(build_record(
             ArtifactCategory::UserActivity,
             "SmartThings Event",
@@ -77,7 +77,11 @@ fn read_events(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Art
             detail,
             path,
             ts,
-            if suspicious { ForensicValue::High } else { ForensicValue::Medium },
+            if suspicious {
+                ForensicValue::High
+            } else {
+                ForensicValue::Medium
+            },
             false,
         ));
     }
@@ -175,8 +179,14 @@ mod tests {
     fn parses_events_and_automation() {
         let db = make_db();
         let r = parse(db.path());
-        let events: Vec<_> = r.iter().filter(|a| a.subcategory == "SmartThings Event").collect();
-        let automations: Vec<_> = r.iter().filter(|a| a.subcategory == "SmartThings Automation").collect();
+        let events: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "SmartThings Event")
+            .collect();
+        let automations: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "SmartThings Automation")
+            .collect();
         assert_eq!(events.len(), 3);
         assert_eq!(automations.len(), 1);
     }
@@ -185,22 +195,31 @@ mod tests {
     fn motion_and_contact_events_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("attribute='motion'") && a.detail.contains("value='active'")));
-        assert!(r.iter().any(|a| a.detail.contains("attribute='contact'") && a.detail.contains("value='open'")));
+        assert!(r.iter().any(
+            |a| a.detail.contains("attribute='motion'") && a.detail.contains("value='active'")
+        ));
+        assert!(
+            r.iter()
+                .any(|a| a.detail.contains("attribute='contact'")
+                    && a.detail.contains("value='open'"))
+        );
     }
 
     #[test]
     fn automation_trigger_type_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("trigger_type='schedule'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("trigger_type='schedule'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

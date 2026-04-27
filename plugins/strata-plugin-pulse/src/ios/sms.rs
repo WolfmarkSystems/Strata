@@ -44,9 +44,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
              GROUP BY service ORDER BY COUNT(*) DESC",
         )
         .and_then(|mut s| {
-            let rows = s.query_map([], |r| {
-                Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
-            })?;
+            let rows = s.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))?;
             Ok(rows.flatten().collect::<Vec<_>>())
         })
         .unwrap_or_default();
@@ -98,7 +96,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             subcategory: "SMS/iMessage handles".to_string(),
             timestamp: None,
             title: "Message participants".to_string(),
-            detail: format!("{} unique handles (phone numbers / Apple IDs)", handle_count),
+            detail: format!(
+                "{} unique handles (phone numbers / Apple IDs)",
+                handle_count
+            ),
             source_path: source.clone(),
             forensic_value: ForensicValue::High,
             mitre_technique: None,
@@ -135,9 +136,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
 /// writing whole-second Cocoa doubles or nanosecond integers. Returns
 /// `(first, last)` unix seconds.
 fn probe_date_range(conn: &rusqlite::Connection) -> (Option<i64>, Option<i64>) {
-    let Ok(mut stmt) = conn.prepare(
-        "SELECT MIN(date), MAX(date) FROM message WHERE date IS NOT NULL AND date != 0",
-    ) else {
+    let Ok(mut stmt) = conn
+        .prepare("SELECT MIN(date), MAX(date) FROM message WHERE date IS NOT NULL AND date != 0")
+    else {
         return (None, None);
     };
     let (min, max): (Option<i64>, Option<i64>) = stmt
@@ -183,8 +184,11 @@ mod tests {
             [],
         )
         .unwrap();
-        c.execute("CREATE TABLE handle (ROWID INTEGER PRIMARY KEY, id TEXT)", [])
-            .unwrap();
+        c.execute(
+            "CREATE TABLE handle (ROWID INTEGER PRIMARY KEY, id TEXT)",
+            [],
+        )
+        .unwrap();
         c.execute(
             "CREATE TABLE attachment (ROWID INTEGER PRIMARY KEY, filename TEXT)",
             [],
@@ -208,8 +212,11 @@ mod tests {
         }
         c.execute("INSERT INTO handle (id) VALUES ('+15551234567')", [])
             .unwrap();
-        c.execute("INSERT INTO attachment (filename) VALUES ('/var/mobile/a.jpg')", [])
-            .unwrap();
+        c.execute(
+            "INSERT INTO attachment (filename) VALUES ('/var/mobile/a.jpg')",
+            [],
+        )
+        .unwrap();
         tmp
     }
 
@@ -267,7 +274,10 @@ mod tests {
             .iter()
             .find(|r| r.subcategory == "SMS/iMessage")
             .unwrap();
-        let nanos_summary = nanos.iter().find(|r| r.subcategory == "SMS/iMessage").unwrap();
+        let nanos_summary = nanos
+            .iter()
+            .find(|r| r.subcategory == "SMS/iMessage")
+            .unwrap();
         assert_eq!(seconds_summary.timestamp, Some(expect_unix));
         assert_eq!(nanos_summary.timestamp, Some(expect_unix));
     }

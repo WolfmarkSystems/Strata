@@ -61,7 +61,9 @@ fn read_activity_log(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRe
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (date, created_ms, name, kind, _speed, _pace, calories, steps, distance, hr) in rows.flatten() {
+    for (date, created_ms, name, kind, _speed, _pace, calories, steps, distance, hr) in
+        rows.flatten()
+    {
         let date = date.unwrap_or_default();
         let name = name.unwrap_or_else(|| "(unnamed)".to_string());
         let kind = kind.unwrap_or_default();
@@ -253,7 +255,10 @@ mod tests {
     fn exercise_event_captures_gps() {
         let db = make_db();
         let r = parse(db.path());
-        let ev = r.iter().find(|a| a.subcategory == "Fitbit Exercise Event").unwrap();
+        let ev = r
+            .iter()
+            .find(|a| a.subcategory == "Fitbit Exercise Event")
+            .unwrap();
         assert!(ev.detail.contains("lat=37.774900"));
         assert!(ev.detail.contains("session=42"));
     }
@@ -262,7 +267,10 @@ mod tests {
     fn activity_steps_and_calories() {
         let db = make_db();
         let r = parse(db.path());
-        let a = r.iter().find(|a| a.subcategory == "Fitbit Activity").unwrap();
+        let a = r
+            .iter()
+            .find(|a| a.subcategory == "Fitbit Activity")
+            .unwrap();
         assert!(a.detail.contains("steps=5000"));
         assert!(a.detail.contains("calories=150"));
     }
@@ -271,7 +279,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

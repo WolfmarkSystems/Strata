@@ -13,7 +13,9 @@
 //!   microseconds since 1601.
 //! - `is_secure` / `is_httponly`
 
-use crate::android::helpers::{build_record, chrome_to_unix, column_exists, open_sqlite_ro, table_exists};
+use crate::android::helpers::{
+    build_record, chrome_to_unix, column_exists, open_sqlite_ro, table_exists,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
@@ -140,7 +142,9 @@ mod tests {
     fn host_and_name_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|x| x.title.contains(".example.com") && x.title.contains("sessionid")));
+        assert!(r
+            .iter()
+            .any(|x| x.title.contains(".example.com") && x.title.contains("sessionid")));
     }
 
     #[test]

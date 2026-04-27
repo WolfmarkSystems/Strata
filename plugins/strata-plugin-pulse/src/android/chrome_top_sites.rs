@@ -125,7 +125,9 @@ mod tests {
     fn category_is_web_activity() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().all(|x| x.category == ArtifactCategory::WebActivity));
+        assert!(r
+            .iter()
+            .all(|x| x.category == ArtifactCategory::WebActivity));
     }
 
     #[test]

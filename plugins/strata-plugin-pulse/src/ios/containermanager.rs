@@ -3,19 +3,22 @@
 //! Maps bundle IDs to sandbox UUIDs with creation/access dates.
 //! Essential for building an app installation timeline.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
-    util::name_is(path, &["containers.sqlite"])
-        && util::path_contains(path, "containermanager")
+    util::name_is(path, &["containers.sqlite"]) && util::path_contains(path, "containermanager")
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "containers") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "containers") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
     let count = util::count_rows(&conn, "containers");
     out.push(ArtifactRecord {
@@ -23,7 +26,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         subcategory: "Container manager".to_string(),
         timestamp: None,
         title: "iOS app container registry".to_string(),
-        detail: format!("{} container rows (bundle ID → UUID mapping with install dates)", count),
+        detail: format!(
+            "{} container rows (bundle ID → UUID mapping with install dates)",
+            count
+        ),
         source_path: source,
         forensic_value: ForensicValue::High,
         mitre_technique: Some("T1005".to_string()),
@@ -42,8 +48,12 @@ mod tests {
 
     #[test]
     fn matches_containermanager_path() {
-        assert!(matches(Path::new("/var/mobile/Library/containermanagerd/ContainerManager/Containers.sqlite")));
-        assert!(!matches(Path::new("/var/mobile/Library/SMS/Containers.sqlite")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/containermanagerd/ContainerManager/Containers.sqlite"
+        )));
+        assert!(!matches(Path::new(
+            "/var/mobile/Library/SMS/Containers.sqlite"
+        )));
     }
 
     #[test]
@@ -53,9 +63,21 @@ mod tests {
         std::fs::create_dir_all(&root).unwrap();
         let p = root.join("Containers.sqlite");
         let c = Connection::open(&p).unwrap();
-        c.execute("CREATE TABLE containers (id INTEGER PRIMARY KEY, identifier TEXT, uuid TEXT)", []).unwrap();
-        c.execute("INSERT INTO containers (identifier, uuid) VALUES ('com.apple.mobilesafari', 'AAAA')", []).unwrap();
-        c.execute("INSERT INTO containers (identifier, uuid) VALUES ('com.example.app', 'BBBB')", []).unwrap();
+        c.execute(
+            "CREATE TABLE containers (id INTEGER PRIMARY KEY, identifier TEXT, uuid TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO containers (identifier, uuid) VALUES ('com.apple.mobilesafari', 'AAAA')",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO containers (identifier, uuid) VALUES ('com.example.app', 'BBBB')",
+            [],
+        )
+        .unwrap();
         let recs = parse(&p);
         assert_eq!(recs.len(), 1);
         assert!(recs[0].detail.contains("2 container"));

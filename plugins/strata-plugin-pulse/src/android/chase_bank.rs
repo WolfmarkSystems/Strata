@@ -7,7 +7,9 @@
 //! accounts in `accounts`, and payees in `payees` or `zelle_payees`.
 //! Schemas vary; parser probes common column variants.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -94,7 +96,11 @@ pub(super) fn read_transactions(
         let account_id = account_id.unwrap_or_default();
         let tx_type = tx_type.unwrap_or_default();
         let ts = ts_raw.and_then(|t| {
-            if t > 10_000_000_000 { unix_ms_to_i64(t) } else { Some(t) }
+            if t > 10_000_000_000 {
+                unix_ms_to_i64(t)
+            } else {
+                Some(t)
+            }
         });
         let title = format!("{} tx: {} {}", bank, amount, description);
         let detail = format!(
@@ -277,7 +283,9 @@ mod tests {
     fn amount_and_description_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("Chase") && a.title.contains("Starbucks")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Chase") && a.title.contains("Starbucks")));
     }
 
     #[test]
@@ -292,14 +300,17 @@ mod tests {
     fn payee_email_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("email='alice@example.com'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("email='alice@example.com'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

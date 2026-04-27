@@ -47,7 +47,9 @@ mod tests {
 
     #[test]
     fn matches_signal_filenames() {
-        assert!(matches(Path::new("/var/mobile/Library/Signal/signal.sqlite")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/Signal/signal.sqlite"
+        )));
         assert!(matches(Path::new("/var/mobile/Library/Signal/signal.db")));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }

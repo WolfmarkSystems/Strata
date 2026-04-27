@@ -83,7 +83,11 @@ fn read_follows(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Ar
     out
 }
 
-fn read_watch_history(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
+fn read_watch_history(
+    conn: &rusqlite::Connection,
+    path: &Path,
+    table: &str,
+) -> Vec<ArtifactRecord> {
     let sql = format!(
         "SELECT channel_name, game_name, view_time, duration \
          FROM \"{table}\" ORDER BY view_time DESC LIMIT 5000",
@@ -253,7 +257,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

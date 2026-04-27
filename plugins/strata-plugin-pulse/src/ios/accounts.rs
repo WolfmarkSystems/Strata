@@ -141,9 +141,15 @@ mod tests {
         let recs = parse(tmp.path());
         let summary = recs.iter().find(|r| r.subcategory == "Accounts").unwrap();
         assert!(summary.detail.contains("4 ZACCOUNT"));
-        assert!(recs.iter().any(|r| r.subcategory == "Accounts type: iCloud"));
-        assert!(recs.iter().any(|r| r.subcategory == "Accounts type: Google"));
-        assert!(recs.iter().any(|r| r.subcategory == "Accounts type: Twitter"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "Accounts type: iCloud"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "Accounts type: Google"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "Accounts type: Twitter"));
     }
 
     #[test]
@@ -152,7 +158,9 @@ mod tests {
         let recs = parse(tmp.path());
         assert!(recs.iter().any(|r| r.subcategory == "Accounts"));
         // No type records should be present.
-        assert!(!recs.iter().any(|r| r.subcategory.starts_with("Accounts type:")));
+        assert!(!recs
+            .iter()
+            .any(|r| r.subcategory.starts_with("Accounts type:")));
     }
 
     #[test]

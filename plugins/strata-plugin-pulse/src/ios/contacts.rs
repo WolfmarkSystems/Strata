@@ -160,7 +160,10 @@ mod tests {
         let tmp = make_addressbook(5, 7, 3);
         let records = parse(tmp.path());
 
-        let summary = records.iter().find(|r| r.subcategory == "Contacts").unwrap();
+        let summary = records
+            .iter()
+            .find(|r| r.subcategory == "Contacts")
+            .unwrap();
         assert!(summary.detail.contains("5 ABPerson"));
 
         let phones = records

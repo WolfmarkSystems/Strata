@@ -60,7 +60,9 @@ fn read_orders(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Art
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (order_id, store, created_ms, subtotal, delivery_fee, tip, total, address, status) in rows.flatten() {
+    for (order_id, store, created_ms, subtotal, delivery_fee, tip, total, address, status) in
+        rows.flatten()
+    {
         let order_id = order_id.unwrap_or_else(|| "(unknown)".to_string());
         let store = store.unwrap_or_else(|| "(unknown)".to_string());
         let subtotal = subtotal.unwrap_or_default();
@@ -184,8 +186,14 @@ mod tests {
     fn parses_orders_and_merchants() {
         let db = make_db();
         let r = parse(db.path());
-        let orders: Vec<_> = r.iter().filter(|a| a.subcategory == "DoorDash Order").collect();
-        let merchants: Vec<_> = r.iter().filter(|a| a.subcategory == "DoorDash Merchant").collect();
+        let orders: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "DoorDash Order")
+            .collect();
+        let merchants: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "DoorDash Merchant")
+            .collect();
         assert_eq!(orders.len(), 1);
         assert_eq!(merchants.len(), 1);
     }
@@ -194,7 +202,10 @@ mod tests {
     fn tip_and_total_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let o = r.iter().find(|a| a.subcategory == "DoorDash Order").unwrap();
+        let o = r
+            .iter()
+            .find(|a| a.subcategory == "DoorDash Order")
+            .unwrap();
         assert!(o.detail.contains("tip='$3.00'"));
         assert!(o.detail.contains("total='$21.99'"));
     }
@@ -203,7 +214,10 @@ mod tests {
     fn merchant_phone_and_gps() {
         let db = make_db();
         let r = parse(db.path());
-        let m = r.iter().find(|a| a.subcategory == "DoorDash Merchant").unwrap();
+        let m = r
+            .iter()
+            .find(|a| a.subcategory == "DoorDash Merchant")
+            .unwrap();
         assert!(m.detail.contains("phone='555-0100'"));
         assert!(m.detail.contains("lat=37.774900"));
     }
@@ -212,7 +226,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

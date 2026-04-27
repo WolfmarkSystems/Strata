@@ -3,9 +3,9 @@
 //! Logs every time an app accesses camera, mic, location, contacts,
 //! photos with exact timestamps. iLEAPP keys off the `access` table.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["com.apple.privacy.accounting.db"])
@@ -13,8 +13,12 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "access") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "access") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
     let total = util::count_rows(&conn, "access");
 
@@ -31,7 +35,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         subcategory: "App Privacy Report".to_string(),
         timestamp: None,
         title: "iOS App Privacy Report".to_string(),
-        detail: format!("{} access events (timestamped camera/mic/location/contacts access log)", total),
+        detail: format!(
+            "{} access events (timestamped camera/mic/location/contacts access log)",
+            total
+        ),
         source_path: source.clone(),
         forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1005".to_string()),
@@ -67,30 +74,48 @@ mod tests {
     fn make_privacy_db(rows: &[(&str, &str)]) -> NamedTempFile {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute("CREATE TABLE access (bundle_id TEXT, category TEXT, timestamp REAL, kind TEXT)", []).unwrap();
+        c.execute(
+            "CREATE TABLE access (bundle_id TEXT, category TEXT, timestamp REAL, kind TEXT)",
+            [],
+        )
+        .unwrap();
         for (bid, cat) in rows {
-            c.execute("INSERT INTO access VALUES (?1, ?2, 700000000.0, 'access')", rusqlite::params![*bid, *cat]).unwrap();
+            c.execute(
+                "INSERT INTO access VALUES (?1, ?2, 700000000.0, 'access')",
+                rusqlite::params![*bid, *cat],
+            )
+            .unwrap();
         }
         tmp
     }
 
     #[test]
     fn matches_privacy_db() {
-        assert!(matches(Path::new("/var/mobile/Library/com.apple.privacy.accounting.db")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/com.apple.privacy.accounting.db"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
     #[test]
     fn parses_summary_and_category_breakdown() {
         let tmp = make_privacy_db(&[
-            ("com.app.a", "Camera"), ("com.app.b", "Camera"),
+            ("com.app.a", "Camera"),
+            ("com.app.b", "Camera"),
             ("com.app.a", "Microphone"),
         ]);
         let recs = parse(tmp.path());
-        let summary = recs.iter().find(|r| r.subcategory == "App Privacy Report").unwrap();
+        let summary = recs
+            .iter()
+            .find(|r| r.subcategory == "App Privacy Report")
+            .unwrap();
         assert!(summary.detail.contains("3 access events"));
-        assert!(recs.iter().any(|r| r.subcategory == "Privacy access: Camera"));
-        assert!(recs.iter().any(|r| r.subcategory == "Privacy access: Microphone"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "Privacy access: Camera"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "Privacy access: Microphone"));
     }
 
     #[test]

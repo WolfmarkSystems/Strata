@@ -4,9 +4,9 @@
 //! plist for discovery/transfer records and `Recents.db` for
 //! received-item history.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["com.apple.sharingd.plist"])
@@ -15,7 +15,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     let source = path.to_string_lossy().to_string();
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
@@ -28,13 +30,19 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 .unwrap_or_default();
             if !tables.is_empty() {
                 let mut total = 0_i64;
-                for t in &tables { total += util::count_rows(&conn, t); }
+                for t in &tables {
+                    total += util::count_rows(&conn, t);
+                }
                 return vec![ArtifactRecord {
                     category: ArtifactCategory::UserActivity,
                     subcategory: "AirDrop".to_string(),
                     timestamp: None,
                     title: "AirDrop transfer history".to_string(),
-                    detail: format!("{} rows across {} tables in Recents.db", total, tables.len()),
+                    detail: format!(
+                        "{} rows across {} tables in Recents.db",
+                        total,
+                        tables.len()
+                    ),
                     source_path: source,
                     forensic_value: ForensicValue::High,
                     mitre_technique: Some("T1011".to_string()),
@@ -51,7 +59,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         subcategory: "AirDrop".to_string(),
         timestamp: None,
         title: "AirDrop sharingd plist".to_string(),
-        detail: format!("{} ({} bytes) — AirDrop discovery and transfer records", name, size),
+        detail: format!(
+            "{} ({} bytes) — AirDrop discovery and transfer records",
+            name, size
+        ),
         source_path: source,
         forensic_value: ForensicValue::High,
         mitre_technique: Some("T1011".to_string()),
@@ -68,8 +79,12 @@ mod tests {
 
     #[test]
     fn matches_airdrop_files() {
-        assert!(matches(Path::new("/var/mobile/Library/Preferences/com.apple.sharingd.plist")));
-        assert!(matches(Path::new("/var/mobile/Library/Application Support/com.apple.sharingd/Recents.db")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/Preferences/com.apple.sharingd.plist"
+        )));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/Application Support/com.apple.sharingd/Recents.db"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 

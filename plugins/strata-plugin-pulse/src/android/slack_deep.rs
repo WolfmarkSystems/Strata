@@ -169,7 +169,10 @@ fn read_reactions(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<
             .split('.')
             .next()
             .and_then(|s| s.parse::<i64>().ok());
-        let title = format!("Slack reaction :{}: by {} on {}", emoji, user_id, message_ts);
+        let title = format!(
+            "Slack reaction :{}: by {} on {}",
+            emoji, user_id, message_ts
+        );
         let detail = format!(
             "Slack reaction emoji='{}' user_id='{}' message_ts='{}' channel_id='{}'",
             emoji, user_id, message_ts, channel_id
@@ -248,7 +251,10 @@ mod tests {
     fn file_share_detail_has_size() {
         let db = make_db();
         let r = parse(db.path());
-        let f = r.iter().find(|a| a.subcategory == "Slack File Share").unwrap();
+        let f = r
+            .iter()
+            .find(|a| a.subcategory == "Slack File Share")
+            .unwrap();
         assert!(f.detail.contains("file_size=204800"));
         assert!(f.detail.contains("uploader='alice'"));
     }
@@ -257,7 +263,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -181,8 +181,14 @@ mod tests {
     fn parses_messages_and_contacts() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "PlanetRomeo Message").collect();
-        let contacts: Vec<_> = r.iter().filter(|a| a.subcategory == "PlanetRomeo Contact").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "PlanetRomeo Message")
+            .collect();
+        let contacts: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "PlanetRomeo Contact")
+            .collect();
         assert_eq!(msgs.len(), 2);
         assert_eq!(contacts.len(), 2);
     }
@@ -199,14 +205,17 @@ mod tests {
     fn city_and_country_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("city='Berlin'") && a.detail.contains("country='Germany'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("city='Berlin'") && a.detail.contains("country='Germany'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -57,7 +57,11 @@ fn read_entries(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord>
         let is_private = is_private.unwrap_or(0) != 0;
         let snap_ids = snap_ids.unwrap_or_default();
         let formats = formats.unwrap_or_default();
-        let title = format!("Snapchat memory {} ({})", id, if is_private { "private" } else { "normal" });
+        let title = format!(
+            "Snapchat memory {} ({})",
+            id,
+            if is_private { "private" } else { "normal" }
+        );
         let detail = format!(
             "Snapchat memories_entry id='{}' private={} snap_ids='{}' formats='{}'",
             id, is_private, snap_ids, formats
@@ -69,7 +73,11 @@ fn read_entries(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord>
             detail,
             path,
             ts,
-            if is_private { ForensicValue::Critical } else { ForensicValue::High },
+            if is_private {
+                ForensicValue::Critical
+            } else {
+                ForensicValue::High
+            },
             is_private,
         ));
     }
@@ -102,7 +110,9 @@ fn read_snaps(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, create_ms, media_id, width, height, duration, has_loc, lat, lon, front) in rows.flatten() {
+    for (id, create_ms, media_id, width, height, duration, has_loc, lat, lon, front) in
+        rows.flatten()
+    {
         let id = id.unwrap_or_else(|| "(unknown)".to_string());
         let media_id = media_id.unwrap_or_default();
         let width = width.unwrap_or(0);
@@ -239,7 +249,10 @@ mod tests {
     fn private_entry_flagged_suspicious() {
         let db = make_db();
         let r = parse(db.path());
-        let private = r.iter().find(|a| a.detail.contains("private=true")).unwrap();
+        let private = r
+            .iter()
+            .find(|a| a.detail.contains("private=true"))
+            .unwrap();
         assert!(private.is_suspicious);
     }
 
@@ -247,7 +260,10 @@ mod tests {
     fn snap_gps_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let snap = r.iter().find(|a| a.subcategory == "Snapchat Memory Snap").unwrap();
+        let snap = r
+            .iter()
+            .find(|a| a.subcategory == "Snapchat Memory Snap")
+            .unwrap();
         assert!(snap.detail.contains("lat=37.774900"));
         assert!(snap.detail.contains("front_facing=true"));
     }
@@ -256,7 +272,10 @@ mod tests {
     fn meo_vault_flagged_critical() {
         let db = make_db();
         let r = parse(db.path());
-        let meo = r.iter().find(|a| a.subcategory == "Snapchat MEO Vault").unwrap();
+        let meo = r
+            .iter()
+            .find(|a| a.subcategory == "Snapchat MEO Vault")
+            .unwrap();
         assert!(meo.is_suspicious);
         assert!(meo.detail.contains("has_master_key=true"));
     }
@@ -265,7 +284,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

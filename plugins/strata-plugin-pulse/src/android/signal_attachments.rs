@@ -56,7 +56,18 @@ fn read_attachments(conn: &rusqlite::Connection, path: &Path, table: &str) -> Ve
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, mid, content_type, local_path, data_size, file_name, caption, data_random, unique_id) in rows.flatten() {
+    for (
+        id,
+        mid,
+        content_type,
+        local_path,
+        data_size,
+        file_name,
+        caption,
+        data_random,
+        unique_id,
+    ) in rows.flatten()
+    {
         let id = id.unwrap_or(0);
         let mid = mid.unwrap_or(0);
         let content_type = content_type.unwrap_or_else(|| "unknown".to_string());
@@ -66,7 +77,10 @@ fn read_attachments(conn: &rusqlite::Connection, path: &Path, table: &str) -> Ve
         let caption = caption.unwrap_or_default();
         let data_random = data_random.unwrap_or_default();
         let unique_id = unique_id.unwrap_or_default();
-        let title = format!("Signal attachment #{}: {} ({})", id, file_name, content_type);
+        let title = format!(
+            "Signal attachment #{}: {} ({})",
+            id, file_name, content_type
+        );
         let mut detail = format!(
             "Signal attachment id={} message_id={} content_type='{}' local_path='{}' size={} file_name='{}' unique_id='{}'",
             id, mid, content_type, local_path, data_size, file_name, unique_id
@@ -181,21 +195,26 @@ mod tests {
     fn local_path_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("local_path='/data/data/org.thoughtcrime.securesms/app_parts/part-1.jpg'")));
+        assert!(r.iter().any(|a| a
+            .detail
+            .contains("local_path='/data/data/org.thoughtcrime.securesms/app_parts/part-1.jpg'")));
     }
 
     #[test]
     fn caption_captured_when_present() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("caption='Look at this'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("caption='Look at this'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

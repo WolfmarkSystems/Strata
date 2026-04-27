@@ -4,9 +4,9 @@
 //! its bundle ID, and `key_tab` / `kvs` hold per-app state. iLEAPP
 //! uses this to enumerate installed apps and their container paths.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["applicationstate.db"])
@@ -14,8 +14,12 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "application_identifier_tab") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "application_identifier_tab") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
     let count = util::count_rows(&conn, "application_identifier_tab");
 
@@ -24,7 +28,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         subcategory: "Application state".to_string(),
         timestamp: None,
         title: "iOS installed applications".to_string(),
-        detail: format!("{} application_identifier_tab rows (installed + previously installed apps)", count),
+        detail: format!(
+            "{} application_identifier_tab rows (installed + previously installed apps)",
+            count
+        ),
         source_path: source,
         forensic_value: ForensicValue::High,
         mitre_technique: Some("T1005".to_string()),
@@ -43,7 +50,9 @@ mod tests {
 
     #[test]
     fn matches_appstate_filename() {
-        assert!(matches(Path::new("/var/mobile/Library/FrontBoard/applicationState.db")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/FrontBoard/applicationState.db"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -55,7 +64,10 @@ mod tests {
         c.execute("INSERT INTO application_identifier_tab (application_identifier) VALUES ('com.apple.mobilesafari')", []).unwrap();
         c.execute("INSERT INTO application_identifier_tab (application_identifier) VALUES ('com.example.app')", []).unwrap();
         let recs = parse(tmp.path());
-        let r = recs.iter().find(|r| r.subcategory == "Application state").unwrap();
+        let r = recs
+            .iter()
+            .find(|r| r.subcategory == "Application state")
+            .unwrap();
         assert!(r.detail.contains("2 application_identifier_tab"));
     }
 

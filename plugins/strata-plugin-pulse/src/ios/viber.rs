@@ -3,9 +3,9 @@
 //! Viber stores messages in `ZVIBERMESSAGE` and contacts in
 //! `ZABCONTACT` / `ZCONTACT`. Timestamps are Cocoa seconds.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["contacts.data", "chats.data"]) && util::path_contains(path, "viber")
@@ -13,7 +13,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
     let mut emitted = false;
 
@@ -54,7 +56,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             break;
         }
     }
-    if !emitted { return Vec::new(); }
+    if !emitted {
+        return Vec::new();
+    }
     out
 }
 
@@ -66,7 +70,9 @@ mod tests {
 
     #[test]
     fn matches_viber_paths() {
-        assert!(matches(Path::new("/var/mobile/Containers/Data/Application/UUID/Documents/Viber/Contacts.data")));
+        assert!(matches(Path::new(
+            "/var/mobile/Containers/Data/Application/UUID/Documents/Viber/Contacts.data"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -77,10 +83,20 @@ mod tests {
         std::fs::create_dir_all(&root).unwrap();
         let p = root.join("Chats.data");
         let c = Connection::open(&p).unwrap();
-        c.execute("CREATE TABLE ZVIBERMESSAGE (Z_PK INTEGER PRIMARY KEY, ZTEXT TEXT)", []).unwrap();
-        c.execute("CREATE TABLE ZABCONTACT (Z_PK INTEGER PRIMARY KEY, ZNAME TEXT)", []).unwrap();
-        c.execute("INSERT INTO ZVIBERMESSAGE (ZTEXT) VALUES ('hello')", []).unwrap();
-        c.execute("INSERT INTO ZABCONTACT (ZNAME) VALUES ('Alice')", []).unwrap();
+        c.execute(
+            "CREATE TABLE ZVIBERMESSAGE (Z_PK INTEGER PRIMARY KEY, ZTEXT TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE ZABCONTACT (Z_PK INTEGER PRIMARY KEY, ZNAME TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute("INSERT INTO ZVIBERMESSAGE (ZTEXT) VALUES ('hello')", [])
+            .unwrap();
+        c.execute("INSERT INTO ZABCONTACT (ZNAME) VALUES ('Alice')", [])
+            .unwrap();
         let recs = parse(&p);
         assert!(recs.iter().any(|r| r.subcategory == "Viber messages"));
         assert!(recs.iter().any(|r| r.subcategory == "Viber contacts"));

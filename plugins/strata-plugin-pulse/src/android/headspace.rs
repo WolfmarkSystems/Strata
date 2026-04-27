@@ -167,21 +167,26 @@ mod tests {
     fn pack_progress_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("Basics") && a.title.contains("(3/10)")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Basics") && a.title.contains("(3/10)")));
     }
 
     #[test]
     fn session_pack_name_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("pack_name='Managing Anxiety'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("pack_name='Managing Anxiety'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

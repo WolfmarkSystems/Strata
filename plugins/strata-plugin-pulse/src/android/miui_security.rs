@@ -7,7 +7,9 @@
 //! `scan_history` and threat detections in `threat`. Column names vary
 //! across MIUI versions.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -79,7 +81,11 @@ fn read_scans(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
             detail,
             path,
             ts,
-            if threats > 0 { ForensicValue::Critical } else { ForensicValue::Low },
+            if threats > 0 {
+                ForensicValue::Critical
+            } else {
+                ForensicValue::Low
+            },
             threats > 0,
         ));
     }
@@ -176,8 +182,14 @@ mod tests {
     fn parses_scans_and_threats() {
         let db = make_db();
         let r = parse(db.path());
-        let scans: Vec<_> = r.iter().filter(|a| a.subcategory == "MIUI Security Scan").collect();
-        let threats: Vec<_> = r.iter().filter(|a| a.subcategory == "MIUI Threat").collect();
+        let scans: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "MIUI Security Scan")
+            .collect();
+        let threats: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "MIUI Threat")
+            .collect();
         assert_eq!(scans.len(), 2);
         assert_eq!(threats.len(), 1);
     }
@@ -188,7 +200,10 @@ mod tests {
         let r = parse(db.path());
         let threat_scan = r.iter().find(|a| a.detail.contains("threats=2")).unwrap();
         assert!(threat_scan.is_suspicious);
-        assert!(matches!(threat_scan.forensic_value, ForensicValue::Critical));
+        assert!(matches!(
+            threat_scan.forensic_value,
+            ForensicValue::Critical
+        ));
     }
 
     #[test]
@@ -205,7 +220,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

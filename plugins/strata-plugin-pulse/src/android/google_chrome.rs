@@ -173,7 +173,8 @@ mod tests {
     fn empty_db_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated(x INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated(x INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

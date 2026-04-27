@@ -77,19 +77,32 @@ fn parse_generic(platform: &str, json: &str) -> Vec<MovementAppArtifact> {
                 .into(),
             timestamp: ts,
             pickup_location: pickup,
-            pickup_address: entry.get("pickup_address").and_then(|x| x.as_str()).map(String::from),
+            pickup_address: entry
+                .get("pickup_address")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             dropoff_location: dropoff,
-            dropoff_address: entry.get("dropoff_address").and_then(|x| x.as_str()).map(String::from),
+            dropoff_address: entry
+                .get("dropoff_address")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             fare: entry.get("fare").and_then(|x| x.as_f64()),
-            driver_name: entry.get("driver").and_then(|x| x.as_str()).map(String::from),
+            driver_name: entry
+                .get("driver")
+                .and_then(|x| x.as_str())
+                .map(String::from),
         });
     }
     out
 }
 
 fn gps(entry: &serde_json::Value, prefix: &str) -> Option<GpsPoint> {
-    let lat = entry.get(format!("{prefix}_lat")).and_then(|x| x.as_f64())?;
-    let lng = entry.get(format!("{prefix}_lng")).and_then(|x| x.as_f64())?;
+    let lat = entry
+        .get(format!("{prefix}_lat"))
+        .and_then(|x| x.as_f64())?;
+    let lng = entry
+        .get(format!("{prefix}_lng"))
+        .and_then(|x| x.as_f64())?;
     Some(GpsPoint { lat, lng })
 }
 

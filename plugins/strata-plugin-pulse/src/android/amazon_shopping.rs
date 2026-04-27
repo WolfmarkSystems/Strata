@@ -7,7 +7,9 @@
 //! actual schema varies across Amazon app versions; parser probes common
 //! column variants and degrades gracefully.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -71,7 +73,11 @@ fn read_searches(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<A
         let query = query.unwrap_or_else(|| "(empty)".to_string());
         // Normalize ms vs seconds
         let ts = ts_raw.and_then(|t| {
-            if t > 10_000_000_000 { unix_ms_to_i64(t) } else { Some(t) }
+            if t > 10_000_000_000 {
+                unix_ms_to_i64(t)
+            } else {
+                Some(t)
+            }
         });
         let title = format!("Amazon search: {}", query);
         let detail = format!("Amazon Shopping search query='{}'", query);
@@ -116,7 +122,11 @@ fn read_viewed(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Art
         let product_title = title.unwrap_or_else(|| "(unnamed)".to_string());
         let price = price.unwrap_or_default();
         let ts = ts_raw.and_then(|t| {
-            if t > 10_000_000_000 { unix_ms_to_i64(t) } else { Some(t) }
+            if t > 10_000_000_000 {
+                unix_ms_to_i64(t)
+            } else {
+                Some(t)
+            }
         });
         let title_str = format!("Amazon viewed: {}", product_title);
         let detail = format!(
@@ -170,8 +180,14 @@ mod tests {
     fn parses_searches_and_viewed() {
         let db = make_db();
         let r = parse(db.path());
-        let searches: Vec<_> = r.iter().filter(|a| a.subcategory == "Amazon Search").collect();
-        let viewed: Vec<_> = r.iter().filter(|a| a.subcategory == "Amazon Viewed").collect();
+        let searches: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Amazon Search")
+            .collect();
+        let viewed: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Amazon Viewed")
+            .collect();
         assert_eq!(searches.len(), 2);
         assert_eq!(viewed.len(), 1);
     }
@@ -196,7 +212,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -52,7 +52,22 @@ fn read_sessions(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (sample, user, distance, start_ms, _end_ms, runtime_ms, _max_speed, calories, avg_pulse, max_pulse, lat, lon, note) in rows.flatten() {
+    for (
+        sample,
+        user,
+        distance,
+        start_ms,
+        _end_ms,
+        runtime_ms,
+        _max_speed,
+        calories,
+        avg_pulse,
+        max_pulse,
+        lat,
+        lon,
+        note,
+    ) in rows.flatten()
+    {
         let sample = sample.unwrap_or_else(|| "(unknown)".to_string());
         let user = user.unwrap_or_default();
         let ts = start_ms.and_then(unix_ms_to_i64);
@@ -148,14 +163,17 @@ mod tests {
     fn distance_and_runtime_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("10000m") && a.title.contains("3600s")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("10000m") && a.title.contains("3600s")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

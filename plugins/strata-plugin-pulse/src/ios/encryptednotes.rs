@@ -5,9 +5,9 @@
 //! locked notes. Even though the body is encrypted, the existence
 //! of locked notes + their creation date is forensically significant.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["notestore.sqlite"])
@@ -15,8 +15,12 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "ZICCLOUDSYNCINGOBJECT") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "ZICCLOUDSYNCINGOBJECT") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
 
     let locked: i64 = conn
@@ -24,7 +28,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         .and_then(|mut s| s.query_row([], |r| r.get(0)))
         .unwrap_or(0);
 
-    if locked == 0 { return out; }
+    if locked == 0 {
+        return out;
+    }
 
     out.push(ArtifactRecord {
         category: ArtifactCategory::UserActivity,
@@ -51,12 +57,18 @@ mod tests {
         let c = Connection::open(tmp.path()).unwrap();
         c.execute("CREATE TABLE ZICCLOUDSYNCINGOBJECT (Z_PK INTEGER PRIMARY KEY, ZTITLE1 TEXT, ZISPASSWORDPROTECTED INTEGER)", []).unwrap();
         for i in 0..locked {
-            c.execute("INSERT INTO ZICCLOUDSYNCINGOBJECT (ZTITLE1, ZISPASSWORDPROTECTED) VALUES (?1, 1)",
-                rusqlite::params![format!("locked{}", i)]).unwrap();
+            c.execute(
+                "INSERT INTO ZICCLOUDSYNCINGOBJECT (ZTITLE1, ZISPASSWORDPROTECTED) VALUES (?1, 1)",
+                rusqlite::params![format!("locked{}", i)],
+            )
+            .unwrap();
         }
         for i in 0..unlocked {
-            c.execute("INSERT INTO ZICCLOUDSYNCINGOBJECT (ZTITLE1, ZISPASSWORDPROTECTED) VALUES (?1, 0)",
-                rusqlite::params![format!("open{}", i)]).unwrap();
+            c.execute(
+                "INSERT INTO ZICCLOUDSYNCINGOBJECT (ZTITLE1, ZISPASSWORDPROTECTED) VALUES (?1, 0)",
+                rusqlite::params![format!("open{}", i)],
+            )
+            .unwrap();
         }
         tmp
     }

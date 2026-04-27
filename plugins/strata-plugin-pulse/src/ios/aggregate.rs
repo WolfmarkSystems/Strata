@@ -5,9 +5,9 @@
 //! prove the device was in active use at specific times even when
 //! per-app artifacts have been wiped.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["addatastore.sqlitedb"])
@@ -15,7 +15,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
     let mut emitted = false;
 
@@ -26,7 +28,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             subcategory: "Aggregate scalars".to_string(),
             timestamp: None,
             title: "iOS Aggregate Dictionary scalars".to_string(),
-            detail: format!("{} scalar rows (daily unlock count, keyboard usage, app launches)", count),
+            detail: format!(
+                "{} scalar rows (daily unlock count, keyboard usage, app launches)",
+                count
+            ),
             source_path: source.clone(),
             forensic_value: ForensicValue::High,
             mitre_technique: Some("T1005".to_string()),
@@ -53,7 +58,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         });
         emitted = true;
     }
-    if !emitted { return Vec::new(); }
+    if !emitted {
+        return Vec::new();
+    }
     out
 }
 
@@ -66,20 +73,38 @@ mod tests {
     fn make_ad(scalars: usize, timed: usize) -> NamedTempFile {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute("CREATE TABLE scalars (key TEXT, value REAL, daynumber INTEGER)", []).unwrap();
-        c.execute("CREATE TABLE timedscalars (key TEXT, value REAL, secondsfromgmt REAL)", []).unwrap();
+        c.execute(
+            "CREATE TABLE scalars (key TEXT, value REAL, daynumber INTEGER)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE timedscalars (key TEXT, value REAL, secondsfromgmt REAL)",
+            [],
+        )
+        .unwrap();
         for i in 0..scalars {
-            c.execute("INSERT INTO scalars VALUES (?1, 42.0, 19800)", rusqlite::params![format!("key{}", i)]).unwrap();
+            c.execute(
+                "INSERT INTO scalars VALUES (?1, 42.0, 19800)",
+                rusqlite::params![format!("key{}", i)],
+            )
+            .unwrap();
         }
         for i in 0..timed {
-            c.execute("INSERT INTO timedscalars VALUES (?1, 1.0, 3600.0)", rusqlite::params![format!("ts{}", i)]).unwrap();
+            c.execute(
+                "INSERT INTO timedscalars VALUES (?1, 1.0, 3600.0)",
+                rusqlite::params![format!("ts{}", i)],
+            )
+            .unwrap();
         }
         tmp
     }
 
     #[test]
     fn matches_addatastore() {
-        assert!(matches(Path::new("/var/mobile/Library/AggregateDictionary/ADDataStore.sqlitedb")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/AggregateDictionary/ADDataStore.sqlitedb"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -87,9 +112,15 @@ mod tests {
     fn parses_both_tables() {
         let tmp = make_ad(5, 3);
         let recs = parse(tmp.path());
-        let s = recs.iter().find(|r| r.subcategory == "Aggregate scalars").unwrap();
+        let s = recs
+            .iter()
+            .find(|r| r.subcategory == "Aggregate scalars")
+            .unwrap();
         assert!(s.detail.contains("5 scalar"));
-        let t = recs.iter().find(|r| r.subcategory == "Aggregate timed scalars").unwrap();
+        let t = recs
+            .iter()
+            .find(|r| r.subcategory == "Aggregate timed scalars")
+            .unwrap();
         assert!(t.detail.contains("3 timedscalar"));
     }
 

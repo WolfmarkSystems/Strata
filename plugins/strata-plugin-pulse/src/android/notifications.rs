@@ -14,7 +14,9 @@
 //! encrypted apps, 2FA codes, and authentication prompts — they are
 //! one of the highest-yield artifacts on a modern Android device.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};

@@ -4,21 +4,29 @@
 //! battery levels, and automatic ear detection state. Proves the user
 //! was physically present and wearing the earbuds.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
-    util::name_is(path, &["com.apple.btserver.plist", "com.apple.btserver.le.plist"])
-        || (util::path_contains(path, "btserver") && {
-            let n = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
-            n.ends_with(".db") || n.ends_with(".plist")
-        })
+    util::name_is(
+        path,
+        &["com.apple.btserver.plist", "com.apple.btserver.le.plist"],
+    ) || (util::path_contains(path, "btserver") && {
+        let n = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        n.ends_with(".db") || n.ends_with(".plist")
+    })
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     let source = path.to_string_lossy().to_string();
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     vec![ArtifactRecord {
@@ -39,7 +47,9 @@ mod tests {
 
     #[test]
     fn matches_btserver() {
-        assert!(matches(Path::new("/var/mobile/Library/Preferences/com.apple.BTServer.plist")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/Preferences/com.apple.BTServer.plist"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
     #[test]

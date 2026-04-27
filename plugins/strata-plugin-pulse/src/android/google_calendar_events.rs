@@ -130,7 +130,10 @@ mod tests {
     fn location_and_organizer_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let standup = r.iter().find(|a| a.detail.contains("Team Standup")).unwrap();
+        let standup = r
+            .iter()
+            .find(|a| a.detail.contains("Team Standup"))
+            .unwrap();
         assert!(standup.detail.contains("location='Zoom'"));
         assert!(standup.detail.contains("organizer='boss@company.com'"));
     }
@@ -147,7 +150,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

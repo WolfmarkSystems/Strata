@@ -189,7 +189,10 @@ mod tests {
     fn session_quality_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        let s = r.iter().find(|a| a.subcategory == "Pillow Sleep Session").unwrap();
+        let s = r
+            .iter()
+            .find(|a| a.subcategory == "Pillow Sleep Session")
+            .unwrap();
         assert!(s.title.contains("quality=82"));
         assert!(s.detail.contains("heart_rate_avg=58.3"));
     }
@@ -198,8 +201,13 @@ mod tests {
     fn audio_recording_path_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let a = r.iter().find(|a| a.subcategory == "Pillow Sleep Audio").unwrap();
-        assert!(a.detail.contains("recording_path='/storage/emulated/0/Pillow/rec001.m4a'"));
+        let a = r
+            .iter()
+            .find(|a| a.subcategory == "Pillow Sleep Audio")
+            .unwrap();
+        assert!(a
+            .detail
+            .contains("recording_path='/storage/emulated/0/Pillow/rec001.m4a'"));
         assert!(a.detail.contains("talk_count=1"));
     }
 
@@ -207,7 +215,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

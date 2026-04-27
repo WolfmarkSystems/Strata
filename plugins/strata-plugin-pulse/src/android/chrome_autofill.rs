@@ -103,12 +103,14 @@ fn read_profiles(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
     };
     let mut out = Vec::new();
     for (first, last, email, phone, company, street, city, state, zip, modified) in rows.flatten() {
-        let name = format!(
-            "{} {}",
-            first.unwrap_or_default(),
-            last.unwrap_or_default()
-        ).trim().to_string();
-        let name_display = if name.is_empty() { "(unnamed)".to_string() } else { name.clone() };
+        let name = format!("{} {}", first.unwrap_or_default(), last.unwrap_or_default())
+            .trim()
+            .to_string();
+        let name_display = if name.is_empty() {
+            "(unnamed)".to_string()
+        } else {
+            name.clone()
+        };
         let title = format!("Chrome autofill profile: {}", name_display);
         let mut detail = format!("Chrome autofill profile name='{}'", name_display);
         if let Some(e) = email.filter(|e| !e.is_empty()) {
@@ -121,10 +123,18 @@ fn read_profiles(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
             detail.push_str(&format!(" company='{}'", c));
         }
         let mut addr_parts = Vec::new();
-        if let Some(s) = street.filter(|s| !s.is_empty()) { addr_parts.push(s); }
-        if let Some(c) = city.filter(|c| !c.is_empty()) { addr_parts.push(c); }
-        if let Some(s) = state.filter(|s| !s.is_empty()) { addr_parts.push(s); }
-        if let Some(z) = zip.filter(|z| !z.is_empty()) { addr_parts.push(z); }
+        if let Some(s) = street.filter(|s| !s.is_empty()) {
+            addr_parts.push(s);
+        }
+        if let Some(c) = city.filter(|c| !c.is_empty()) {
+            addr_parts.push(c);
+        }
+        if let Some(s) = state.filter(|s| !s.is_empty()) {
+            addr_parts.push(s);
+        }
+        if let Some(z) = zip.filter(|z| !z.is_empty()) {
+            addr_parts.push(z);
+        }
         if !addr_parts.is_empty() {
             detail.push_str(&format!(" address='{}'", addr_parts.join(", ")));
         }
@@ -184,8 +194,14 @@ mod tests {
     fn parses_autofill_and_profiles() {
         let db = make_db();
         let r = parse(db.path());
-        let fills: Vec<_> = r.iter().filter(|a| a.subcategory == "Chrome Autofill").collect();
-        let profs: Vec<_> = r.iter().filter(|a| a.subcategory == "Chrome Autofill Profile").collect();
+        let fills: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Chrome Autofill")
+            .collect();
+        let profs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Chrome Autofill Profile")
+            .collect();
         assert_eq!(fills.len(), 2);
         assert_eq!(profs.len(), 1);
     }
@@ -194,15 +210,23 @@ mod tests {
     fn profile_includes_address() {
         let db = make_db();
         let r = parse(db.path());
-        let prof = r.iter().find(|a| a.subcategory == "Chrome Autofill Profile").unwrap();
-        assert!(prof.detail.contains("address='123 Main St, Springfield, IL, 62704'"));
+        let prof = r
+            .iter()
+            .find(|a| a.subcategory == "Chrome Autofill Profile")
+            .unwrap();
+        assert!(prof
+            .detail
+            .contains("address='123 Main St, Springfield, IL, 62704'"));
     }
 
     #[test]
     fn autofill_count_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let email = r.iter().find(|a| a.detail.contains("user@example.com")).unwrap();
+        let email = r
+            .iter()
+            .find(|a| a.detail.contains("user@example.com"))
+            .unwrap();
         assert!(email.detail.contains("use_count=5"));
     }
 
@@ -210,7 +234,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

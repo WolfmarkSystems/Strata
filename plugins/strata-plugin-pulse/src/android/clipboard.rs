@@ -12,7 +12,9 @@
 //! Clipboard contents are forensically significant — passwords, 2FA
 //! codes, addresses, and account numbers all flow through here.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
@@ -70,10 +72,7 @@ fn read_clips(conn: &Connection, path: &Path) -> Vec<ArtifactRecord> {
             ArtifactCategory::UserActivity,
             "Android Clipboard",
             format!("Clip: {}", preview),
-            format!(
-                "Clipboard text='{}' pinned={}",
-                text, pinned_flag
-            ),
+            format!("Clipboard text='{}' pinned={}", text, pinned_flag),
             path,
             ts,
             ForensicValue::High,

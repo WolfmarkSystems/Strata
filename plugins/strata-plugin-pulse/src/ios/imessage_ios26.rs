@@ -20,7 +20,7 @@
 //!
 //! Zero `.unwrap()`, zero `unsafe {}`, zero `println!` per CLAUDE.md.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use chrono::{DateTime, TimeZone, Utc};
 use rusqlite::Connection;
@@ -70,11 +70,16 @@ pub fn matches_ios26(path: &Path) -> bool {
 }
 
 fn has_ios26_columns(conn: &Connection) -> bool {
-    if column_names(conn, "chat").iter().any(|c| c == "chat_properties") {
+    if column_names(conn, "chat")
+        .iter()
+        .any(|c| c == "chat_properties")
+    {
         return true;
     }
     let msg_cols = column_names(conn, "message");
-    msg_cols.iter().any(|c| c.contains("encryption") || c.contains("translat"))
+    msg_cols
+        .iter()
+        .any(|c| c.contains("encryption") || c.contains("translat"))
 }
 
 fn column_names(conn: &Connection, table: &str) -> Vec<String> {
@@ -97,7 +102,10 @@ fn column_names(conn: &Connection, table: &str) -> Vec<String> {
 /// chat. Unknown / mis-shaped PLISTs are skipped silently.
 pub fn parse_backgrounds(conn: &Connection) -> Vec<ImessageBackground> {
     let mut out = Vec::new();
-    if !column_names(conn, "chat").iter().any(|c| c == "chat_properties") {
+    if !column_names(conn, "chat")
+        .iter()
+        .any(|c| c == "chat_properties")
+    {
         return out;
     }
     let mut stmt = match conn
@@ -106,9 +114,7 @@ pub fn parse_backgrounds(conn: &Connection) -> Vec<ImessageBackground> {
         Ok(s) => s,
         Err(_) => return out,
     };
-    let rows = match stmt.query_map([], |r| {
-        Ok((r.get::<_, i64>(0)?, r.get::<_, Vec<u8>>(1)?))
-    }) {
+    let rows = match stmt.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Vec<u8>>(1)?))) {
         Ok(r) => r,
         Err(_) => return out,
     };
@@ -179,20 +185,22 @@ pub fn parse_encryption_states(conn: &Connection) -> Vec<MessageEncryptionState>
     let Some(enc_col) = cols.iter().find(|c| c.contains("encryption")).cloned() else {
         return out;
     };
-    let sql = format!("SELECT ROWID, COALESCE({enc_col}, '') FROM message WHERE {enc_col} IS NOT NULL");
+    let sql =
+        format!("SELECT ROWID, COALESCE({enc_col}, '') FROM message WHERE {enc_col} IS NOT NULL");
     let mut stmt = match conn.prepare(&sql) {
         Ok(s) => s,
         Err(_) => return out,
     };
-    let rows = match stmt.query_map([], |r| {
-        Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))
-    }) {
+    let rows = match stmt.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))) {
         Ok(r) => r,
         Err(_) => return out,
     };
     for (id, state) in rows.flatten() {
         if !state.is_empty() {
-            out.push(MessageEncryptionState { message_id: id, state });
+            out.push(MessageEncryptionState {
+                message_id: id,
+                state,
+            });
         }
     }
     out
@@ -262,7 +270,11 @@ fn opt(s: &str) -> Option<String> {
 
 fn cocoa_to_utc(ts: i64) -> Option<DateTime<Utc>> {
     let cocoa_epoch_offset = 978_307_200i64;
-    let secs = if ts > 1_000_000_000_000 { ts / 1_000_000_000 } else { ts };
+    let secs = if ts > 1_000_000_000_000 {
+        ts / 1_000_000_000
+    } else {
+        ts
+    };
     Utc.timestamp_opt(secs + cocoa_epoch_offset, 0).single()
 }
 
@@ -274,7 +286,9 @@ fn cocoa_to_utc(ts: i64) -> Option<DateTime<Utc>> {
 /// until we have real samples.
 pub fn is_ktx_v1(bytes: &[u8]) -> bool {
     // «KTX 11» — 0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
-    const MAGIC: [u8; 12] = [0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A];
+    const MAGIC: [u8; 12] = [
+        0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A,
+    ];
     bytes.len() >= MAGIC.len() && bytes[..MAGIC.len()] == MAGIC
 }
 
@@ -300,7 +314,11 @@ pub fn emit_artifacts(
                 bg.chat_id,
                 bg.background_type,
                 bg.color_primary.clone().unwrap_or_default(),
-                if bg.image_ktx_data.is_some() { ", with image" } else { "" }
+                if bg.image_ktx_data.is_some() {
+                    ", with image"
+                } else {
+                    ""
+                }
             ),
             source_path: source.clone(),
             timestamp: bg.modified_date.map(|t| t.timestamp()),
@@ -362,10 +380,6 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     emit_artifacts(path, &bg, &tr, &enc)
 }
 
-// Silence the unused-import on PathBuf if future changes need it.
-#[allow(dead_code)]
-fn _ensure_pathbuf_used(_p: PathBuf) {}
-
 // ── Tests ──────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -380,27 +394,37 @@ mod tests {
     fn plist_with_background() -> Vec<u8> {
         // Minimal binary PLIST with a nested `backgroundProperties` dict.
         let mut inner = plist::Dictionary::new();
-        inner.insert("backgroundType".into(), plist::Value::String("Gradient".into()));
-        inner.insert("colorPrimary".into(), plist::Value::String("#FF00AA".into()));
-        inner.insert("colorSecondary".into(), plist::Value::String("#110055".into()));
+        inner.insert(
+            "backgroundType".into(),
+            plist::Value::String("Gradient".into()),
+        );
+        inner.insert(
+            "colorPrimary".into(),
+            plist::Value::String("#FF00AA".into()),
+        );
+        inner.insert(
+            "colorSecondary".into(),
+            plist::Value::String("#110055".into()),
+        );
         let mut outer = plist::Dictionary::new();
         outer.insert(
             "backgroundProperties".into(),
             plist::Value::Dictionary(inner),
         );
         let mut bytes: Vec<u8> = Vec::new();
-        plist::to_writer_binary(std::io::Cursor::new(&mut bytes), &plist::Value::Dictionary(outer))
-            .expect("write plist");
+        plist::to_writer_binary(
+            std::io::Cursor::new(&mut bytes),
+            &plist::Value::Dictionary(outer),
+        )
+        .expect("write plist");
         bytes
     }
 
     #[test]
     fn parses_gradient_background_from_chat_properties() {
         let c = mem();
-        c.execute_batch(
-            "CREATE TABLE chat (ROWID INTEGER PRIMARY KEY, chat_properties BLOB);",
-        )
-        .expect("schema");
+        c.execute_batch("CREATE TABLE chat (ROWID INTEGER PRIMARY KEY, chat_properties BLOB);")
+            .expect("schema");
         let p = plist_with_background();
         c.execute(
             "INSERT INTO chat (ROWID, chat_properties) VALUES (7, ?1)",
@@ -425,17 +449,21 @@ mod tests {
     #[test]
     fn parses_encryption_state_when_column_present() {
         let c = mem();
-        c.execute_batch(
-            "CREATE TABLE message (ROWID INTEGER PRIMARY KEY, encryption_state TEXT);",
-        )
-        .expect("schema");
+        c.execute_batch("CREATE TABLE message (ROWID INTEGER PRIMARY KEY, encryption_state TEXT);")
+            .expect("schema");
         c.execute(
             "INSERT INTO message (ROWID, encryption_state) VALUES (3, 'E2EE')",
             [],
         )
         .expect("ins");
         let states = parse_encryption_states(&c);
-        assert_eq!(states, vec![MessageEncryptionState { message_id: 3, state: "E2EE".into() }]);
+        assert_eq!(
+            states,
+            vec![MessageEncryptionState {
+                message_id: 3,
+                state: "E2EE".into()
+            }]
+        );
     }
 
     #[test]
@@ -450,11 +478,8 @@ mod tests {
                 date INTEGER);",
         )
         .expect("schema");
-        c.execute(
-            "INSERT INTO message VALUES (9, 'es', 'en', 0, 0)",
-            [],
-        )
-        .expect("ins");
+        c.execute("INSERT INTO message VALUES (9, 'es', 'en', 0, 0)", [])
+            .expect("ins");
         let ev = parse_translation_events(&c);
         assert_eq!(ev.len(), 1);
         assert_eq!(ev[0].source_language.as_deref(), Some("es"));
@@ -477,7 +502,8 @@ mod tests {
         let tmp = tempfile::tempdir().expect("tmp");
         let p = tmp.path().join("chat.db");
         let conn = Connection::open(&p).expect("create");
-        conn.execute_batch("CREATE TABLE message (ROWID INTEGER);").expect("s");
+        conn.execute_batch("CREATE TABLE message (ROWID INTEGER);")
+            .expect("s");
         drop(conn);
         assert!(!matches_ios26(&p));
     }

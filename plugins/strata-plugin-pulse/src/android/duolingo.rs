@@ -52,7 +52,9 @@ fn read_profile(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord>
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (username, email, learning_lang, from_lang, streak, xp, lingots, created_ms) in rows.flatten() {
+    for (username, email, learning_lang, from_lang, streak, xp, lingots, created_ms) in
+        rows.flatten()
+    {
         let username = username.unwrap_or_default();
         let email = email.unwrap_or_default();
         let learning_lang = learning_lang.unwrap_or_default();
@@ -176,21 +178,28 @@ mod tests {
     fn streak_and_xp_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("current_streak=45") && a.detail.contains("total_xp=12500")));
+        assert!(
+            r.iter()
+                .any(|a| a.detail.contains("current_streak=45")
+                    && a.detail.contains("total_xp=12500"))
+        );
     }
 
     #[test]
     fn email_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("email='jane@example.com'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("email='jane@example.com'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

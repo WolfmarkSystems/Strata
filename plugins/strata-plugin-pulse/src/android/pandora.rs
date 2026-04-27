@@ -158,7 +158,11 @@ fn read_feedback(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
         let station_id = station_id.unwrap_or_default();
         let is_positive = is_positive.unwrap_or(0) != 0;
         let ts = ts_ms.and_then(unix_ms_to_i64);
-        let thumb = if is_positive { "thumbs_up" } else { "thumbs_down" };
+        let thumb = if is_positive {
+            "thumbs_up"
+        } else {
+            "thumbs_down"
+        };
         let title = format!("Pandora {}: {} — {}", thumb, artist, track_title);
         let detail = format!(
             "Pandora feedback track_id='{}' title='{}' artist='{}' station_id='{}' is_positive={}",
@@ -248,7 +252,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

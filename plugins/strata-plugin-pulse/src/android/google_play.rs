@@ -14,7 +14,9 @@
 //! Tracks "this account installed this package on this device" — the
 //! single most useful data point when correlating apps to identity.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
@@ -157,7 +159,9 @@ mod tests {
     fn package_and_account_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|x| x.title.contains("com.whatsapp") && x.title.contains("user@gmail.com")));
+        assert!(r
+            .iter()
+            .any(|x| x.title.contains("com.whatsapp") && x.title.contains("user@gmail.com")));
     }
 
     #[test]

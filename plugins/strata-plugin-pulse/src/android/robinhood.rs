@@ -57,7 +57,8 @@ fn read_orders(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Art
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, symbol, side, quantity, price, total, created_ms, state, order_type) in rows.flatten() {
+    for (id, symbol, side, quantity, price, total, created_ms, state, order_type) in rows.flatten()
+    {
         let id = id.unwrap_or_else(|| "(unknown)".to_string());
         let symbol = symbol.unwrap_or_else(|| "(unknown)".to_string());
         let side = side.unwrap_or_default();
@@ -176,8 +177,14 @@ mod tests {
     fn parses_orders_and_positions() {
         let db = make_db();
         let r = parse(db.path());
-        let orders: Vec<_> = r.iter().filter(|a| a.subcategory == "Robinhood Order").collect();
-        let positions: Vec<_> = r.iter().filter(|a| a.subcategory == "Robinhood Position").collect();
+        let orders: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Robinhood Order")
+            .collect();
+        let positions: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Robinhood Position")
+            .collect();
         assert_eq!(orders.len(), 2);
         assert_eq!(positions.len(), 1);
     }
@@ -194,7 +201,10 @@ mod tests {
     fn position_average_price_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let p = r.iter().find(|a| a.subcategory == "Robinhood Position").unwrap();
+        let p = r
+            .iter()
+            .find(|a| a.subcategory == "Robinhood Position")
+            .unwrap();
         assert!(p.detail.contains("avg_buy_price='150.00'"));
     }
 
@@ -202,7 +212,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

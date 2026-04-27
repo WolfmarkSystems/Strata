@@ -7,7 +7,9 @@
 //! Key forensic interest: deleted photos in `garbage` may still be
 //! recoverable after user "deletion".
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -29,7 +31,11 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
 
 fn read_trash(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
     let has_delete_time = column_exists(conn, "garbage", "delete_time");
-    let ts_col = if has_delete_time { "delete_time" } else { "date_modified" };
+    let ts_col = if has_delete_time {
+        "delete_time"
+    } else {
+        "date_modified"
+    };
     let sql = format!(
         "SELECT fileName, localPath, size, {ts_col}, sha1 \
          FROM garbage ORDER BY {ts_col} DESC LIMIT 10000",
@@ -162,8 +168,14 @@ mod tests {
     fn parses_trash_and_cloud() {
         let db = make_db();
         let r = parse(db.path());
-        let trash: Vec<_> = r.iter().filter(|a| a.subcategory == "MIUI Gallery Trash").collect();
-        let cloud: Vec<_> = r.iter().filter(|a| a.subcategory == "MIUI Gallery Cloud").collect();
+        let trash: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "MIUI Gallery Trash")
+            .collect();
+        let cloud: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "MIUI Gallery Cloud")
+            .collect();
         assert_eq!(trash.len(), 2);
         assert_eq!(cloud.len(), 1);
     }
@@ -188,7 +200,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

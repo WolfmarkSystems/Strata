@@ -3,9 +3,9 @@
 //! iLEAPP keys off `ZMTEPISODE` (episodes with play state,
 //! download date, duration) and `ZMTPODCAST` (subscriptions).
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["mtlibrary.sqlite"])
@@ -13,7 +13,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
     let mut emitted = false;
 
@@ -51,7 +53,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         });
         emitted = true;
     }
-    if !emitted { return Vec::new(); }
+    if !emitted {
+        return Vec::new();
+    }
     out
 }
 
@@ -63,7 +67,9 @@ mod tests {
 
     #[test]
     fn matches_mtlibrary() {
-        assert!(matches(Path::new("/var/mobile/Media/Podcasts/MTLibrary.sqlite")));
+        assert!(matches(Path::new(
+            "/var/mobile/Media/Podcasts/MTLibrary.sqlite"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -71,13 +77,25 @@ mod tests {
     fn parses_episodes_and_subscriptions() {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute("CREATE TABLE ZMTEPISODE (Z_PK INTEGER PRIMARY KEY, ZTITLE TEXT)", []).unwrap();
-        c.execute("CREATE TABLE ZMTPODCAST (Z_PK INTEGER PRIMARY KEY, ZTITLE TEXT)", []).unwrap();
-        c.execute("INSERT INTO ZMTEPISODE (ZTITLE) VALUES ('ep1')", []).unwrap();
-        c.execute("INSERT INTO ZMTPODCAST (ZTITLE) VALUES ('pod1')", []).unwrap();
+        c.execute(
+            "CREATE TABLE ZMTEPISODE (Z_PK INTEGER PRIMARY KEY, ZTITLE TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE ZMTPODCAST (Z_PK INTEGER PRIMARY KEY, ZTITLE TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute("INSERT INTO ZMTEPISODE (ZTITLE) VALUES ('ep1')", [])
+            .unwrap();
+        c.execute("INSERT INTO ZMTPODCAST (ZTITLE) VALUES ('pod1')", [])
+            .unwrap();
         let recs = parse(tmp.path());
         assert!(recs.iter().any(|r| r.subcategory == "Podcasts episodes"));
-        assert!(recs.iter().any(|r| r.subcategory == "Podcasts subscriptions"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "Podcasts subscriptions"));
     }
 
     #[test]

@@ -170,8 +170,6 @@ mod tests {
     fn empty_known_tables_still_summarises() {
         let tmp = make_powerlog(0);
         let recs = parse(tmp.path());
-        assert!(recs
-            .iter()
-            .any(|r| r.subcategory == "PowerLog summary"));
+        assert!(recs.iter().any(|r| r.subcategory == "PowerLog summary"));
     }
 }

@@ -127,7 +127,10 @@ fn read_diagnostics(conn: &rusqlite::Connection, path: &Path, table: &str) -> Ve
         let oil_life = oil_life.unwrap_or(0.0);
         let fuel_range = fuel_range.unwrap_or(0.0);
         let ts = ts_ms.and_then(unix_ms_to_i64);
-        let title = format!("GM diagnostic: oil={:.0}% range={:.0}mi", oil_life, fuel_range);
+        let title = format!(
+            "GM diagnostic: oil={:.0}% range={:.0}mi",
+            oil_life, fuel_range
+        );
         let mut detail = format!(
             "GM OnStar diagnostic vin='{}' oil_life={:.1} fuel_range={:.1}",
             vin, oil_life, fuel_range
@@ -266,14 +269,17 @@ mod tests {
     fn tire_pressure_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("tire_pressure=[FL=34,FR=34,RL=34,RR=34]")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("tire_pressure=[FL=34,FR=34,RL=34,RR=34]")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

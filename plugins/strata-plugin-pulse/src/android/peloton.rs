@@ -57,7 +57,21 @@ fn read_workouts(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<A
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, class_id, class_title, instructor, discipline, started_ms, _ended_ms, duration, output, distance, calories, avg_hr) in rows.flatten() {
+    for (
+        id,
+        class_id,
+        class_title,
+        instructor,
+        discipline,
+        started_ms,
+        _ended_ms,
+        duration,
+        output,
+        distance,
+        calories,
+        avg_hr,
+    ) in rows.flatten()
+    {
         let id = id.unwrap_or_default();
         let class_id = class_id.unwrap_or_default();
         let class_title = class_title.unwrap_or_else(|| "(unnamed)".to_string());
@@ -132,8 +146,12 @@ mod tests {
     fn instructor_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("instructor='Cody Rigsby'")));
-        assert!(r.iter().any(|a| a.detail.contains("instructor='Adrian Williams'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("instructor='Cody Rigsby'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("instructor='Adrian Williams'")));
     }
 
     #[test]
@@ -149,7 +167,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

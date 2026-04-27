@@ -9,9 +9,7 @@ use crate::android::helpers::{build_record, open_sqlite_ro, table_exists};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "providers.telephony/databases/telephony.db",
-];
+pub const MATCHES: &[&str] = &["providers.telephony/databases/telephony.db"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {
@@ -129,14 +127,17 @@ mod tests {
     fn forensic_value_is_critical() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().all(|a| matches!(a.forensic_value, ForensicValue::Critical)));
+        assert!(r
+            .iter()
+            .all(|a| matches!(a.forensic_value, ForensicValue::Critical)));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

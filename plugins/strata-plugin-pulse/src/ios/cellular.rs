@@ -15,7 +15,11 @@ use super::util;
 pub fn matches(path: &Path) -> bool {
     util::name_is(
         path,
-        &["datausage.sqlite", "datausage.sqlite-wal", "cellular_usage.db"],
+        &[
+            "datausage.sqlite",
+            "datausage.sqlite-wal",
+            "cellular_usage.db",
+        ],
     )
 }
 
@@ -64,10 +68,16 @@ mod tests {
     fn make_db(processes: usize) -> NamedTempFile {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute("CREATE TABLE ZPROCESS (Z_PK INTEGER PRIMARY KEY, ZPROCNAME TEXT)", [])
-            .unwrap();
-        c.execute("CREATE TABLE ZLIVEUSAGE (Z_PK INTEGER PRIMARY KEY, ZWWANIN INTEGER, ZWWANOUT INTEGER)", [])
-            .unwrap();
+        c.execute(
+            "CREATE TABLE ZPROCESS (Z_PK INTEGER PRIMARY KEY, ZPROCNAME TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE ZLIVEUSAGE (Z_PK INTEGER PRIMARY KEY, ZWWANIN INTEGER, ZWWANOUT INTEGER)",
+            [],
+        )
+        .unwrap();
         for i in 0..processes {
             c.execute(
                 "INSERT INTO ZPROCESS (ZPROCNAME) VALUES (?1)",
@@ -85,7 +95,9 @@ mod tests {
 
     #[test]
     fn matches_known_filenames() {
-        assert!(matches(Path::new("/var/wireless/Library/Databases/DataUsage.sqlite")));
+        assert!(matches(Path::new(
+            "/var/wireless/Library/Databases/DataUsage.sqlite"
+        )));
         assert!(matches(Path::new("/copies/Cellular_Usage.db")));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
@@ -94,9 +106,15 @@ mod tests {
     fn parses_zprocess_and_zliveusage_counts() {
         let tmp = make_db(3);
         let recs = parse(tmp.path());
-        let p = recs.iter().find(|r| r.subcategory == "Data usage ZPROCESS").unwrap();
+        let p = recs
+            .iter()
+            .find(|r| r.subcategory == "Data usage ZPROCESS")
+            .unwrap();
         assert!(p.detail.contains("3 rows"));
-        let l = recs.iter().find(|r| r.subcategory == "Data usage ZLIVEUSAGE").unwrap();
+        let l = recs
+            .iter()
+            .find(|r| r.subcategory == "Data usage ZLIVEUSAGE")
+            .unwrap();
         assert!(l.detail.contains("3 rows"));
     }
 

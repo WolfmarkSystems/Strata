@@ -4,9 +4,9 @@
 //! Contains ICCID, IMSI (partial), carrier name, phone number.
 //! Extremely high value for attribution.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 const SIM_PLISTS: &[&str] = &[
     "com.apple.commcenter.plist",
@@ -20,7 +20,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     let source = path.to_string_lossy().to_string();
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     vec![ArtifactRecord {
@@ -28,7 +30,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         subcategory: "SIM info".to_string(),
         timestamp: None,
         title: format!("iOS SIM / carrier info: {}", name),
-        detail: format!("{} ({} bytes) — ICCID, carrier name, phone number", name, size),
+        detail: format!(
+            "{} ({} bytes) — ICCID, carrier name, phone number",
+            name, size
+        ),
         source_path: source,
         forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1005".to_string()),
@@ -45,8 +50,12 @@ mod tests {
 
     #[test]
     fn matches_sim_plists() {
-        assert!(matches(Path::new("/var/wireless/Library/Preferences/com.apple.commcenter.plist")));
-        assert!(matches(Path::new("/var/wireless/Library/Preferences/carrier.plist")));
+        assert!(matches(Path::new(
+            "/var/wireless/Library/Preferences/com.apple.commcenter.plist"
+        )));
+        assert!(matches(Path::new(
+            "/var/wireless/Library/Preferences/carrier.plist"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 

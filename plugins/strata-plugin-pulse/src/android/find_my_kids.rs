@@ -66,11 +66,11 @@ fn read_locations(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<
         let address = address.unwrap_or_default();
         let battery = battery.unwrap_or(0);
         let ts = ts_ms.and_then(unix_ms_to_i64);
-        let title = format!("Find My Kids location: {}", address.chars().take(60).collect::<String>());
-        let mut detail = format!(
-            "Find My Kids child location battery={}%",
-            battery
+        let title = format!(
+            "Find My Kids location: {}",
+            address.chars().take(60).collect::<String>()
         );
+        let mut detail = format!("Find My Kids child location battery={}%", battery);
         if let (Some(la), Some(lo)) = (lat, lon) {
             detail.push_str(&format!(" lat={:.6} lon={:.6}", la, lo));
         }
@@ -238,21 +238,26 @@ mod tests {
     fn location_gps_and_battery_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("lat=37.774900") && a.detail.contains("battery=85%")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("lat=37.774900") && a.detail.contains("battery=85%")));
     }
 
     #[test]
     fn geofence_radius_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("name='School'") && a.detail.contains("radius=200m")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("name='School'") && a.detail.contains("radius=200m")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

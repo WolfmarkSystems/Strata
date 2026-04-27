@@ -7,7 +7,9 @@
 //! Samsung Pay forensic references. Tables commonly include `payment_history`,
 //! `card_info`, `transactions`. Column names vary across Samsung Pay versions.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -173,8 +175,14 @@ mod tests {
     fn parses_transactions_and_cards() {
         let db = make_db();
         let r = parse(db.path());
-        let tx: Vec<_> = r.iter().filter(|a| a.subcategory == "Samsung Pay Transaction").collect();
-        let cards: Vec<_> = r.iter().filter(|a| a.subcategory == "Samsung Pay Card").collect();
+        let tx: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Samsung Pay Transaction")
+            .collect();
+        let cards: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Samsung Pay Card")
+            .collect();
         assert_eq!(tx.len(), 2);
         assert_eq!(cards.len(), 1);
     }
@@ -183,14 +191,19 @@ mod tests {
     fn amount_and_merchant_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("$45.99") && a.title.contains("Starbucks")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("$45.99") && a.title.contains("Starbucks")));
     }
 
     #[test]
     fn card_last_four_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let card = r.iter().find(|a| a.subcategory == "Samsung Pay Card").unwrap();
+        let card = r
+            .iter()
+            .find(|a| a.subcategory == "Samsung Pay Card")
+            .unwrap();
         assert!(card.detail.contains("last_four='4321'"));
         assert!(card.detail.contains("issuer='Visa'"));
     }
@@ -199,7 +212,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

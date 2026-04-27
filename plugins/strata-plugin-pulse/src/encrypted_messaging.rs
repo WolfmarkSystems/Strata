@@ -80,11 +80,7 @@ pub fn parse_telegram_phone(bytes: &[u8]) -> Option<String> {
                 end += 1;
             }
             if end - i <= 16 {
-                return Some(
-                    std::str::from_utf8(&bytes[i..end])
-                        .ok()?
-                        .to_string(),
-                );
+                return Some(std::str::from_utf8(&bytes[i..end]).ok()?.to_string());
             }
         }
         i += 1;
@@ -111,7 +107,11 @@ pub fn parse_discord_voice_sessions(json: &str) -> Vec<VoiceChannelSession> {
         let participants: Vec<String> = entry
             .get("participants")
             .and_then(|x| x.as_array())
-            .map(|a| a.iter().filter_map(|e| e.as_str().map(String::from)).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|e| e.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default();
         let started = entry
             .get("started")

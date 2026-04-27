@@ -57,7 +57,9 @@ fn read_trips(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (uuid, req_ms, p_lat, p_lon, d_lat, d_lon, p_addr, d_addr, fare, driver, plate, status) in rows.flatten() {
+    for (uuid, req_ms, p_lat, p_lon, d_lat, d_lon, p_addr, d_addr, fare, driver, plate, status) in
+        rows.flatten()
+    {
         let uuid = uuid.unwrap_or_else(|| "(unknown)".to_string());
         let p_addr = p_addr.unwrap_or_default();
         let d_addr = d_addr.unwrap_or_default();
@@ -141,21 +143,25 @@ mod tests {
     fn pickup_and_dropoff_gps() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("pickup_lat=37.774900") && a.detail.contains("dropoff_lat=37.621300")));
+        assert!(r.iter().any(|a| a.detail.contains("pickup_lat=37.774900")
+            && a.detail.contains("dropoff_lat=37.621300")));
     }
 
     #[test]
     fn driver_and_plate_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("driver='John D'") && a.detail.contains("plate='ABC123'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("driver='John D'") && a.detail.contains("plate='ABC123'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

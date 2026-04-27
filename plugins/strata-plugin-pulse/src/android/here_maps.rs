@@ -53,10 +53,7 @@ fn read_search(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> 
         let lo = lon.unwrap_or(0.0);
         let ts = ts_ms.and_then(unix_ms_to_i64);
         let title = format!("HERE Maps Search: {}", q);
-        let detail = format!(
-            "HERE Maps search query='{}' lat={:.6} lon={:.6}",
-            q, la, lo
-        );
+        let detail = format!("HERE Maps search query='{}' lat={:.6} lon={:.6}", q, la, lo);
         out.push(build_record(
             ArtifactCategory::UserActivity,
             "HERE Maps Search",
@@ -117,7 +114,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

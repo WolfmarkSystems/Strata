@@ -51,7 +51,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
         let body = msg.unwrap_or_default();
         // IMO uses nanoseconds timestamp
         let ts = ts_raw.map(|t| t / 1_000_000_000);
-        let direction = if msg_type.unwrap_or(0) == 1 { "incoming" } else { "outgoing" };
+        let direction = if msg_type.unwrap_or(0) == 1 {
+            "incoming"
+        } else {
+            "outgoing"
+        };
         let read_flag = read.unwrap_or(0) != 0;
         let preview: String = body.chars().take(120).collect();
         let title = format!("IMO {} {}: {}", direction, buid, preview);
@@ -146,7 +150,10 @@ mod tests {
     fn parses_messages_and_friends() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "IMO Message").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "IMO Message")
+            .collect();
         let friends: Vec<_> = r.iter().filter(|a| a.subcategory == "IMO Friend").collect();
         assert_eq!(msgs.len(), 3);
         assert_eq!(friends.len(), 2);
@@ -165,15 +172,20 @@ mod tests {
     fn direction_is_correct() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("incoming") && a.title.contains("Hello IMO")));
-        assert!(r.iter().any(|a| a.title.contains("outgoing") && a.title.contains("Reply back")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("incoming") && a.title.contains("Hello IMO")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("outgoing") && a.title.contains("Reply back")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

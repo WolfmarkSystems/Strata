@@ -23,7 +23,10 @@ use crate::android::helpers::{build_record, open_sqlite_ro, table_exists, unix_m
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &["com.whatsapp/databases/msgstore.db", "com.whatsapp/databases/wa.db"];
+pub const MATCHES: &[&str] = &[
+    "com.whatsapp/databases/msgstore.db",
+    "com.whatsapp/databases/wa.db",
+];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {
@@ -69,7 +72,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
     };
     let mut out = Vec::new();
     for (jid, from_me, data, ts_ms, mime, remote) in rows.flatten() {
-        let direction = if from_me.unwrap_or(0) == 1 { "sent" } else { "received" };
+        let direction = if from_me.unwrap_or(0) == 1 {
+            "sent"
+        } else {
+            "received"
+        };
         let jid = jid.unwrap_or_else(|| "(unknown)".to_string());
         let body = data.unwrap_or_default();
         let ts = ts_ms.and_then(unix_ms_to_i64);
@@ -120,7 +127,11 @@ fn read_calls(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
     for (ts_ms, video, duration, result) in rows.flatten() {
         let ts = ts_ms.and_then(unix_ms_to_i64);
-        let call_type = if video.unwrap_or(0) == 1 { "video" } else { "voice" };
+        let call_type = if video.unwrap_or(0) == 1 {
+            "video"
+        } else {
+            "voice"
+        };
         let dur = duration.unwrap_or(0);
         let res = result.unwrap_or(0);
         let title = format!("WhatsApp {} call ({}s, result={})", call_type, dur, res);
@@ -229,10 +240,7 @@ mod tests {
     }
 
     fn make_wa_db() -> tempfile::NamedTempFile {
-        let tmp = tempfile::Builder::new()
-            .suffix("wa.db")
-            .tempfile()
-            .unwrap();
+        let tmp = tempfile::Builder::new().suffix("wa.db").tempfile().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
         c.execute_batch(
             r#"
@@ -256,8 +264,14 @@ mod tests {
     fn parses_messages_and_calls() {
         let db = make_msgstore();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "WhatsApp Message").collect();
-        let calls: Vec<_> = r.iter().filter(|a| a.subcategory == "WhatsApp Call").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "WhatsApp Message")
+            .collect();
+        let calls: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "WhatsApp Call")
+            .collect();
         assert_eq!(msgs.len(), 3);
         assert_eq!(calls.len(), 2);
     }
@@ -275,7 +289,9 @@ mod tests {
         let db = make_msgstore();
         let r = parse(db.path());
         let grp = r.iter().find(|a| a.detail.contains("group-123")).unwrap();
-        assert!(grp.detail.contains("sender_in_group='5559999999@s.whatsapp.net'"));
+        assert!(grp
+            .detail
+            .contains("sender_in_group='5559999999@s.whatsapp.net'"));
     }
 
     #[test]
@@ -291,7 +307,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

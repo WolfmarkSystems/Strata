@@ -160,7 +160,10 @@ fn read_rooms(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
         let name = name.unwrap_or_else(|| "(unnamed)".to_string());
         let home_id = home_id.unwrap_or_default();
         let title = format!("Google Home room: {}", name);
-        let detail = format!("Google Home room id='{}' name='{}' home_id='{}'", id, name, home_id);
+        let detail = format!(
+            "Google Home room id='{}' name='{}' home_id='{}'",
+            id, name, home_id
+        );
         out.push(build_record(
             ArtifactCategory::SystemActivity,
             "Google Home Room",
@@ -237,14 +240,17 @@ mod tests {
     fn activity_actor_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("actor='user@example.com'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("actor='user@example.com'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

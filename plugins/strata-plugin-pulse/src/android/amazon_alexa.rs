@@ -7,7 +7,9 @@
 //! `card`, `routine`, `device`. Transcripts are especially valuable —
 //! they capture the exact words spoken to an Alexa device.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -33,7 +35,11 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     out
 }
 
-fn read_voice_history(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
+fn read_voice_history(
+    conn: &rusqlite::Connection,
+    path: &Path,
+    table: &str,
+) -> Vec<ArtifactRecord> {
     let transcript_col = if column_exists(conn, table, "transcript") {
         "transcript"
     } else if column_exists(conn, table, "summary") {
@@ -246,7 +252,9 @@ mod tests {
         let db = make_db();
         let r = parse(db.path());
         assert!(r.iter().any(|a| a.title.contains("alexa play jazz")));
-        assert!(r.iter().any(|a| a.detail.contains("response='Playing jazz from Spotify'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("response='Playing jazz from Spotify'")));
     }
 
     #[test]
@@ -261,7 +269,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -113,7 +113,9 @@ mod tests {
     fn sender_recipient_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("$alice") && a.title.contains("$bob")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("$alice") && a.title.contains("$bob")));
     }
 
     #[test]
@@ -129,14 +131,17 @@ mod tests {
     fn forensic_value_is_critical() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().all(|a| matches!(a.forensic_value, ForensicValue::Critical)));
+        assert!(r
+            .iter()
+            .all(|a| matches!(a.forensic_value, ForensicValue::Critical)));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

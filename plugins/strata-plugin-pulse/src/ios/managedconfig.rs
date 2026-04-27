@@ -4,27 +4,43 @@
 //! was under corporate/institutional management, which apps were
 //! force-installed, and what restrictions were applied.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::path_contains(path, "managedconfiguration")
-        && util::name_is(path, &["effectiveusersettings.plist", "profiletruth.plist", "profileinstallationresults.plist"])
+        && util::name_is(
+            path,
+            &[
+                "effectiveusersettings.plist",
+                "profiletruth.plist",
+                "profileinstallationresults.plist",
+            ],
+        )
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     let source = path.to_string_lossy().to_string();
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     vec![ArtifactRecord {
         category: ArtifactCategory::SystemActivity,
-        subcategory: "MDM config".to_string(), timestamp: None,
+        subcategory: "MDM config".to_string(),
+        timestamp: None,
         title: format!("iOS MDM profile: {}", name),
-        detail: format!("{} ({} bytes) — MDM enrollment, managed apps, device restrictions", name, size),
-        source_path: source, forensic_value: ForensicValue::High,
-        mitre_technique: Some("T1098".to_string()), is_suspicious: false, raw_data: None,
+        detail: format!(
+            "{} ({} bytes) — MDM enrollment, managed apps, device restrictions",
+            name, size
+        ),
+        source_path: source,
+        forensic_value: ForensicValue::High,
+        mitre_technique: Some("T1098".to_string()),
+        is_suspicious: false,
+        raw_data: None,
         confidence: 0,
     }]
 }

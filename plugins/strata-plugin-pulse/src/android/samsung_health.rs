@@ -12,7 +12,9 @@
 //! publicly documented Samsung Health schema. Schema varies across
 //! S-Health versions; the parser probes multiple known column names.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -25,7 +27,11 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
 
     // Try both underscore-prefixed and unprefixed variants.
-    for table in &["com_samsung_health_step_count", "step_count", "stepdaily_trend"] {
+    for table in &[
+        "com_samsung_health_step_count",
+        "step_count",
+        "stepdaily_trend",
+    ] {
         if table_exists(&conn, table) {
             out.extend(read_steps(&conn, path, table));
             break;
@@ -175,7 +181,10 @@ fn read_sleep(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
     let mut out = Vec::new();
     for (start_ms, end_ms) in rows.flatten() {
         let ts = start_ms.and_then(unix_ms_to_i64);
-        let dur_s = end_ms.zip(start_ms).map(|(e, s)| (e - s) / 1000).unwrap_or(0);
+        let dur_s = end_ms
+            .zip(start_ms)
+            .map(|(e, s)| (e - s) / 1000)
+            .unwrap_or(0);
         let hours = dur_s as f64 / 3600.0;
         let title = format!("SHealth sleep: {:.1}h", hours);
         let detail = format!(
@@ -256,7 +265,10 @@ mod tests {
     fn exercise_duration_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let ex = r.iter().find(|a| a.subcategory == "Samsung Health Exercise").unwrap();
+        let ex = r
+            .iter()
+            .find(|a| a.subcategory == "Samsung Health Exercise")
+            .unwrap();
         assert!(ex.detail.contains("duration=1800s"));
         assert!(ex.detail.contains("distance=5000.0m"));
     }
@@ -265,7 +277,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

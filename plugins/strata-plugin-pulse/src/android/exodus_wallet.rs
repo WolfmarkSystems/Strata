@@ -165,8 +165,14 @@ mod tests {
     fn parses_accounts_and_transactions() {
         let db = make_db();
         let r = parse(db.path());
-        let accts: Vec<_> = r.iter().filter(|a| a.subcategory == "Exodus Account").collect();
-        let txs: Vec<_> = r.iter().filter(|a| a.subcategory == "Exodus Transaction").collect();
+        let accts: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Exodus Account")
+            .collect();
+        let txs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Exodus Transaction")
+            .collect();
         assert_eq!(accts.len(), 2);
         assert_eq!(txs.len(), 2);
     }
@@ -175,21 +181,26 @@ mod tests {
     fn account_balance_and_coin_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("0.5") && a.title.contains("BTC")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("0.5") && a.title.contains("BTC")));
     }
 
     #[test]
     fn transaction_addresses_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("txid='abc123'") && a.detail.contains("from='1A1zP1'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("txid='abc123'") && a.detail.contains("from='1A1zP1'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

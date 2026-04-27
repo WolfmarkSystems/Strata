@@ -61,10 +61,7 @@ fn read_activities(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactReco
         let kind = kind.unwrap_or_else(|| "activity".to_string());
         let ts = ts_ms.and_then(unix_ms_to_i64);
         let title = format!("Strava {}: {}", kind, name);
-        let mut detail = format!(
-            "Strava activity id={} type='{}' name='{}'",
-            id, kind, name
-        );
+        let mut detail = format!("Strava activity id={} type='{}' name='{}'", id, kind, name);
         if let Some(d) = distance {
             detail.push_str(&format!(" distance={:.0}m", d));
         }
@@ -181,8 +178,14 @@ mod tests {
     fn parses_activities_and_segments() {
         let db = make_db();
         let r = parse(db.path());
-        let acts: Vec<_> = r.iter().filter(|a| a.subcategory == "Strava Activity").collect();
-        let segs: Vec<_> = r.iter().filter(|a| a.subcategory == "Strava Segment").collect();
+        let acts: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Strava Activity")
+            .collect();
+        let segs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Strava Segment")
+            .collect();
         assert_eq!(acts.len(), 2);
         assert_eq!(segs.len(), 1);
     }
@@ -207,7 +210,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

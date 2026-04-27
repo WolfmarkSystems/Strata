@@ -49,15 +49,18 @@ fn read_notes(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
     for (title, content, created, modified, trashed) in rows.flatten() {
         let title_str = title.unwrap_or_else(|| "(untitled)".to_string());
         let body = content.unwrap_or_default();
-        let ts = modified.and_then(unix_ms_to_i64).or(created.and_then(unix_ms_to_i64));
+        let ts = modified
+            .and_then(unix_ms_to_i64)
+            .or(created.and_then(unix_ms_to_i64));
         let is_trashed = trashed.unwrap_or(0) != 0;
         let preview: String = body.chars().take(120).collect();
-        let display = if title_str == "(untitled)" { &preview } else { &title_str };
+        let display = if title_str == "(untitled)" {
+            &preview
+        } else {
+            &title_str
+        };
         let title_out = format!("Samsung Note: {}", display);
-        let mut detail = format!(
-            "Samsung Notes title='{}' body='{}'",
-            title_str, body
-        );
+        let mut detail = format!("Samsung Notes title='{}' body='{}'", title_str, body);
         if is_trashed {
             detail.push_str(" trashed=true");
         }
@@ -96,7 +99,9 @@ fn read_notes_meta(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactReco
     let mut out = Vec::new();
     for (title, created, updated) in rows.flatten() {
         let title_str = title.unwrap_or_else(|| "(untitled)".to_string());
-        let ts = updated.and_then(unix_ms_to_i64).or(created.and_then(unix_ms_to_i64));
+        let ts = updated
+            .and_then(unix_ms_to_i64)
+            .or(created.and_then(unix_ms_to_i64));
         let title_out = format!("Samsung Note: {}", title_str);
         let detail = format!("Samsung Notes title='{}'", title_str);
         out.push(build_record(
@@ -152,7 +157,10 @@ mod tests {
     fn trashed_note_is_suspicious() {
         let db = make_db();
         let r = parse(db.path());
-        let trashed = r.iter().find(|a| a.detail.contains("trashed=true")).unwrap();
+        let trashed = r
+            .iter()
+            .find(|a| a.detail.contains("trashed=true"))
+            .unwrap();
         assert!(trashed.is_suspicious);
     }
 
@@ -160,14 +168,17 @@ mod tests {
     fn body_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("body='Milk, bread, eggs'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("body='Milk, bread, eggs'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

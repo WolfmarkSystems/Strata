@@ -51,7 +51,9 @@ fn read_refunds(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Ar
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (tax_year, filing_status, refund_amount, status, ssn_last_four, checked_ms) in rows.flatten() {
+    for (tax_year, filing_status, refund_amount, status, ssn_last_four, checked_ms) in
+        rows.flatten()
+    {
         let tax_year = tax_year.unwrap_or(0);
         let filing_status = filing_status.unwrap_or_default();
         let refund_amount = refund_amount.unwrap_or_default();
@@ -115,21 +117,25 @@ mod tests {
     fn tax_year_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("2024") && a.title.contains("approved")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("2024") && a.title.contains("approved")));
     }
 
     #[test]
     fn filing_status_and_ssn_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("filing_status='single'") && a.detail.contains("ssn_last_four='1234'")));
+        assert!(r.iter().any(|a| a.detail.contains("filing_status='single'")
+            && a.detail.contains("ssn_last_four='1234'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -4,18 +4,25 @@
 //! a per-bundle-ID breakdown showing exactly which apps were used and
 //! for how long each day.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
-    util::name_is(path, &["rmadminstore-local.sqlite", "rmadminstore-cloud.sqlite"])
+    util::name_is(
+        path,
+        &["rmadminstore-local.sqlite", "rmadminstore-cloud.sqlite"],
+    )
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "ZUSAGETIMEDITEM") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "ZUSAGETIMEDITEM") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
 
     let by_app = conn
@@ -23,19 +30,23 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             "SELECT COALESCE(ZBUNDLEIDENTIFIER, '(unknown)'), COUNT(*), \
              COALESCE(SUM(ZTOTALTIMEINSECONDS), 0) \
              FROM ZUSAGETIMEDITEM \
-             GROUP BY ZBUNDLEIDENTIFIER ORDER BY SUM(ZTOTALTIMEINSECONDS) DESC LIMIT 20"
+             GROUP BY ZBUNDLEIDENTIFIER ORDER BY SUM(ZTOTALTIMEINSECONDS) DESC LIMIT 20",
         )
         .and_then(|mut s| {
-            let r = s.query_map([], |row| Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, i64>(1)?,
-                row.get::<_, f64>(2)?,
-            )))?;
+            let r = s.query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, f64>(2)?,
+                ))
+            })?;
             Ok(r.flatten().collect::<Vec<_>>())
         })
         .unwrap_or_default();
 
-    if by_app.is_empty() { return out; }
+    if by_app.is_empty() {
+        return out;
+    }
 
     for (bundle, rows, seconds) in by_app {
         out.push(ArtifactRecord {
@@ -44,8 +55,11 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             timestamp: None,
             title: format!("Screen Time: {}", bundle),
             detail: format!("{} entries, {:.0}s total foreground time", rows, seconds),
-            source_path: source.clone(), forensic_value: ForensicValue::High,
-            mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+            source_path: source.clone(),
+            forensic_value: ForensicValue::High,
+            mitre_technique: Some("T1005".to_string()),
+            is_suspicious: false,
+            raw_data: None,
             confidence: 0,
         });
     }
@@ -71,9 +85,16 @@ mod tests {
 
     #[test]
     fn parses_per_app_breakdown() {
-        let tmp = make_st(&[("com.apple.mobilesafari", 3600.0), ("com.apple.mobilesafari", 1800.0), ("com.example", 600.0)]);
+        let tmp = make_st(&[
+            ("com.apple.mobilesafari", 3600.0),
+            ("com.apple.mobilesafari", 1800.0),
+            ("com.example", 600.0),
+        ]);
         let recs = parse(tmp.path());
-        let safari = recs.iter().find(|r| r.subcategory.contains("mobilesafari")).unwrap();
+        let safari = recs
+            .iter()
+            .find(|r| r.subcategory.contains("mobilesafari"))
+            .unwrap();
         assert!(safari.detail.contains("5400s"));
         assert!(recs.iter().any(|r| r.subcategory.contains("com.example")));
     }

@@ -28,9 +28,9 @@ pub fn scan_whatsapp(path: &Path) -> Vec<EphemeralIndicator> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    if let Ok(mut stmt) = conn.prepare(
-        "SELECT DISTINCT ephemeral_duration FROM message WHERE ephemeral_duration > 0",
-    ) {
+    if let Ok(mut stmt) =
+        conn.prepare("SELECT DISTINCT ephemeral_duration FROM message WHERE ephemeral_duration > 0")
+    {
         let rows = stmt.query_map([], |row| row.get::<_, i64>(0));
         if let Ok(rows) = rows {
             for d in rows.flatten() {
@@ -142,7 +142,9 @@ fn open_ro(path: &Path) -> Option<Connection> {
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )
     .ok()?;
-    if c.pragma_query_value(None, "schema_version", |_| Ok(())).is_ok() {
+    if c.pragma_query_value(None, "schema_version", |_| Ok(()))
+        .is_ok()
+    {
         Some(c)
     } else {
         None
@@ -163,11 +165,8 @@ mod tests {
             "CREATE TABLE message (id INTEGER, ephemeral_duration INTEGER, message_expiry_timestamp INTEGER);",
         )
         .expect("schema");
-        conn.execute(
-            "INSERT INTO message VALUES (1, 86400, 1)",
-            [],
-        )
-        .expect("i");
+        conn.execute("INSERT INTO message VALUES (1, 86400, 1)", [])
+            .expect("i");
         drop(conn);
         let out = scan_whatsapp(&path);
         assert!(out
@@ -188,9 +187,7 @@ mod tests {
             .expect("m");
         drop(conn);
         let out = scan_telegram(&path);
-        assert!(out
-            .iter()
-            .any(|i| i.indicator_type == "SecretChatPresent"));
+        assert!(out.iter().any(|i| i.indicator_type == "SecretChatPresent"));
     }
 
     #[test]

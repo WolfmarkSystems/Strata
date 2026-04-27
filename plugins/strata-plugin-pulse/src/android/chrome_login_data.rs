@@ -14,7 +14,9 @@
 //! Each saved login is forensically high-value because it confirms an
 //! account exists, even though the secret is opaque.
 
-use crate::android::helpers::{build_record, chrome_to_unix, column_exists, open_sqlite_ro, table_exists};
+use crate::android::helpers::{
+    build_record, chrome_to_unix, column_exists, open_sqlite_ro, table_exists,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
@@ -136,14 +138,18 @@ mod tests {
     fn user_and_origin_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|x| x.title.contains("octocat") && x.title.contains("github.com")));
+        assert!(r
+            .iter()
+            .any(|x| x.title.contains("octocat") && x.title.contains("github.com")));
     }
 
     #[test]
     fn category_is_credentials() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().all(|x| x.category == ArtifactCategory::AccountsCredentials));
+        assert!(r
+            .iter()
+            .all(|x| x.category == ArtifactCategory::AccountsCredentials));
         assert!(r.iter().all(|x| x.forensic_value == ForensicValue::High));
     }
 

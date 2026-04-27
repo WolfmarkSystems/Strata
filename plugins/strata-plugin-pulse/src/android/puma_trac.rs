@@ -52,7 +52,22 @@ fn read_exercises(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecor
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, start_ms, _end_ms, dur_ms, score, calories, city, country, distance, _max_speed, mean_speed, _pace, loc_type) in rows.flatten() {
+    for (
+        id,
+        start_ms,
+        _end_ms,
+        dur_ms,
+        score,
+        calories,
+        city,
+        country,
+        distance,
+        _max_speed,
+        mean_speed,
+        _pace,
+        loc_type,
+    ) in rows.flatten()
+    {
         let id = id.unwrap_or_else(|| "(unknown)".to_string());
         let ts = start_ms.and_then(unix_ms_to_i64);
         let dur_s = dur_ms.unwrap_or(0) / 1000;
@@ -163,7 +178,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

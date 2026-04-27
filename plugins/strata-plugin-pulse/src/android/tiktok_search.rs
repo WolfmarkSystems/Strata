@@ -7,7 +7,9 @@
 //! or `sug_word` tables with timestamps and type flags (user/hashtag/
 //! video).
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -21,7 +23,12 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    for table in &["search_history", "search_queries", "sug_word", "user_search_history"] {
+    for table in &[
+        "search_history",
+        "search_queries",
+        "sug_word",
+        "user_search_history",
+    ] {
         if table_exists(&conn, table) {
             out.extend(read_searches(&conn, path, table));
         }
@@ -76,7 +83,11 @@ fn read_searches(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<A
         let query = query.unwrap_or_default();
         let search_type = search_type.unwrap_or_else(|| "general".to_string());
         let ts = ts_raw.and_then(|t| {
-            if t > 10_000_000_000 { unix_ms_to_i64(t) } else { Some(t) }
+            if t > 10_000_000_000 {
+                unix_ms_to_i64(t)
+            } else {
+                Some(t)
+            }
         });
         let title = format!("TikTok search ({}): {}", search_type, query);
         let detail = format!(
@@ -133,22 +144,29 @@ mod tests {
     fn search_type_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("(hashtag)") && a.title.contains("#viral")));
-        assert!(r.iter().any(|a| a.title.contains("(user)") && a.title.contains("@celebrity")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("(hashtag)") && a.title.contains("#viral")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("(user)") && a.title.contains("@celebrity")));
     }
 
     #[test]
     fn source_table_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().all(|a| a.detail.contains("source_table='search_history'")));
+        assert!(r
+            .iter()
+            .all(|a| a.detail.contains("source_table='search_history'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

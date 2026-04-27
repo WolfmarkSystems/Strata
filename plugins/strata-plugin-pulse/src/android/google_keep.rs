@@ -50,14 +50,17 @@ fn read_tree_entity(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRec
     for (created, updated, title, text, modifier) in rows.flatten() {
         let title_str = title.unwrap_or_else(|| "(untitled)".to_string());
         let body = text.unwrap_or_default();
-        let ts = updated.and_then(unix_ms_to_i64).or(created.and_then(unix_ms_to_i64));
+        let ts = updated
+            .and_then(unix_ms_to_i64)
+            .or(created.and_then(unix_ms_to_i64));
         let preview: String = body.chars().take(120).collect();
-        let display = if title_str == "(untitled)" { &preview } else { &title_str };
+        let display = if title_str == "(untitled)" {
+            &preview
+        } else {
+            &title_str
+        };
         let title_out = format!("Keep note: {}", display);
-        let mut detail = format!(
-            "Google Keep note title='{}' body='{}'",
-            title_str, body
-        );
+        let mut detail = format!("Google Keep note title='{}' body='{}'", title_str, body);
         if let Some(m) = modifier.filter(|m| !m.is_empty()) {
             detail.push_str(&format!(" modifier='{}'", m));
         }
@@ -98,12 +101,13 @@ fn read_search_content(conn: &rusqlite::Connection, path: &Path) -> Vec<Artifact
         let title_str = title.unwrap_or_else(|| "(untitled)".to_string());
         let body = text.unwrap_or_default();
         let preview: String = body.chars().take(120).collect();
-        let display = if title_str == "(untitled)" { &preview } else { &title_str };
+        let display = if title_str == "(untitled)" {
+            &preview
+        } else {
+            &title_str
+        };
         let title_out = format!("Keep note: {}", display);
-        let detail = format!(
-            "Google Keep note title='{}' body='{}'",
-            title_str, body
-        );
+        let detail = format!("Google Keep note title='{}' body='{}'", title_str, body);
         out.push(build_record(
             ArtifactCategory::UserActivity,
             "Google Keep Note",
@@ -164,7 +168,10 @@ mod tests {
     fn modifier_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let note = r.iter().find(|a| a.detail.contains("Shopping List")).unwrap();
+        let note = r
+            .iter()
+            .find(|a| a.detail.contains("Shopping List"))
+            .unwrap();
         assert!(note.detail.contains("modifier='user@gmail.com'"));
     }
 
@@ -172,7 +179,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

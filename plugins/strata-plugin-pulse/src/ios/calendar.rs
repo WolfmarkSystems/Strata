@@ -117,8 +117,11 @@ mod tests {
             [],
         )
         .unwrap();
-        c.execute("CREATE TABLE Calendar (ROWID INTEGER PRIMARY KEY, title TEXT)", [])
-            .unwrap();
+        c.execute(
+            "CREATE TABLE Calendar (ROWID INTEGER PRIMARY KEY, title TEXT)",
+            [],
+        )
+        .unwrap();
         c.execute(
             "CREATE TABLE Participant (ROWID INTEGER PRIMARY KEY, email TEXT)",
             [],
@@ -156,9 +159,7 @@ mod tests {
         let recs = parse(tmp.path());
         let cal = recs.iter().find(|r| r.subcategory == "Calendar").unwrap();
         assert!(cal.detail.contains("4 CalendarItem"));
-        assert!(recs
-            .iter()
-            .any(|r| r.subcategory == "Calendar accounts"));
+        assert!(recs.iter().any(|r| r.subcategory == "Calendar accounts"));
         assert!(recs
             .iter()
             .any(|r| r.subcategory == "Calendar participants"));

@@ -72,7 +72,9 @@ fn read_profile(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord>
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (dodid, rank, last_name, first_name, unit, installation, branch, component, mos) in rows.flatten() {
+    for (dodid, rank, last_name, first_name, unit, installation, branch, component, mos) in
+        rows.flatten()
+    {
         let dodid = dodid.unwrap_or_default();
         let rank = rank.unwrap_or_default();
         let last_name = last_name.unwrap_or_default();
@@ -201,7 +203,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
     out
 }
 
-fn read_notifications(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
+fn read_notifications(
+    conn: &rusqlite::Connection,
+    path: &Path,
+    table: &str,
+) -> Vec<ArtifactRecord> {
     let sql = format!(
         "SELECT id, title, body, received_at, category \
          FROM \"{table}\" ORDER BY received_at DESC LIMIT 5000",
@@ -303,7 +309,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

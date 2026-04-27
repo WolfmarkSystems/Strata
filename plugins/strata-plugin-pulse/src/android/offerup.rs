@@ -51,10 +51,7 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
         let ts = ts_ms.and_then(unix_ms_to_i64);
         let preview: String = body.chars().take(120).collect();
         let title = format!("OfferUp {}: {}", sender, preview);
-        let detail = format!(
-            "OfferUp message sender='{}' text='{}'",
-            sender, body
-        );
+        let detail = format!("OfferUp message sender='{}' text='{}'", sender, body);
         out.push(build_record(
             ArtifactCategory::Communications,
             "OfferUp Message",
@@ -157,7 +154,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

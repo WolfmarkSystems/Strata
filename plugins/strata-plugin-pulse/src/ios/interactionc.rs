@@ -5,9 +5,9 @@
 //! iLEAPP keys off `ZINTERACTIONS` and `ZCONTACTS` tables.
 //! High value for building a communication graph.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["interactionc.db"])
@@ -15,7 +15,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
     let mut emitted = false;
 
@@ -26,7 +28,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             subcategory: "InteractionC interactions".to_string(),
             timestamp: None,
             title: "iOS contact interactions".to_string(),
-            detail: format!("{} ZINTERACTIONS rows (cross-app communication graph)", count),
+            detail: format!(
+                "{} ZINTERACTIONS rows (cross-app communication graph)",
+                count
+            ),
             source_path: source.clone(),
             forensic_value: ForensicValue::High,
             mitre_technique: Some("T1005".to_string()),
@@ -53,7 +58,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         });
         emitted = true;
     }
-    if !emitted { return Vec::new(); }
+    if !emitted {
+        return Vec::new();
+    }
     out
 }
 
@@ -65,7 +72,9 @@ mod tests {
 
     #[test]
     fn matches_interactionc() {
-        assert!(matches(Path::new("/var/mobile/Library/CoreDuet/People/interactionC.db")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/CoreDuet/People/interactionC.db"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -73,13 +82,33 @@ mod tests {
     fn parses_interactions_and_contacts() {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute("CREATE TABLE ZINTERACTIONS (Z_PK INTEGER PRIMARY KEY, ZBUNDLEID TEXT)", []).unwrap();
-        c.execute("CREATE TABLE ZCONTACTS (Z_PK INTEGER PRIMARY KEY, ZIDENTIFIER TEXT)", []).unwrap();
-        c.execute("INSERT INTO ZINTERACTIONS (ZBUNDLEID) VALUES ('com.apple.MobileSMS')", []).unwrap();
-        c.execute("INSERT INTO ZCONTACTS (ZIDENTIFIER) VALUES ('+15551234567')", []).unwrap();
+        c.execute(
+            "CREATE TABLE ZINTERACTIONS (Z_PK INTEGER PRIMARY KEY, ZBUNDLEID TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE ZCONTACTS (Z_PK INTEGER PRIMARY KEY, ZIDENTIFIER TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO ZINTERACTIONS (ZBUNDLEID) VALUES ('com.apple.MobileSMS')",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO ZCONTACTS (ZIDENTIFIER) VALUES ('+15551234567')",
+            [],
+        )
+        .unwrap();
         let recs = parse(tmp.path());
-        assert!(recs.iter().any(|r| r.subcategory == "InteractionC interactions"));
-        assert!(recs.iter().any(|r| r.subcategory == "InteractionC contacts"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "InteractionC interactions"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "InteractionC contacts"));
     }
 
     #[test]

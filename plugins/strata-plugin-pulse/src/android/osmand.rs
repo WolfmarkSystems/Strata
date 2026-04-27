@@ -52,10 +52,7 @@ fn read_search(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> 
         let lo = lon.unwrap_or(0.0);
         let ts = date_ms.and_then(unix_ms_to_i64);
         let title = format!("OsmAnd Search: {}", q);
-        let detail = format!(
-            "OsmAnd search query='{}' lat={:.6} lon={:.6}",
-            q, la, lo
-        );
+        let detail = format!("OsmAnd search query='{}' lat={:.6} lon={:.6}", q, la, lo);
         out.push(build_record(
             ArtifactCategory::UserActivity,
             "OsmAnd Search",
@@ -107,7 +104,10 @@ mod tests {
     fn query_in_title_and_coords_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let grocery = r.iter().find(|a| a.title.contains("grocery store")).unwrap();
+        let grocery = r
+            .iter()
+            .find(|a| a.title.contains("grocery store"))
+            .unwrap();
         assert!(grocery.detail.contains("lat=51.507351"));
         assert!(grocery.detail.contains("lon=-0.127758"));
     }
@@ -116,7 +116,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

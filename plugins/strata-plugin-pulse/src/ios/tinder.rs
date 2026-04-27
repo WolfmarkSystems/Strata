@@ -3,9 +3,9 @@
 //! Tinder stores match metadata and messages in a CoreData store.
 //! iLEAPP keys off `ZMATCH` and `ZMESSAGE` tables.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["tinder.sqlite"])
@@ -14,13 +14,19 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
     let mut emitted = false;
 
     for (table, label, cat) in [
         ("ZMATCH", "Tinder matches", ArtifactCategory::SocialMedia),
-        ("ZMESSAGE", "Tinder messages", ArtifactCategory::Communications),
+        (
+            "ZMESSAGE",
+            "Tinder messages",
+            ArtifactCategory::Communications,
+        ),
     ] {
         if util::table_exists(&conn, table) {
             let n = util::count_rows(&conn, table);
@@ -40,7 +46,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             emitted = true;
         }
     }
-    if !emitted { return Vec::new(); }
+    if !emitted {
+        return Vec::new();
+    }
     out
 }
 
@@ -52,8 +60,12 @@ mod tests {
 
     #[test]
     fn matches_tinder_filenames() {
-        assert!(matches(Path::new("/var/mobile/Containers/Data/Application/UUID/Library/Tinder.sqlite")));
-        assert!(matches(Path::new("/var/mobile/Containers/Data/Application/UUID/Library/Tinder/model.sqlite")));
+        assert!(matches(Path::new(
+            "/var/mobile/Containers/Data/Application/UUID/Library/Tinder.sqlite"
+        )));
+        assert!(matches(Path::new(
+            "/var/mobile/Containers/Data/Application/UUID/Library/Tinder/model.sqlite"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -61,10 +73,20 @@ mod tests {
     fn parses_matches_and_messages() {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute("CREATE TABLE ZMATCH (Z_PK INTEGER PRIMARY KEY, ZPERSON TEXT)", []).unwrap();
-        c.execute("CREATE TABLE ZMESSAGE (Z_PK INTEGER PRIMARY KEY, ZTEXT TEXT)", []).unwrap();
-        c.execute("INSERT INTO ZMATCH (ZPERSON) VALUES ('person1')", []).unwrap();
-        c.execute("INSERT INTO ZMESSAGE (ZTEXT) VALUES ('hey')", []).unwrap();
+        c.execute(
+            "CREATE TABLE ZMATCH (Z_PK INTEGER PRIMARY KEY, ZPERSON TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE ZMESSAGE (Z_PK INTEGER PRIMARY KEY, ZTEXT TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute("INSERT INTO ZMATCH (ZPERSON) VALUES ('person1')", [])
+            .unwrap();
+        c.execute("INSERT INTO ZMESSAGE (ZTEXT) VALUES ('hey')", [])
+            .unwrap();
         let recs = parse(tmp.path());
         assert!(recs.iter().any(|r| r.subcategory == "Tinder matches"));
         assert!(recs.iter().any(|r| r.subcategory == "Tinder messages"));

@@ -162,7 +162,8 @@ fn cocoa_to_utc_f(ts: f64) -> Option<DateTime<Utc>> {
         return None;
     }
     let cocoa_epoch_offset = 978_307_200i64;
-    Utc.timestamp_opt(ts as i64 + cocoa_epoch_offset, 0).single()
+    Utc.timestamp_opt(ts as i64 + cocoa_epoch_offset, 0)
+        .single()
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────
@@ -212,8 +213,14 @@ mod tests {
         let c = fixture("korbyn@example.com");
         let assets = parse_shared_assets(&c, "korbyn@example.com");
         assert_eq!(assets.len(), 2);
-        let own = assets.iter().filter(|a| a.attributed_to_device_user).count();
-        let other = assets.iter().filter(|a| !a.attributed_to_device_user).count();
+        let own = assets
+            .iter()
+            .filter(|a| a.attributed_to_device_user)
+            .count();
+        let other = assets
+            .iter()
+            .filter(|a| !a.attributed_to_device_user)
+            .count();
         assert_eq!(own, 1);
         assert_eq!(other, 1);
     }

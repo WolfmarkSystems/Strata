@@ -71,8 +71,14 @@ fn parse_generic(platform: &str, json: &str) -> Vec<FinancialAppArtifact> {
                 .into(),
             timestamp: ts,
             amount: entry.get("amount").and_then(|x| x.as_f64()),
-            counterparty: entry.get("counterparty").and_then(|x| x.as_str()).map(String::from),
-            description: entry.get("description").and_then(|x| x.as_str()).map(String::from),
+            counterparty: entry
+                .get("counterparty")
+                .and_then(|x| x.as_str())
+                .map(String::from),
+            description: entry
+                .get("description")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             account_reference: entry
                 .get("account_last4")
                 .and_then(|x| x.as_str())

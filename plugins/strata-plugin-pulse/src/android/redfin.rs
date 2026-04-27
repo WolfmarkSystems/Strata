@@ -180,8 +180,7 @@ fn parse_tour_schedules(conn: &rusqlite::Connection, path: &Path) -> Vec<Artifac
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (home_id, address, tour_date_ms, tour_time, agent, status, scheduled_ms) in rows.flatten()
-    {
+    for (home_id, address, tour_date_ms, tour_time, agent, status, scheduled_ms) in rows.flatten() {
         let home_id = home_id.unwrap_or_default();
         let address = address.unwrap_or_else(|| "(unknown)".to_string());
         let tour_time = tour_time.unwrap_or_default();
@@ -300,7 +299,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -4,9 +4,9 @@
 //! extract credential values — only metadata: which services have
 //! saved credentials, creation/modification dates, access groups.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["keychain-2.db", "keychain-2.db-shm"])
@@ -15,7 +15,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
 
     for (table, label) in [
@@ -31,9 +33,15 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 subcategory: format!("Keychain {}", table),
                 timestamp: None,
                 title: format!("iOS Keychain: {}", label),
-                detail: format!("{} {} rows (metadata only — credential values NOT extracted)", count, table),
-                source_path: source.clone(), forensic_value: ForensicValue::High,
-                mitre_technique: Some("T1555".to_string()), is_suspicious: false, raw_data: None,
+                detail: format!(
+                    "{} {} rows (metadata only — credential values NOT extracted)",
+                    count, table
+                ),
+                source_path: source.clone(),
+                forensic_value: ForensicValue::High,
+                mitre_technique: Some("T1555".to_string()),
+                is_suspicious: false,
+                raw_data: None,
                 confidence: 0,
             });
         }
@@ -58,16 +66,42 @@ mod tests {
     fn parses_table_counts() {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute("CREATE TABLE genp (rowid INTEGER PRIMARY KEY, acct TEXT, agrp TEXT)", []).unwrap();
-        c.execute("CREATE TABLE inet (rowid INTEGER PRIMARY KEY, acct TEXT, srvr TEXT)", []).unwrap();
-        c.execute("INSERT INTO genp (acct, agrp) VALUES ('user', 'com.app')", []).unwrap();
-        c.execute("INSERT INTO inet (acct, srvr) VALUES ('user', 'example.com')", []).unwrap();
-        c.execute("INSERT INTO inet (acct, srvr) VALUES ('admin', 'bank.com')", []).unwrap();
+        c.execute(
+            "CREATE TABLE genp (rowid INTEGER PRIMARY KEY, acct TEXT, agrp TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE inet (rowid INTEGER PRIMARY KEY, acct TEXT, srvr TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO genp (acct, agrp) VALUES ('user', 'com.app')",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO inet (acct, srvr) VALUES ('user', 'example.com')",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO inet (acct, srvr) VALUES ('admin', 'bank.com')",
+            [],
+        )
+        .unwrap();
         let recs = parse(tmp.path());
-        let genp = recs.iter().find(|r| r.subcategory == "Keychain genp").unwrap();
+        let genp = recs
+            .iter()
+            .find(|r| r.subcategory == "Keychain genp")
+            .unwrap();
         assert!(genp.detail.contains("1 genp"));
         assert!(genp.detail.contains("NOT extracted"));
-        let inet = recs.iter().find(|r| r.subcategory == "Keychain inet").unwrap();
+        let inet = recs
+            .iter()
+            .find(|r| r.subcategory == "Keychain inet")
+            .unwrap();
         assert!(inet.detail.contains("2 inet"));
     }
 

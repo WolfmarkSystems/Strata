@@ -235,14 +235,17 @@ mod tests {
     fn contact_address_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("name='Alice'") && a.detail.contains("mdid='mdid_alice'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("name='Alice'") && a.detail.contains("mdid='mdid_alice'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

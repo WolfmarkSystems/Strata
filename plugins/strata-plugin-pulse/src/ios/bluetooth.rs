@@ -121,13 +121,24 @@ mod tests {
     #[test]
     fn parses_db_table_counts() {
         let dir = tempdir().unwrap();
-        let p = dir.path().join("com.apple.MobileBluetooth.ledevices.other.db");
+        let p = dir
+            .path()
+            .join("com.apple.MobileBluetooth.ledevices.other.db");
         let c = Connection::open(&p).unwrap();
-        c.execute("CREATE TABLE leperipherals (Uuid TEXT, Name TEXT)", []).unwrap();
-        c.execute("INSERT INTO leperipherals VALUES ('uuid1', 'AirPods')", []).unwrap();
-        c.execute("INSERT INTO leperipherals VALUES ('uuid2', 'Apple Watch')", []).unwrap();
+        c.execute("CREATE TABLE leperipherals (Uuid TEXT, Name TEXT)", [])
+            .unwrap();
+        c.execute("INSERT INTO leperipherals VALUES ('uuid1', 'AirPods')", [])
+            .unwrap();
+        c.execute(
+            "INSERT INTO leperipherals VALUES ('uuid2', 'Apple Watch')",
+            [],
+        )
+        .unwrap();
         let recs = parse(&p);
-        let r = recs.iter().find(|r| r.subcategory == "Bluetooth devices").unwrap();
+        let r = recs
+            .iter()
+            .find(|r| r.subcategory == "Bluetooth devices")
+            .unwrap();
         assert!(r.detail.contains("2 total rows"));
     }
 

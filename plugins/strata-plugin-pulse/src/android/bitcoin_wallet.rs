@@ -8,7 +8,9 @@
 //! schema conventions (`address`, `tx`, `wallet`). Table names vary
 //! across wallet versions.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -44,7 +46,11 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
 }
 
 fn read_addresses(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
-    let label_col = if column_exists(conn, table, "label") { "label" } else { "name" };
+    let label_col = if column_exists(conn, table, "label") {
+        "label"
+    } else {
+        "name"
+    };
     let sql = format!(
         "SELECT address, {label_col}, path, created_at FROM \"{table}\" LIMIT 5000",
         label_col = label_col,
@@ -245,7 +251,10 @@ mod tests {
     fn satoshis_converted_to_btc() {
         let db = make_db();
         let r = parse(db.path());
-        let tx = r.iter().find(|a| a.subcategory == "Bitcoin Transaction").unwrap();
+        let tx = r
+            .iter()
+            .find(|a| a.subcategory == "Bitcoin Transaction")
+            .unwrap();
         // 100000000 sats = 1.0 BTC
         assert!(tx.detail.contains("amount_btc=1.00000000"));
         assert!(tx.title.contains("1.00000000 BTC"));
@@ -255,14 +264,17 @@ mod tests {
     fn derivation_path_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("derivation_path='m/44'/0'/0'/0/0'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("derivation_path='m/44'/0'/0'/0/0'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

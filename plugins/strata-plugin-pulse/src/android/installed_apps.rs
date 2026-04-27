@@ -22,8 +22,8 @@ pub const MATCHES: &[&str] = &["packages.list", "packages.xml"];
 /// Some package names that — while real — frequently appear on jailbroken
 /// or "modded" devices and warrant a closer look.
 const SUSPICIOUS_PACKAGES: &[&str] = &[
-    "com.topjohnwu.magisk",   // Magisk root manager
-    "eu.chainfire.supersu",   // SuperSU
+    "com.topjohnwu.magisk", // Magisk root manager
+    "eu.chainfire.supersu", // SuperSU
     "com.koushikdutta.superuser",
     "stericson.busybox",      // BusyBox installer
     "de.robv.android.xposed", // Xposed
@@ -106,7 +106,8 @@ mod tests {
 
     #[test]
     fn skips_blank_and_comment_lines() {
-        let txt = "\n# header comment\ncom.app1 10001 0 /data/user/0/com.app1 default 1023 0 /a.apk\n\n";
+        let txt =
+            "\n# header comment\ncom.app1 10001 0 /data/user/0/com.app1 default 1023 0 /a.apk\n\n";
         let f = write_tmp(txt);
         let r = parse(f.path());
         assert_eq!(r.len(), 1);

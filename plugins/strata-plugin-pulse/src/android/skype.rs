@@ -52,7 +52,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
         let body = content.unwrap_or_default();
         let ts = ts_ms.and_then(unix_ms_to_i64);
         let is_call = msg_type.unwrap_or(0) == 3;
-        let subcategory = if is_call { "Skype Call" } else { "Skype Message" };
+        let subcategory = if is_call {
+            "Skype Call"
+        } else {
+            "Skype Message"
+        };
         let preview: String = body.chars().take(120).collect();
         let title = format!("Skype {}: {}", from, preview);
         let detail = format!(
@@ -107,7 +111,10 @@ mod tests {
     fn parses_messages_and_calls() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "Skype Message").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Skype Message")
+            .collect();
         let calls: Vec<_> = r.iter().filter(|a| a.subcategory == "Skype Call").collect();
         assert_eq!(msgs.len(), 2);
         assert_eq!(calls.len(), 1);
@@ -117,7 +124,9 @@ mod tests {
     fn conversation_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("conversation='19:abc@thread'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("conversation='19:abc@thread'")));
     }
 
     #[test]
@@ -131,7 +140,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

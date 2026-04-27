@@ -100,7 +100,9 @@ fn read_assignments(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRec
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, course_id, name, due_ms, points_possible, submission_types, has_submitted) in rows.flatten() {
+    for (id, course_id, name, due_ms, points_possible, submission_types, has_submitted) in
+        rows.flatten()
+    {
         let id = id.unwrap_or_default();
         let course_id = course_id.unwrap_or_default();
         let name = name.unwrap_or_else(|| "(unnamed)".to_string());
@@ -248,7 +250,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -54,7 +54,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
         let recipient = recipient.unwrap_or_else(|| "(unknown)".to_string());
         let payload = payload.unwrap_or_default();
         let kind = payload_type.unwrap_or_else(|| "text".to_string());
-        let direction = if is_incoming.unwrap_or(0) == 1 { "incoming" } else { "outgoing" };
+        let direction = if is_incoming.unwrap_or(0) == 1 {
+            "incoming"
+        } else {
+            "outgoing"
+        };
         let conv = conv.unwrap_or_default();
         let ts = ts_ms.and_then(unix_ms_to_i64);
         let preview: String = payload.chars().take(120).collect();
@@ -178,8 +182,14 @@ mod tests {
     fn parses_messages_and_matches() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "Bumble Message").collect();
-        let matches: Vec<_> = r.iter().filter(|a| a.subcategory == "Bumble Match").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Bumble Message")
+            .collect();
+        let matches: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Bumble Match")
+            .collect();
         assert_eq!(msgs.len(), 2);
         assert_eq!(matches.len(), 2);
     }
@@ -188,8 +198,12 @@ mod tests {
     fn game_mode_mapped() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("Bumble match: Alice (Date)")));
-        assert!(r.iter().any(|a| a.title.contains("Bumble match: Bob (Friends)")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Bumble match: Alice (Date)")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Bumble match: Bob (Friends)")));
     }
 
     #[test]
@@ -204,7 +218,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -25,7 +25,14 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    for table in &["measurements", "measurement", "readings", "reading", "bp_records", "record"] {
+    for table in &[
+        "measurements",
+        "measurement",
+        "readings",
+        "reading",
+        "bp_records",
+        "record",
+    ] {
         if table_exists(&conn, table) {
             out.extend(read_readings(&conn, path, table));
             break;
@@ -115,28 +122,38 @@ mod tests {
     fn parses_readings() {
         let db = make_db();
         let r = parse(db.path());
-        assert_eq!(r.iter().filter(|a| a.subcategory == "Blood Pressure Reading").count(), 3);
+        assert_eq!(
+            r.iter()
+                .filter(|a| a.subcategory == "Blood Pressure Reading")
+                .count(),
+            3
+        );
     }
 
     #[test]
     fn systolic_diastolic_in_title_and_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("120/80") && a.detail.contains("systolic=120")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("120/80") && a.detail.contains("systolic=120")));
     }
 
     #[test]
     fn notes_captured_when_present() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("notes='Morning reading'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("notes='Morning reading'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

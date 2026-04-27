@@ -4,9 +4,9 @@
 //! keys off `ZTEXTREPLACEMENTENTRY` with `ZSHORTCUT`, `ZPHRASE`,
 //! `ZTIMESTAMP`. Often contains personal addresses, emails, names.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["textreplacement.db"])
@@ -14,8 +14,12 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "ZTEXTREPLACEMENTENTRY") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "ZTEXTREPLACEMENTENTRY") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
     let count = util::count_rows(&conn, "ZTEXTREPLACEMENTENTRY");
     out.push(ArtifactRecord {
@@ -23,7 +27,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         subcategory: "Text Replacement".to_string(),
         timestamp: None,
         title: "iOS keyboard text replacements".to_string(),
-        detail: format!("{} ZTEXTREPLACEMENTENTRY rows (shortcut → phrase mappings, may contain personal info)", count),
+        detail: format!(
+            "{} ZTEXTREPLACEMENTENTRY rows (shortcut → phrase mappings, may contain personal info)",
+            count
+        ),
         source_path: source,
         forensic_value: ForensicValue::High,
         mitre_technique: Some("T1005".to_string()),
@@ -42,7 +49,9 @@ mod tests {
 
     #[test]
     fn matches_textreplacement_db() {
-        assert!(matches(Path::new("/var/mobile/Library/Keyboard/TextReplacement.db")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/Keyboard/TextReplacement.db"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -51,8 +60,16 @@ mod tests {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
         c.execute("CREATE TABLE ZTEXTREPLACEMENTENTRY (Z_PK INTEGER PRIMARY KEY, ZSHORTCUT TEXT, ZPHRASE TEXT)", []).unwrap();
-        c.execute("INSERT INTO ZTEXTREPLACEMENTENTRY (ZSHORTCUT, ZPHRASE) VALUES ('omw', 'On my way!')", []).unwrap();
-        c.execute("INSERT INTO ZTEXTREPLACEMENTENTRY (ZSHORTCUT, ZPHRASE) VALUES ('addr', '123 Main St')", []).unwrap();
+        c.execute(
+            "INSERT INTO ZTEXTREPLACEMENTENTRY (ZSHORTCUT, ZPHRASE) VALUES ('omw', 'On my way!')",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO ZTEXTREPLACEMENTENTRY (ZSHORTCUT, ZPHRASE) VALUES ('addr', '123 Main St')",
+            [],
+        )
+        .unwrap();
         let recs = parse(tmp.path());
         assert_eq!(recs.len(), 1);
         assert!(recs[0].detail.contains("2 ZTEXTREPLACEMENTENTRY"));

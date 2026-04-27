@@ -4,20 +4,28 @@
 //! cameras, lights, thermostats. Proves device proximity + user
 //! actions (e.g., "door was unlocked at 2:30 AM").
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::path_contains(path, "homekit") && {
-        let n = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
+        let n = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
         n.ends_with(".db") || n.ends_with(".sqlite") || n.ends_with(".plist")
     }
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let source = path.to_string_lossy().to_string();
-    let n = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
+    let n = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
 
     if n.ends_with(".db") || n.ends_with(".sqlite") {
         if let Some(conn) = util::open_sqlite_ro(path) {
@@ -27,14 +35,24 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 .unwrap_or_default();
             if !tables.is_empty() {
                 let mut total = 0_i64;
-                for t in &tables { total += util::count_rows(&conn, t); }
+                for t in &tables {
+                    total += util::count_rows(&conn, t);
+                }
                 return vec![ArtifactRecord {
                     category: ArtifactCategory::UserActivity,
-                    subcategory: "HomeKit".to_string(), timestamp: None,
+                    subcategory: "HomeKit".to_string(),
+                    timestamp: None,
                     title: "iOS HomeKit smart home database".to_string(),
-                    detail: format!("{} rows across {} tables — device events, automations, scenes", total, tables.len()),
-                    source_path: source, forensic_value: ForensicValue::Critical,
-                    mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+                    detail: format!(
+                        "{} rows across {} tables — device events, automations, scenes",
+                        total,
+                        tables.len()
+                    ),
+                    source_path: source,
+                    forensic_value: ForensicValue::Critical,
+                    mitre_technique: Some("T1005".to_string()),
+                    is_suspicious: false,
+                    raw_data: None,
                     confidence: 0,
                 }];
             }
@@ -43,14 +61,23 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     }
 
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     vec![ArtifactRecord {
         category: ArtifactCategory::UserActivity,
-        subcategory: "HomeKit".to_string(), timestamp: None,
+        subcategory: "HomeKit".to_string(),
+        timestamp: None,
         title: "iOS HomeKit configuration".to_string(),
-        detail: format!("HomeKit plist ({} bytes) — smart home devices, rooms, automations", size),
-        source_path: source, forensic_value: ForensicValue::Critical,
-        mitre_technique: Some("T1005".to_string()), is_suspicious: false, raw_data: None,
+        detail: format!(
+            "HomeKit plist ({} bytes) — smart home devices, rooms, automations",
+            size
+        ),
+        source_path: source,
+        forensic_value: ForensicValue::Critical,
+        mitre_technique: Some("T1005".to_string()),
+        is_suspicious: false,
+        raw_data: None,
         confidence: 0,
     }]
 }
@@ -64,7 +91,9 @@ mod tests {
     #[test]
     fn matches_homekit() {
         assert!(matches(Path::new("/var/mobile/Library/HomeKit/store.db")));
-        assert!(matches(Path::new("/var/mobile/Library/HomeKit/config.plist")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/HomeKit/config.plist"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -75,7 +104,11 @@ mod tests {
         std::fs::create_dir_all(&root).unwrap();
         let p = root.join("store.db");
         let c = Connection::open(&p).unwrap();
-        c.execute("CREATE TABLE events (id INTEGER PRIMARY KEY, device TEXT, action TEXT, ts REAL)", []).unwrap();
+        c.execute(
+            "CREATE TABLE events (id INTEGER PRIMARY KEY, device TEXT, action TEXT, ts REAL)",
+            [],
+        )
+        .unwrap();
         c.execute("INSERT INTO events (device, action, ts) VALUES ('Front Door Lock', 'unlock', 700000000.0)", []).unwrap();
         let recs = parse(&p);
         assert_eq!(recs.len(), 1);

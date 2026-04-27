@@ -62,7 +62,9 @@ fn read_cases(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (case_number, case_title, court, case_type, date_filed, date_closed, ts_ms) in rows.flatten() {
+    for (case_number, case_title, court, case_type, date_filed, date_closed, ts_ms) in
+        rows.flatten()
+    {
         let case_number = case_number.unwrap_or_else(|| "(unknown)".to_string());
         let case_title = case_title.unwrap_or_default();
         let court = court.unwrap_or_default();
@@ -114,7 +116,8 @@ fn read_docket(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Art
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (case_number, entry_number, description, filed_date, document_url, ts_ms) in rows.flatten() {
+    for (case_number, entry_number, description, filed_date, document_url, ts_ms) in rows.flatten()
+    {
         let case_number = case_number.unwrap_or_default();
         let entry_number = entry_number.unwrap_or(0);
         let description = description.unwrap_or_default();
@@ -173,21 +176,26 @@ mod tests {
     fn case_number_and_court_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("court='NDCA'") && a.detail.contains("case_type='criminal'")));
+        assert!(r.iter().any(
+            |a| a.detail.contains("court='NDCA'") && a.detail.contains("case_type='criminal'")
+        ));
     }
 
     #[test]
     fn docket_url_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("document_url='https://ecf.cand.uscourts.gov/doc/1'")));
+        assert!(r.iter().any(|a| a
+            .detail
+            .contains("document_url='https://ecf.cand.uscourts.gov/doc/1'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

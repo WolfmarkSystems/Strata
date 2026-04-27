@@ -260,9 +260,15 @@ mod tests {
     fn parses_search_saved_and_rsvp() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.subcategory == "Realtor.com Property Search"));
-        assert!(r.iter().any(|a| a.subcategory == "Realtor.com Saved Property"));
-        assert!(r.iter().any(|a| a.subcategory == "Realtor.com Open House RSVP"));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "Realtor.com Property Search"));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "Realtor.com Saved Property"));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "Realtor.com Open House RSVP"));
     }
 
     #[test]
@@ -295,7 +301,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

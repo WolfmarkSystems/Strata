@@ -31,7 +31,11 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     out
 }
 
-fn read_watch_history(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
+fn read_watch_history(
+    conn: &rusqlite::Connection,
+    path: &Path,
+    table: &str,
+) -> Vec<ArtifactRecord> {
     let sql = format!(
         "SELECT video_id, title, creator, watched_at, duration \
          FROM \"{table}\" ORDER BY watched_at DESC LIMIT 5000",
@@ -79,7 +83,11 @@ fn read_watch_history(conn: &rusqlite::Connection, path: &Path, table: &str) -> 
     out
 }
 
-fn read_subscriptions(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
+fn read_subscriptions(
+    conn: &rusqlite::Connection,
+    path: &Path,
+    table: &str,
+) -> Vec<ArtifactRecord> {
     let sql = format!(
         "SELECT channel_id, channel_name, subscribed_at \
          FROM \"{table}\" ORDER BY subscribed_at DESC LIMIT 5000",
@@ -166,7 +174,10 @@ mod tests {
     fn watch_duration_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let w = r.iter().find(|a| a.subcategory == "Rumble Watch" && a.detail.contains("v1")).unwrap();
+        let w = r
+            .iter()
+            .find(|a| a.subcategory == "Rumble Watch" && a.detail.contains("v1"))
+            .unwrap();
         assert!(w.detail.contains("duration=1200s"));
         assert!(w.detail.contains("creator='NewsChannel'"));
     }
@@ -175,14 +186,17 @@ mod tests {
     fn subscription_channel_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("channel_name='FreedomMedia'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("channel_name='FreedomMedia'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

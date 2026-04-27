@@ -74,7 +74,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<A
         let sender = sender.unwrap_or_else(|| "(unknown)".to_string());
         let recipient = recipient.unwrap_or_else(|| "(unknown)".to_string());
         let body = body.unwrap_or_default();
-        let direction = if is_incoming.unwrap_or(0) == 1 { "incoming" } else { "outgoing" };
+        let direction = if is_incoming.unwrap_or(0) == 1 {
+            "incoming"
+        } else {
+            "outgoing"
+        };
         let ts = sent_ms.and_then(unix_ms_to_i64);
         let preview: String = body.chars().take(120).collect();
         let title = format!("Grindr {} msg {}: {}", direction, sender, preview);
@@ -299,22 +303,31 @@ mod tests {
     fn messages_are_critical_forensic_value() {
         let db = make_db();
         let r = parse(db.path());
-        let msg = r.iter().find(|a| a.subcategory == "Grindr Message").unwrap();
-        assert_eq!(msg.forensic_value, strata_plugin_sdk::ForensicValue::Critical);
+        let msg = r
+            .iter()
+            .find(|a| a.subcategory == "Grindr Message")
+            .unwrap();
+        assert_eq!(
+            msg.forensic_value,
+            strata_plugin_sdk::ForensicValue::Critical
+        );
     }
 
     #[test]
     fn distance_captured_in_profile() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.subcategory == "Grindr Profile View" && a.detail.contains("distance=150.5m")));
+        assert!(r.iter().any(
+            |a| a.subcategory == "Grindr Profile View" && a.detail.contains("distance=150.5m")
+        ));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

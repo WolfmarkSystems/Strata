@@ -52,10 +52,7 @@ fn read_chats(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
         let name = name.unwrap_or_else(|| "(unnamed)".to_string());
         let kind = classify_chat(uid);
         let title = format!("Telegram {}: {}", kind, name);
-        let detail = format!(
-            "Telegram chat uid={} name='{}' kind='{}'",
-            uid, name, kind
-        );
+        let detail = format!("Telegram chat uid={} name='{}' kind='{}'", uid, name, kind);
         out.push(build_record(
             ArtifactCategory::SocialMedia,
             "Telegram Channel",
@@ -159,8 +156,14 @@ mod tests {
     fn parses_chats_and_members() {
         let db = make_db();
         let r = parse(db.path());
-        let chats: Vec<_> = r.iter().filter(|a| a.subcategory == "Telegram Channel").collect();
-        let members: Vec<_> = r.iter().filter(|a| a.subcategory == "Telegram Channel Member").collect();
+        let chats: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Telegram Channel")
+            .collect();
+        let members: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Telegram Channel Member")
+            .collect();
         assert_eq!(chats.len(), 3);
         assert_eq!(members.len(), 1);
     }
@@ -169,9 +172,15 @@ mod tests {
     fn chat_kinds_classified() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("Telegram private: Alice")));
-        assert!(r.iter().any(|a| a.title.contains("Telegram channel: Crypto News")));
-        assert!(r.iter().any(|a| a.title.contains("Telegram group: Book Club")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Telegram private: Alice")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Telegram channel: Crypto News")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Telegram group: Book Club")));
     }
 
     #[test]
@@ -185,7 +194,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

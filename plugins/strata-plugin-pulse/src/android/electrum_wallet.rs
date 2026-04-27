@@ -227,14 +227,19 @@ mod tests {
         let r = parse(db.path());
         assert!(r.iter().any(|a| a.subcategory == "Electrum Address"));
         assert!(r.iter().any(|a| a.subcategory == "Electrum Transaction"));
-        assert!(r.iter().any(|a| a.subcategory == "Electrum Lightning Channel"));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "Electrum Lightning Channel"));
     }
 
     #[test]
     fn sats_converted_to_btc() {
         let db = make_db();
         let r = parse(db.path());
-        let tx = r.iter().find(|a| a.subcategory == "Electrum Transaction").unwrap();
+        let tx = r
+            .iter()
+            .find(|a| a.subcategory == "Electrum Transaction")
+            .unwrap();
         assert!(tx.detail.contains("amount_btc=1.00000000"));
     }
 
@@ -242,14 +247,18 @@ mod tests {
     fn lightning_channel_state_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("state='OPEN'") && a.detail.contains("local_balance_sats=500000")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("state='OPEN'")
+                && a.detail.contains("local_balance_sats=500000")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

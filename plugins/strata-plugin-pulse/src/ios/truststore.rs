@@ -5,9 +5,9 @@
 //! device was configured for TLS interception (MITM proxy, corporate
 //! inspection, or malware).
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["truststore.sqlite3", "truststore.sqlite"])
@@ -15,7 +15,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
 
     // tsettings = user-installed certs; overrides = per-cert trust
@@ -51,7 +53,9 @@ mod tests {
 
     #[test]
     fn matches_truststore() {
-        assert!(matches(Path::new("/var/protected/trustd/TrustStore.sqlite3")));
+        assert!(matches(Path::new(
+            "/var/protected/trustd/TrustStore.sqlite3"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -59,10 +63,21 @@ mod tests {
     fn parses_tsettings_as_suspicious() {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute("CREATE TABLE tsettings (sha1 BLOB, subj BLOB, tset BLOB, data BLOB)", []).unwrap();
-        c.execute("INSERT INTO tsettings VALUES (x'AA', x'BB', x'CC', x'DD')", []).unwrap();
+        c.execute(
+            "CREATE TABLE tsettings (sha1 BLOB, subj BLOB, tset BLOB, data BLOB)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO tsettings VALUES (x'AA', x'BB', x'CC', x'DD')",
+            [],
+        )
+        .unwrap();
         let recs = parse(tmp.path());
-        let r = recs.iter().find(|r| r.subcategory.contains("tsettings")).unwrap();
+        let r = recs
+            .iter()
+            .find(|r| r.subcategory.contains("tsettings"))
+            .unwrap();
         assert!(r.is_suspicious);
         assert_eq!(r.forensic_value, ForensicValue::Critical);
     }
@@ -73,7 +88,10 @@ mod tests {
         let c = Connection::open(tmp.path()).unwrap();
         c.execute("CREATE TABLE tsettings (sha1 BLOB)", []).unwrap();
         let recs = parse(tmp.path());
-        let r = recs.iter().find(|r| r.subcategory.contains("tsettings")).unwrap();
+        let r = recs
+            .iter()
+            .find(|r| r.subcategory.contains("tsettings"))
+            .unwrap();
         assert!(!r.is_suspicious);
     }
 

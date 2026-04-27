@@ -45,7 +45,10 @@ pub fn identify_ai_app(path: &Path) -> Option<&'static str> {
 }
 
 pub fn platform_from_path(path: &Path) -> &'static str {
-    let lower = path.to_string_lossy().replace('\\', "/").to_ascii_lowercase();
+    let lower = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
     if lower.contains("/data/data/") || lower.contains(".apk") {
         "Android"
     } else if lower.contains("/private/var/mobile") || lower.contains("/bundle.app/") {
@@ -159,7 +162,9 @@ mod tests {
             Some("ChatGPT")
         );
         assert_eq!(
-            identify_ai_app(Path::new("/data/data/com.openai.chatgpt/databases/chatgpt.db")),
+            identify_ai_app(Path::new(
+                "/data/data/com.openai.chatgpt/databases/chatgpt.db"
+            )),
             Some("ChatGPT")
         );
         assert!(identify_ai_app(Path::new("/tmp/random")).is_none());
@@ -187,16 +192,10 @@ mod tests {
             [],
         )
         .expect("c");
-        conn.execute(
-            "INSERT INTO messages VALUES (1, 'user', 'hi')",
-            [],
-        )
-        .expect("m");
-        conn.execute(
-            "INSERT INTO messages VALUES (1, 'assistant', 'hello')",
-            [],
-        )
-        .expect("m2");
+        conn.execute("INSERT INTO messages VALUES (1, 'user', 'hi')", [])
+            .expect("m");
+        conn.execute("INSERT INTO messages VALUES (1, 'assistant', 'hello')", [])
+            .expect("m2");
         drop(conn);
         let out = parse_conversations(&path, "ChatGPT");
         assert_eq!(out.len(), 1);

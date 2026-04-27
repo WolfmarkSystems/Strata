@@ -72,7 +72,11 @@ fn read_boards(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> 
             detail,
             path,
             ts,
-            if is_secret { ForensicValue::High } else { ForensicValue::Medium },
+            if is_secret {
+                ForensicValue::High
+            } else {
+                ForensicValue::Medium
+            },
             is_secret,
         ));
     }
@@ -227,14 +231,17 @@ mod tests {
     fn pin_image_url_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("image_url='http://img1.jpg'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("image_url='http://img1.jpg'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

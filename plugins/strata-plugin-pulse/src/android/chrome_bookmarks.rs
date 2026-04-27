@@ -39,7 +39,10 @@ fn extract_bookmarks(node: &serde_json::Value, path: &Path, out: &mut Vec<Artifa
     if let Some(children) = node.get("children").and_then(|c| c.as_array()) {
         for child in children {
             let url = child.get("url").and_then(|v| v.as_str()).unwrap_or("");
-            let name = child.get("name").and_then(|v| v.as_str()).unwrap_or("(untitled)");
+            let name = child
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("(untitled)");
             let date_added = child
                 .get("date_added")
                 .and_then(|v| v.as_str())
@@ -48,10 +51,7 @@ fn extract_bookmarks(node: &serde_json::Value, path: &Path, out: &mut Vec<Artifa
                 // Chrome date_added is WebKit timestamp (microseconds since 1601)
                 let ts = date_added.map(|us| us / 1_000_000 - 11_644_473_600);
                 let title = format!("Chrome bookmark: {}", name);
-                let detail = format!(
-                    "Chrome bookmark name='{}' url='{}'",
-                    name, url
-                );
+                let detail = format!("Chrome bookmark name='{}' url='{}'", name, url);
                 out.push(build_record(
                     ArtifactCategory::WebActivity,
                     "Chrome Bookmark",
@@ -107,7 +107,8 @@ mod tests {
     fn name_and_url_in_detail() {
         let f = make_bookmarks_file();
         let r = parse(f.path());
-        assert!(r.iter().any(|a| a.detail.contains("name='Example'") && a.detail.contains("url='https://example.com'")));
+        assert!(r.iter().any(|a| a.detail.contains("name='Example'")
+            && a.detail.contains("url='https://example.com'")));
     }
 
     #[test]

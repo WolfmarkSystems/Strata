@@ -5,9 +5,9 @@
 //! This is separate because iLEAPP's workout parser is distinct from
 //! the samples parser.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["healthdb_secure.sqlite"])
@@ -15,15 +15,27 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "workouts") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "workouts") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
     let count = util::count_rows(&conn, "workouts");
-    if count == 0 { return out; }
+    if count == 0 {
+        return out;
+    }
 
     let ts = conn
-        .prepare("SELECT MIN(start_date), MAX(start_date) FROM workouts WHERE start_date IS NOT NULL")
-        .and_then(|mut s| s.query_row([], |r| Ok((r.get::<_, Option<f64>>(0)?, r.get::<_, Option<f64>>(1)?))))
+        .prepare(
+            "SELECT MIN(start_date), MAX(start_date) FROM workouts WHERE start_date IS NOT NULL",
+        )
+        .and_then(|mut s| {
+            s.query_row([], |r| {
+                Ok((r.get::<_, Option<f64>>(0)?, r.get::<_, Option<f64>>(1)?))
+            })
+        })
         .unwrap_or((None, None));
     let first = ts.0.and_then(util::cf_absolute_to_unix);
 
@@ -36,7 +48,8 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         })
         .unwrap_or_default();
 
-    let type_str: String = by_type.iter()
+    let type_str: String = by_type
+        .iter()
         .map(|(t, c)| format!("type {}={}", t, c))
         .collect::<Vec<_>>()
         .join(", ");
@@ -75,9 +88,16 @@ mod tests {
 
     #[test]
     fn parses_workout_count_and_types() {
-        let tmp = make_workouts(&[(37, 700_000_000.0), (37, 700_100_000.0), (13, 700_200_000.0)]);
+        let tmp = make_workouts(&[
+            (37, 700_000_000.0),
+            (37, 700_100_000.0),
+            (13, 700_200_000.0),
+        ]);
         let recs = parse(tmp.path());
-        let r = recs.iter().find(|r| r.subcategory == "Health workouts").unwrap();
+        let r = recs
+            .iter()
+            .find(|r| r.subcategory == "Health workouts")
+            .unwrap();
         assert!(r.detail.contains("3 workouts"));
         assert!(r.detail.contains("type 37=2"));
     }

@@ -73,9 +73,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
              GROUP BY COALESCE(ZORIGINATED, -1)",
         )
         .and_then(|mut s| {
-            let r = s.query_map([], |row| {
-                Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
-            })?;
+            let r = s.query_map([], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)))?;
             Ok(r.flatten().collect::<Vec<_>>())
         })
         .unwrap_or_default();
@@ -191,7 +189,10 @@ mod tests {
             .find(|r| r.subcategory == "CallHistory")
             .expect("summary record");
         assert!(summary.detail.contains("3 total"));
-        assert_eq!(summary.timestamp, Some(700_000_000 + util::APPLE_EPOCH_OFFSET));
+        assert_eq!(
+            summary.timestamp,
+            Some(700_000_000 + util::APPLE_EPOCH_OFFSET)
+        );
     }
 
     #[test]

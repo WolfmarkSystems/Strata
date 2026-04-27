@@ -163,7 +163,10 @@ mod tests {
     fn parses_messages_and_users() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "Skout Message").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Skout Message")
+            .collect();
         let users: Vec<_> = r.iter().filter(|a| a.subcategory == "Skout User").collect();
         assert_eq!(msgs.len(), 2);
         assert_eq!(users.len(), 1);
@@ -173,7 +176,9 @@ mod tests {
     fn picture_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("picture='http://pic.jpg'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("picture='http://pic.jpg'")));
     }
 
     #[test]
@@ -188,7 +193,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

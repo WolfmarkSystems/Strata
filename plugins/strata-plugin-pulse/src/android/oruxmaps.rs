@@ -146,8 +146,14 @@ mod tests {
     fn parses_pois_and_tracks() {
         let db = make_db();
         let r = parse(db.path());
-        let pois: Vec<_> = r.iter().filter(|a| a.subcategory == "OruxMaps POI").collect();
-        let tracks: Vec<_> = r.iter().filter(|a| a.subcategory == "OruxMaps Track").collect();
+        let pois: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "OruxMaps POI")
+            .collect();
+        let tracks: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "OruxMaps Track")
+            .collect();
         assert_eq!(pois.len(), 2);
         assert_eq!(tracks.len(), 1);
     }
@@ -171,7 +177,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

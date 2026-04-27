@@ -241,21 +241,28 @@ mod tests {
     fn neighborhood_identified_in_post() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.subcategory == "Nextdoor Post" && a.detail.contains("neighborhood='Maple Ridge'")));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "Nextdoor Post"
+                && a.detail.contains("neighborhood='Maple Ridge'")));
     }
 
     #[test]
     fn neighbor_street_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.subcategory == "Nextdoor Neighbor" && a.detail.contains("street='123 Oak St'")));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "Nextdoor Neighbor"
+                && a.detail.contains("street='123 Oak St'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

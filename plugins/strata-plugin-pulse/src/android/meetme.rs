@@ -49,7 +49,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
                 let first = first.unwrap_or_default();
                 let last = last.unwrap_or_default();
                 let name = format!("{} {}", first, last).trim().to_string();
-                let name = if name.is_empty() { format!("user_{}", sender_id) } else { name };
+                let name = if name.is_empty() {
+                    format!("user_{}", sender_id)
+                } else {
+                    name
+                };
                 let body = body.unwrap_or_default();
                 let kind = msg_type.unwrap_or_else(|| "text".to_string());
                 let thread = thread_id.unwrap_or(0);
@@ -134,14 +138,17 @@ mod tests {
     fn attachment_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("attachment='/local/pic.jpg'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("attachment='/local/pic.jpg'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

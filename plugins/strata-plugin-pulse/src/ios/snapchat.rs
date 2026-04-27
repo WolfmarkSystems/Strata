@@ -74,8 +74,11 @@ mod tests {
     fn make_snap_db(rows: usize) -> NamedTempFile {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute("CREATE TABLE messages (id INTEGER PRIMARY KEY, body BLOB)", [])
-            .unwrap();
+        c.execute(
+            "CREATE TABLE messages (id INTEGER PRIMARY KEY, body BLOB)",
+            [],
+        )
+        .unwrap();
         for i in 0..rows {
             c.execute(
                 "INSERT INTO messages (body) VALUES (?1)",

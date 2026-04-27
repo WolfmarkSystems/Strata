@@ -90,9 +90,15 @@ mod tests {
         let txt = "ro.product.model=Pixel 7\nro.foo.bar=baz\n";
         let f = write_tmp(txt);
         let r = parse(f.path());
-        let model = r.iter().find(|x| x.title.starts_with("ro.product.model")).unwrap();
+        let model = r
+            .iter()
+            .find(|x| x.title.starts_with("ro.product.model"))
+            .unwrap();
         assert_eq!(model.forensic_value, ForensicValue::Medium);
-        let foo = r.iter().find(|x| x.title.starts_with("ro.foo.bar")).unwrap();
+        let foo = r
+            .iter()
+            .find(|x| x.title.starts_with("ro.foo.bar"))
+            .unwrap();
         assert_eq!(foo.forensic_value, ForensicValue::Informational);
     }
 

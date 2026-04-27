@@ -104,7 +104,9 @@ fn read_actions(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord>
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (start, _end, duration, kind, distance, avg_speed, top_speed, max_alt, min_alt) in rows.flatten() {
+    for (start, _end, duration, kind, distance, avg_speed, top_speed, max_alt, min_alt) in
+        rows.flatten()
+    {
         let kind = kind.unwrap_or_else(|| "run".to_string());
         let ts = start;
         let dur = duration.unwrap_or(0);
@@ -211,7 +213,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

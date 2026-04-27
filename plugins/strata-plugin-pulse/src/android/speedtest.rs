@@ -134,21 +134,27 @@ mod tests {
     fn external_and_internal_ip() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("external_ip='203.0.113.42'") && a.detail.contains("internal_ip='192.168.1.100'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("external_ip='203.0.113.42'")
+                && a.detail.contains("internal_ip='192.168.1.100'")));
     }
 
     #[test]
     fn mbps_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("200.0") && a.title.contains("50.0")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("200.0") && a.title.contains("50.0")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -9,9 +9,7 @@ use crate::android::helpers::{build_record, open_sqlite_ro, table_exists, unix_m
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "com.microsoft.office.onenote/databases/",
-];
+pub const MATCHES: &[&str] = &["com.microsoft.office.onenote/databases/"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {
@@ -51,10 +49,7 @@ fn read_pages(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
         let title_str = title.unwrap_or_else(|| "(untitled)".to_string());
         let ts = modified.and_then(unix_ms_to_i64);
         let display = format!("OneNote Page: {}", title_str);
-        let detail = format!(
-            "OneNote page title='{}'",
-            title_str
-        );
+        let detail = format!("OneNote page title='{}'", title_str);
         out.push(build_record(
             ArtifactCategory::UserActivity,
             "OneNote Page",
@@ -105,14 +100,17 @@ mod tests {
     fn title_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("title='CS 101 Lecture'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("title='CS 101 Lecture'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

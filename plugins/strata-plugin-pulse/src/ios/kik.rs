@@ -3,9 +3,9 @@
 //! iLEAPP keys off `ZKIKMESSAGE` (messages) and `ZKIKUSER` (contacts).
 //! Timestamps are Cocoa seconds.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["kik.sqlite"])
@@ -13,7 +13,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
 
     if util::table_exists(&conn, "ZKIKMESSAGE") {
@@ -64,7 +66,9 @@ mod tests {
 
     #[test]
     fn matches_kik_filename() {
-        assert!(matches(Path::new("/var/mobile/Containers/Data/Application/UUID/Library/kik.sqlite")));
+        assert!(matches(Path::new(
+            "/var/mobile/Containers/Data/Application/UUID/Library/kik.sqlite"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -73,9 +77,18 @@ mod tests {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
         c.execute("CREATE TABLE ZKIKMESSAGE (Z_PK INTEGER PRIMARY KEY, ZBODY TEXT, ZRECEIVEDTIMESTAMP DOUBLE)", []).unwrap();
-        c.execute("CREATE TABLE ZKIKUSER (Z_PK INTEGER PRIMARY KEY, ZDISPLAYNAME TEXT)", []).unwrap();
-        c.execute("INSERT INTO ZKIKMESSAGE (ZBODY, ZRECEIVEDTIMESTAMP) VALUES ('hi', 700000000.0)", []).unwrap();
-        c.execute("INSERT INTO ZKIKUSER (ZDISPLAYNAME) VALUES ('Alice')", []).unwrap();
+        c.execute(
+            "CREATE TABLE ZKIKUSER (Z_PK INTEGER PRIMARY KEY, ZDISPLAYNAME TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO ZKIKMESSAGE (ZBODY, ZRECEIVEDTIMESTAMP) VALUES ('hi', 700000000.0)",
+            [],
+        )
+        .unwrap();
+        c.execute("INSERT INTO ZKIKUSER (ZDISPLAYNAME) VALUES ('Alice')", [])
+            .unwrap();
         let recs = parse(tmp.path());
         assert!(recs.iter().any(|r| r.subcategory == "Kik messages"));
         assert!(recs.iter().any(|r| r.subcategory == "Kik users"));

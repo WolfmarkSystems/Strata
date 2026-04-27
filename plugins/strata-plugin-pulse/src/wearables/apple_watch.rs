@@ -125,9 +125,15 @@ pub fn parse_medical_events(json: &str) -> Vec<AppleWatchMedicalEvent> {
                 .unwrap_or("Unknown")
                 .into(),
             timestamp: ts,
-            severity: entry.get("severity").and_then(|x| x.as_str()).map(String::from),
+            severity: entry
+                .get("severity")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             readings,
-            alert_triggered: entry.get("alert").and_then(|x| x.as_bool()).unwrap_or(false),
+            alert_triggered: entry
+                .get("alert")
+                .and_then(|x| x.as_bool())
+                .unwrap_or(false),
             emergency_services_contacted: entry
                 .get("emergency")
                 .and_then(|x| x.as_bool())
@@ -171,7 +177,11 @@ fn cocoa_to_utc(secs: f64) -> DateTime<Utc> {
     let cocoa_epoch_offset = 978_307_200i64;
     Utc.timestamp_opt(secs as i64 + cocoa_epoch_offset, 0)
         .single()
-        .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap())
+        .unwrap_or_else(unix_epoch)
+}
+
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────

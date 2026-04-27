@@ -57,7 +57,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
         let username = username.unwrap_or_else(|| "(unknown)".to_string());
         let body = content.unwrap_or_default();
         let ts = ts_ms.and_then(unix_ms_to_i64);
-        let direction = if sent.unwrap_or(0) != 0 { "sent" } else { "received" };
+        let direction = if sent.unwrap_or(0) != 0 {
+            "sent"
+        } else {
+            "received"
+        };
         let conv_id = conv_id.unwrap_or_default();
         let msg_id = msg_id.unwrap_or_default();
         let file = file.unwrap_or_default();
@@ -260,7 +264,10 @@ mod tests {
     fn account_device_id_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let acc = r.iter().find(|a| a.subcategory == "RandoChat Account").unwrap();
+        let acc = r
+            .iter()
+            .find(|a| a.subcategory == "RandoChat Account")
+            .unwrap();
         assert!(acc.detail.contains("device_id='device_abc123'"));
         assert!(acc.detail.contains("preferred_age=25-35"));
     }
@@ -269,7 +276,10 @@ mod tests {
     fn contact_favorite_flag() {
         let db = make_db();
         let r = parse(db.path());
-        let contact = r.iter().find(|a| a.subcategory == "RandoChat Contact").unwrap();
+        let contact = r
+            .iter()
+            .find(|a| a.subcategory == "RandoChat Contact")
+            .unwrap();
         assert!(contact.detail.contains("favorite=true"));
     }
 
@@ -277,7 +287,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

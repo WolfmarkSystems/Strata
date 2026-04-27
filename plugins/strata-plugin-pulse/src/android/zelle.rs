@@ -56,7 +56,9 @@ fn read_transfers(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, direction, amount, recipient_name, recipient_token, memo, status, created_ms) in rows.flatten() {
+    for (id, direction, amount, recipient_name, recipient_token, memo, status, created_ms) in
+        rows.flatten()
+    {
         let id = id.unwrap_or_else(|| "(unknown)".to_string());
         let direction = direction.unwrap_or_default();
         let amount = amount.unwrap_or_default();
@@ -174,22 +176,30 @@ mod tests {
     fn direction_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("sent") && a.title.contains("$250.00")));
-        assert!(r.iter().any(|a| a.title.contains("received") && a.title.contains("$50.00")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("sent") && a.title.contains("$250.00")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("received") && a.title.contains("$50.00")));
     }
 
     #[test]
     fn recipient_token_and_memo_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("recipient_token='alice@example.com'") && a.detail.contains("memo='Rent'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("recipient_token='alice@example.com'")
+                && a.detail.contains("memo='Rent'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

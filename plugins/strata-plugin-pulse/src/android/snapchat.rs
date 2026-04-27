@@ -163,8 +163,14 @@ mod tests {
     fn parses_messages_and_friends() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "Snapchat Message").collect();
-        let friends: Vec<_> = r.iter().filter(|a| a.subcategory == "Snapchat Friend").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Snapchat Message")
+            .collect();
+        let friends: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Snapchat Friend")
+            .collect();
         assert_eq!(msgs.len(), 3);
         assert_eq!(friends.len(), 2);
     }
@@ -173,14 +179,19 @@ mod tests {
     fn message_sender_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("alice_snap") && a.title.contains("Hey!")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("alice_snap") && a.title.contains("Hey!")));
     }
 
     #[test]
     fn friend_phone_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let alice = r.iter().find(|a| a.detail.contains("alice_snap") && a.subcategory == "Snapchat Friend").unwrap();
+        let alice = r
+            .iter()
+            .find(|a| a.detail.contains("alice_snap") && a.subcategory == "Snapchat Friend")
+            .unwrap();
         assert!(alice.detail.contains("phone='+15551234567'"));
         assert!(alice.detail.contains("birthday='1990-01-15'"));
     }
@@ -189,7 +200,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

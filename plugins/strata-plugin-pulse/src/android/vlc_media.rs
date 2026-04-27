@@ -55,7 +55,11 @@ fn read_media(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
             _ => "unknown",
         };
         let ts = modified.and_then(unix_ms_to_i64);
-        let display = if title_str == "(untitled)" { &filename } else { &title_str };
+        let display = if title_str == "(untitled)" {
+            &filename
+        } else {
+            &title_str
+        };
         let title_out = format!("VLC {}: {} ({}s)", media, display, dur_s);
         let detail = format!(
             "VLC media title='{}' file='{}' uri='{}' type={} duration={}s",
@@ -115,22 +119,29 @@ mod tests {
     fn media_type_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("video") && a.title.contains("Summer Video")));
-        assert!(r.iter().any(|a| a.title.contains("audio") && a.title.contains("Podcast")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("video") && a.title.contains("Summer Video")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("audio") && a.title.contains("Podcast")));
     }
 
     #[test]
     fn uri_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("uri='file:///sdcard/DCIM/summer.mp4'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("uri='file:///sdcard/DCIM/summer.mp4'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

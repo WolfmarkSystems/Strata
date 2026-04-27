@@ -12,10 +12,7 @@ use crate::android::helpers::{build_record, open_sqlite_ro, table_exists, unix_m
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "usagestats/usage",
-    "usagestats/0/",
-];
+pub const MATCHES: &[&str] = &["usagestats/usage", "usagestats/0/"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {
@@ -56,7 +53,10 @@ fn read_usage_stats(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRec
         let ts = last_active.and_then(unix_ms_to_i64);
         let total_s = total_active.unwrap_or(0) / 1000;
         let launches = launch_count.unwrap_or(0);
-        let title = format!("Usage: {} ({}s active, {} launches)", package, total_s, launches);
+        let title = format!(
+            "Usage: {} ({}s active, {} launches)",
+            package, total_s, launches
+        );
         let detail = format!(
             "Usage stats package='{}' total_active={}s launch_count={}",
             package, total_s, launches
@@ -156,7 +156,10 @@ mod tests {
     fn time_and_launches_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let wa = r.iter().find(|a| a.detail.contains("com.whatsapp")).unwrap();
+        let wa = r
+            .iter()
+            .find(|a| a.detail.contains("com.whatsapp"))
+            .unwrap();
         assert!(wa.detail.contains("total_active=3600s"));
         assert!(wa.detail.contains("launch_count=50"));
     }
@@ -172,7 +175,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

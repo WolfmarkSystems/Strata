@@ -110,7 +110,9 @@ fn read_gifts(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (gift_id, gift_name, gift_value, receiver_id, receiver_name, send_ms, count) in rows.flatten() {
+    for (gift_id, gift_name, gift_value, receiver_id, receiver_name, send_ms, count) in
+        rows.flatten()
+    {
         let gift_id = gift_id.unwrap_or_default();
         let gift_name = gift_name.unwrap_or_default();
         let gift_value = gift_value.unwrap_or(0);
@@ -178,8 +180,14 @@ mod tests {
     fn parses_watch_and_gifts() {
         let db = make_db();
         let r = parse(db.path());
-        let watches: Vec<_> = r.iter().filter(|a| a.subcategory == "TikTok LIVE Watch").collect();
-        let gifts: Vec<_> = r.iter().filter(|a| a.subcategory == "TikTok LIVE Gift").collect();
+        let watches: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "TikTok LIVE Watch")
+            .collect();
+        let gifts: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "TikTok LIVE Gift")
+            .collect();
         assert_eq!(watches.len(), 1);
         assert_eq!(gifts.len(), 2);
     }
@@ -198,7 +206,10 @@ mod tests {
     fn watch_duration_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        let w = r.iter().find(|a| a.subcategory == "TikTok LIVE Watch").unwrap();
+        let w = r
+            .iter()
+            .find(|a| a.subcategory == "TikTok LIVE Watch")
+            .unwrap();
         assert!(w.title.contains("800s"));
     }
 
@@ -206,7 +217,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

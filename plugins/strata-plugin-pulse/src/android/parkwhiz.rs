@@ -54,7 +54,8 @@ fn read_reservations(conn: &rusqlite::Connection, path: &Path, table: &str) -> V
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (location_name, address, lat, lon, start_ms, end_ms, price, confirmation) in rows.flatten() {
+    for (location_name, address, lat, lon, start_ms, end_ms, price, confirmation) in rows.flatten()
+    {
         let location_name = location_name.unwrap_or_else(|| "(unknown location)".to_string());
         let address = address.unwrap_or_default();
         let price = price.unwrap_or_default();
@@ -123,28 +124,38 @@ mod tests {
     fn parses_reservations() {
         let db = make_db();
         let r = parse(db.path());
-        assert_eq!(r.iter().filter(|a| a.subcategory == "ParkWhiz Reservation").count(), 2);
+        assert_eq!(
+            r.iter()
+                .filter(|a| a.subcategory == "ParkWhiz Reservation")
+                .count(),
+            2
+        );
     }
 
     #[test]
     fn gps_coordinates_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("lat=41.878100") && a.detail.contains("lon=-87.629800")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("lat=41.878100") && a.detail.contains("lon=-87.629800")));
     }
 
     #[test]
     fn confirmation_number_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("confirmation='PWZ-123456'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("confirmation='PWZ-123456'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

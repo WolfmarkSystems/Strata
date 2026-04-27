@@ -48,9 +48,15 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     };
 
     let (first, last): (Option<i64>, Option<i64>) = if util::table_exists(&conn, "visits") {
-        conn.prepare("SELECT MIN(visit_time), MAX(visit_time) FROM visits WHERE visit_time IS NOT NULL")
-            .and_then(|mut s| s.query_row([], |row| Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, Option<i64>>(1)?))))
-            .unwrap_or((None, None))
+        conn.prepare(
+            "SELECT MIN(visit_time), MAX(visit_time) FROM visits WHERE visit_time IS NOT NULL",
+        )
+        .and_then(|mut s| {
+            s.query_row([], |row| {
+                Ok((row.get::<_, Option<i64>>(0)?, row.get::<_, Option<i64>>(1)?))
+            })
+        })
+        .unwrap_or((None, None))
     } else {
         (None, None)
     };
@@ -83,20 +89,44 @@ mod tests {
     use rusqlite::Connection;
     use tempfile::tempdir;
 
-    fn make_chrome_history(urls: usize, visits_per_url: usize) -> (tempfile::TempDir, std::path::PathBuf) {
+    fn make_chrome_history(
+        urls: usize,
+        visits_per_url: usize,
+    ) -> (tempfile::TempDir, std::path::PathBuf) {
         let dir = tempdir().unwrap();
-        let chrome = dir.path().join("Library").join("Application Support").join("Google").join("Chrome");
+        let chrome = dir
+            .path()
+            .join("Library")
+            .join("Application Support")
+            .join("Google")
+            .join("Chrome");
         std::fs::create_dir_all(&chrome).unwrap();
         let p = chrome.join("History");
         let c = Connection::open(&p).unwrap();
-        c.execute("CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT, last_visit_time INTEGER)", []).unwrap();
-        c.execute("CREATE TABLE visits (id INTEGER PRIMARY KEY, url INTEGER, visit_time INTEGER)", []).unwrap();
+        c.execute(
+            "CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT, last_visit_time INTEGER)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE visits (id INTEGER PRIMARY KEY, url INTEGER, visit_time INTEGER)",
+            [],
+        )
+        .unwrap();
         // 2026-01-01 00:00:00 UTC in WebKit micros = (1767225600 + 11644473600) * 1_000_000
         let base_webkit: i64 = (1_767_225_600 + 11_644_473_600) * 1_000_000;
         for i in 0..urls {
-            c.execute("INSERT INTO urls (url, last_visit_time) VALUES (?1, ?2)", rusqlite::params![format!("https://e.com/{}", i), base_webkit]).unwrap();
+            c.execute(
+                "INSERT INTO urls (url, last_visit_time) VALUES (?1, ?2)",
+                rusqlite::params![format!("https://e.com/{}", i), base_webkit],
+            )
+            .unwrap();
             for v in 0..visits_per_url {
-                c.execute("INSERT INTO visits (url, visit_time) VALUES (?1, ?2)", rusqlite::params![i + 1, base_webkit + (v as i64) * 1_000_000]).unwrap();
+                c.execute(
+                    "INSERT INTO visits (url, visit_time) VALUES (?1, ?2)",
+                    rusqlite::params![i + 1, base_webkit + (v as i64) * 1_000_000],
+                )
+                .unwrap();
             }
         }
         (dir, p)
@@ -114,7 +144,10 @@ mod tests {
     fn parses_count_and_webkit_time_to_unix() {
         let (_d, p) = make_chrome_history(3, 2);
         let recs = parse(&p);
-        let h = recs.iter().find(|r| r.subcategory == "Chrome iOS history").unwrap();
+        let h = recs
+            .iter()
+            .find(|r| r.subcategory == "Chrome iOS history")
+            .unwrap();
         assert!(h.detail.contains("3 URLs"));
         assert!(h.detail.contains("6 visits"));
         // 2026-01-01 UTC -> Unix 1767225600

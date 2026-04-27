@@ -27,10 +27,7 @@ pub fn matches(path: &Path) -> bool {
     if !in_searchparty {
         return false;
     }
-    n == "items.data"
-        || n == "beaconnamingrecord"
-        || n == "beacons"
-        || n.ends_with(".plist")
+    n == "items.data" || n == "beaconnamingrecord" || n == "beacons" || n.ends_with(".plist")
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {

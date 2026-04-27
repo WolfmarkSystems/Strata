@@ -20,7 +20,9 @@
 //! );
 //! ```
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
@@ -149,7 +151,9 @@ mod tests {
         let db = make_db();
         let r = parse(db.path());
         assert_eq!(r.len(), 3);
-        assert!(r.iter().all(|c| c.category == ArtifactCategory::Communications));
+        assert!(r
+            .iter()
+            .all(|c| c.category == ArtifactCategory::Communications));
     }
 
     #[test]
@@ -175,7 +179,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

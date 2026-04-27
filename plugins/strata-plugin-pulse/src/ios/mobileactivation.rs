@@ -3,9 +3,9 @@
 //! Contains ActivationState, UniqueDeviceID, SerialNumber, PhoneNumber,
 //! ICCID, IMEI. Critical for tying physical device to user account.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["activation_record.plist"])
@@ -14,7 +14,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     let source = path.to_string_lossy().to_string();
     vec![ArtifactRecord {
         category: ArtifactCategory::AccountsCredentials,
@@ -38,7 +40,9 @@ mod tests {
 
     #[test]
     fn matches_activation_record() {
-        assert!(matches(Path::new("/var/mobile/Library/mad/activation_record.plist")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/mad/activation_record.plist"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 

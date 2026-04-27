@@ -4,30 +4,43 @@
 //! flight numbers in text. The cache retains detected data even after
 //! the source message/email is deleted.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::path_contains(path, "datadetectors") && {
-        let n = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
+        let n = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
         n.ends_with(".db") || n.ends_with(".sqlite") || n.ends_with(".plist")
     }
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     let source = path.to_string_lossy().to_string();
 
     if let Some(conn) = util::open_sqlite_ro(path) {
         let tables: Vec<String> = conn
-            .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-            .and_then(|mut s| { let r = s.query_map([], |row| row.get::<_, String>(0))?; Ok(r.flatten().collect()) })
+            .prepare(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+            )
+            .and_then(|mut s| {
+                let r = s.query_map([], |row| row.get::<_, String>(0))?;
+                Ok(r.flatten().collect())
+            })
             .unwrap_or_default();
         if !tables.is_empty() {
             let mut total = 0_i64;
-            for t in &tables { total += util::count_rows(&conn, t); }
+            for t in &tables {
+                total += util::count_rows(&conn, t);
+            }
             return vec![ArtifactRecord {
                 category: ArtifactCategory::UserActivity,
                 subcategory: "DataDetectors".to_string(), timestamp: None,
@@ -42,11 +55,18 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
 
     vec![ArtifactRecord {
         category: ArtifactCategory::UserActivity,
-        subcategory: "DataDetectors".to_string(), timestamp: None,
+        subcategory: "DataDetectors".to_string(),
+        timestamp: None,
         title: "iOS DataDetectors plist".to_string(),
-        detail: format!("DataDetectors data ({} bytes) — auto-detected entities cache", size),
-        source_path: source, forensic_value: ForensicValue::High,
-        mitre_technique: None, is_suspicious: false, raw_data: None,
+        detail: format!(
+            "DataDetectors data ({} bytes) — auto-detected entities cache",
+            size
+        ),
+        source_path: source,
+        forensic_value: ForensicValue::High,
+        mitre_technique: None,
+        is_suspicious: false,
+        raw_data: None,
         confidence: 0,
     }]
 }
@@ -58,7 +78,9 @@ mod tests {
 
     #[test]
     fn matches_datadetectors() {
-        assert!(matches(Path::new("/var/mobile/Library/DataDetectors/cache.db")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/DataDetectors/cache.db"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
     #[test]

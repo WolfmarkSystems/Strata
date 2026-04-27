@@ -90,7 +90,10 @@ mod tests {
     fn parses_row_count() {
         let (_d, p) = make_discord_cache(7);
         let recs = parse(&p);
-        let r = recs.iter().find(|r| r.subcategory == "Discord cache").unwrap();
+        let r = recs
+            .iter()
+            .find(|r| r.subcategory == "Discord cache")
+            .unwrap();
         assert!(r.detail.contains("7 cfurl_cache_response"));
     }
 

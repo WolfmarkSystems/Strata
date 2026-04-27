@@ -198,7 +198,8 @@ mod tests {
     fn missing_tables_yield_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE raw_contacts(_id INTEGER PRIMARY KEY);").unwrap();
+        c.execute_batch("CREATE TABLE raw_contacts(_id INTEGER PRIMARY KEY);")
+            .unwrap();
         // no `data` table
         drop(c);
         assert!(parse(tmp.path()).is_empty());

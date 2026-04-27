@@ -4,9 +4,9 @@
 //! FaceTime calls (ZCALLTYPE 8=audio, 16=video) and extracting
 //! per-call duration + connection metadata.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["callhistory.storedata"])
@@ -14,8 +14,12 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "ZCALLRECORD") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "ZCALLRECORD") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
 
     // FaceTime audio = type 8, video = type 16 (varies by iOS version)
@@ -28,7 +32,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         .and_then(|mut s| s.query_row([], |r| r.get(0)))
         .unwrap_or(0);
 
-    if ft_audio == 0 && ft_video == 0 { return out; }
+    if ft_audio == 0 && ft_video == 0 {
+        return out;
+    }
 
     let total_duration: f64 = conn
         .prepare("SELECT COALESCE(SUM(ZDURATION), 0) FROM ZCALLRECORD WHERE ZCALLTYPE IN (8, 16)")
@@ -37,7 +43,8 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
 
     out.push(ArtifactRecord {
         category: ArtifactCategory::Communications,
-        subcategory: "FaceTime deep".to_string(), timestamp: None,
+        subcategory: "FaceTime deep".to_string(),
+        timestamp: None,
         title: "FaceTime call breakdown".to_string(),
         detail: format!(
             "{} FaceTime audio + {} FaceTime video calls, total duration {:.0}s",
@@ -73,7 +80,10 @@ mod tests {
     fn parses_facetime_audio_and_video() {
         let tmp = make_calls(&[(8, 120.0), (8, 60.0), (16, 300.0), (1, 45.0)]);
         let recs = parse(tmp.path());
-        let r = recs.iter().find(|r| r.subcategory == "FaceTime deep").unwrap();
+        let r = recs
+            .iter()
+            .find(|r| r.subcategory == "FaceTime deep")
+            .unwrap();
         assert!(r.detail.contains("2 FaceTime audio"));
         assert!(r.detail.contains("1 FaceTime video"));
         assert!(r.detail.contains("480s"));

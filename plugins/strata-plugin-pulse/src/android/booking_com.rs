@@ -57,8 +57,18 @@ fn read_reservations(conn: &rusqlite::Connection, path: &Path, table: &str) -> V
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (property, city, country, check_in_ms, check_out_ms, guests, price, currency, confirm, status) in
-        rows.flatten()
+    for (
+        property,
+        city,
+        country,
+        check_in_ms,
+        check_out_ms,
+        guests,
+        price,
+        currency,
+        confirm,
+        status,
+    ) in rows.flatten()
     {
         let property = property.unwrap_or_else(|| "(unknown)".to_string());
         let city = city.unwrap_or_default();
@@ -76,8 +86,16 @@ fn read_reservations(conn: &rusqlite::Connection, path: &Path, table: &str) -> V
             "Booking.com reservation property='{}' city='{}' country='{}' \
              check_in='{}' check_out='{}' guests={} total_price='{}' currency='{}' \
              confirmation='{}' status='{}'",
-            property, city, country, check_in_str, check_out_str, guests,
-            price, currency, confirm, status
+            property,
+            city,
+            country,
+            check_in_str,
+            check_out_str,
+            guests,
+            price,
+            currency,
+            confirm,
+            status
         );
         out.push(build_record(
             ArtifactCategory::UserActivity,
@@ -153,7 +171,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

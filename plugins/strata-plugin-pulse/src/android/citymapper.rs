@@ -175,8 +175,14 @@ mod tests {
     fn parses_history_and_trips() {
         let db = make_db();
         let r = parse(db.path());
-        let hist: Vec<_> = r.iter().filter(|a| a.subcategory == "Citymapper Location").collect();
-        let trips: Vec<_> = r.iter().filter(|a| a.subcategory == "Citymapper Trip").collect();
+        let hist: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Citymapper Location")
+            .collect();
+        let trips: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Citymapper Trip")
+            .collect();
         assert_eq!(hist.len(), 2);
         assert_eq!(trips.len(), 1);
     }
@@ -185,7 +191,10 @@ mod tests {
     fn home_work_coords_in_saved_trip() {
         let db = make_db();
         let r = parse(db.path());
-        let t = r.iter().find(|a| a.subcategory == "Citymapper Trip").unwrap();
+        let t = r
+            .iter()
+            .find(|a| a.subcategory == "Citymapper Trip")
+            .unwrap();
         assert!(t.detail.contains("home_lat=40.750000"));
         assert!(t.detail.contains("work_lat=40.712800"));
         assert!(t.detail.contains("region='NYC'"));
@@ -203,7 +212,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

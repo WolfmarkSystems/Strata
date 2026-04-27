@@ -25,7 +25,11 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     out
 }
 
-fn read_watch_history(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
+fn read_watch_history(
+    conn: &rusqlite::Connection,
+    path: &Path,
+    table: &str,
+) -> Vec<ArtifactRecord> {
     let sql = format!(
         "SELECT channel_name, show_title, episode_title, watched_at, duration \
          FROM \"{table}\" ORDER BY watched_at DESC LIMIT 5000",
@@ -105,28 +109,39 @@ mod tests {
     fn parses_watch_history() {
         let db = make_db();
         let r = parse(db.path());
-        assert_eq!(r.iter().filter(|a| a.subcategory == "Pluto TV Watch").count(), 2);
+        assert_eq!(
+            r.iter()
+                .filter(|a| a.subcategory == "Pluto TV Watch")
+                .count(),
+            2
+        );
     }
 
     #[test]
     fn channel_and_show_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("channel='Action Movies'") && a.detail.contains("show='Die Hard'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("channel='Action Movies'")
+                && a.detail.contains("show='Die Hard'")));
     }
 
     #[test]
     fn episode_title_included_when_present() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("episode='S01E01 Pilot'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("episode='S01E01 Pilot'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

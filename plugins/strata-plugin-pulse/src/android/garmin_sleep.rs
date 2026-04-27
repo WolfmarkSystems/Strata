@@ -53,10 +53,7 @@ fn read_sleep(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
         let ts = start; // Unix epoch seconds
         let hours = total.unwrap_or(0) as f64 / 3600.0;
         let title = format!("Garmin sleep {} ({:.1}h)", date, hours);
-        let mut detail = format!(
-            "Garmin sleep date='{}' total={}s",
-            date, total.unwrap_or(0)
-        );
+        let mut detail = format!("Garmin sleep date='{}' total={}s", date, total.unwrap_or(0));
         if let Some(d) = deep {
             detail.push_str(&format!(" deep={}s", d));
         }
@@ -146,7 +143,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

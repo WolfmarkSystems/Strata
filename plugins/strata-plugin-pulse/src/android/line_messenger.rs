@@ -168,7 +168,10 @@ mod tests {
     fn parses_messages_and_calls() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "LINE Message").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "LINE Message")
+            .collect();
         let calls: Vec<_> = r.iter().filter(|a| a.subcategory == "LINE Call").collect();
         assert_eq!(msgs.len(), 3);
         assert_eq!(calls.len(), 2);
@@ -185,15 +188,20 @@ mod tests {
     fn call_direction_from_type() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.subcategory == "LINE Call" && a.detail.contains("direction=outgoing")));
-        assert!(r.iter().any(|a| a.subcategory == "LINE Call" && a.detail.contains("direction=incoming")));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "LINE Call" && a.detail.contains("direction=outgoing")));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "LINE Call" && a.detail.contains("direction=incoming")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

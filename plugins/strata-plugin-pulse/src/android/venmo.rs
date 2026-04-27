@@ -57,7 +57,9 @@ fn read_transactions(conn: &rusqlite::Connection, path: &Path, table: &str) -> V
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, sender, recipient, amount, note, audience, created_ms, tx_type, status) in rows.flatten() {
+    for (id, sender, recipient, amount, note, audience, created_ms, tx_type, status) in
+        rows.flatten()
+    {
         let id = id.unwrap_or_else(|| "(unknown)".to_string());
         let sender = sender.unwrap_or_else(|| "(unknown)".to_string());
         let recipient = recipient.unwrap_or_else(|| "(unknown)".to_string());
@@ -175,8 +177,14 @@ mod tests {
     fn parses_transactions_and_friends() {
         let db = make_db();
         let r = parse(db.path());
-        let txs: Vec<_> = r.iter().filter(|a| a.subcategory == "Venmo Transaction").collect();
-        let friends: Vec<_> = r.iter().filter(|a| a.subcategory == "Venmo Friend").collect();
+        let txs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Venmo Transaction")
+            .collect();
+        let friends: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Venmo Friend")
+            .collect();
         assert_eq!(txs.len(), 2);
         assert_eq!(friends.len(), 1);
     }
@@ -185,7 +193,9 @@ mod tests {
     fn audience_and_note_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("audience='private'") && a.detail.contains("note='Lunch'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("audience='private'") && a.detail.contains("note='Lunch'")));
     }
 
     #[test]
@@ -201,7 +211,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

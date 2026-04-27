@@ -11,9 +11,7 @@ use crate::android::helpers::{build_record, open_sqlite_ro, table_exists, unix_m
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "com.google.android.apps.kids.familylink",
-];
+pub const MATCHES: &[&str] = &["com.google.android.apps.kids.familylink"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {
@@ -162,7 +160,10 @@ fn read_screen_time(conn: &rusqlite::Connection, path: &Path, table: &str) -> Ve
         let child_name = child_name.unwrap_or_else(|| "(unknown child)".to_string());
         let duration = duration_min.unwrap_or(0);
         let ts = date_ms.and_then(unix_ms_to_i64);
-        let title = format!("Family Link screen time: {} {}min {}", child_name, duration, app_name);
+        let title = format!(
+            "Family Link screen time: {} {}min {}",
+            child_name, duration, app_name
+        );
         let detail = format!(
             "Family Link screen time child_name='{}' app_name='{}' duration_minutes={}",
             child_name, app_name, duration
@@ -233,21 +234,25 @@ mod tests {
     fn child_location_gps_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("lat=37.774900") && a.detail.contains("child_name='Emma'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("lat=37.774900") && a.detail.contains("child_name='Emma'")));
     }
 
     #[test]
     fn screen_time_duration_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("duration_minutes=45") && a.detail.contains("app_name='YouTube Kids'")));
+        assert!(r.iter().any(|a| a.detail.contains("duration_minutes=45")
+            && a.detail.contains("app_name='YouTube Kids'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

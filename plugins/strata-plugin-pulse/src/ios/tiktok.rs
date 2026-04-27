@@ -8,9 +8,9 @@
 //!
 //! Pulse v1.0 reports row counts + date range.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     if util::name_is(path, &["awemeim.db"]) {
@@ -22,14 +22,20 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
 
     if util::table_exists(&conn, "msg") {
         let count = util::count_rows(&conn, "msg");
         let ts = conn
             .prepare("SELECT MIN(created_time), MAX(created_time) FROM msg WHERE created_time > 0")
-            .and_then(|mut s| s.query_row([], |r| Ok((r.get::<_, Option<i64>>(0)?, r.get::<_, Option<i64>>(1)?))))
+            .and_then(|mut s| {
+                s.query_row([], |r| {
+                    Ok((r.get::<_, Option<i64>>(0)?, r.get::<_, Option<i64>>(1)?))
+                })
+            })
             .unwrap_or((None, None));
         out.push(ArtifactRecord {
             category: ArtifactCategory::Communications,
@@ -49,7 +55,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     // Generic table inventory for the TikTok activity db
     if !util::table_exists(&conn, "msg") {
         let tables: Vec<String> = conn
-            .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+            .prepare(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+            )
             .and_then(|mut s| {
                 let r = s.query_map([], |row| row.get::<_, String>(0))?;
                 Ok(r.flatten().collect())
@@ -57,7 +65,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             .unwrap_or_default();
         if !tables.is_empty() {
             let mut total = 0_i64;
-            for t in &tables { total += util::count_rows(&conn, t); }
+            for t in &tables {
+                total += util::count_rows(&conn, t);
+            }
             out.push(ArtifactRecord {
                 category: ArtifactCategory::SocialMedia,
                 subcategory: "TikTok activity".to_string(),
@@ -84,8 +94,12 @@ mod tests {
 
     #[test]
     fn matches_tiktok_filenames() {
-        assert!(matches(Path::new("/var/mobile/Containers/Data/Application/UUID/Library/Application Support/AwemeIM.db")));
-        assert!(matches(Path::new("/var/mobile/Containers/Data/Application/UUID/Documents/musically/db.sqlite")));
+        assert!(matches(Path::new(
+            "/var/mobile/Containers/Data/Application/UUID/Library/Application Support/AwemeIM.db"
+        )));
+        assert!(matches(Path::new(
+            "/var/mobile/Containers/Data/Application/UUID/Documents/musically/db.sqlite"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -95,10 +109,21 @@ mod tests {
         let p = dir.path().join("AwemeIM.db");
         let c = Connection::open(&p).unwrap();
         c.execute("CREATE TABLE msg (id INTEGER PRIMARY KEY, content TEXT, created_time INTEGER, sender TEXT)", []).unwrap();
-        c.execute("INSERT INTO msg (content, created_time, sender) VALUES ('hi', 1700000000, 'u1')", []).unwrap();
-        c.execute("INSERT INTO msg (content, created_time, sender) VALUES ('yo', 1700000100, 'u2')", []).unwrap();
+        c.execute(
+            "INSERT INTO msg (content, created_time, sender) VALUES ('hi', 1700000000, 'u1')",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO msg (content, created_time, sender) VALUES ('yo', 1700000100, 'u2')",
+            [],
+        )
+        .unwrap();
         let recs = parse(&p);
-        let m = recs.iter().find(|r| r.subcategory == "TikTok messages").unwrap();
+        let m = recs
+            .iter()
+            .find(|r| r.subcategory == "TikTok messages")
+            .unwrap();
         assert!(m.detail.contains("2 msg rows"));
         assert_eq!(m.timestamp, Some(1_700_000_000));
     }

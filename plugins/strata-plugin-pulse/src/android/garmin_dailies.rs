@@ -50,14 +50,13 @@ fn read_dailies(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord>
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (date, steps, total_cal, active_cal, distance, rest_hr, min_hr, max_hr, stress, spo2) in rows.flatten() {
+    for (date, steps, total_cal, active_cal, distance, rest_hr, min_hr, max_hr, stress, spo2) in
+        rows.flatten()
+    {
         let date = date.unwrap_or_else(|| "(unknown)".to_string());
         let steps = steps.unwrap_or(0);
         let title = format!("Garmin daily {}: {} steps", date, steps);
-        let mut detail = format!(
-            "Garmin daily summary date='{}' steps={}",
-            date, steps
-        );
+        let mut detail = format!("Garmin daily summary date='{}' steps={}", date, steps);
         if let Some(c) = total_cal {
             detail.push_str(&format!(" total_cal={:.0}", c));
         }
@@ -136,7 +135,9 @@ mod tests {
     fn steps_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("2021-01-01") && a.title.contains("12000 steps")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("2021-01-01") && a.title.contains("12000 steps")));
     }
 
     #[test]
@@ -153,7 +154,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

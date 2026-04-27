@@ -57,7 +57,10 @@ fn read_spotlight(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecor
         let media = media_type.unwrap_or_else(|| "video".to_string());
         let views = views.unwrap_or(0);
         let ts = ts_ms.and_then(unix_ms_to_i64);
-        let title = format!("Snapchat Spotlight: {} ({}, {} views)", creator, media, views);
+        let title = format!(
+            "Snapchat Spotlight: {} ({}, {} views)",
+            creator, media, views
+        );
         let detail = format!(
             "Snapchat Spotlight creator='{}' type='{}' view_count={}",
             creator, media, views
@@ -170,16 +173,22 @@ mod tests {
     fn creator_and_views_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("creator='creator_a'") && a.detail.contains("view_count=15000")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("creator='creator_a'")
+                && a.detail.contains("view_count=15000")));
         // Arroyo message with empty content gets [type] in title
-        assert!(r.iter().any(|a| a.title.contains("user_x") && a.title.contains("[snap]")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("user_x") && a.title.contains("[snap]")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

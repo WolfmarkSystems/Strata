@@ -112,7 +112,9 @@ fn read_trips(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, vin, started_ms, _ended_ms, distance, s_lat, s_lon, e_lat, e_lon, avg_mpg) in rows.flatten() {
+    for (id, vin, started_ms, _ended_ms, distance, s_lat, s_lon, e_lat, e_lon, avg_mpg) in
+        rows.flatten()
+    {
         let id = id.unwrap_or_default();
         let vin = vin.unwrap_or_default();
         let distance = distance.unwrap_or(0.0);
@@ -251,7 +253,8 @@ mod tests {
     fn remote_start_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("command='remote_start'") && a.detail.contains("status='success'")));
+        assert!(r.iter().any(|a| a.detail.contains("command='remote_start'")
+            && a.detail.contains("status='success'")));
     }
 
     #[test]
@@ -267,7 +270,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -13,11 +13,7 @@ use crate::android::helpers::{build_record, open_sqlite_ro, table_exists};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "factory_reset",
-    "poweroffreset",
-    "shutdown_checkpoints",
-];
+pub const MATCHES: &[&str] = &["factory_reset", "poweroffreset", "shutdown_checkpoints"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     // Try as SQLite first
@@ -55,10 +51,7 @@ fn read_secure_settings(conn: &rusqlite::Connection, path: &Path) -> Vec<Artifac
         let name = name.unwrap_or_else(|| "(unknown)".to_string());
         let value = value.unwrap_or_default();
         let title = format!("Secure setting: {} = {}", name, value);
-        let detail = format!(
-            "Android secure setting name='{}' value='{}'",
-            name, value
-        );
+        let detail = format!("Android secure setting name='{}' value='{}'", name, value);
         out.push(build_record(
             ArtifactCategory::SystemActivity,
             "Device Settings",
@@ -93,10 +86,13 @@ fn read_checkpoints(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRec
     let mut out = Vec::new();
     for (ts, reason, _server) in rows.flatten() {
         let reason = reason.unwrap_or_else(|| "(unknown)".to_string());
-        let is_reset = reason.to_lowercase().contains("factory")
-            || reason.to_lowercase().contains("wipe");
+        let is_reset =
+            reason.to_lowercase().contains("factory") || reason.to_lowercase().contains("wipe");
         let title = format!("Shutdown: {}", reason);
-        let detail = format!("Shutdown checkpoint reason='{}' factory_reset={}", reason, is_reset);
+        let detail = format!(
+            "Shutdown checkpoint reason='{}' factory_reset={}",
+            reason, is_reset
+        );
         out.push(build_record(
             ArtifactCategory::SystemActivity,
             "Shutdown Checkpoint",
@@ -122,7 +118,8 @@ fn read_text_file(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
     for line in data.lines().filter(|l| !l.trim().is_empty()) {
         let lower = line.to_lowercase();
-        let is_reset = lower.contains("factory") || lower.contains("wipe") || lower.contains("reset");
+        let is_reset =
+            lower.contains("factory") || lower.contains("wipe") || lower.contains("reset");
         let title = if is_reset {
             "FACTORY RESET DETECTED".to_string()
         } else {
@@ -131,12 +128,20 @@ fn read_text_file(path: &Path) -> Vec<ArtifactRecord> {
         let detail = format!("Device event log='{}'", line);
         out.push(build_record(
             ArtifactCategory::SystemActivity,
-            if is_reset { "Factory Reset" } else { "Power Event" },
+            if is_reset {
+                "Factory Reset"
+            } else {
+                "Power Event"
+            },
             title,
             detail,
             path,
             None,
-            if is_reset { ForensicValue::Critical } else { ForensicValue::Medium },
+            if is_reset {
+                ForensicValue::Critical
+            } else {
+                ForensicValue::Medium
+            },
             is_reset,
         ));
     }
@@ -178,7 +183,10 @@ mod tests {
     fn factory_reset_is_suspicious() {
         let db = make_checkpoint_db();
         let r = parse(db.path());
-        let reset = r.iter().find(|a| a.detail.contains("factory_reset=true")).unwrap();
+        let reset = r
+            .iter()
+            .find(|a| a.detail.contains("factory_reset=true"))
+            .unwrap();
         assert!(reset.is_suspicious);
         assert!(matches!(reset.forensic_value, ForensicValue::Critical));
     }
@@ -186,7 +194,11 @@ mod tests {
     #[test]
     fn text_file_detects_reset() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
-        std::fs::write(tmp.path(), "2021-01-01 00:00:00 factory reset initiated\nnormal boot\n").unwrap();
+        std::fs::write(
+            tmp.path(),
+            "2021-01-01 00:00:00 factory reset initiated\nnormal boot\n",
+        )
+        .unwrap();
         let r = parse(tmp.path());
         assert_eq!(r.len(), 2);
         assert!(r.iter().any(|a| a.subcategory == "Factory Reset"));

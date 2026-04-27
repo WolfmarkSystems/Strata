@@ -10,10 +10,7 @@ use crate::android::helpers::{build_record, open_sqlite_ro, table_exists, unix_m
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "com.discord/databases/",
-    "com.discord/files/kv-storage/",
-];
+pub const MATCHES: &[&str] = &["com.discord/databases/", "com.discord/files/kv-storage/"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {
@@ -33,7 +30,11 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     out
 }
 
-fn read_voice_sessions(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
+fn read_voice_sessions(
+    conn: &rusqlite::Connection,
+    path: &Path,
+    table: &str,
+) -> Vec<ArtifactRecord> {
     let sql = format!(
         "SELECT channel_id, guild_id, joined_at, left_at, duration \
          FROM \"{table}\" ORDER BY joined_at DESC LIMIT 5000",
@@ -107,7 +108,9 @@ fn read_calls(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, caller_id, recipient_id, call_type, started_ms, _ended_ms, duration_ms, status) in rows.flatten() {
+    for (id, caller_id, recipient_id, call_type, started_ms, _ended_ms, duration_ms, status) in
+        rows.flatten()
+    {
         let id = id.unwrap_or_else(|| "(unknown)".to_string());
         let caller_id = caller_id.unwrap_or_default();
         let recipient_id = recipient_id.unwrap_or_default();
@@ -115,7 +118,10 @@ fn read_calls(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
         let dur_s = duration_ms.unwrap_or(0) / 1000;
         let status = status.unwrap_or_default();
         let ts = started_ms.and_then(unix_ms_to_i64);
-        let title = format!("Discord call: {} → {} ({}s)", caller_id, recipient_id, dur_s);
+        let title = format!(
+            "Discord call: {} → {} ({}s)",
+            caller_id, recipient_id, dur_s
+        );
         let detail = format!(
             "Discord call id='{}' caller='{}' recipient='{}' type='{}' duration={}s status='{}'",
             id, caller_id, recipient_id, call_type, dur_s, status
@@ -181,7 +187,10 @@ mod tests {
     fn voice_duration_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let v = r.iter().find(|a| a.subcategory == "Discord Voice Session").unwrap();
+        let v = r
+            .iter()
+            .find(|a| a.subcategory == "Discord Voice Session")
+            .unwrap();
         assert!(v.detail.contains("duration=3600s"));
     }
 
@@ -198,7 +207,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -68,16 +68,15 @@ fn read_flights(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord>
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, start_ms, duration, distance, max_alt, home_lat, home_lon, serial, path_km) in rows.flatten() {
+    for (id, start_ms, duration, distance, max_alt, home_lat, home_lon, serial, path_km) in
+        rows.flatten()
+    {
         let id = id.unwrap_or(0);
         let ts = start_ms.and_then(unix_ms_to_i64);
         let duration_s = duration.unwrap_or(0) / 1000;
         let serial = serial.unwrap_or_default();
         let title = format!("DJI flight #{} ({}s)", id, duration_s);
-        let mut detail = format!(
-            "DJI flight id={} duration={}s",
-            id, duration_s
-        );
+        let mut detail = format!("DJI flight id={} duration={}s", id, duration_s);
         if let Some(d) = distance {
             detail.push_str(&format!(" distance={:.0}m", d));
         }
@@ -241,7 +240,10 @@ mod tests {
         let db = make_db();
         let r = parse(db.path());
         let flights: Vec<_> = r.iter().filter(|a| a.subcategory == "DJI Flight").collect();
-        let waypoints: Vec<_> = r.iter().filter(|a| a.subcategory == "DJI Waypoint").collect();
+        let waypoints: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "DJI Waypoint")
+            .collect();
         assert_eq!(flights.len(), 2);
         assert_eq!(waypoints.len(), 1);
     }
@@ -250,7 +252,9 @@ mod tests {
     fn aircraft_serial_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("aircraft_serial='0TYDH3A0A12345'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("aircraft_serial='0TYDH3A0A12345'")));
     }
 
     #[test]
@@ -275,7 +279,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

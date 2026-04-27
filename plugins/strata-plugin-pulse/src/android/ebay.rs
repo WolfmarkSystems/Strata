@@ -7,7 +7,9 @@
 //! or `watchlist`, and viewed items in `recently_viewed`. Column variants
 //! probed defensively.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -68,7 +70,11 @@ fn read_searches(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<A
     for (keyword, ts_raw) in rows.flatten() {
         let keyword = keyword.unwrap_or_default();
         let ts = ts_raw.and_then(|t| {
-            if t > 10_000_000_000 { unix_ms_to_i64(t) } else { Some(t) }
+            if t > 10_000_000_000 {
+                unix_ms_to_i64(t)
+            } else {
+                Some(t)
+            }
         });
         let title = format!("eBay search: {}", keyword);
         let detail = format!("eBay search keyword='{}'", keyword);
@@ -171,8 +177,14 @@ mod tests {
     fn parses_searches_and_watched() {
         let db = make_db();
         let r = parse(db.path());
-        let searches: Vec<_> = r.iter().filter(|a| a.subcategory == "eBay Search").collect();
-        let watched: Vec<_> = r.iter().filter(|a| a.subcategory == "eBay Watched").collect();
+        let searches: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "eBay Search")
+            .collect();
+        let watched: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "eBay Watched")
+            .collect();
         assert_eq!(searches.len(), 2);
         assert_eq!(watched.len(), 1);
     }
@@ -197,7 +209,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

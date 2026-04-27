@@ -72,7 +72,9 @@ fn read_license(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Ar
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (license_number, first, last, dob, address, state, exp_ms, class, restrictions) in rows.flatten() {
+    for (license_number, first, last, dob, address, state, exp_ms, class, restrictions) in
+        rows.flatten()
+    {
         let license_number = license_number.unwrap_or_else(|| "(unknown)".to_string());
         let first = first.unwrap_or_default();
         let last = last.unwrap_or_default();
@@ -261,7 +263,9 @@ mod tests {
     fn vehicle_vin_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("vin='1HGBH41JXMN109186'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("vin='1HGBH41JXMN109186'")));
     }
 
     #[test]
@@ -277,7 +281,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

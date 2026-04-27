@@ -61,7 +61,9 @@ fn read_posts(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, user_id, taken_ms, front, back, caption, location, lat, lon, retakes, is_late) in rows.flatten() {
+    for (id, user_id, taken_ms, front, back, caption, location, lat, lon, retakes, is_late) in
+        rows.flatten()
+    {
         let id = id.unwrap_or_else(|| "(unknown)".to_string());
         let user_id = user_id.unwrap_or_else(|| "(unknown)".to_string());
         let front = front.unwrap_or_default();
@@ -184,8 +186,14 @@ mod tests {
     fn parses_posts_and_friends() {
         let db = make_db();
         let r = parse(db.path());
-        let posts: Vec<_> = r.iter().filter(|a| a.subcategory == "BeReal Post").collect();
-        let friends: Vec<_> = r.iter().filter(|a| a.subcategory == "BeReal Friend").collect();
+        let posts: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "BeReal Post")
+            .collect();
+        let friends: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "BeReal Friend")
+            .collect();
         assert_eq!(posts.len(), 2);
         assert_eq!(friends.len(), 1);
     }
@@ -194,7 +202,9 @@ mod tests {
     fn retake_count_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("retake_count=5") && a.detail.contains("is_late=true")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("retake_count=5") && a.detail.contains("is_late=true")));
     }
 
     #[test]
@@ -210,7 +220,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

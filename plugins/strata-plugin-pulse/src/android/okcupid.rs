@@ -120,7 +120,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<A
         let sender = sender.unwrap_or_else(|| "(unknown)".to_string());
         let recipient = recipient.unwrap_or_else(|| "(unknown)".to_string());
         let body = body.unwrap_or_default();
-        let direction = if is_incoming.unwrap_or(0) == 1 { "incoming" } else { "outgoing" };
+        let direction = if is_incoming.unwrap_or(0) == 1 {
+            "incoming"
+        } else {
+            "outgoing"
+        };
         let ts = sent_ms.and_then(unix_ms_to_i64);
         let preview: String = body.chars().take(120).collect();
         let title = format!("OkCupid {} msg {}: {}", direction, sender, preview);
@@ -242,21 +246,26 @@ mod tests {
     fn match_percentage_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.subcategory == "OkCupid Like" && a.detail.contains("match_pct=85%")));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "OkCupid Like" && a.detail.contains("match_pct=85%")));
     }
 
     #[test]
     fn answer_text_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.subcategory == "OkCupid Answer" && a.detail.contains("answer='Dogs'")));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "OkCupid Answer" && a.detail.contains("answer='Dogs'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -51,7 +51,8 @@ pub fn scan(path: &Path) -> Vec<Artifact> {
         return out;
     }
     // Roblox logs.
-    if (lower.contains("/roblox/logs/") || lower.contains("\\roblox\\logs\\")) && name.ends_with(".log")
+    if (lower.contains("/roblox/logs/") || lower.contains("\\roblox\\logs\\"))
+        && name.ends_with(".log")
     {
         if let Ok(body) = fs::read_to_string(path) {
             for msg in parse_chat_log(&body) {
@@ -222,7 +223,10 @@ pub fn parse_chat_log(body: &str) -> Vec<ChatLine> {
         if let Some(user_start) = after.strip_prefix('<') {
             if let Some(user_end) = user_start.find('>') {
                 let user = user_start[..user_end].to_string();
-                let msg = user_start[user_end + 1..].trim_start_matches(':').trim().to_string();
+                let msg = user_start[user_end + 1..]
+                    .trim_start_matches(':')
+                    .trim()
+                    .to_string();
                 out.push(ChatLine {
                     timestamp: ts,
                     username: Some(user),
@@ -251,7 +255,10 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].account_name.as_deref(), Some("alice"));
         assert_eq!(entries[0].persona_name.as_deref(), Some("AliceGamer"));
-        assert_eq!(entries[0].timestamp.map(|t| t.timestamp()), Some(1_717_243_200));
+        assert_eq!(
+            entries[0].timestamp.map(|t| t.timestamp()),
+            Some(1_717_243_200)
+        );
         assert!(entries[0].remember_password);
     }
 
@@ -262,7 +269,10 @@ mod tests {
         assert_eq!(msgs.len(), 2);
         assert_eq!(msgs[0].username.as_deref(), Some("Alice"));
         assert_eq!(msgs[0].message, "hey there");
-        assert_eq!(msgs[0].timestamp.map(|d| d.timestamp()), Some(1_717_243_200));
+        assert_eq!(
+            msgs[0].timestamp.map(|d| d.timestamp()),
+            Some(1_717_243_200)
+        );
     }
 
     #[test]
@@ -286,11 +296,7 @@ mod tests {
         let logdir = dir.path().join("Roblox").join("logs");
         std::fs::create_dir_all(&logdir).expect("mkdirs");
         let path = logdir.join("session.log");
-        std::fs::write(
-            &path,
-            "[2024-06-01 12:00:00] <Bobby> hello roblox\n",
-        )
-        .expect("write");
+        std::fs::write(&path, "[2024-06-01 12:00:00] <Bobby> hello roblox\n").expect("write");
         let out = scan(&path);
         assert!(out
             .iter()

@@ -71,7 +71,7 @@ pub fn parse_unsent_messages(conn: &Connection) -> Vec<UnsentMessage> {
     let Ok(rows) = rows else { return Vec::new() };
     let mut out = Vec::new();
     for (id, chat_room, text, sent_raw, unsent_raw, handle) in rows.flatten() {
-        let sent = cocoa_to_utc(sent_raw).unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap());
+        let sent = cocoa_to_utc(sent_raw).unwrap_or_else(unix_epoch);
         let unsent = cocoa_to_utc(unsent_raw).unwrap_or(sent);
         let delta = (unsent - sent).num_seconds().max(0) as u64;
         out.push(UnsentMessage {
@@ -105,7 +105,11 @@ fn cocoa_to_utc(ts: i64) -> Option<DateTime<Utc>> {
         return None;
     }
     let cocoa_epoch_offset = 978_307_200i64;
-    let secs = if ts > 1_000_000_000_000 { ts / 1_000_000_000 } else { ts };
+    let secs = if ts > 1_000_000_000_000 {
+        ts / 1_000_000_000
+    } else {
+        ts
+    };
     Utc.timestamp_opt(secs + cocoa_epoch_offset, 0).single()
 }
 
@@ -120,16 +124,23 @@ pub fn classify_airdrop_transfer(
     device: &str,
     recipient_in_contacts: bool,
 ) -> AirDropBoopTransfer {
-    let transfer_type = if recipient_in_contacts { "Standard" } else { "Boop" };
+    let transfer_type = if recipient_in_contacts {
+        "Standard"
+    } else {
+        "Boop"
+    };
     AirDropBoopTransfer {
-        timestamp: cocoa_to_utc(timestamp_secs_since_cocoa)
-            .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap()),
+        timestamp: cocoa_to_utc(timestamp_secs_since_cocoa).unwrap_or_else(unix_epoch),
         direction: direction.into(),
         file_name: file_name.map(|s| s.into()),
         file_size,
         recipient_or_sender_device: device.into(),
         transfer_type: transfer_type.into(),
     }
+}
+
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────
@@ -166,7 +177,8 @@ mod tests {
     #[test]
     fn missing_deleted_column_returns_empty() {
         let c = Connection::open_in_memory().expect("open");
-        c.execute_batch("CREATE TABLE message (ROWID INTEGER);").expect("s");
+        c.execute_batch("CREATE TABLE message (ROWID INTEGER);")
+            .expect("s");
         assert!(parse_unsent_messages(&c).is_empty());
     }
 

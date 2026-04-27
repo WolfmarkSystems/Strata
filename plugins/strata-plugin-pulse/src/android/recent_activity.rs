@@ -52,10 +52,7 @@ fn read_recent(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> 
         let ts = last_active.and_then(unix_ms_to_i64);
         let calling = calling.unwrap_or_default();
         let title = format!("Recent task #{}: {}", task, activity);
-        let mut detail = format!(
-            "Recent activity task={} activity='{}'",
-            task, activity
-        );
+        let mut detail = format!("Recent activity task={} activity='{}'", task, activity);
         if let Some(first) = first_active.and_then(unix_ms_to_i64) {
             detail.push_str(&format!(" first_active={}", first));
         }
@@ -160,14 +157,17 @@ mod tests {
     fn calling_package_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("calling_package='com.android.launcher3'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("calling_package='com.android.launcher3'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

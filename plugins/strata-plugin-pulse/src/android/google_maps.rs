@@ -13,16 +13,14 @@
 //! 2. A `places` table with `name`, `latitude`, `longitude`,
 //!    `last_accessed_ms`.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "gmm_storage.db",
-    "gmm_myplaces.db",
-    "search_history.db",
-];
+pub const MATCHES: &[&str] = &["gmm_storage.db", "gmm_myplaces.db", "search_history.db"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {
@@ -114,10 +112,7 @@ fn read_places(conn: &Connection, path: &Path, out: &mut Vec<ArtifactRecord>) {
             ArtifactCategory::UserActivity,
             "Android Google Maps Place",
             format!("Place: {}", n),
-            format!(
-                "Google Maps saved place '{}' at ({:.6},{:.6})",
-                n, la, lo
-            ),
+            format!("Google Maps saved place '{}' at ({:.6},{:.6})", n, la, lo),
             path,
             ts_ms.and_then(unix_ms_to_i64),
             ForensicValue::Medium,
@@ -175,7 +170,8 @@ mod tests {
     fn missing_tables_yield_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE irrelevant(x INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE irrelevant(x INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

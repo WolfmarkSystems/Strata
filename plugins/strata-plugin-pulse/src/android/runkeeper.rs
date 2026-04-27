@@ -49,7 +49,8 @@ fn read_trips(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, start, kind, distance, elapsed, calories, hr, climb, uuid, nickname) in rows.flatten() {
+    for (id, start, kind, distance, elapsed, calories, hr, climb, uuid, nickname) in rows.flatten()
+    {
         let id = id.unwrap_or(0);
         let kind = kind.unwrap_or_else(|| "activity".to_string());
         // RunKeeper uses milliseconds
@@ -151,7 +152,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

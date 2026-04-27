@@ -57,7 +57,22 @@ fn read_rides(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Arti
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (ride_id, req_ms, p_lat, p_lon, d_lat, d_lon, p_addr, d_addr, cost, currency, driver, plate, ride_type) in rows.flatten() {
+    for (
+        ride_id,
+        req_ms,
+        p_lat,
+        p_lon,
+        d_lat,
+        d_lon,
+        p_addr,
+        d_addr,
+        cost,
+        currency,
+        driver,
+        plate,
+        ride_type,
+    ) in rows.flatten()
+    {
         let ride_id = ride_id.unwrap_or_else(|| "(unknown)".to_string());
         let p_addr = p_addr.unwrap_or_default();
         let d_addr = d_addr.unwrap_or_default();
@@ -159,7 +174,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -5,9 +5,9 @@
 //! because it targets the ML classification tables, not the asset
 //! inventory. Reveals photo content without viewing image bytes.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     // Same file as photos.rs but we produce different records
@@ -16,8 +16,12 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "ZCOMPUTEDASSETATTRIBUTES") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "ZCOMPUTEDASSETATTRIBUTES") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
     let count = util::count_rows(&conn, "ZCOMPUTEDASSETATTRIBUTES");
 
@@ -61,7 +65,11 @@ mod tests {
         let c = Connection::open(tmp.path()).unwrap();
         c.execute("CREATE TABLE ZCOMPUTEDASSETATTRIBUTES (Z_PK INTEGER PRIMARY KEY, ZFACECOUNT INTEGER, ZBODYCOUNT INTEGER)", []).unwrap();
         for (fc, bc) in rows {
-            c.execute("INSERT INTO ZCOMPUTEDASSETATTRIBUTES (ZFACECOUNT, ZBODYCOUNT) VALUES (?1, ?2)", rusqlite::params![*fc, *bc]).unwrap();
+            c.execute(
+                "INSERT INTO ZCOMPUTEDASSETATTRIBUTES (ZFACECOUNT, ZBODYCOUNT) VALUES (?1, ?2)",
+                rusqlite::params![*fc, *bc],
+            )
+            .unwrap();
         }
         tmp
     }
@@ -70,7 +78,10 @@ mod tests {
     fn parses_face_and_body_counts() {
         let tmp = make_analysis_db(&[(2, 1), (0, 0), (1, 0)]);
         let recs = parse(tmp.path());
-        let r = recs.iter().find(|r| r.subcategory == "Photo Analysis ML").unwrap();
+        let r = recs
+            .iter()
+            .find(|r| r.subcategory == "Photo Analysis ML")
+            .unwrap();
         assert!(r.detail.contains("3 classified"));
         assert!(r.detail.contains("2 with faces"));
         assert!(r.detail.contains("1 with bodies"));
@@ -87,6 +98,8 @@ mod tests {
 
     #[test]
     fn matches_photos_sqlite() {
-        assert!(matches(Path::new("/var/mobile/Media/PhotoData/Photos.sqlite")));
+        assert!(matches(Path::new(
+            "/var/mobile/Media/PhotoData/Photos.sqlite"
+        )));
     }
 }

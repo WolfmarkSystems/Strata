@@ -30,7 +30,11 @@ pub struct DatingAppArtifact {
     pub age_stated: Option<u8>,
 }
 
-pub fn parse_events(platform: &str, account_email: Option<&str>, json: &str) -> Vec<DatingAppArtifact> {
+pub fn parse_events(
+    platform: &str,
+    account_email: Option<&str>,
+    json: &str,
+) -> Vec<DatingAppArtifact> {
     let v: serde_json::Value = match serde_json::from_str(json) {
         Ok(v) => v,
         Err(_) => return Vec::new(),
@@ -65,9 +69,18 @@ pub fn parse_events(platform: &str, account_email: Option<&str>, json: &str) -> 
                 .unwrap_or("Event")
                 .into(),
             timestamp: ts,
-            matched_user_id: entry.get("user_id").and_then(|x| x.as_str()).map(String::from),
-            matched_user_name: entry.get("user_name").and_then(|x| x.as_str()).map(String::from),
-            message_content: entry.get("message").and_then(|x| x.as_str()).map(String::from),
+            matched_user_id: entry
+                .get("user_id")
+                .and_then(|x| x.as_str())
+                .map(String::from),
+            matched_user_name: entry
+                .get("user_name")
+                .and_then(|x| x.as_str())
+                .map(String::from),
+            message_content: entry
+                .get("message")
+                .and_then(|x| x.as_str())
+                .map(String::from),
             location,
             age_stated: entry
                 .get("age_stated")
@@ -81,7 +94,10 @@ pub fn parse_events(platform: &str, account_email: Option<&str>, json: &str) -> 
 /// ICAC-critical: flag profiles that stated an age below 18. Returns
 /// the subset of artifacts whose stated age is under the specified
 /// threshold.
-pub fn artifacts_under_age(artifacts: &[DatingAppArtifact], max_age: u8) -> Vec<&DatingAppArtifact> {
+pub fn artifacts_under_age(
+    artifacts: &[DatingAppArtifact],
+    max_age: u8,
+) -> Vec<&DatingAppArtifact> {
     artifacts
         .iter()
         .filter(|a| a.age_stated.map(|age| age < max_age).unwrap_or(false))

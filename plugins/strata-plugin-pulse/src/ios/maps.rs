@@ -86,7 +86,9 @@ mod tests {
 
     #[test]
     fn matches_canonical_filenames_and_uuid_variant() {
-        assert!(matches(Path::new("/var/mobile/Library/Maps/History.mapsdata")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/Maps/History.mapsdata"
+        )));
         assert!(matches(Path::new(
             "/var/mobile/Library/Maps/GeoHistory.mapsdata"
         )));

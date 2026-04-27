@@ -120,9 +120,7 @@ fn classify_stream(stream: &str) -> (&'static str, ForensicValue, Option<&'stati
             ("Inferred Activity", ForensicValue::Medium, None)
         }
         "/search/queries" => ("Search Queries", ForensicValue::High, Some("T1005")),
-        "/app/intents" | "/app/mediaUsage" => {
-            ("App Intents", ForensicValue::High, Some("T1005"))
-        }
+        "/app/intents" | "/app/mediaUsage" => ("App Intents", ForensicValue::High, Some("T1005")),
         _ => ("Other", ForensicValue::Medium, None),
     }
 }
@@ -167,7 +165,9 @@ mod tests {
 
     #[test]
     fn matches_knowledgec_by_name() {
-        assert!(matches(Path::new("/Library/CoreDuet/Knowledge/knowledgeC.db")));
+        assert!(matches(Path::new(
+            "/Library/CoreDuet/Knowledge/knowledgeC.db"
+        )));
         assert!(matches(Path::new("C:/copied/KnowledgeC.db")));
         assert!(!matches(Path::new("/Library/Safari/History.db")));
     }

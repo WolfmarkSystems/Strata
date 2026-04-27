@@ -119,7 +119,10 @@ mod tests {
 
     #[test]
     fn cf_nanos_to_unix_handles_one_second() {
-        assert_eq!(cf_nanos_to_unix(1_000_000_000), Some(APPLE_EPOCH_OFFSET + 1));
+        assert_eq!(
+            cf_nanos_to_unix(1_000_000_000),
+            Some(APPLE_EPOCH_OFFSET + 1)
+        );
     }
 
     #[test]

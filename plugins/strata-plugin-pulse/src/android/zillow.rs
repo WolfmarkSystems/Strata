@@ -59,8 +59,7 @@ fn parse_searches(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecor
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (address, price_min, price_max, beds, baths, sqft, lat, lon, searched_ms) in
-        rows.flatten()
+    for (address, price_min, price_max, beds, baths, sqft, lat, lon, searched_ms) in rows.flatten()
     {
         let address = address.unwrap_or_else(|| "(unknown)".to_string());
         let ts = searched_ms.and_then(unix_ms_to_i64);
@@ -309,7 +308,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

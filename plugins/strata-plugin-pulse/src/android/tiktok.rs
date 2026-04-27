@@ -154,8 +154,14 @@ mod tests {
     fn parses_messages_and_users() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "TikTok Message").collect();
-        let users: Vec<_> = r.iter().filter(|a| a.subcategory == "TikTok User").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "TikTok Message")
+            .collect();
+        let users: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "TikTok User")
+            .collect();
         assert_eq!(msgs.len(), 3);
         assert_eq!(users.len(), 2);
     }
@@ -164,7 +170,9 @@ mod tests {
     fn sender_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("user123") && a.title.contains("Hey check")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("user123") && a.title.contains("Hey check")));
     }
 
     #[test]
@@ -178,7 +186,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

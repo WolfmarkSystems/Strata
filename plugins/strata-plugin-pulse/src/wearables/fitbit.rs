@@ -65,7 +65,8 @@ fn parse_minute_table(conn: &Connection, table: &str, kind: &str) -> Vec<FitbitM
         return Vec::new();
     }
     let cols = col_names(conn, table);
-    let ts = pick(&cols, &["timestamp", "minute", "minute_ts"]).unwrap_or_else(|| "timestamp".into());
+    let ts =
+        pick(&cols, &["timestamp", "minute", "minute_ts"]).unwrap_or_else(|| "timestamp".into());
     let val = pick(&cols, &["value", "count", "bpm"]).unwrap_or_else(|| "value".into());
     let dev = pick(&cols, &["device_id", "tracker_id"]);
     let sql = format!(
@@ -92,7 +93,7 @@ fn parse_minute_table(conn: &Connection, table: &str, kind: &str) -> Vec<FitbitM
             timestamp: Utc
                 .timestamp_opt(ts_ms / 1000, 0)
                 .single()
-                .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap()),
+                .unwrap_or_else(unix_epoch),
             data_type: kind.into(),
             value: v,
             device_id: dev,
@@ -137,16 +138,18 @@ pub fn parse_activity_log(conn: &Connection) -> Vec<FitbitWorkout> {
     });
     let Ok(rows) = rows else { return Vec::new() };
     rows.flatten()
-        .map(|(id, start_ms, end_ms, kind, dist, cals, hr)| FitbitWorkout {
-            workout_id: id.to_string(),
-            start_time: ms_to_utc(start_ms),
-            end_time: ms_to_utc(end_ms),
-            workout_type: kind,
-            distance_meters: dist,
-            calories_burned: cals.map(|v| v.max(0) as u32),
-            avg_heart_rate: hr.map(|v| v.max(0).min(u16::MAX as i64) as u16),
-            gps_track: Vec::new(),
-        })
+        .map(
+            |(id, start_ms, end_ms, kind, dist, cals, hr)| FitbitWorkout {
+                workout_id: id.to_string(),
+                start_time: ms_to_utc(start_ms),
+                end_time: ms_to_utc(end_ms),
+                workout_type: kind,
+                distance_meters: dist,
+                calories_burned: cals.map(|v| v.max(0) as u32),
+                avg_heart_rate: hr.map(|v| v.max(0).min(u16::MAX as i64) as u16),
+                gps_track: Vec::new(),
+            },
+        )
         .collect()
 }
 
@@ -229,7 +232,11 @@ fn pick(cols: &[String], candidates: &[&str]) -> Option<String> {
 fn ms_to_utc(ms: i64) -> DateTime<Utc> {
     Utc.timestamp_opt(ms / 1000, 0)
         .single()
-        .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap())
+        .unwrap_or_else(unix_epoch)
+}
+
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────

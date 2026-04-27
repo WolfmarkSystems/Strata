@@ -40,7 +40,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         title: "iOS mobile_installation log".to_string(),
         detail: format!(
             "{} install events, {} uninstall events, {} unique bundle IDs observed",
-            stats.installs, stats.uninstalls, stats.bundle_ids.len()
+            stats.installs,
+            stats.uninstalls,
+            stats.bundle_ids.len()
         ),
         source_path: source.clone(),
         forensic_value: ForensicValue::High,
@@ -108,11 +110,14 @@ fn scan_log(text: &str) -> LogStats {
 /// >=2 dots that does not start with a slash or quote.
 fn extract_bundle_id(line: &str) -> Option<String> {
     for tok in line.split(|c: char| c.is_whitespace() || matches!(c, '"' | '\'' | '(' | ')')) {
-        let trimmed = tok.trim_matches(|c: char| !c.is_ascii_alphanumeric() && c != '.' && c != '-');
+        let trimmed =
+            tok.trim_matches(|c: char| !c.is_ascii_alphanumeric() && c != '.' && c != '-');
         if trimmed.matches('.').count() >= 2
             && !trimmed.starts_with('.')
             && !trimmed.ends_with('.')
-            && trimmed.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
+            && trimmed
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
         {
             return Some(trimmed.to_string());
         }

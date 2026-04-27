@@ -106,7 +106,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<A
         let sender = sender.unwrap_or_else(|| "(unknown)".to_string());
         let connection_id = connection_id.unwrap_or_default();
         let body = body.unwrap_or_default();
-        let direction = if is_incoming.unwrap_or(0) == 1 { "incoming" } else { "outgoing" };
+        let direction = if is_incoming.unwrap_or(0) == 1 {
+            "incoming"
+        } else {
+            "outgoing"
+        };
         let ts = sent_ms.and_then(unix_ms_to_i64);
         let preview: String = body.chars().take(120).collect();
         let title = format!("CMB {} msg {}: {}", direction, sender, preview);
@@ -173,22 +177,29 @@ mod tests {
     fn expired_connection_flagged() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.subcategory == "CMB Connection" && a.detail.contains("expired=true")));
-        assert!(r.iter().any(|a| a.subcategory == "CMB Connection" && a.detail.contains("expired=false")));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "CMB Connection" && a.detail.contains("expired=true")));
+        assert!(r
+            .iter()
+            .any(|a| a.subcategory == "CMB Connection" && a.detail.contains("expired=false")));
     }
 
     #[test]
     fn message_body_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("Hello, nice to meet you!")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("Hello, nice to meet you!")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

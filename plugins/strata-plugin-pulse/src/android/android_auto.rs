@@ -245,7 +245,9 @@ mod tests {
     fn vehicle_bluetooth_address_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("bluetooth='AA:BB:CC:DD:EE:FF'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("bluetooth='AA:BB:CC:DD:EE:FF'")));
     }
 
     #[test]
@@ -259,7 +261,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

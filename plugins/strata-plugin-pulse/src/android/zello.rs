@@ -153,8 +153,14 @@ mod tests {
     fn parses_messages_and_channels() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.title.starts_with("Zello voice") || a.title.starts_with("Zello text")).collect();
-        let chs: Vec<_> = r.iter().filter(|a| a.title.starts_with("Zello channel")).collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.title.starts_with("Zello voice") || a.title.starts_with("Zello text"))
+            .collect();
+        let chs: Vec<_> = r
+            .iter()
+            .filter(|a| a.title.starts_with("Zello channel"))
+            .collect();
         assert_eq!(msgs.len(), 2);
         assert_eq!(chs.len(), 1);
     }
@@ -163,15 +169,21 @@ mod tests {
     fn channel_name_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("channel='Ops Channel'") && a.detail.contains("sender='dispatch'")));
-        assert!(r.iter().any(|a| a.detail.contains("owner='dispatch'") && a.detail.contains("member_count=12")));
+        assert!(r.iter().any(|a| a.detail.contains("channel='Ops Channel'")
+            && a.detail.contains("sender='dispatch'")));
+        assert!(
+            r.iter()
+                .any(|a| a.detail.contains("owner='dispatch'")
+                    && a.detail.contains("member_count=12"))
+        );
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

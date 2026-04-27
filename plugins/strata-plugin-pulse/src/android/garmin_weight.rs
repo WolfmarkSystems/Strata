@@ -44,10 +44,7 @@ fn read_weight(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> 
         let weight_kg = weight.unwrap_or(0.0);
         let ts = date; // seconds
         let title = format!("Garmin weight: {:.2}kg", weight_kg);
-        let detail = format!(
-            "Garmin weight sample_pk={} weight_kg={:.2}",
-            pk, weight_kg
-        );
+        let detail = format!("Garmin weight sample_pk={} weight_kg={:.2}", pk, weight_kg);
         out.push(build_record(
             ArtifactCategory::UserActivity,
             "Garmin Weight",
@@ -112,7 +109,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

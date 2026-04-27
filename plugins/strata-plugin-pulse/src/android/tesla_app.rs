@@ -116,7 +116,21 @@ fn read_drives(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Art
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, vehicle_id, started_ms, _ended_ms, start_addr, end_addr, start_lat, start_lon, end_lat, end_lon, distance, energy) in rows.flatten() {
+    for (
+        id,
+        vehicle_id,
+        started_ms,
+        _ended_ms,
+        start_addr,
+        end_addr,
+        start_lat,
+        start_lon,
+        end_lat,
+        end_lon,
+        distance,
+        energy,
+    ) in rows.flatten()
+    {
         let id = id.unwrap_or_default();
         let vehicle_id = vehicle_id.unwrap_or_default();
         let start_addr = start_addr.unwrap_or_default();
@@ -177,7 +191,9 @@ fn read_charging(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<A
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, vehicle_id, started_ms, _ended_ms, charger_type, kwh, loc_name, lat, lon) in rows.flatten() {
+    for (id, vehicle_id, started_ms, _ended_ms, charger_type, kwh, loc_name, lat, lon) in
+        rows.flatten()
+    {
         let id = id.unwrap_or_default();
         let vehicle_id = vehicle_id.unwrap_or_default();
         let charger_type = charger_type.unwrap_or_default();
@@ -272,7 +288,9 @@ mod tests {
     fn vin_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("vin='5YJ3E1EA4LF123456'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("vin='5YJ3E1EA4LF123456'")));
     }
 
     #[test]
@@ -296,7 +314,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

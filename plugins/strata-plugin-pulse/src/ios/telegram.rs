@@ -59,7 +59,8 @@ mod tests {
         let p = root.join("db.sqlite");
         let c = Connection::open(&p).unwrap();
         for i in 0..tables {
-            c.execute(&format!("CREATE TABLE t{} (k INT)", i), []).unwrap();
+            c.execute(&format!("CREATE TABLE t{} (k INT)", i), [])
+                .unwrap();
         }
         (dir, p)
     }

@@ -31,7 +31,11 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     out
 }
 
-fn read_watch_history(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
+fn read_watch_history(
+    conn: &rusqlite::Connection,
+    path: &Path,
+    table: &str,
+) -> Vec<ArtifactRecord> {
     let sql = format!(
         "SELECT video_id, title, owner_name, watched_at, duration \
          FROM \"{table}\" ORDER BY watched_at DESC LIMIT 5000",
@@ -79,7 +83,11 @@ fn read_watch_history(conn: &rusqlite::Connection, path: &Path, table: &str) -> 
     out
 }
 
-fn read_search_history(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
+fn read_search_history(
+    conn: &rusqlite::Connection,
+    path: &Path,
+    table: &str,
+) -> Vec<ArtifactRecord> {
     let sql = format!(
         "SELECT query, searched_at \
          FROM \"{table}\" ORDER BY searched_at DESC LIMIT 5000",
@@ -160,7 +168,10 @@ mod tests {
     fn watch_duration_and_owner_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let w = r.iter().find(|a| a.subcategory == "Dailymotion Watch" && a.detail.contains("x7abc")).unwrap();
+        let w = r
+            .iter()
+            .find(|a| a.subcategory == "Dailymotion Watch" && a.detail.contains("x7abc"))
+            .unwrap();
         assert!(w.detail.contains("duration=180s"));
         assert!(w.detail.contains("owner='CatLovers'"));
     }
@@ -176,7 +187,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

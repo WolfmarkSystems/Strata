@@ -95,9 +95,7 @@ pub fn analyse(
     expected_if_full_retention: u64,
     historical: Vec<HistoricalRetention>,
 ) -> MessageRetentionSetting {
-    let setting_has_changed = historical
-        .iter()
-        .any(|h| h.setting != current_setting);
+    let setting_has_changed = historical.iter().any(|h| h.setting != current_setting);
 
     let messages_expected_present = match current_setting {
         MessageRetention::Forever => Some(expected_if_full_retention),
@@ -131,8 +129,7 @@ pub fn analyse(
     } else {
         (
             false,
-            "Retention setting would purge older messages; gap is expected, not suspicious."
-                .into(),
+            "Retention setting would purge older messages; gap is expected, not suspicious.".into(),
         )
     };
 
@@ -206,13 +203,7 @@ mod tests {
             detected_at: Utc::now() - Duration::days(30),
             source: "plist_backup".into(),
         }];
-        let result = analyse(
-            MessageRetention::ThirtyDays,
-            90,
-            1,
-            10,
-            history,
-        );
+        let result = analyse(MessageRetention::ThirtyDays, 90, 1, 10, history);
         assert!(result.gap_detected);
         assert!(result.gap_explanation.contains("ALERT"));
     }

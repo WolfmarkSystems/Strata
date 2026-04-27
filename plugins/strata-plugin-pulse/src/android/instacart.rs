@@ -51,7 +51,9 @@ fn read_orders(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Art
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (order_id, retailer, placed_ms, total, address, shopper, status, item_count) in rows.flatten() {
+    for (order_id, retailer, placed_ms, total, address, shopper, status, item_count) in
+        rows.flatten()
+    {
         let order_id = order_id.unwrap_or_else(|| "(unknown)".to_string());
         let retailer = retailer.unwrap_or_else(|| "(unknown)".to_string());
         let total = total.unwrap_or_default();
@@ -139,7 +141,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

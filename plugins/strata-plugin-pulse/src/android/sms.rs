@@ -60,9 +60,9 @@ fn sms_type_name(code: i64) -> &'static str {
 }
 
 fn read_sms(conn: &Connection, path: &Path) -> Vec<ArtifactRecord> {
-    let mut stmt = match conn.prepare(
-        "SELECT address, body, date, type, read FROM sms ORDER BY date DESC LIMIT 10000",
-    ) {
+    let mut stmt = match conn
+        .prepare("SELECT address, body, date, type, read FROM sms ORDER BY date DESC LIMIT 10000")
+    {
         Ok(s) => s,
         Err(_) => return Vec::new(),
     };
@@ -160,7 +160,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE irrelevant(x INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE irrelevant(x INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

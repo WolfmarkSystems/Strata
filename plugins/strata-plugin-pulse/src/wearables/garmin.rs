@@ -71,7 +71,7 @@ pub fn parse_activities(conn: &Connection) -> Vec<GarminActivity> {
             start_time: Utc
                 .timestamp_opt(start_ms / 1000, 0)
                 .single()
-                .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap()),
+                .unwrap_or_else(unix_epoch),
             duration_seconds: dur.max(0) as u32,
             distance_meters: dist,
             gps_points: Vec::new(),
@@ -80,6 +80,10 @@ pub fn parse_activities(conn: &Connection) -> Vec<GarminActivity> {
             device_model: device,
         })
         .collect()
+}
+
+fn unix_epoch() -> DateTime<Utc> {
+    DateTime::<Utc>::from(std::time::UNIX_EPOCH)
 }
 
 /// Minimal FIT-file header probe (14-byte header: size + protocol +

@@ -123,14 +123,20 @@ mod tests {
     fn parses_reservations() {
         let db = make_db();
         let r = parse(db.path());
-        assert_eq!(r.iter().filter(|a| a.subcategory == "SpotHero Reservation").count(), 2);
+        assert_eq!(
+            r.iter()
+                .filter(|a| a.subcategory == "SpotHero Reservation")
+                .count(),
+            2
+        );
     }
 
     #[test]
     fn gps_and_vehicle_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("lat=41.883000") && a.detail.contains("vehicle='Honda Civic - ABC123'")));
+        assert!(r.iter().any(|a| a.detail.contains("lat=41.883000")
+            && a.detail.contains("vehicle='Honda Civic - ABC123'")));
     }
 
     #[test]
@@ -144,7 +150,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -104,7 +104,11 @@ fn read_lights(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> 
         let model = model.unwrap_or_default();
         let room = room.unwrap_or_default();
         let on_state = on_state.unwrap_or(0) != 0;
-        let title = format!("Hue light: {} ({})", name, if on_state { "on" } else { "off" });
+        let title = format!(
+            "Hue light: {} ({})",
+            name,
+            if on_state { "on" } else { "off" }
+        );
         let detail = format!(
             "Philips Hue light id='{}' name='{}' model='{}' room='{}' on={}",
             id, name, model, room, on_state
@@ -223,22 +227,29 @@ mod tests {
     fn bridge_mac_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("mac='00:17:88:AA:BB:CC'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("mac='00:17:88:AA:BB:CC'")));
     }
 
     #[test]
     fn light_on_state_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("Kitchen") && a.title.contains("on")));
-        assert!(r.iter().any(|a| a.title.contains("Bedroom") && a.title.contains("off")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Kitchen") && a.title.contains("on")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Bedroom") && a.title.contains("off")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

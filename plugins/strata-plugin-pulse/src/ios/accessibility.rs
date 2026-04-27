@@ -3,9 +3,9 @@
 //! Indicates VoiceOver, AssistiveTouch, BoldText, etc. May help
 //! characterise the device user (visual/motor impairment indicators).
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["com.apple.accessibility.plist"])
@@ -13,7 +13,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     let source = path.to_string_lossy().to_string();
     vec![ArtifactRecord {
         category: ArtifactCategory::SystemActivity,
@@ -37,8 +39,12 @@ mod tests {
 
     #[test]
     fn matches_accessibility_plist() {
-        assert!(matches(Path::new("/var/mobile/Library/Preferences/com.apple.Accessibility.plist")));
-        assert!(!matches(Path::new("/var/mobile/Library/Preferences/com.apple.wifi.plist")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/Preferences/com.apple.Accessibility.plist"
+        )));
+        assert!(!matches(Path::new(
+            "/var/mobile/Library/Preferences/com.apple.wifi.plist"
+        )));
     }
 
     #[test]

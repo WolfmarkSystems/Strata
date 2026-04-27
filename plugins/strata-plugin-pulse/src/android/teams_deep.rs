@@ -241,7 +241,10 @@ mod tests {
     fn channel_message_has_team_and_sender() {
         let db = make_db();
         let r = parse(db.path());
-        let m = r.iter().find(|a| a.subcategory == "Teams Channel Message").unwrap();
+        let m = r
+            .iter()
+            .find(|a| a.subcategory == "Teams Channel Message")
+            .unwrap();
         assert!(m.detail.contains("team_name='Engineering'"));
         assert!(m.detail.contains("sender='alice'"));
     }
@@ -250,7 +253,10 @@ mod tests {
     fn shared_file_size_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let f = r.iter().find(|a| a.subcategory == "Teams Shared File").unwrap();
+        let f = r
+            .iter()
+            .find(|a| a.subcategory == "Teams Shared File")
+            .unwrap();
         assert!(f.detail.contains("size=51200"));
     }
 
@@ -258,7 +264,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

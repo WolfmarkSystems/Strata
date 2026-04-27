@@ -53,7 +53,8 @@ fn read_orders(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Art
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (uuid, restaurant, rest_uuid, placed_ms, total, address, lat, lon, status) in rows.flatten() {
+    for (uuid, restaurant, rest_uuid, placed_ms, total, address, lat, lon, status) in rows.flatten()
+    {
         let uuid = uuid.unwrap_or_else(|| "(unknown)".to_string());
         let restaurant = restaurant.unwrap_or_else(|| "(unknown)".to_string());
         let rest_uuid = rest_uuid.unwrap_or_default();
@@ -127,8 +128,12 @@ mod tests {
     fn delivery_address_and_gps() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("delivery_address='123 Main St'")));
-        assert!(r.iter().any(|a| a.detail.contains("delivery_lat=37.774900")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("delivery_address='123 Main St'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("delivery_lat=37.774900")));
     }
 
     #[test]
@@ -143,7 +148,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

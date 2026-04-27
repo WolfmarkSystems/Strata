@@ -4,9 +4,9 @@
 //! Shows which third-party apps had health data access and which
 //! Apple Watch contributed readings.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["healthdb_secure.sqlite"])
@@ -14,23 +14,31 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "data_provenances") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "data_provenances") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
 
     let by_source = conn
         .prepare(
             "SELECT COALESCE(origin_product_type, '(unknown)'), COUNT(*) \
              FROM data_provenances GROUP BY origin_product_type \
-             ORDER BY COUNT(*) DESC LIMIT 15"
+             ORDER BY COUNT(*) DESC LIMIT 15",
         )
         .and_then(|mut s| {
-            let r = s.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)))?;
+            let r = s.query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+            })?;
             Ok(r.flatten().collect::<Vec<_>>())
         })
         .unwrap_or_default();
 
-    if by_source.is_empty() { return out; }
+    if by_source.is_empty() {
+        return out;
+    }
 
     for (product, count) in by_source {
         out.push(ArtifactRecord {

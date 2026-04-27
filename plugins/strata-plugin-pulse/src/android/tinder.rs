@@ -185,7 +185,9 @@ mod tests {
     fn super_like_flag_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("super_like=true") && a.detail.contains("Bob")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("super_like=true") && a.detail.contains("Bob")));
     }
 
     #[test]
@@ -199,7 +201,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -6,9 +6,7 @@ use crate::android::helpers::{build_record, open_sqlite_ro, table_exists, unix_m
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "com.evernote/databases/",
-];
+pub const MATCHES: &[&str] = &["com.evernote/databases/"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {
@@ -43,13 +41,12 @@ fn read_notes(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
     for (title, created, updated, content_preview) in rows.flatten() {
         let title_str = title.unwrap_or_else(|| "(untitled)".to_string());
         let preview = content_preview.unwrap_or_default();
-        let ts = updated.and_then(unix_ms_to_i64).or(created.and_then(unix_ms_to_i64));
+        let ts = updated
+            .and_then(unix_ms_to_i64)
+            .or(created.and_then(unix_ms_to_i64));
         let snippet: String = preview.chars().take(120).collect();
         let display = format!("Evernote Note: {}", title_str);
-        let detail = format!(
-            "Evernote note title='{}' preview='{}'",
-            title_str, snippet
-        );
+        let detail = format!("Evernote note title='{}' preview='{}'", title_str, snippet);
         out.push(build_record(
             ArtifactCategory::UserActivity,
             "Evernote Note",
@@ -103,14 +100,17 @@ mod tests {
         let db = make_db();
         let r = parse(db.path());
         assert!(r.iter().any(|a| a.detail.contains("title='Work Notes'")));
-        assert!(r.iter().any(|a| a.detail.contains("preview='Quarterly review agenda items'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("preview='Quarterly review agenda items'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

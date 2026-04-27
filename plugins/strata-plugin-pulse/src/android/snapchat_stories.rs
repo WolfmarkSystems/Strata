@@ -8,7 +8,9 @@
 //! `story` or `story_snap` tables, with `user_id`, `timestamp`,
 //! `media_id`, and viewer tracking. Column names vary across versions.
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
@@ -174,8 +176,14 @@ mod tests {
     fn parses_stories_and_views() {
         let db = make_db();
         let r = parse(db.path());
-        let stories: Vec<_> = r.iter().filter(|a| a.subcategory == "Snapchat Story").collect();
-        let views: Vec<_> = r.iter().filter(|a| a.subcategory == "Snapchat Story View").collect();
+        let stories: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Snapchat Story")
+            .collect();
+        let views: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Snapchat Story View")
+            .collect();
         assert_eq!(stories.len(), 3);
         assert_eq!(views.len(), 1);
     }
@@ -198,7 +206,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

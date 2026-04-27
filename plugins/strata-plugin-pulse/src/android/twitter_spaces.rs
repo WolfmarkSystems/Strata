@@ -55,7 +55,18 @@ fn read_spaces(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Art
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (space_id, host_id, host_name, space_title, started_ms, _ended_ms, participants, is_recording, state) in rows.flatten() {
+    for (
+        space_id,
+        host_id,
+        host_name,
+        space_title,
+        started_ms,
+        _ended_ms,
+        participants,
+        is_recording,
+        state,
+    ) in rows.flatten()
+    {
         let space_id = space_id.unwrap_or_else(|| "(unknown)".to_string());
         let host_id = host_id.unwrap_or_default();
         let host_name = host_name.unwrap_or_default();
@@ -131,14 +142,17 @@ mod tests {
     fn recording_flag_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("recording=true") && a.detail.contains("state='ended'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("recording=true") && a.detail.contains("state='ended'")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

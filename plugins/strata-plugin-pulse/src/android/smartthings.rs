@@ -171,8 +171,14 @@ mod tests {
     fn parses_devices_and_locations() {
         let db = make_db();
         let r = parse(db.path());
-        let devs: Vec<_> = r.iter().filter(|a| a.subcategory == "SmartThings Device").collect();
-        let locs: Vec<_> = r.iter().filter(|a| a.subcategory == "SmartThings Location").collect();
+        let devs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "SmartThings Device")
+            .collect();
+        let locs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "SmartThings Location")
+            .collect();
         assert_eq!(devs.len(), 2);
         assert_eq!(locs.len(), 1);
     }
@@ -181,7 +187,9 @@ mod tests {
     fn device_manufacturer_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("manufacturer='Philips'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("manufacturer='Philips'")));
         assert!(r.iter().any(|a| a.detail.contains("manufacturer='August'")));
     }
 
@@ -189,7 +197,10 @@ mod tests {
     fn home_location_coordinates() {
         let db = make_db();
         let r = parse(db.path());
-        let home = r.iter().find(|a| a.subcategory == "SmartThings Location").unwrap();
+        let home = r
+            .iter()
+            .find(|a| a.subcategory == "SmartThings Location")
+            .unwrap();
         assert!(home.detail.contains("lat=37.774900"));
         assert!(home.detail.contains("radius=100m"));
     }
@@ -198,7 +209,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

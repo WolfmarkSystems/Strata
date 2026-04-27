@@ -43,10 +43,7 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         subcategory: "Mail".to_string(),
         timestamp: first,
         title: "Apple Mail Envelope Index".to_string(),
-        detail: format!(
-            "{} messages, range {:?}..{:?} Unix",
-            messages, first, last
-        ),
+        detail: format!("{} messages, range {:?}..{:?} Unix", messages, first, last),
         source_path: source.clone(),
         forensic_value: ForensicValue::High,
         mitre_technique: Some("T1114".to_string()),
@@ -92,9 +89,21 @@ mod tests {
         let p = dir.path().join("Envelope Index");
         let c = Connection::open(&p).unwrap();
         c.execute("CREATE TABLE messages (ROWID INTEGER PRIMARY KEY, sender INTEGER, date_received INTEGER)", []).unwrap();
-        c.execute("CREATE TABLE addresses (ROWID INTEGER PRIMARY KEY, address TEXT)", []).unwrap();
-        c.execute("CREATE TABLE subjects (ROWID INTEGER PRIMARY KEY, subject TEXT)", []).unwrap();
-        c.execute("CREATE TABLE mailboxes (ROWID INTEGER PRIMARY KEY, url TEXT)", []).unwrap();
+        c.execute(
+            "CREATE TABLE addresses (ROWID INTEGER PRIMARY KEY, address TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE subjects (ROWID INTEGER PRIMARY KEY, subject TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE mailboxes (ROWID INTEGER PRIMARY KEY, url TEXT)",
+            [],
+        )
+        .unwrap();
         for i in 0..messages {
             c.execute(
                 "INSERT INTO messages (sender, date_received) VALUES (1, ?1)",

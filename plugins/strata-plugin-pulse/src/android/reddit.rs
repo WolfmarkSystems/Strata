@@ -42,7 +42,11 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     out
 }
 
-fn read_subscriptions(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<ArtifactRecord> {
+fn read_subscriptions(
+    conn: &rusqlite::Connection,
+    path: &Path,
+    table: &str,
+) -> Vec<ArtifactRecord> {
     let sql = format!(
         "SELECT display_name, title, subscribers, is_nsfw \
          FROM \"{table}\" LIMIT 5000",
@@ -81,7 +85,11 @@ fn read_subscriptions(conn: &rusqlite::Connection, path: &Path, table: &str) -> 
             detail,
             path,
             None,
-            if is_nsfw { ForensicValue::High } else { ForensicValue::Medium },
+            if is_nsfw {
+                ForensicValue::High
+            } else {
+                ForensicValue::Medium
+            },
             is_nsfw,
         ));
     }
@@ -236,7 +244,10 @@ mod tests {
     fn saved_post_url_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let saved = r.iter().find(|a| a.subcategory == "Reddit Saved Post").unwrap();
+        let saved = r
+            .iter()
+            .find(|a| a.subcategory == "Reddit Saved Post")
+            .unwrap();
         assert!(saved.detail.contains("url='https://example.com'"));
         assert!(saved.detail.contains("subreddit='r/programming'"));
     }
@@ -245,7 +256,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

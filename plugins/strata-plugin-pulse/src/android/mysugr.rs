@@ -51,7 +51,9 @@ fn read_entries(conn: &rusqlite::Connection, path: &Path, table: &str) -> Vec<Ar
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, ts_ms, blood_sugar, carbs, bolus, basal, activity_duration, note, tags) in rows.flatten() {
+    for (id, ts_ms, blood_sugar, carbs, bolus, basal, activity_duration, note, tags) in
+        rows.flatten()
+    {
         let id = id.unwrap_or_default();
         let blood_sugar = blood_sugar.unwrap_or(0);
         let carbs = carbs.unwrap_or(0.0);
@@ -127,7 +129,9 @@ mod tests {
     fn note_and_tags_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("note='Before lunch'") && a.detail.contains("tags='meal'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("note='Before lunch'") && a.detail.contains("tags='meal'")));
     }
 
     #[test]
@@ -141,7 +145,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

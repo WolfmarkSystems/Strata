@@ -3,9 +3,9 @@
 //! `ZCLOUDRECORDING` has title, creation date (Cocoa seconds),
 //! duration, label preset. May reveal evidentiary recordings.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["recordings.db", "cloudrecordings.db"])
@@ -14,11 +14,15 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
 
     for table in ["ZCLOUDRECORDING", "ZRECORDING"] {
-        if !util::table_exists(&conn, table) { continue; }
+        if !util::table_exists(&conn, table) {
+            continue;
+        }
         let count = util::count_rows(&conn, table);
         let ts = conn
             .prepare(&format!("SELECT MIN(ZCREATIONDATE), MAX(ZCREATIONDATE) FROM {} WHERE ZCREATIONDATE IS NOT NULL", table))
@@ -30,7 +34,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             subcategory: "Voice Memos".to_string(),
             timestamp: first,
             title: "iOS Voice Memos recordings".to_string(),
-            detail: format!("{} {} rows (audio recording metadata, not bytes)", count, table),
+            detail: format!(
+                "{} {} rows (audio recording metadata, not bytes)",
+                count, table
+            ),
             source_path: source.clone(),
             forensic_value: ForensicValue::High,
             mitre_technique: Some("T1005".to_string()),
@@ -67,7 +74,10 @@ mod tests {
         let recs = parse(&p);
         assert_eq!(recs.len(), 1);
         assert!(recs[0].detail.contains("1 ZCLOUDRECORDING"));
-        assert_eq!(recs[0].timestamp, Some(700_000_000 + util::APPLE_EPOCH_OFFSET));
+        assert_eq!(
+            recs[0].timestamp,
+            Some(700_000_000 + util::APPLE_EPOCH_OFFSET)
+        );
     }
 
     #[test]

@@ -197,7 +197,10 @@ mod tests {
     fn parses_boarding_pass() {
         let db = make_db();
         let r = parse(db.path());
-        let bp: Vec<_> = r.iter().filter(|a| a.subcategory == "Delta Boarding Pass").collect();
+        let bp: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Delta Boarding Pass")
+            .collect();
         assert_eq!(bp.len(), 1);
         assert!(bp[0].detail.contains("pnr='ZRWT1Q'"));
         assert!(bp[0].detail.contains("gate='D14'"));
@@ -207,7 +210,10 @@ mod tests {
     fn parses_skymiles_account() {
         let db = make_db();
         let r = parse(db.path());
-        let ff: Vec<_> = r.iter().filter(|a| a.subcategory == "SkyMiles Account").collect();
+        let ff: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "SkyMiles Account")
+            .collect();
         assert_eq!(ff.len(), 1);
         assert!(ff[0].detail.contains("miles=112000"));
         assert!(ff[0].detail.contains("status='Platinum'"));
@@ -217,15 +223,21 @@ mod tests {
     fn boarding_pass_forensic_value_is_critical() {
         let db = make_db();
         let r = parse(db.path());
-        let bp: Vec<_> = r.iter().filter(|a| a.subcategory == "Delta Boarding Pass").collect();
-        assert!(bp.iter().all(|a| a.forensic_value == ForensicValue::Critical));
+        let bp: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Delta Boarding Pass")
+            .collect();
+        assert!(bp
+            .iter()
+            .all(|a| a.forensic_value == ForensicValue::Critical));
     }
 
     #[test]
     fn missing_tables_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

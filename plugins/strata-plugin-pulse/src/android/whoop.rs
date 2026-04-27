@@ -146,7 +146,9 @@ fn read_sleep(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (cycle_id, started_ms, _ended_ms, performance, rem, sws, light, awake, disturbances) in rows.flatten() {
+    for (cycle_id, started_ms, _ended_ms, performance, rem, sws, light, awake, disturbances) in
+        rows.flatten()
+    {
         let cycle_id = cycle_id.unwrap_or_default();
         let performance = performance.unwrap_or(0.0);
         let rem = rem.unwrap_or(0);
@@ -246,7 +248,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

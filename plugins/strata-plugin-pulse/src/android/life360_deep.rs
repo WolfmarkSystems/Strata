@@ -129,7 +129,10 @@ fn read_crash_detection(
         let severity = severity.unwrap_or_else(|| "unknown".to_string());
         let emergency_dispatched = emergency.unwrap_or(0) != 0;
         let ts = ts_ms.and_then(unix_ms_to_i64);
-        let title = format!("Life360 crash detection: {} severity={}", crash_id, severity);
+        let title = format!(
+            "Life360 crash detection: {} severity={}",
+            crash_id, severity
+        );
         let mut detail = format!(
             "Life360 crash_detection crash_id='{}' severity='{}' emergency_dispatched={}",
             crash_id, severity, emergency_dispatched
@@ -266,7 +269,10 @@ mod tests {
     fn driving_event_speed_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let ev = r.iter().find(|a| a.subcategory == "Life360 Driving Event" && a.detail.contains("hard_brake")).unwrap();
+        let ev = r
+            .iter()
+            .find(|a| a.subcategory == "Life360 Driving Event" && a.detail.contains("hard_brake"))
+            .unwrap();
         assert!(ev.detail.contains("speed_mph=45.5"));
         assert!(ev.detail.contains("lat=37.774900"));
     }
@@ -284,7 +290,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

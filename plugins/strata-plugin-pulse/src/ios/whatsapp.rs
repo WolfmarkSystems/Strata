@@ -13,8 +13,7 @@ use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 use super::util;
 
 pub fn matches(path: &Path) -> bool {
-    util::name_is(path, &["chatstorage.sqlite"])
-        && util::path_contains(path, "whatsapp")
+    util::name_is(path, &["chatstorage.sqlite"]) && util::path_contains(path, "whatsapp")
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
@@ -54,9 +53,21 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     });
 
     for (table, label, fv) in [
-        ("ZWACHATSESSION", "WhatsApp chat sessions", ForensicValue::High),
-        ("ZWAGROUPMEMBER", "WhatsApp group members", ForensicValue::High),
-        ("ZWAMEDIAITEM", "WhatsApp attachments (metadata only)", ForensicValue::High),
+        (
+            "ZWACHATSESSION",
+            "WhatsApp chat sessions",
+            ForensicValue::High,
+        ),
+        (
+            "ZWAGROUPMEMBER",
+            "WhatsApp group members",
+            ForensicValue::High,
+        ),
+        (
+            "ZWAMEDIAITEM",
+            "WhatsApp attachments (metadata only)",
+            ForensicValue::High,
+        ),
     ] {
         if util::table_exists(&conn, table) {
             let n = util::count_rows(&conn, table);
@@ -91,10 +102,26 @@ mod tests {
         std::fs::create_dir_all(&waroot).unwrap();
         let p = waroot.join("ChatStorage.sqlite");
         let c = Connection::open(&p).unwrap();
-        c.execute("CREATE TABLE ZWAMESSAGE (Z_PK INTEGER PRIMARY KEY, ZTEXT TEXT, ZMESSAGEDATE DOUBLE)", []).unwrap();
-        c.execute("CREATE TABLE ZWACHATSESSION (Z_PK INTEGER PRIMARY KEY, ZPARTNERNAME TEXT)", []).unwrap();
-        c.execute("CREATE TABLE ZWAGROUPMEMBER (Z_PK INTEGER PRIMARY KEY, ZMEMBERJID TEXT)", []).unwrap();
-        c.execute("CREATE TABLE ZWAMEDIAITEM (Z_PK INTEGER PRIMARY KEY, ZMEDIALOCALPATH TEXT)", []).unwrap();
+        c.execute(
+            "CREATE TABLE ZWAMESSAGE (Z_PK INTEGER PRIMARY KEY, ZTEXT TEXT, ZMESSAGEDATE DOUBLE)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE ZWACHATSESSION (Z_PK INTEGER PRIMARY KEY, ZPARTNERNAME TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE ZWAGROUPMEMBER (Z_PK INTEGER PRIMARY KEY, ZMEMBERJID TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE ZWAMEDIAITEM (Z_PK INTEGER PRIMARY KEY, ZMEDIALOCALPATH TEXT)",
+            [],
+        )
+        .unwrap();
         for i in 0..rows {
             c.execute(
                 "INSERT INTO ZWAMESSAGE (ZTEXT, ZMESSAGEDATE) VALUES (?1, ?2)",
@@ -102,24 +129,37 @@ mod tests {
             )
             .unwrap();
         }
-        c.execute("INSERT INTO ZWACHATSESSION (ZPARTNERNAME) VALUES ('Alice')", []).unwrap();
+        c.execute(
+            "INSERT INTO ZWACHATSESSION (ZPARTNERNAME) VALUES ('Alice')",
+            [],
+        )
+        .unwrap();
         (dir, p)
     }
 
     #[test]
     fn matches_chatstorage_under_whatsapp_path() {
-        assert!(matches(Path::new("/var/mobile/Containers/Shared/AppGroup/UUID/whatsapp/Documents/ChatStorage.sqlite")));
-        assert!(!matches(Path::new("/var/mobile/Library/SMS/ChatStorage.sqlite")));
+        assert!(matches(Path::new(
+            "/var/mobile/Containers/Shared/AppGroup/UUID/whatsapp/Documents/ChatStorage.sqlite"
+        )));
+        assert!(!matches(Path::new(
+            "/var/mobile/Library/SMS/ChatStorage.sqlite"
+        )));
     }
 
     #[test]
     fn parses_messages_and_session_counts() {
         let (_d, p) = make_chatstorage(3);
         let recs = parse(&p);
-        let m = recs.iter().find(|r| r.subcategory == "WhatsApp messages").unwrap();
+        let m = recs
+            .iter()
+            .find(|r| r.subcategory == "WhatsApp messages")
+            .unwrap();
         assert!(m.detail.contains("3 ZWAMESSAGE"));
         assert_eq!(m.forensic_value, ForensicValue::Critical);
-        assert!(recs.iter().any(|r| r.subcategory == "WhatsApp ZWACHATSESSION"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "WhatsApp ZWACHATSESSION"));
     }
 
     #[test]

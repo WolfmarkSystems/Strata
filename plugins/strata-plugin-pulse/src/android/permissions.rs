@@ -10,10 +10,7 @@ use crate::android::helpers::{build_record, open_sqlite_ro, table_exists};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "runtime-permissions.db",
-    "runtime-permissions/",
-];
+pub const MATCHES: &[&str] = &["runtime-permissions.db", "runtime-permissions/"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {
@@ -82,7 +79,11 @@ fn read_permissions(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRec
             detail,
             path,
             None,
-            if dangerous { ForensicValue::High } else { ForensicValue::Low },
+            if dangerous {
+                ForensicValue::High
+            } else {
+                ForensicValue::Low
+            },
             dangerous,
         ));
     }
@@ -124,7 +125,11 @@ fn read_permissions_legacy(conn: &rusqlite::Connection, path: &Path) -> Vec<Arti
             detail,
             path,
             None,
-            if dangerous { ForensicValue::High } else { ForensicValue::Low },
+            if dangerous {
+                ForensicValue::High
+            } else {
+                ForensicValue::Low
+            },
             dangerous,
         ));
     }
@@ -186,7 +191,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

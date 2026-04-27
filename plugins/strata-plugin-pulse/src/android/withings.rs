@@ -230,7 +230,10 @@ mod tests {
     fn device_mac_address_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let d = r.iter().find(|a| a.subcategory == "Withings Device").unwrap();
+        let d = r
+            .iter()
+            .find(|a| a.subcategory == "Withings Device")
+            .unwrap();
         assert!(d.detail.contains("mac='AA:BB:CC:DD:EE:FF'"));
         assert!(d.detail.contains("model='Body+'"));
     }
@@ -239,7 +242,10 @@ mod tests {
     fn workout_location_gps() {
         let db = make_db();
         let r = parse(db.path());
-        let l = r.iter().find(|a| a.subcategory == "Withings Location").unwrap();
+        let l = r
+            .iter()
+            .find(|a| a.subcategory == "Withings Location")
+            .unwrap();
         assert!(l.detail.contains("lat=37.774900"));
     }
 
@@ -247,7 +253,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

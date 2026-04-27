@@ -98,7 +98,9 @@ fn read_sleep(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (ts_ms, bedtime_start, _bedtime_end, total, score, deep, rem, light, efficiency) in rows.flatten() {
+    for (ts_ms, bedtime_start, _bedtime_end, total, score, deep, rem, light, efficiency) in
+        rows.flatten()
+    {
         let total = total.unwrap_or(0);
         let score = score.unwrap_or(0);
         let deep = deep.unwrap_or(0);
@@ -235,7 +237,9 @@ mod tests {
     fn temperature_deviation_captured() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("temperature_deviation=0.20")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("temperature_deviation=0.20")));
     }
 
     #[test]
@@ -249,7 +253,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

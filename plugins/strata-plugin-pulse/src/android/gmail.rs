@@ -11,7 +11,9 @@
 //! - `dateSentMs` / `dateReceivedMs`
 //! - `snippet` (first ~120 chars of body)
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
@@ -157,7 +159,10 @@ mod tests {
     fn from_and_snippet_captured_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let urgent = r.iter().find(|m| m.detail.contains("eve@evilcorp.com")).unwrap();
+        let urgent = r
+            .iter()
+            .find(|m| m.detail.contains("eve@evilcorp.com"))
+            .unwrap();
         assert!(urgent.detail.contains("Urgent wire transfer"));
     }
 

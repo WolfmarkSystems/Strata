@@ -152,9 +152,7 @@ pub fn identify_platform(path: &Path) -> Option<&'static str> {
     if lower.contains("/tencent/wechat/") && name.starts_with("msg") && name.ends_with(".db") {
         return Some("WeChat");
     }
-    if lower.contains("/line/data/")
-        && (name == "lineqcchat.db" || name == "naver_line.db")
-    {
+    if lower.contains("/line/data/") && (name == "lineqcchat.db" || name == "naver_line.db") {
         return Some("Line");
     }
     None
@@ -210,7 +208,9 @@ mod tests {
         drop(conn);
         let out = parse_viber(&path);
         assert!(out.iter().any(|a| a.artifact_subtype == "Message"));
-        assert!(out.iter().any(|a| a.artifact_subtype == "Call" && a.call_duration_secs == Some(42)));
+        assert!(out
+            .iter()
+            .any(|a| a.artifact_subtype == "Call" && a.call_duration_secs == Some(42)));
     }
 
     #[test]

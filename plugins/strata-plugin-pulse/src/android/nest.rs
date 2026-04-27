@@ -61,7 +61,10 @@ fn read_thermostat(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactReco
         let mode = mode.unwrap_or_default();
         let hvac_state = hvac_state.unwrap_or_default();
         let ts = ts_ms.and_then(unix_ms_to_i64);
-        let title = format!("Nest thermostat: {:.1}°→{:.1}° ({})", current_temp, target_temp, mode);
+        let title = format!(
+            "Nest thermostat: {:.1}°→{:.1}° ({})",
+            current_temp, target_temp, mode
+        );
         let detail = format!(
             "Nest thermostat device_id='{}' current_temp={:.1} target_temp={:.1} mode='{}' hvac_state='{}'",
             device_id, current_temp, target_temp, mode, hvac_state
@@ -104,7 +107,9 @@ fn read_camera(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> 
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, device_id, event_type, started_ms, _ended_ms, zone, has_person, has_sound) in rows.flatten() {
+    for (id, device_id, event_type, started_ms, _ended_ms, zone, has_person, has_sound) in
+        rows.flatten()
+    {
         let id = id.unwrap_or_default();
         let device_id = device_id.unwrap_or_else(|| "(unknown)".to_string());
         let event_type = event_type.unwrap_or_default();
@@ -241,7 +246,10 @@ mod tests {
     fn away_and_home_transitions_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let modes: Vec<_> = r.iter().filter(|a| a.subcategory == "Nest Home/Away").collect();
+        let modes: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Nest Home/Away")
+            .collect();
         assert_eq!(modes.len(), 2);
         assert!(modes.iter().any(|a| a.detail.contains("mode='away'")));
         assert!(modes.iter().any(|a| a.detail.contains("mode='home'")));
@@ -251,7 +259,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

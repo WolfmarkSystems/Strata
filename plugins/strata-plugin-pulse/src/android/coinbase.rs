@@ -214,8 +214,14 @@ mod tests {
     fn parses_accounts_and_transactions() {
         let db = make_db();
         let r = parse(db.path());
-        let accts: Vec<_> = r.iter().filter(|a| a.subcategory == "Coinbase Account").collect();
-        let txs: Vec<_> = r.iter().filter(|a| a.subcategory == "Coinbase Transaction").collect();
+        let accts: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Coinbase Account")
+            .collect();
+        let txs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Coinbase Transaction")
+            .collect();
         assert_eq!(accts.len(), 2);
         assert_eq!(txs.len(), 2);
     }
@@ -239,7 +245,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

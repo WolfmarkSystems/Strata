@@ -51,10 +51,7 @@ fn read_statuses(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
         let ts = created_ms.and_then(unix_ms_to_i64);
         let preview: String = body.chars().take(120).collect();
         let title = format!("Tweet by {}: {}", author, preview);
-        let mut detail = format!(
-            "Twitter status author='{}' content='{}'",
-            author, body
-        );
+        let mut detail = format!("Twitter status author='{}' content='{}'", author, body);
         if let Some(r) = reply_to.filter(|r| !r.is_empty()) {
             detail.push_str(&format!(" reply_to='{}'", r));
         }
@@ -154,7 +151,10 @@ mod tests {
     fn parses_statuses_and_conversations() {
         let db = make_db();
         let r = parse(db.path());
-        let tweets: Vec<_> = r.iter().filter(|a| a.subcategory == "Twitter Status").collect();
+        let tweets: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Twitter Status")
+            .collect();
         let dms: Vec<_> = r.iter().filter(|a| a.subcategory == "Twitter DM").collect();
         assert_eq!(tweets.len(), 3);
         assert_eq!(dms.len(), 1);
@@ -178,7 +178,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

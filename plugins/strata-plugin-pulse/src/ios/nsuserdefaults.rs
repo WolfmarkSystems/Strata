@@ -5,31 +5,49 @@
 //! feature flags, and onboarding state. This parser detects and
 //! inventories them.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
-    if !util::path_contains(path, "/preferences/") { return false; }
-    let n = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
+    if !util::path_contains(path, "/preferences/") {
+        return false;
+    }
+    let n = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
     // Match reverse-DNS plist names (at least 2 dots = com.xxx.yyy)
     n.ends_with(".plist") && n.matches('.').count() >= 3
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     let source = path.to_string_lossy().to_string();
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     // Extract bundle ID from filename (strip .plist)
-    let bundle = name.strip_suffix(".plist").or_else(|| name.strip_suffix(".PLIST")).unwrap_or(name);
+    let bundle = name
+        .strip_suffix(".plist")
+        .or_else(|| name.strip_suffix(".PLIST"))
+        .unwrap_or(name);
     vec![ArtifactRecord {
         category: ArtifactCategory::UserActivity,
-        subcategory: "NSUserDefaults".to_string(), timestamp: None,
+        subcategory: "NSUserDefaults".to_string(),
+        timestamp: None,
         title: format!("App preferences: {}", bundle),
-        detail: format!("{} ({} bytes) — user IDs, auth tokens, last-login, feature flags", bundle, size),
-        source_path: source, forensic_value: ForensicValue::Medium,
-        mitre_technique: None, is_suspicious: false, raw_data: None,
+        detail: format!(
+            "{} ({} bytes) — user IDs, auth tokens, last-login, feature flags",
+            bundle, size
+        ),
+        source_path: source,
+        forensic_value: ForensicValue::Medium,
+        mitre_technique: None,
+        is_suspicious: false,
+        raw_data: None,
         confidence: 0,
     }]
 }
@@ -41,9 +59,15 @@ mod tests {
 
     #[test]
     fn matches_reverse_dns_plists_in_preferences() {
-        assert!(matches(Path::new("/var/mobile/Library/Preferences/com.example.myapp.plist")));
-        assert!(!matches(Path::new("/var/mobile/Library/Preferences/com.apple.plist"))); // only 2 dots
-        assert!(!matches(Path::new("/var/mobile/Library/SMS/com.example.myapp.plist"))); // wrong dir
+        assert!(matches(Path::new(
+            "/var/mobile/Library/Preferences/com.example.myapp.plist"
+        )));
+        assert!(!matches(Path::new(
+            "/var/mobile/Library/Preferences/com.apple.plist"
+        ))); // only 2 dots
+        assert!(!matches(Path::new(
+            "/var/mobile/Library/SMS/com.example.myapp.plist"
+        ))); // wrong dir
     }
 
     #[test]

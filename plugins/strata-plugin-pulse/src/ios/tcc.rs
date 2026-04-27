@@ -8,9 +8,9 @@
 //! Extremely high forensic value — shows which apps had camera/mic
 //! access and when the user granted it.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["tcc.db"])
@@ -18,8 +18,12 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "access") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "access") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
     let total = util::count_rows(&conn, "access");
 
@@ -37,7 +41,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         subcategory: "TCC permissions".to_string(),
         timestamp: None,
         title: "iOS privacy permissions (TCC)".to_string(),
-        detail: format!("{} access rows (per-app camera/mic/photos/contacts/location grants)", total),
+        detail: format!(
+            "{} access rows (per-app camera/mic/photos/contacts/location grants)",
+            total
+        ),
         source_path: source.clone(),
         forensic_value: ForensicValue::Critical,
         mitre_technique: Some("T1005".to_string()),
@@ -81,7 +88,11 @@ mod tests {
         let c = Connection::open(tmp.path()).unwrap();
         c.execute("CREATE TABLE access (service TEXT, client TEXT, auth_value INTEGER, auth_reason INTEGER, last_modified INTEGER)", []).unwrap();
         for (svc, client, auth) in rows {
-            c.execute("INSERT INTO access VALUES (?1, ?2, ?3, 4, 1700000000)", rusqlite::params![*svc, *client, *auth]).unwrap();
+            c.execute(
+                "INSERT INTO access VALUES (?1, ?2, ?3, 4, 1700000000)",
+                rusqlite::params![*svc, *client, *auth],
+            )
+            .unwrap();
         }
         tmp
     }
@@ -100,10 +111,17 @@ mod tests {
             ("kTCCServiceMicrophone", "com.app.a", 2),
         ]);
         let recs = parse(tmp.path());
-        let summary = recs.iter().find(|r| r.subcategory == "TCC permissions").unwrap();
+        let summary = recs
+            .iter()
+            .find(|r| r.subcategory == "TCC permissions")
+            .unwrap();
         assert!(summary.detail.contains("3 access rows"));
-        assert!(recs.iter().any(|r| r.subcategory.contains("Camera") && r.subcategory.contains("allowed")));
-        assert!(recs.iter().any(|r| r.subcategory.contains("Camera") && r.subcategory.contains("denied")));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory.contains("Camera") && r.subcategory.contains("allowed")));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory.contains("Camera") && r.subcategory.contains("denied")));
     }
 
     #[test]

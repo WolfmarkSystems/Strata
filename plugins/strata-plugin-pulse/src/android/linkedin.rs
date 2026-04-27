@@ -95,7 +95,11 @@ fn extract_message_text(raw: &str) -> (String, String) {
         }
     } else {
         // Fallback: include the raw string as body if it's short
-        if raw.len() < 500 && raw.chars().all(|c| c.is_ascii_graphic() || c.is_whitespace()) {
+        if raw.len() < 500
+            && raw
+                .chars()
+                .all(|c| c.is_ascii_graphic() || c.is_whitespace())
+        {
             body = raw.to_string();
         }
     }
@@ -139,7 +143,9 @@ mod tests {
     fn json_body_extracted() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("body='Are you open to opportunities?'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("body='Are you open to opportunities?'")));
         assert!(r.iter().any(|a| a.detail.contains("subject='Job'")));
     }
 
@@ -154,7 +160,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -74,7 +74,12 @@ pub fn detect_store(path: &Path) -> Option<&'static str> {
     }
 }
 
-pub fn carve(bytes: &[u8], source_path: &str, app_name: &str, store_type: &str) -> Vec<ElectronArtifact> {
+pub fn carve(
+    bytes: &[u8],
+    source_path: &str,
+    app_name: &str,
+    store_type: &str,
+) -> Vec<ElectronArtifact> {
     let mut out = Vec::new();
     let mut i = 0usize;
     while i < bytes.len() {
@@ -160,7 +165,10 @@ mod tests {
     fn detect_app_recognises_known_apps() {
         assert_eq!(detect_app(Path::new("/x/Slack/storage/x.ldb")), "Slack");
         assert_eq!(detect_app(Path::new("/x/Notion/leveldb/y.ldb")), "Notion");
-        assert_eq!(detect_app(Path::new("/x/Unknown/file.ldb")), "Electron App (unknown)");
+        assert_eq!(
+            detect_app(Path::new("/x/Unknown/file.ldb")),
+            "Electron App (unknown)"
+        );
     }
 
     #[test]

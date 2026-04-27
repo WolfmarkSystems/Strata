@@ -37,7 +37,8 @@ pub struct WhatsAppFinding {
 
 pub fn is_whatsapp_path(path: &Path) -> bool {
     let lower = path.to_string_lossy().to_ascii_lowercase();
-    lower.contains("5319275a.whatsappdesktop_") || lower.contains("/whatsapp/")
+    lower.contains("5319275a.whatsappdesktop_")
+        || lower.contains("/whatsapp/")
         || lower.contains("\\whatsapp\\")
 }
 
@@ -123,7 +124,9 @@ pub fn parse(path: &Path) -> Option<WhatsAppFinding> {
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
         );
         finding.locked = match conn {
-            Ok(c) => c.pragma_query_value(None, "schema_version", |_| Ok(())).is_err(),
+            Ok(c) => c
+                .pragma_query_value(None, "schema_version", |_| Ok(()))
+                .is_err(),
             Err(_) => true,
         };
         return Some(finding);

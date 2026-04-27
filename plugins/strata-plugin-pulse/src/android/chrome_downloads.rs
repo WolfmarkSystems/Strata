@@ -14,7 +14,9 @@
 //! State codes: 0=in_progress, 1=complete, 2=cancelled, 3=interrupted.
 //! Danger codes 2..7 mean Chrome flagged the file as malicious.
 
-use crate::android::helpers::{build_record, chrome_to_unix, column_exists, open_sqlite_ro, table_exists};
+use crate::android::helpers::{
+    build_record, chrome_to_unix, column_exists, open_sqlite_ro, table_exists,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};

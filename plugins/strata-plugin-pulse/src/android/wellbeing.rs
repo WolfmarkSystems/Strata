@@ -75,7 +75,11 @@ fn read_events(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord> 
             detail,
             path,
             ts,
-            if suspicious { ForensicValue::High } else { ForensicValue::Low },
+            if suspicious {
+                ForensicValue::High
+            } else {
+                ForensicValue::Low
+            },
             suspicious,
         ));
     }
@@ -118,15 +122,22 @@ mod tests {
     fn event_types_mapped() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("event='ACTIVITY_RESUMED'")));
-        assert!(r.iter().any(|a| a.detail.contains("event='DEVICE_STARTUP'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("event='ACTIVITY_RESUMED'")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("event='DEVICE_STARTUP'")));
     }
 
     #[test]
     fn startup_is_suspicious() {
         let db = make_db();
         let r = parse(db.path());
-        let startup = r.iter().find(|a| a.detail.contains("DEVICE_STARTUP")).unwrap();
+        let startup = r
+            .iter()
+            .find(|a| a.detail.contains("DEVICE_STARTUP"))
+            .unwrap();
         assert!(startup.is_suspicious);
     }
 
@@ -134,7 +145,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

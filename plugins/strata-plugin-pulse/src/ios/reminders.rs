@@ -88,10 +88,7 @@ mod tests {
         for i in 0..total {
             let done: i64 = if i < completed { 1 } else { 0 };
             c.execute(
-                &format!(
-                    "INSERT INTO {} (ZTITLE, ZCOMPLETED) VALUES (?1, ?2)",
-                    table
-                ),
+                &format!("INSERT INTO {} (ZTITLE, ZCOMPLETED) VALUES (?1, ?2)", table),
                 rusqlite::params![format!("todo {}", i), done],
             )
             .unwrap();

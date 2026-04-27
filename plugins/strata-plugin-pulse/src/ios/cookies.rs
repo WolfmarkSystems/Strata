@@ -17,11 +17,14 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     let source = path.to_string_lossy().to_string();
 
     // Infer the owning app from the parent directory path
-    let app_hint = path.parent()
+    let app_hint = path
+        .parent()
         .and_then(|p| p.parent())
         .and_then(|p| p.file_name())
         .and_then(|n| n.to_str())
@@ -32,7 +35,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
         subcategory: "Cookies".to_string(),
         timestamp: None,
         title: format!("iOS binary cookies ({})", app_hint),
-        detail: format!("Cookies.binarycookies ({} bytes) — session tokens, tracking cookies, auth state", size),
+        detail: format!(
+            "Cookies.binarycookies ({} bytes) — session tokens, tracking cookies, auth state",
+            size
+        ),
         source_path: source,
         forensic_value: ForensicValue::High,
         mitre_technique: Some("T1539".to_string()),
@@ -49,7 +55,9 @@ mod tests {
 
     #[test]
     fn matches_cookie_files() {
-        assert!(matches(Path::new("/var/mobile/Containers/Data/Application/UUID/Library/Cookies/Cookies.binarycookies")));
+        assert!(matches(Path::new(
+            "/var/mobile/Containers/Data/Application/UUID/Library/Cookies/Cookies.binarycookies"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 

@@ -4,24 +4,31 @@
 //! QR codes, or Safari links. They record which real-world locations
 //! or businesses the user interacted with.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::path_contains(path, "appclip") && {
-        let n = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_ascii_lowercase();
+        let n = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
         n.ends_with(".db") || n.ends_with(".sqlite") || n.ends_with(".plist")
     }
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-    if size == 0 { return Vec::new(); }
+    if size == 0 {
+        return Vec::new();
+    }
     let source = path.to_string_lossy().to_string();
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
-    if name.to_ascii_lowercase().ends_with(".db") || name.to_ascii_lowercase().ends_with(".sqlite") {
+    if name.to_ascii_lowercase().ends_with(".db") || name.to_ascii_lowercase().ends_with(".sqlite")
+    {
         if let Some(conn) = util::open_sqlite_ro(path) {
             let tables: Vec<String> = conn
                 .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
@@ -29,14 +36,23 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
                 .unwrap_or_default();
             if !tables.is_empty() {
                 let mut total = 0_i64;
-                for t in &tables { total += util::count_rows(&conn, t); }
+                for t in &tables {
+                    total += util::count_rows(&conn, t);
+                }
                 return vec![ArtifactRecord {
                     category: ArtifactCategory::UserActivity,
-                    subcategory: "App Clips".to_string(), timestamp: None,
+                    subcategory: "App Clips".to_string(),
+                    timestamp: None,
                     title: "iOS App Clips interaction history".to_string(),
-                    detail: format!("{} rows — NFC/QR/link-triggered app interactions at businesses", total),
-                    source_path: source, forensic_value: ForensicValue::High,
-                    mitre_technique: Some("T1430".to_string()), is_suspicious: false, raw_data: None,
+                    detail: format!(
+                        "{} rows — NFC/QR/link-triggered app interactions at businesses",
+                        total
+                    ),
+                    source_path: source,
+                    forensic_value: ForensicValue::High,
+                    mitre_technique: Some("T1430".to_string()),
+                    is_suspicious: false,
+                    raw_data: None,
                     confidence: 0,
                 }];
             }
@@ -46,11 +62,15 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
 
     vec![ArtifactRecord {
         category: ArtifactCategory::UserActivity,
-        subcategory: "App Clips".to_string(), timestamp: None,
+        subcategory: "App Clips".to_string(),
+        timestamp: None,
         title: "iOS App Clips config".to_string(),
         detail: format!("{} ({} bytes) — App Clip invocation history", name, size),
-        source_path: source, forensic_value: ForensicValue::High,
-        mitre_technique: None, is_suspicious: false, raw_data: None,
+        source_path: source,
+        forensic_value: ForensicValue::High,
+        mitre_technique: None,
+        is_suspicious: false,
+        raw_data: None,
         confidence: 0,
     }]
 }

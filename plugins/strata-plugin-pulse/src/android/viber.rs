@@ -53,7 +53,11 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
         let address = address.unwrap_or_else(|| "(unknown)".to_string());
         let body = body.unwrap_or_default();
         let ts = date_ms.and_then(unix_ms_to_i64);
-        let direction = if msg_type.unwrap_or(0) == 0 { "received" } else { "sent" };
+        let direction = if msg_type.unwrap_or(0) == 0 {
+            "received"
+        } else {
+            "sent"
+        };
         let preview: String = body.chars().take(120).collect();
         let title = format!("Viber {} {}: {}", direction, address, preview);
         let detail = format!(
@@ -200,9 +204,15 @@ mod tests {
     fn parses_messages_calls_contacts() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "Viber Message").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Viber Message")
+            .collect();
         let calls: Vec<_> = r.iter().filter(|a| a.subcategory == "Viber Call").collect();
-        let contacts: Vec<_> = r.iter().filter(|a| a.subcategory == "Viber Contact").collect();
+        let contacts: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Viber Contact")
+            .collect();
         assert_eq!(msgs.len(), 2);
         assert_eq!(calls.len(), 1);
         assert_eq!(contacts.len(), 1);
@@ -212,8 +222,12 @@ mod tests {
     fn message_direction_correct() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("received") && a.title.contains("Hello Viber")));
-        assert!(r.iter().any(|a| a.title.contains("sent") && a.title.contains("Reply")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("received") && a.title.contains("Hello Viber")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("sent") && a.title.contains("Reply")));
     }
 
     #[test]
@@ -229,7 +243,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

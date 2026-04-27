@@ -217,7 +217,10 @@ mod tests {
     fn macro_values_captured() {
         let db = make_db();
         let r = parse(db.path());
-        let d = r.iter().find(|a| a.subcategory == "MyFitnessPal Diary").unwrap();
+        let d = r
+            .iter()
+            .find(|a| a.subcategory == "MyFitnessPal Diary")
+            .unwrap();
         assert!(d.detail.contains("carbs_g=27.0"));
         assert!(d.detail.contains("protein_g=5.0"));
     }
@@ -226,14 +229,17 @@ mod tests {
     fn exercise_duration_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("Running") && a.title.contains("30 min")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("Running") && a.title.contains("30 min")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

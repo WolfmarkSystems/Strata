@@ -50,16 +50,15 @@ fn read_activities(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactReco
         return Vec::new();
     };
     let mut out = Vec::new();
-    for (id, name, kind, start_gmt, distance, duration, lat, lon, calories, avg_hr, steps) in rows.flatten() {
+    for (id, name, kind, start_gmt, distance, duration, lat, lon, calories, avg_hr, steps) in
+        rows.flatten()
+    {
         let id = id.unwrap_or(0);
         let name = name.unwrap_or_else(|| "(unnamed)".to_string());
         let kind = kind.unwrap_or_else(|| "activity".to_string());
         let ts = start_gmt; // Unix epoch seconds
         let title = format!("Garmin {}: {}", kind, name);
-        let mut detail = format!(
-            "Garmin activity id={} type='{}' name='{}'",
-            id, kind, name
-        );
+        let mut detail = format!("Garmin activity id={} type='{}' name='{}'", id, kind, name);
         if let Some(d) = distance {
             detail.push_str(&format!(" distance={:.2}m", d));
         }
@@ -144,7 +143,9 @@ mod tests {
     fn activity_type_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("running") && a.title.contains("Morning Run")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("running") && a.title.contains("Morning Run")));
         assert!(r.iter().any(|a| a.title.contains("cycling")));
     }
 
@@ -162,7 +163,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

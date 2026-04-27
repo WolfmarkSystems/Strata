@@ -6,9 +6,7 @@ use crate::android::helpers::{build_record, open_sqlite_ro, table_exists};
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "com.soundcloud.android/databases/",
-];
+pub const MATCHES: &[&str] = &["com.soundcloud.android/databases/"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {
@@ -101,14 +99,18 @@ mod tests {
     fn username_and_playback_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.detail.contains("username='JazzCat'") && a.detail.contains("playback_count=3200")));
+        assert!(r
+            .iter()
+            .any(|a| a.detail.contains("username='JazzCat'")
+                && a.detail.contains("playback_count=3200")));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

@@ -6,19 +6,22 @@
 //! (Cocoa), `ZWIFIIN`, `ZWIFIOUT`, `ZWWANIN`, `ZWWANOUT`. Proves
 //! which apps used network and when.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
-    util::name_is(path, &["datausage.sqlite"])
-        && util::path_contains(path, "networkd")
+    util::name_is(path, &["datausage.sqlite"]) && util::path_contains(path, "networkd")
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
-    if !util::table_exists(&conn, "ZPROCESS") { return out; }
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
+    if !util::table_exists(&conn, "ZPROCESS") {
+        return out;
+    }
     let source = path.to_string_lossy().to_string();
     let count = util::count_rows(&conn, "ZPROCESS");
 
@@ -56,8 +59,12 @@ mod tests {
 
     #[test]
     fn matches_networkd_datausage() {
-        assert!(matches(Path::new("/var/networkd/Library/com.apple.networkd/DataUsage.sqlite")));
-        assert!(!matches(Path::new("/var/wireless/Library/Databases/DataUsage.sqlite")));
+        assert!(matches(Path::new(
+            "/var/networkd/Library/com.apple.networkd/DataUsage.sqlite"
+        )));
+        assert!(!matches(Path::new(
+            "/var/wireless/Library/Databases/DataUsage.sqlite"
+        )));
     }
 
     #[test]
@@ -72,7 +79,10 @@ mod tests {
         let recs = parse(&p);
         assert_eq!(recs.len(), 1);
         assert!(recs[0].detail.contains("1 ZPROCESS"));
-        assert_eq!(recs[0].timestamp, Some(700_000_000 + util::APPLE_EPOCH_OFFSET));
+        assert_eq!(
+            recs[0].timestamp,
+            Some(700_000_000 + util::APPLE_EPOCH_OFFSET)
+        );
     }
 
     #[test]

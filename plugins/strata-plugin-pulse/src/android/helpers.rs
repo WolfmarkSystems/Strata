@@ -39,9 +39,9 @@ pub fn open_sqlite_ro(path: &Path) -> Option<Connection> {
 
 /// Return true if the given table exists in this SQLite database.
 pub fn table_exists(conn: &Connection, table: &str) -> bool {
-    let mut stmt = match conn.prepare(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND lower(name)=lower(?1) LIMIT 1",
-    ) {
+    let mut stmt = match conn
+        .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND lower(name)=lower(?1) LIMIT 1")
+    {
         Ok(s) => s,
         Err(_) => return false,
     };

@@ -45,7 +45,9 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     });
 
     let by_domain = conn
-        .prepare("SELECT domain, COUNT(*) FROM Files GROUP BY domain ORDER BY COUNT(*) DESC LIMIT 25")
+        .prepare(
+            "SELECT domain, COUNT(*) FROM Files GROUP BY domain ORDER BY COUNT(*) DESC LIMIT 25",
+        )
         .and_then(|mut s| {
             let r = s.query_map([], |row| {
                 Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))

@@ -189,7 +189,10 @@ mod tests {
     fn parses_recents_and_places() {
         let db = make_db();
         let r = parse(db.path());
-        let searches: Vec<_> = r.iter().filter(|a| a.subcategory == "Waze Search").collect();
+        let searches: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Waze Search")
+            .collect();
         let places: Vec<_> = r.iter().filter(|a| a.subcategory == "Waze Place").collect();
         assert_eq!(searches.len(), 2);
         assert_eq!(places.len(), 2);
@@ -208,14 +211,17 @@ mod tests {
     fn category_is_location() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().all(|a| a.category == ArtifactCategory::UserActivity));
+        assert!(r
+            .iter()
+            .all(|a| a.category == ArtifactCategory::UserActivity));
     }
 
     #[test]
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

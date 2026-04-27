@@ -3,9 +3,9 @@
 //! Complete App Store purchase history with Apple ID. Proves account
 //! ownership and app acquisition timeline.
 
+use super::util;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
-use super::util;
 
 pub fn matches(path: &Path) -> bool {
     util::name_is(path, &["itunesstored2.sqlitedb", "itunesstored.sqlitedb"])
@@ -13,7 +13,9 @@ pub fn matches(path: &Path) -> bool {
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let mut out = Vec::new();
-    let Some(conn) = util::open_sqlite_ro(path) else { return out };
+    let Some(conn) = util::open_sqlite_ro(path) else {
+        return out;
+    };
     let source = path.to_string_lossy().to_string();
 
     if util::table_exists(&conn, "purchase") {
@@ -23,7 +25,10 @@ pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
             subcategory: "iTunes Store purchases".to_string(),
             timestamp: None,
             title: "App Store purchase history".to_string(),
-            detail: format!("{} purchase rows (app downloads with Apple ID + date)", count),
+            detail: format!(
+                "{} purchase rows (app downloads with Apple ID + date)",
+                count
+            ),
             source_path: source.clone(),
             forensic_value: ForensicValue::High,
             mitre_technique: Some("T1005".to_string()),
@@ -59,7 +64,9 @@ mod tests {
 
     #[test]
     fn matches_itunesstore_filenames() {
-        assert!(matches(Path::new("/var/mobile/Library/com.apple.itunesstored/itunesstored2.sqlitedb")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/com.apple.itunesstored/itunesstored2.sqlitedb"
+        )));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
 
@@ -67,13 +74,33 @@ mod tests {
     fn parses_purchase_and_account() {
         let tmp = NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute("CREATE TABLE purchase (pid INTEGER PRIMARY KEY, title TEXT, date REAL)", []).unwrap();
-        c.execute("CREATE TABLE account (dsid INTEGER PRIMARY KEY, account_name TEXT)", []).unwrap();
-        c.execute("INSERT INTO purchase (title, date) VALUES ('MyApp', 700000000.0)", []).unwrap();
-        c.execute("INSERT INTO account (account_name) VALUES ('user@apple.com')", []).unwrap();
+        c.execute(
+            "CREATE TABLE purchase (pid INTEGER PRIMARY KEY, title TEXT, date REAL)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "CREATE TABLE account (dsid INTEGER PRIMARY KEY, account_name TEXT)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO purchase (title, date) VALUES ('MyApp', 700000000.0)",
+            [],
+        )
+        .unwrap();
+        c.execute(
+            "INSERT INTO account (account_name) VALUES ('user@apple.com')",
+            [],
+        )
+        .unwrap();
         let recs = parse(tmp.path());
-        assert!(recs.iter().any(|r| r.subcategory == "iTunes Store purchases"));
-        assert!(recs.iter().any(|r| r.subcategory == "iTunes Store accounts"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "iTunes Store purchases"));
+        assert!(recs
+            .iter()
+            .any(|r| r.subcategory == "iTunes Store accounts"));
     }
 
     #[test]

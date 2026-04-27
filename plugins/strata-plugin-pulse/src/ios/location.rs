@@ -22,8 +22,7 @@ pub fn matches(path: &Path) -> bool {
     if !util::name_is(path, &names) {
         return false;
     }
-    util::path_contains(path, "/com.apple.routined/")
-        || util::path_contains(path, "/routined/")
+    util::path_contains(path, "/com.apple.routined/") || util::path_contains(path, "/routined/")
 }
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
@@ -92,7 +91,10 @@ mod tests {
     use tempfile::tempdir;
 
     fn make_routined(dir: &Path, name: &str, table: &str, rows: usize) -> std::path::PathBuf {
-        let routined = dir.join("Library").join("Caches").join("com.apple.routined");
+        let routined = dir
+            .join("Library")
+            .join("Caches")
+            .join("com.apple.routined");
         std::fs::create_dir_all(&routined).unwrap();
         let p = routined.join(name);
         let c = Connection::open(&p).unwrap();
@@ -106,7 +108,10 @@ mod tests {
         .unwrap();
         for _ in 0..rows {
             c.execute(
-                &format!("INSERT INTO {} (ZLATITUDE, ZLONGITUDE) VALUES (40.7, -74.0)", table),
+                &format!(
+                    "INSERT INTO {} (ZLATITUDE, ZLONGITUDE) VALUES (40.7, -74.0)",
+                    table
+                ),
                 [],
             )
             .unwrap();
@@ -122,13 +127,20 @@ mod tests {
         assert!(matches(Path::new(
             "/var/mobile/Library/Caches/com.apple.routined/Cloud.sqlite"
         )));
-        assert!(!matches(Path::new("/var/mobile/Library/Other/Cache.sqlite")));
+        assert!(!matches(Path::new(
+            "/var/mobile/Library/Other/Cache.sqlite"
+        )));
     }
 
     #[test]
     fn parses_known_table_with_count() {
         let dir = tempdir().unwrap();
-        let p = make_routined(dir.path(), "Cache.sqlite", "ZRTLEARNEDLOCATIONOFINTERESTMO", 5);
+        let p = make_routined(
+            dir.path(),
+            "Cache.sqlite",
+            "ZRTLEARNEDLOCATIONOFINTERESTMO",
+            5,
+        );
         let records = parse(&p);
         let table_rec = records
             .iter()
@@ -147,7 +159,11 @@ mod tests {
     #[test]
     fn unrecognised_schema_returns_empty() {
         let dir = tempdir().unwrap();
-        let routined = dir.path().join("Library").join("Caches").join("com.apple.routined");
+        let routined = dir
+            .path()
+            .join("Library")
+            .join("Caches")
+            .join("com.apple.routined");
         std::fs::create_dir_all(&routined).unwrap();
         let p = routined.join("Cache.sqlite");
         let c = Connection::open(&p).unwrap();

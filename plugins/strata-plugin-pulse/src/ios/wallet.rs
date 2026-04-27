@@ -113,7 +113,9 @@ mod tests {
 
     #[test]
     fn matches_wallet_filenames() {
-        assert!(matches(Path::new("/var/mobile/Library/Passes/nanopasses.sqlite3")));
+        assert!(matches(Path::new(
+            "/var/mobile/Library/Passes/nanopasses.sqlite3"
+        )));
         assert!(matches(Path::new("/copies/passes23.sqlite")));
         assert!(!matches(Path::new("/var/mobile/Library/SMS/sms.db")));
     }
@@ -122,7 +124,10 @@ mod tests {
     fn parses_pass_and_payment_pass_counts() {
         let tmp = make_wallet_db(3, 2);
         let recs = parse(tmp.path());
-        let p = recs.iter().find(|r| r.subcategory == "Wallet passes").unwrap();
+        let p = recs
+            .iter()
+            .find(|r| r.subcategory == "Wallet passes")
+            .unwrap();
         assert!(p.detail.contains("3 pass rows"));
         let pp = recs
             .iter()

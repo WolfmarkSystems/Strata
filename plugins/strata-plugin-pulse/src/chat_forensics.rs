@@ -83,12 +83,11 @@ pub fn parse_slack(path: &Path) -> Vec<ChatMessage> {
                 channel_id: None,
                 sender: user,
                 content: text.unwrap_or_default(),
-                timestamp: ts
-                    .and_then(|t| {
-                        let secs = t.trunc() as i64;
-                        let nanos = ((t - t.trunc()) * 1_000_000_000.0) as u32;
-                        DateTime::<Utc>::from_timestamp(secs, nanos)
-                    }),
+                timestamp: ts.and_then(|t| {
+                    let secs = t.trunc() as i64;
+                    let nanos = ((t - t.trunc()) * 1_000_000_000.0) as u32;
+                    DateTime::<Utc>::from_timestamp(secs, nanos)
+                }),
             });
         }
     }
@@ -287,10 +286,8 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let path = dir.path().join("root-state.db");
         let conn = Connection::open(&path).expect("open");
-        conn.execute_batch(
-            "CREATE TABLE messages (ts REAL, user_id TEXT, text TEXT);",
-        )
-        .expect("schema");
+        conn.execute_batch("CREATE TABLE messages (ts REAL, user_id TEXT, text TEXT);")
+            .expect("schema");
         conn.execute(
             "INSERT INTO messages VALUES (1717243200.5, 'U123', 'hello slack')",
             [],
@@ -301,7 +298,10 @@ mod tests {
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].content, "hello slack");
         assert_eq!(msgs[0].sender.as_deref(), Some("U123"));
-        assert_eq!(msgs[0].timestamp.map(|d| d.timestamp()), Some(1_717_243_200));
+        assert_eq!(
+            msgs[0].timestamp.map(|d| d.timestamp()),
+            Some(1_717_243_200)
+        );
     }
 
     #[test]
@@ -330,7 +330,10 @@ mod tests {
         assert_eq!(msgs[0].channel_id.as_deref(), Some("conv-1"));
         assert_eq!(msgs[0].sender.as_deref(), Some("alice@x.test"));
         assert_eq!(msgs[0].content, "Team hello");
-        assert_eq!(msgs[0].timestamp.map(|d| d.timestamp()), Some(1_717_243_200));
+        assert_eq!(
+            msgs[0].timestamp.map(|d| d.timestamp()),
+            Some(1_717_243_200)
+        );
     }
 
     #[test]
@@ -345,7 +348,10 @@ mod tests {
         assert_eq!(msgs[0].channel_id.as_deref(), Some("C-1"));
         assert_eq!(msgs[0].content, "hi discord");
         assert_eq!(msgs[0].sender.as_deref(), Some("U-1"));
-        assert_eq!(msgs[1].timestamp.map(|d| d.timestamp()), Some(1_717_243_500));
+        assert_eq!(
+            msgs[1].timestamp.map(|d| d.timestamp()),
+            Some(1_717_243_500)
+        );
     }
 
     #[test]

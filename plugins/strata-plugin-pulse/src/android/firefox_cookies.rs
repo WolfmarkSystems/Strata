@@ -114,14 +114,19 @@ mod tests {
     fn host_and_name_in_title() {
         let db = make_db();
         let r = parse(db.path());
-        assert!(r.iter().any(|a| a.title.contains("session_id") && a.title.contains(".example.com")));
+        assert!(r
+            .iter()
+            .any(|a| a.title.contains("session_id") && a.title.contains(".example.com")));
     }
 
     #[test]
     fn secure_flag_in_detail() {
         let db = make_db();
         let r = parse(db.path());
-        let s = r.iter().find(|a| a.detail.contains(".example.com")).unwrap();
+        let s = r
+            .iter()
+            .find(|a| a.detail.contains(".example.com"))
+            .unwrap();
         assert!(s.detail.contains("secure=true"));
         assert!(s.detail.contains("httpOnly=true"));
     }
@@ -130,7 +135,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

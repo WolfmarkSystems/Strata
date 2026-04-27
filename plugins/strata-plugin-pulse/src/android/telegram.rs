@@ -54,10 +54,7 @@ fn read_messages(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactRecord
         let dialog_id = uid.unwrap_or(0);
         let ts = date; // Telegram uses Unix seconds directly
         let title = format!("Telegram msg #{} in dialog {}", msg_id, dialog_id);
-        let detail = format!(
-            "Telegram message mid={} dialog_id={}",
-            msg_id, dialog_id
-        );
+        let detail = format!("Telegram message mid={} dialog_id={}", msg_id, dialog_id);
         out.push(build_record(
             ArtifactCategory::Communications,
             "Telegram Message",
@@ -94,10 +91,7 @@ fn read_messages_legacy(conn: &rusqlite::Connection, path: &Path) -> Vec<Artifac
         let msg_id = mid.unwrap_or(0);
         let dialog_id = uid.unwrap_or(0);
         let title = format!("Telegram msg #{} in dialog {}", msg_id, dialog_id);
-        let detail = format!(
-            "Telegram message mid={} dialog_id={}",
-            msg_id, dialog_id
-        );
+        let detail = format!("Telegram message mid={} dialog_id={}", msg_id, dialog_id);
         out.push(build_record(
             ArtifactCategory::Communications,
             "Telegram Message",
@@ -188,8 +182,14 @@ mod tests {
     fn parses_messages_and_dialogs() {
         let db = make_db();
         let r = parse(db.path());
-        let msgs: Vec<_> = r.iter().filter(|a| a.subcategory == "Telegram Message").collect();
-        let dialogs: Vec<_> = r.iter().filter(|a| a.subcategory == "Telegram Dialog").collect();
+        let msgs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Telegram Message")
+            .collect();
+        let dialogs: Vec<_> = r
+            .iter()
+            .filter(|a| a.subcategory == "Telegram Dialog")
+            .collect();
         assert_eq!(msgs.len(), 3);
         assert_eq!(dialogs.len(), 2);
     }
@@ -214,7 +214,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

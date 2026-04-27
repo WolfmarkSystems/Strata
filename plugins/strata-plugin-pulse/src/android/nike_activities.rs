@@ -48,7 +48,10 @@ fn read_activities(conn: &rusqlite::Connection, path: &Path) -> Vec<ArtifactReco
         let source = source.unwrap_or_else(|| "nike".to_string());
         let ts = start_ms.and_then(unix_ms_to_i64);
         let duration_s = active_ms.unwrap_or(0) / 1000;
-        let total_s = end_ms.zip(start_ms).map(|(e, s)| (e - s) / 1000).unwrap_or(0);
+        let total_s = end_ms
+            .zip(start_ms)
+            .map(|(e, s)| (e - s) / 1000)
+            .unwrap_or(0);
         let title = format!("Nike run #{} ({}s active)", id, duration_s);
         let detail = format!(
             "Nike Run Club activity id={} source='{}' active_duration={}s total_duration={}s",
@@ -123,7 +126,8 @@ mod tests {
     fn missing_table_yields_empty() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
         let c = Connection::open(tmp.path()).unwrap();
-        c.execute_batch("CREATE TABLE unrelated (id INTEGER);").unwrap();
+        c.execute_batch("CREATE TABLE unrelated (id INTEGER);")
+            .unwrap();
         drop(c);
         assert!(parse(tmp.path()).is_empty());
     }

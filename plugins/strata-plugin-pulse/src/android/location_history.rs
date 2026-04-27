@@ -15,11 +15,7 @@ use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
 
-pub const MATCHES: &[&str] = &[
-    "location_history.db",
-    "herrevad",
-    "fused_location",
-];
+pub const MATCHES: &[&str] = &["location_history.db", "herrevad", "fused_location"];
 
 pub fn parse(path: &Path) -> Vec<ArtifactRecord> {
     let Some(conn) = open_sqlite_ro(path) else {

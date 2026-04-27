@@ -24,7 +24,9 @@
 //! | 7     | USER_INTERACTION       |
 //! | 23    | DEVICE_SHUTDOWN        |
 
-use crate::android::helpers::{build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64};
+use crate::android::helpers::{
+    build_record, column_exists, open_sqlite_ro, table_exists, unix_ms_to_i64,
+};
 use rusqlite::Connection;
 use std::path::Path;
 use strata_plugin_sdk::{ArtifactCategory, ArtifactRecord, ForensicValue};
@@ -132,7 +134,9 @@ mod tests {
         let db = make_db();
         let records = parse(db.path());
         assert_eq!(records.len(), 3);
-        assert!(records.iter().all(|r| r.category == ArtifactCategory::ExecutionHistory));
+        assert!(records
+            .iter()
+            .all(|r| r.category == ArtifactCategory::ExecutionHistory));
         assert!(records.iter().all(|r| r.subcategory == "Android App Usage"));
     }
 
@@ -146,9 +150,7 @@ mod tests {
         assert!(records
             .iter()
             .any(|r| r.title.contains("MOVE_TO_BACKGROUND")));
-        assert!(records
-            .iter()
-            .any(|r| r.title.contains("USER_INTERACTION")));
+        assert!(records.iter().any(|r| r.title.contains("USER_INTERACTION")));
     }
 
     #[test]
