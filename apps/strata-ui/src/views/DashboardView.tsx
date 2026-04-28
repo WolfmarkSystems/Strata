@@ -53,6 +53,8 @@ export default function DashboardView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evidenceId])
 
+  const top = useMemo(() => topFindings(categories, advisory), [categories, advisory])
+
   if (!evidenceLoaded || !evidenceId) {
     return (
       <EmptyState
@@ -90,7 +92,6 @@ export default function DashboardView() {
     }
   }
 
-  const top = useMemo(() => topFindings(categories, advisory), [categories, advisory])
 
   return (
     <div

@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event'
 import type { TreeNode, FileEntry, FileMetadata } from '../types'
 
 // Browser preview detection — Tauri injects __TAURI_INTERNALS__ at runtime
-const IN_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+const IN_TAURI = true
 
 export interface IpcFailure {
   command: string
