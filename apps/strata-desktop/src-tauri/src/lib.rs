@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 
 // Day 11 — engine adapter
 use strata_engine_adapter as engine;
@@ -17,20 +16,11 @@ fn current_evidence_lock() -> &'static Mutex<Option<String>> {
 }
 
 fn set_current_evidence_id(id: &str) {
-    match current_evidence_lock().lock() {
-        Ok(mut current) => *current = Some(id.to_string()),
-        Err(e) => log::error!("current evidence lock poisoned: {e}"),
-    }
+    *current_evidence_lock().lock().unwrap() = Some(id.to_string());
 }
 
 fn current_evidence_id() -> Option<String> {
-    match current_evidence_lock().lock() {
-        Ok(current) => current.clone(),
-        Err(e) => {
-            log::error!("current evidence lock poisoned: {e}");
-            None
-        }
-    }
+    current_evidence_lock().lock().unwrap().clone()
 }
 
 // ── Conversions: adapter types → desktop IPC types ─────────────────────────
@@ -41,8 +31,6 @@ fn adapter_tree_to_desktop(n: engine::TreeNode) -> TreeNode {
         name: n.name,
         node_type: n.node_type,
         count: n.count,
-        file_count: n.file_count,
-        folder_count: n.folder_count,
         is_deleted: n.is_deleted,
         is_flagged: n.is_flagged,
         is_suspicious: n.is_suspicious,
@@ -65,7 +53,6 @@ fn adapter_file_to_desktop(f: engine::FileEntry) -> FileEntry {
         is_deleted: f.is_deleted,
         is_suspicious: f.is_suspicious,
         is_flagged: f.is_flagged,
-        known_good: f.known_good,
         category: f.category,
         tag: None,
         tag_color: None,
@@ -88,7 +75,6 @@ fn adapter_file_to_metadata(f: engine::FileEntry) -> FileMetadata {
         is_deleted: f.is_deleted,
         is_suspicious: f.is_suspicious,
         is_flagged: f.is_flagged,
-        known_good: f.known_good,
         mft_entry: f.mft_entry,
         extension: f.extension,
         mime_type: None,
@@ -113,96 +99,6 @@ fn adapter_hex_to_desktop(h: engine::HexData) -> HexData {
     }
 }
 
-fn adapter_artifact_to_desktop(a: engine::PluginArtifact) -> Artifact {
-    Artifact {
-        id: a.id,
-        category: a.category,
-        name: a.name,
-        value: a.value,
-        timestamp: a.timestamp,
-        source_file: a.source_file,
-        source_path: a.source_path,
-        forensic_value: a.forensic_value,
-        mitre_technique: a.mitre_technique,
-        mitre_name: a.mitre_name,
-        plugin: a.plugin,
-        raw_data: a.raw_data,
-        is_advisory: a.is_advisory,
-        advisory_notice: a.advisory_notice,
-        confidence_score: a.confidence_score,
-        confidence_basis: a.confidence_basis,
-    }
-}
-
-fn examiner_name_for_app(app: &tauri::AppHandle) -> String {
-    get_examiner_profile_sync(app)
-        .map(|profile| profile.name)
-        .ok()
-        .filter(|name| !name.trim().is_empty())
-        .unwrap_or_else(|| "Unknown Examiner".to_string())
-}
-
-fn get_examiner_profile_sync(app: &tauri::AppHandle) -> Result<ExaminerProfile, String> {
-    let path = examiner_profile_path(app)?;
-    if !path.exists() {
-        return Ok(ExaminerProfile::default());
-    }
-    let s = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&s).map_err(|e| e.to_string())
-}
-
-fn log_custody_event(
-    examiner: String,
-    action: &str,
-    evidence_id: String,
-    details: String,
-    hash_before: Option<String>,
-    hash_after: Option<String>,
-) {
-    engine::log_custody(engine::CustodyEntry {
-        timestamp: engine::now_unix(),
-        examiner,
-        action: action.to_string(),
-        evidence_id,
-        details,
-        hash_before,
-        hash_after,
-    });
-}
-
-fn artifact_notes_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    Ok(dir.join("artifact_notes.json"))
-}
-
-fn load_artifact_notes_from_path(path: &Path) -> Result<Vec<ArtifactNote>, String> {
-    if !path.exists() {
-        return Ok(Vec::new());
-    }
-    let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&raw).map_err(|e| e.to_string())
-}
-
-fn save_artifact_notes_to_path(path: &Path, notes: &[ArtifactNote]) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let raw = serde_json::to_string_pretty(notes).map_err(|e| e.to_string())?;
-    std::fs::write(path, raw).map_err(|e| e.to_string())
-}
-
-fn upsert_artifact_note(notes: &mut Vec<ArtifactNote>, note: ArtifactNote) {
-    if let Some(existing) = notes
-        .iter_mut()
-        .find(|existing| existing.artifact_id == note.artifact_id)
-    {
-        *existing = note;
-    } else {
-        notes.push(note);
-    }
-}
-
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────────────────────────────────────
@@ -213,8 +109,6 @@ pub struct TreeNode {
     pub name: String,
     pub node_type: String,
     pub count: u64,
-    pub file_count: u64,
-    pub folder_count: u64,
     pub is_deleted: bool,
     pub is_flagged: bool,
     pub is_suspicious: bool,
@@ -236,7 +130,6 @@ pub struct FileEntry {
     pub is_deleted: bool,
     pub is_suspicious: bool,
     pub is_flagged: bool,
-    pub known_good: bool,
     pub category: String,
     pub tag: Option<String>,
     pub tag_color: Option<String>,
@@ -258,7 +151,6 @@ pub struct FileMetadata {
     pub is_deleted: bool,
     pub is_suspicious: bool,
     pub is_flagged: bool,
-    pub known_good: bool,
     pub mft_entry: Option<u64>,
     pub extension: String,
     pub mime_type: Option<String>,
@@ -283,76 +175,7 @@ pub struct Stats {
     pub flagged: u64,
     pub carved: u64,
     pub hashed: u64,
-    pub known_good: u64,
-    pub unknown: u64,
     pub artifacts: u64,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct EvidenceIntegrity {
-    pub sha256: String,
-    pub computed_at: i64,
-    pub file_size_bytes: u64,
-    pub verified: bool,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct HashSetInfo {
-    pub name: String,
-    pub description: String,
-    pub hash_count: usize,
-    pub imported_at: i64,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct HashSetStats {
-    pub set_count: usize,
-    pub hash_count: usize,
-    pub known_good: u64,
-    pub unknown: u64,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct ArtifactNote {
-    pub artifact_id: String,
-    pub evidence_id: String,
-    pub note: String,
-    pub created_at: i64,
-    pub examiner: String,
-    pub flagged: bool,
-}
-
-impl From<engine::EvidenceIntegrity> for EvidenceIntegrity {
-    fn from(value: engine::EvidenceIntegrity) -> Self {
-        Self {
-            sha256: value.sha256,
-            computed_at: value.computed_at,
-            file_size_bytes: value.file_size_bytes,
-            verified: value.verified,
-        }
-    }
-}
-
-impl From<engine::HashSetInfo> for HashSetInfo {
-    fn from(value: engine::HashSetInfo) -> Self {
-        Self {
-            name: value.name,
-            description: value.description,
-            hash_count: value.hash_count,
-            imported_at: value.imported_at,
-        }
-    }
-}
-
-impl From<engine::HashSetStats> for HashSetStats {
-    fn from(value: engine::HashSetStats) -> Self {
-        Self {
-            set_count: value.set_count,
-            hash_count: value.hash_count,
-            known_good: value.known_good,
-            unknown: value.unknown,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -394,41 +217,59 @@ static TAG_STORE: OnceLock<Arc<Mutex<HashMap<String, TaggedFile>>>> = OnceLock::
 
 fn get_tag_store() -> Arc<Mutex<HashMap<String, TaggedFile>>> {
     TAG_STORE
-        .get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+        .get_or_init(|| {
+            let mut map: HashMap<String, TaggedFile> = HashMap::new();
+            map.insert("f004".to_string(), TaggedFile {
+                file_id: "f004".to_string(),
+                name: "mimikatz.exe".to_string(),
+                extension: "exe".to_string(),
+                size_display: "1.2 MB".to_string(),
+                modified: "2009-11-15 14:33".to_string(),
+                full_path: "\\Windows\\Temp\\mimikatz.exe".to_string(),
+                tag: "Critical Evidence".to_string(),
+                tag_color: "#a84040".to_string(),
+                tagged_at: "2009-11-16 09:00".to_string(),
+                note: Some("Known credential dumping tool".to_string()),
+            });
+            map.insert("f003".to_string(), TaggedFile {
+                file_id: "f003".to_string(),
+                name: "svchost32.exe".to_string(),
+                extension: "exe".to_string(),
+                size_display: "892 KB".to_string(),
+                modified: "2009-11-15 14:32".to_string(),
+                full_path: "\\Windows\\System32\\svchost32.exe".to_string(),
+                tag: "Suspicious".to_string(),
+                tag_color: "#b87840".to_string(),
+                tagged_at: "2009-11-16 09:01".to_string(),
+                note: None,
+            });
+            map.insert("f010".to_string(), TaggedFile {
+                file_id: "f010".to_string(),
+                name: "cleanup.ps1".to_string(),
+                extension: "ps1".to_string(),
+                size_display: "4.8 KB".to_string(),
+                modified: "2009-11-15 14:31".to_string(),
+                full_path: "\\Windows\\Temp\\cleanup.ps1".to_string(),
+                tag: "Suspicious".to_string(),
+                tag_color: "#b87840".to_string(),
+                tagged_at: "2009-11-16 09:02".to_string(),
+                note: Some("Anti-forensic script".to_string()),
+            });
+            map.insert("f005".to_string(), TaggedFile {
+                file_id: "f005".to_string(),
+                name: "Security.evtx".to_string(),
+                extension: "evtx".to_string(),
+                size_display: "44 MB".to_string(),
+                modified: "2009-11-16 03:44".to_string(),
+                full_path: "\\Windows\\System32\\winevt\\Logs\\Security.evtx".to_string(),
+                tag: "Key Artifact".to_string(),
+                tag_color: "#4a7890".to_string(),
+                tagged_at: "2009-11-16 09:03".to_string(),
+                note: None,
+            });
+            Arc::new(Mutex::new(map))
+        })
         .clone()
-}
-
-fn load_tags_from_disk(app: &tauri::AppHandle) -> Result<(), String> {
-    let path = tags_path(app)?;
-    let loaded: HashMap<String, TaggedFile> = if path.exists() {
-        let json =
-            std::fs::read_to_string(&path).map_err(|e| format!("Failed to read tags: {e}"))?;
-        serde_json::from_str(&json).map_err(|e| format!("Failed to parse tags: {e}"))?
-    } else {
-        HashMap::new()
-    };
-
-    let store = get_tag_store();
-    let mut map = store.lock().map_err(|e| e.to_string())?;
-    *map = loaded;
-    Ok(())
-}
-
-fn save_tags_to_disk(app: &tauri::AppHandle, tags: &HashMap<String, TaggedFile>) -> Result<(), String> {
-    let path = tags_path(app)?;
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create tags dir: {e}"))?;
-    }
-    let json = serde_json::to_string_pretty(tags).map_err(|e| format!("Failed to encode tags: {e}"))?;
-    std::fs::write(&path, json).map_err(|e| format!("Failed to save tags: {e}"))
-}
-
-fn current_tag_timestamp() -> String {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
-        .to_string()
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -453,30 +294,12 @@ pub struct Artifact {
     pub mitre_name: Option<String>,
     pub plugin: String,
     pub raw_data: Option<String>,
-    pub is_advisory: bool,
-    pub advisory_notice: Option<String>,
-    pub confidence_score: f32,
-    pub confidence_basis: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ArtifactsResponse {
     pub artifacts: Vec<Artifact>,
     pub plugins_not_run: bool,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct IocQuery {
-    pub indicators: Vec<String>,
-    pub evidence_id: String,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct IocMatch {
-    pub indicator: String,
-    pub artifact: Artifact,
-    pub match_field: String,
-    pub confidence: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -507,7 +330,7 @@ fn get_plugin_status_store() -> Arc<Mutex<HashMap<String, PluginStatus>>> {
 /// Short display names for every plugin registered in
 /// `strata_engine_adapter::plugins::build_plugins()`. Order matches the
 /// adapter's registration order so Sigma remains last. Sprint 8 P1 F2
-/// expanded this from the pre-sprint 15-entry list to the full 24
+/// expanded this from the pre-sprint 15-entry list to the full 23
 /// plugins; the prior list silently dropped Apex, Carbon, Pulse, Vault,
 /// ARBOR, Advisory, CSAM Scanner, and Sentinel — ~184 Charlie
 /// artifacts the UI could never reach.
@@ -533,7 +356,6 @@ const PLUGIN_NAMES: &[&str] = &[
     "Pulse",
     "Vault",
     "ARBOR",
-    "AUGUR",
     "Advisory Analytics",
     "Sigma",
 ];
@@ -547,6 +369,7 @@ const PLUGIN_NAMES: &[&str] = &[
 fn is_plugin_complete(status: &str) -> bool {
     matches!(status, "complete" | "completed" | "success")
 }
+
 
 #[derive(Serialize, Deserialize)]
 pub struct SearchResult {
@@ -591,17 +414,6 @@ pub struct ExaminerProfile {
     pub email: String,
 }
 
-impl Default for ExaminerProfile {
-    fn default() -> Self {
-        Self {
-            name: String::new(),
-            agency: String::new(),
-            badge: String::new(),
-            email: String::new(),
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DriveInfo {
     pub id: String,
@@ -639,21 +451,6 @@ fn machine_id_string() -> String {
 
 fn license_file_path() -> Option<std::path::PathBuf> {
     dirs::home_dir().map(|h| h.join(".wolfmark").join("license.key"))
-}
-
-fn app_data_file_path(app: &tauri::AppHandle, filename: &str) -> Result<std::path::PathBuf, String> {
-    app.path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())
-        .map(|dir| dir.join(filename))
-}
-
-fn examiner_profile_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
-    app_data_file_path(app, "examiner_profile.json")
-}
-
-fn tags_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
-    app_data_file_path(app, "tags.json")
 }
 
 fn invalid_license(machine_id: String, msg: &str) -> LicenseResult {
@@ -731,13 +528,11 @@ fn verify_license_key(key: &str, machine_id: &str) -> LicenseResult {
     }
 
     // Compute days_remaining (best-effort, day-precision).
-    let days_remaining = match (
-        chrono::NaiveDate::parse_from_str(expires, "%Y-%m-%d"),
-        chrono::Utc::now().date_naive(),
-    ) {
-        (Ok(exp), today_naive) => (exp - today_naive).num_days().max(0) as i32,
-        _ => 0,
-    };
+    let days_remaining =
+        match (chrono::NaiveDate::parse_from_str(expires, "%Y-%m-%d"), chrono::Utc::now().date_naive()) {
+            (Ok(exp), today_naive) => (exp - today_naive).num_days().max(0) as i32,
+            _ => 0,
+        };
 
     LicenseResult {
         valid: true,
@@ -875,28 +670,18 @@ async fn deactivate_license() -> Result<bool, String> {
 }
 
 #[tauri::command]
-async fn get_examiner_profile(app: tauri::AppHandle) -> Result<ExaminerProfile, String> {
-    let path = examiner_profile_path(&app)?;
-    if !path.exists() {
-        return Ok(ExaminerProfile::default());
-    }
-    let json =
-        std::fs::read_to_string(&path).map_err(|e| format!("Failed to read profile: {e}"))?;
-    serde_json::from_str(&json).map_err(|e| format!("Failed to parse profile: {e}"))
+async fn get_examiner_profile() -> Result<ExaminerProfile, String> {
+    Ok(ExaminerProfile {
+        name: String::new(),
+        agency: String::new(),
+        badge: String::new(),
+        email: String::new(),
+    })
 }
 
 #[tauri::command]
-async fn save_examiner_profile(
-    app: tauri::AppHandle,
-    profile: ExaminerProfile,
-) -> Result<(), String> {
-    let path = examiner_profile_path(&app)?;
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create profile dir: {e}"))?;
-    }
-    let json = serde_json::to_string_pretty(&profile).map_err(|e| e.to_string())?;
-    std::fs::write(&path, json).map_err(|e| format!("Failed to save profile: {e}"))?;
-    log::debug!("Examiner profile saved to {}", path.display());
+async fn save_examiner_profile(profile: ExaminerProfile) -> Result<(), String> {
+    println!("Saving examiner: {:?}", profile.name);
     Ok(())
 }
 
@@ -931,7 +716,11 @@ async fn list_drives() -> Result<Vec<DriveInfo>, String> {
         let free_gb = disk.available_space() as f64 / 1_073_741_824.0;
 
         let name = disk.name().to_string_lossy().to_string();
-        let display_name = if name.is_empty() { mount.clone() } else { name };
+        let display_name = if name.is_empty() {
+            mount.clone()
+        } else {
+            name
+        };
 
         let id = {
             let mut cleaned = mount.replace('/', "-");
@@ -989,347 +778,20 @@ pub struct ReportOptions {
     pub include_timeline: bool,
 }
 
-struct ReportSnapshot {
-    evidence_id: String,
-    evidence_description: String,
-    generated_at: String,
-    app_version: String,
-    stats: Stats,
-    integrity: Option<EvidenceIntegrity>,
-    tagged: Vec<TaggedFile>,
-    flagged_notes: Vec<ArtifactNote>,
-    categories: Vec<ArtifactCategory>,
-    custody: Vec<engine::CustodyEntry>,
-    hash_sets: Vec<HashSetInfo>,
-    augur_artifacts: Vec<engine::PluginArtifact>,
+#[derive(Serialize, Deserialize)]
+pub struct ReportResult {
+    pub html: String,
+    pub path: Option<String>,
 }
 
 #[tauri::command]
-async fn generate_report(
-    app: tauri::AppHandle,
-    evidence_id: String,
-    output_path: String,
-    format: String,
-) -> Result<String, String> {
-    let evidence_id = if evidence_id.is_empty() {
-        current_evidence_id().unwrap_or_default()
-    } else {
-        evidence_id
-    };
-    if evidence_id.is_empty() {
-        return Err("No evidence loaded".to_string());
-    }
-    let profile = get_examiner_profile_sync(&app).unwrap_or_default();
-    let options = ReportOptions {
-        case_number: evidence_id.clone(),
-        case_name: current_evidence_id().unwrap_or_else(|| "Strata Analysis".to_string()),
-        examiner_name: if profile.name.is_empty() {
-            "Unknown Examiner".to_string()
-        } else {
-            profile.name
-        },
-        examiner_agency: profile.agency,
-        examiner_badge: profile.badge,
-        include_artifacts: true,
-        include_tagged: true,
-        include_mitre: true,
-        include_timeline: true,
-    };
-    let stats = if evidence_id.is_empty() {
-        Stats {
-            files: 0,
-            suspicious: 0,
-            flagged: 0,
-            carved: 0,
-            hashed: 0,
-            known_good: 0,
-            unknown: 0,
-            artifacts: 0,
-        }
-    } else {
-        get_stats(evidence_id.clone()).await?
-    };
-    let categories = if evidence_id.is_empty() {
-        Vec::new()
-    } else {
-        get_artifact_categories(evidence_id.clone()).await?
-    };
-    let integrity = if evidence_id.is_empty() {
-        None
-    } else {
-        get_evidence_integrity(evidence_id.clone()).await.ok()
-    };
-    let tagged = {
-        let store = get_tag_store();
-        let map = store.lock().map_err(|e| e.to_string())?;
-        map.values().cloned().collect()
-    };
-    let flagged_notes = if evidence_id.is_empty() {
-        Vec::new()
-    } else {
-        get_flagged_artifacts(app.clone(), evidence_id.clone()).await?
-    };
-    let snapshot = ReportSnapshot {
-        evidence_id: evidence_id.clone(),
-        evidence_description: format!("Evidence {evidence_id}"),
-        generated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M UTC").to_string(),
-        app_version: env!("CARGO_PKG_VERSION").to_string(),
-        stats,
-        integrity,
-        tagged,
-        flagged_notes,
-        categories,
-        custody: engine::get_custody_log(&evidence_id),
-        hash_sets: engine::list_hash_sets()
-            .into_iter()
-            .map(HashSetInfo::from)
-            .collect(),
-        augur_artifacts: engine::get_plugin_artifacts(&evidence_id, "AUGUR").unwrap_or_default(),
-    };
-    let html = build_report_html(&options, &snapshot);
-    let out = if output_path.trim().is_empty() {
-        std::env::temp_dir()
-            .join(report_filename_for_case(&options.case_number, chrono::Utc::now()))
-            .to_string_lossy()
-            .to_string()
-    } else {
-        output_path
-    };
-    let report_path = if format.eq_ignore_ascii_case("pdf") {
-        write_report_pdf_or_html(&html, &out)?
-    } else {
-        std::fs::write(&out, &html).map_err(|e| e.to_string())?;
-        out
-    };
-    if !evidence_id.is_empty() {
-        log_custody_event(
-            options.examiner_name.clone(),
-            "report_generated",
-            evidence_id,
-            format!("Generated {} report at {}", format, report_path),
-            None,
-            None,
-        );
-    }
-    Ok(report_path)
+async fn generate_report(options: ReportOptions) -> Result<ReportResult, String> {
+    let html = build_report_html(&options);
+    Ok(ReportResult { html, path: None })
 }
 
-fn report_filename_for_case(case_number: &str, generated_at: chrono::DateTime<chrono::Utc>) -> String {
-    let mut case = case_number
-        .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
-        .collect::<String>();
-    while case.contains("__") {
-        case = case.replace("__", "_");
-    }
-    let case = case.trim_matches('_');
-    let case = if case.is_empty() { "Case" } else { case };
-    format!(
-        "Strata_Report_{}_{}.html",
-        case,
-        generated_at.format("%Y%m%d_%H%M%S")
-    )
-}
-
-fn write_report_pdf_or_html(html: &str, output_path: &str) -> Result<String, String> {
-    let html_path = if output_path.to_ascii_lowercase().ends_with(".pdf") {
-        output_path.replace(".pdf", ".html")
-    } else {
-        format!("{output_path}.html")
-    };
-    std::fs::write(&html_path, html).map_err(|e| e.to_string())?;
-    if cfg!(target_os = "macos") {
-        let status = std::process::Command::new("wkhtmltopdf")
-            .arg(&html_path)
-            .arg(output_path)
-            .status();
-        if let Ok(status) = status {
-            if status.success() {
-                return Ok(output_path.to_string());
-            }
-        }
-    }
-    Ok(html_path)
-}
-
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#x27;")
-}
-
-fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
+fn build_report_html(o: &ReportOptions) -> String {
     let css = include_str!("report_css.css");
-    let case_number = html_escape(&o.case_number);
-    let case_name = html_escape(&o.case_name);
-    let examiner_name = html_escape(&o.examiner_name);
-    let examiner_agency = html_escape(&o.examiner_agency);
-    let examiner_badge = html_escape(&o.examiner_badge);
-    let evidence_description = html_escape(&snapshot.evidence_description);
-    let evidence_id = html_escape(&snapshot.evidence_id);
-    let evidence_hash = snapshot
-        .integrity
-        .as_ref()
-        .map(|i| html_escape(&i.sha256))
-        .unwrap_or_else(|| "Not computed".to_string());
-    let evidence_size = snapshot
-        .integrity
-        .as_ref()
-        .map(|i| i.file_size_bytes.to_string())
-        .unwrap_or_else(|| "Unknown".to_string());
-    let analysis_start = snapshot
-        .custody
-        .first()
-        .map(|entry| entry.timestamp.to_string())
-        .unwrap_or_else(|| "Not recorded".to_string());
-    let analysis_end = snapshot
-        .custody
-        .last()
-        .map(|entry| entry.timestamp.to_string())
-        .unwrap_or_else(|| "Not recorded".to_string());
-    let tagged_rows = if snapshot.tagged.is_empty() {
-        "<tr><td colspan=\"4\">No tagged evidence recorded.</td></tr>".to_string()
-    } else {
-        snapshot
-            .tagged
-            .iter()
-            .map(|f| {
-                format!(
-                    "<tr><td style=\"font-weight:700\">{}</td><td>{}</td><td style=\"font-family:monospace;font-size:10px;\">{}</td><td>{}</td></tr>",
-                    html_escape(&f.name),
-                    html_escape(&f.tag),
-                    html_escape(&f.full_path),
-                    html_escape(f.note.as_deref().unwrap_or(""))
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("")
-    };
-    let category_rows = if snapshot.categories.iter().all(|c| c.count == 0) {
-        "<tr><td colspan=\"3\">No plugin artifacts have been recorded for this evidence.</td></tr>"
-            .to_string()
-    } else {
-        snapshot
-            .categories
-            .iter()
-            .filter(|c| c.count > 0)
-            .map(|c| {
-                format!(
-                    "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
-                    html_escape(&c.name),
-                    c.count,
-                    html_escape(&c.color)
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("")
-    };
-    let integrity_section = snapshot
-        .integrity
-        .as_ref()
-        .map(|i| {
-            format!(
-                r#"<div class="section" id="evidence-integrity">
-    <h2>3. Evidence Integrity</h2>
-    <div class="info-grid">
-      <div class="info-row"><span class="info-key">SHA-256</span><span class="info-val" style="font-family:monospace;font-size:10px;">{}</span></div>
-      <div class="info-row"><span class="info-key">Analysis SHA-256</span><span class="info-val" style="font-family:monospace;font-size:10px;">{}</span></div>
-      <div class="info-row"><span class="info-key">Match Confirmation</span><span class="info-val">{}</span></div>
-      <div class="info-row"><span class="info-key">Size</span><span class="info-val">{} bytes</span></div>
-      <div class="info-row"><span class="info-key">Computed</span><span class="info-val">{}</span></div>
-    </div>
-  </div>"#,
-                html_escape(&i.sha256),
-                html_escape(&i.sha256),
-                if i.verified { "MATCH CONFIRMED" } else { "MISMATCH WARNING" },
-                i.file_size_bytes,
-                i.computed_at
-            )
-        })
-        .unwrap_or_default();
-    let flagged_rows = if snapshot.flagged_notes.is_empty() {
-        "<tr><td colspan=\"5\">No flagged artifact notes recorded.</td></tr>".to_string()
-    } else {
-        snapshot
-            .flagged_notes
-            .iter()
-            .map(|note| {
-                format!(
-                    "<tr><td style=\"font-family:monospace;font-size:10px;\">{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
-                    html_escape(&note.artifact_id),
-                    html_escape(&note.evidence_id),
-                    html_escape(&note.examiner),
-                    note.created_at,
-                    html_escape(&note.note)
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("")
-    };
-    let custody_rows = if snapshot.custody.is_empty() {
-        "<tr><td colspan=\"6\">No custody entries recorded.</td></tr>".to_string()
-    } else {
-        snapshot
-            .custody
-            .iter()
-            .map(|entry| {
-                format!(
-                    "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td style=\"font-family:monospace;font-size:10px;\">{}</td></tr>",
-                    entry.timestamp,
-                    html_escape(&entry.examiner),
-                    html_escape(&entry.action),
-                    html_escape(&entry.evidence_id),
-                    html_escape(&entry.details),
-                    html_escape(entry.hash_after.as_deref().unwrap_or(""))
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("")
-    };
-    let hash_set_rows = if snapshot.hash_sets.is_empty() {
-        "<tr><td colspan=\"3\">No hash sets applied.</td></tr>".to_string()
-    } else {
-        snapshot
-            .hash_sets
-            .iter()
-            .map(|set| {
-                format!(
-                    "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
-                    html_escape(&set.name),
-                    set.hash_count,
-                    set.imported_at
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("")
-    };
-    let augur_rows = if snapshot.augur_artifacts.is_empty() {
-        "<tr><td colspan=\"5\">No AUGUR advisory translation artifacts recorded.</td></tr>"
-            .to_string()
-    } else {
-        snapshot
-            .augur_artifacts
-            .iter()
-            .map(|artifact| {
-                format!(
-                    "<tr><td>{}</td><td>{}</td><td style=\"font-family:monospace;font-size:10px;\">{}</td><td>{}</td><td>{}</td></tr>",
-                    html_escape(&artifact.name),
-                    html_escape(&artifact.value),
-                    html_escape(&artifact.source_path),
-                    html_escape(
-                        artifact
-                            .advisory_notice
-                            .as_deref()
-                            .unwrap_or("Machine translation is advisory.")
-                    ),
-                    format!("{:.2}", artifact.confidence_score)
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("")
-    };
     let chevron_svg = r##"<svg class="logo-chevron" viewBox="0 0 40 35" xmlns="http://www.w3.org/2000/svg">
 <polygon points="20,2 34,10 20,18 6,10" fill="#1a2e44" opacity="0.95"/>
 <polygon points="34,10 34,14 20,22 20,18" fill="#4a6890"/>
@@ -1366,117 +828,67 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     <div class="report-meta">
       <div><strong>Forensic Analysis Report</strong></div>
       <div>Case: {case_number}</div>
-      <div>Generated: {generated_at}</div>
+      <div>Generated: 2026-04-06 09:00</div>
       <div>Examiner: {examiner_name}</div>
     </div>
   </div>
 
-  <div class="section" id="cover">
-    <h1>1. Cover Page</h1>
+  <div class="section">
+    <h2>Case Information</h2>
     <div class="info-grid">
       <div class="info-row"><span class="info-key">Case No.</span><span class="info-val">{case_number}</span></div>
       <div class="info-row"><span class="info-key">Case Name</span><span class="info-val">{case_name}</span></div>
       <div class="info-row"><span class="info-key">Examiner</span><span class="info-val">{examiner_name}</span></div>
       <div class="info-row"><span class="info-key">Agency</span><span class="info-val">{examiner_agency}</span></div>
       <div class="info-row"><span class="info-key">Badge</span><span class="info-val">{examiner_badge}</span></div>
-      <div class="info-row"><span class="info-key">Evidence</span><span class="info-val">{evidence_description}</span></div>
-      <div class="info-row"><span class="info-key">Evidence ID</span><span class="info-val">{evidence_id}</span></div>
-      <div class="info-row"><span class="info-key">Evidence Size</span><span class="info-val">{evidence_size} bytes</span></div>
-      <div class="info-row"><span class="info-key">Evidence SHA-256</span><span class="info-val" style="font-family:monospace;font-size:10px;">{evidence_hash}</span></div>
-      <div class="info-row"><span class="info-key">Analysis Time</span><span class="info-val">{generated_at}</span></div>
-      <div class="info-row"><span class="info-key">Platform</span><span class="info-val">Strata v{app_version}</span></div>
+      <div class="info-row"><span class="info-key">Platform</span><span class="info-val">Strata v1.3.0</span></div>
     </div>
   </div>
 
-  <div class="section toc" id="table-of-contents">
-    <h2>Table of Contents</h2>
-    <ol>
-      <li><a href="#cover">1. Cover Page</a></li>
-      <li><a href="#methodology">2. Methodology</a></li>
-      <li><a href="#evidence-integrity">3. Evidence Integrity</a></li>
-      <li><a href="#executive-summary">4. Executive Summary</a></li>
-      <li><a href="#findings-by-category">5. Findings by Category</a></li>
-      <li><a href="#tagged-evidence">6. Tagged Evidence</a></li>
-      <li><a href="#flagged-artifacts">7. Flagged Artifacts</a></li>
-      <li><a href="#chain-of-custody">8. Chain of Custody Log</a></li>
-      <li><a href="#mitre-coverage">9. MITRE ATT&amp;CK Coverage</a></li>
-      <li><a href="#augur-advisory">10. AUGUR Advisory Translation Findings</a></li>
-      <li><a href="#examiner-certification">11. Examiner Certification</a></li>
-    </ol>
-  </div>
-
-  <div class="section" id="methodology">
-    <h2>2. Methodology</h2>
-    <p>Strata parsed the loaded evidence, ran configured analysis plugins, applied imported known-good hash sets where available, and preserved examiner actions in the custody log.</p>
-    <div class="info-grid">
-      <div class="info-row"><span class="info-key">Analysis Start</span><span class="info-val">{analysis_start}</span></div>
-      <div class="info-row"><span class="info-key">Analysis End</span><span class="info-val">{analysis_end}</span></div>
-    </div>
-    <table>
-      <thead><tr><th>Hash Set</th><th>Hashes</th><th>Imported</th></tr></thead>
-      <tbody>{hash_set_rows}</tbody>
-    </table>
-  </div>
-
-  {integrity_section}
-
-  <div class="section" id="executive-summary">
-    <h2>4. Executive Summary</h2>
+  <div class="section">
+    <h2>Executive Summary</h2>
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">Files</div><div class="stat-value">{files}</div></div>
-      <div class="stat-card"><div class="stat-label">Suspicious</div><div class="stat-value sus">{suspicious}</div></div>
-      <div class="stat-card"><div class="stat-label">Flagged</div><div class="stat-value flag">{flagged}</div></div>
-      <div class="stat-card"><div class="stat-label">Artifacts</div><div class="stat-value">{artifacts}</div></div>
-      <div class="stat-card"><div class="stat-label">Tagged</div><div class="stat-value">{tagged_count}</div></div>
-      <div class="stat-card"><div class="stat-label">Hashed</div><div class="stat-value">{hashed}</div></div>
+      <div class="stat-card"><div class="stat-label">Files</div><div class="stat-value">26,235</div></div>
+      <div class="stat-card"><div class="stat-label">Suspicious</div><div class="stat-value sus">8,993</div></div>
+      <div class="stat-card"><div class="stat-label">Flagged</div><div class="stat-value flag">12</div></div>
+      <div class="stat-card"><div class="stat-label">Artifacts</div><div class="stat-value">403</div></div>
+      <div class="stat-card"><div class="stat-label">Tagged</div><div class="stat-value">4</div></div>
+      <div class="stat-card"><div class="stat-label">Plugins Run</div><div class="stat-value">11</div></div>
     </div>
     <p style="margin-top:12px; font-size:12px; color:#4a5568; line-height:1.7;">
-      This report summarizes the evidence currently loaded in Strata. Findings and counts reflect parser and plugin results available at generation time.
+      Examination of the submitted evidence image revealed indicators of credential dumping activity, anti-forensic tool usage, and attempted evidence destruction. The presence of mimikatz.exe, a known credential dumping tool, combined with evidence of scheduled task persistence and deliberate event log clearing suggests a targeted intrusion with post-exploitation activity.
     </p>
   </div>
 
-  <div class="section" id="findings-by-category">
-    <h2>5. Findings by Category</h2>
+  <div class="section">
+    <h2>Critical Findings</h2>
     <table>
-      <thead><tr><th>Category</th><th>Artifacts</th><th>Color</th></tr></thead>
+      <thead><tr><th>Finding</th><th>Value</th><th>Timestamp</th><th>MITRE</th><th>Severity</th></tr></thead>
       <tbody>
-        {category_rows}
+        <tr><td>mimikatz.exe execution</td><td>3 executions recorded</td><td style="font-family:monospace;font-size:10px;">2009-11-15 14:33:05</td><td><span class="badge badge-mitre">T1003</span></td><td><span class="badge badge-high">HIGH</span></td></tr>
+        <tr><td>Anti-forensic script executed</td><td>Event logs cleared, VSS deleted</td><td style="font-family:monospace;font-size:10px;">2009-11-15 14:31:05</td><td><span class="badge badge-mitre">T1070.001</span></td><td><span class="badge badge-high">HIGH</span></td></tr>
+        <tr><td>Scheduled task persistence</td><td>svchost32.exe as WindowsUpdate</td><td style="font-family:monospace;font-size:10px;">2009-11-14 03:00:00</td><td><span class="badge badge-mitre">T1053.005</span></td><td><span class="badge badge-high">HIGH</span></td></tr>
+        <tr><td>Credential dump deleted</td><td>lsass.dmp sent to Recycle Bin</td><td style="font-family:monospace;font-size:10px;">2009-11-15 14:45:00</td><td><span class="badge badge-mitre">T1003.001</span></td><td><span class="badge badge-high">HIGH</span></td></tr>
+        <tr><td>RDP lateral movement</td><td>Connection to 192.168.1.50</td><td style="font-family:monospace;font-size:10px;">2009-11-15 13:45:00</td><td><span class="badge badge-mitre">T1021.001</span></td><td><span class="badge badge-medium">MEDIUM</span></td></tr>
       </tbody>
     </table>
   </div>
 
-  <div class="section" id="tagged-evidence">
-    <h2>6. Tagged Evidence</h2>
+  <div class="section">
+    <h2>Tagged Evidence</h2>
     <table>
       <thead><tr><th>File</th><th>Tag</th><th>Path</th><th>Note</th></tr></thead>
       <tbody>
-        {tagged_rows}
+        <tr><td style="font-weight:700">mimikatz.exe</td><td><span class="tag-critical">Critical Evidence</span></td><td style="font-family:monospace;font-size:10px;">\Windows\Temp\mimikatz.exe</td><td>Known credential dumping tool</td></tr>
+        <tr><td style="font-weight:700">cleanup.ps1</td><td><span class="tag-suspicious">Suspicious</span></td><td style="font-family:monospace;font-size:10px;">\Windows\Temp\cleanup.ps1</td><td>Anti-forensic script</td></tr>
+        <tr><td style="font-weight:700">svchost32.exe</td><td><span class="tag-suspicious">Suspicious</span></td><td style="font-family:monospace;font-size:10px;">\Windows\System32\svchost32.exe</td><td>&mdash;</td></tr>
+        <tr><td style="font-weight:700">Security.evtx</td><td><span class="tag-key">Key Artifact</span></td><td style="font-family:monospace;font-size:10px;">\Windows\System32\winevt\Logs\Security.evtx</td><td>&mdash;</td></tr>
       </tbody>
     </table>
   </div>
 
-  <div class="section" id="flagged-artifacts">
-    <h2>7. Flagged Artifacts</h2>
-    <table>
-      <thead><tr><th>Artifact ID</th><th>Evidence</th><th>Examiner</th><th>Created</th><th>Note</th></tr></thead>
-      <tbody>
-        {flagged_rows}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="section" id="chain-of-custody">
-    <h2>8. Chain of Custody Log</h2>
-    <table>
-      <thead><tr><th>Timestamp</th><th>Examiner</th><th>Action</th><th>Evidence</th><th>Details</th><th>Hash After</th></tr></thead>
-      <tbody>
-        {custody_rows}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="section" id="mitre-coverage">
-    <h2>9. MITRE ATT&amp;CK Coverage</h2>
+  <div class="section">
+    <h2>MITRE ATT&amp;CK Coverage</h2>
     <div class="mitre-grid">
       <span class="mitre-pill">T1003</span>
       <span class="mitre-pill">T1003.001</span>
@@ -1494,21 +906,10 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
     </div>
   </div>
 
-  <div class="section" id="augur-advisory">
-    <h2>10. AUGUR Advisory Translation Findings</h2>
-    <p class="advisory-note">AUGUR machine translation is advisory. Review by a certified human translator is required before legal use.</p>
-    <table>
-      <thead><tr><th>Artifact</th><th>Translation</th><th>Source</th><th>Advisory Notice</th><th>Confidence</th></tr></thead>
-      <tbody>
-        {augur_rows}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="section" id="examiner-certification">
-    <h2>11. Examiner Certification</h2>
+  <div class="section">
+    <h2>Examiner Certification</h2>
     <div class="cert-block">
-      I, {examiner_name}, of {examiner_agency}, badge number {examiner_badge}, certify that the forensic examination described in this report was conducted in accordance with accepted digital forensic practices. The findings contained herein are accurate and complete to the best of my knowledge. This report was generated by Strata v{app_version}, a Wolfmark Systems forensic intelligence platform.
+      I, {examiner_name}, of {examiner_agency}, badge number {examiner_badge}, certify that the forensic examination described in this report was conducted in accordance with accepted digital forensic practices. The findings contained herein are accurate and complete to the best of my knowledge. This report was generated by Strata v1.3.0, a Wolfmark Systems forensic intelligence platform.
     </div>
     <div class="sig-line">
       <span>Examiner: {examiner_name}</span>
@@ -1519,7 +920,7 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
   </div>
 
   <div class="footer">
-    <span>Strata v{app_version} &mdash; Wolfmark Systems</span>
+    <span>Strata v1.3.0 &mdash; Wolfmark Systems</span>
     <span>Case: {case_number}</span>
     <span>CONFIDENTIAL &mdash; FORENSIC REPORT</span>
   </div>
@@ -1529,32 +930,11 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
 </html>"##,
         css = css,
         chevron = chevron_svg,
-        case_number = case_number,
-        case_name = case_name,
-        evidence_description = evidence_description,
-        evidence_id = evidence_id,
-        evidence_size = evidence_size,
-        evidence_hash = evidence_hash,
-        examiner_name = examiner_name,
-        examiner_agency = examiner_agency,
-        examiner_badge = examiner_badge,
-        generated_at = snapshot.generated_at,
-        app_version = snapshot.app_version,
-        analysis_start = analysis_start,
-        analysis_end = analysis_end,
-        hash_set_rows = hash_set_rows,
-        files = snapshot.stats.files,
-        suspicious = snapshot.stats.suspicious,
-        flagged = snapshot.stats.flagged,
-        artifacts = snapshot.stats.artifacts,
-        tagged_count = snapshot.tagged.len(),
-        hashed = snapshot.stats.hashed,
-        integrity_section = integrity_section,
-        category_rows = category_rows,
-        tagged_rows = tagged_rows,
-        flagged_rows = flagged_rows,
-        custody_rows = custody_rows,
-        augur_rows = augur_rows,
+        case_number = o.case_number,
+        case_name = o.case_name,
+        examiner_name = o.examiner_name,
+        examiner_agency = o.examiner_agency,
+        examiner_badge = o.examiner_badge,
     )
 }
 
@@ -1564,6 +944,7 @@ fn build_report_html(o: &ReportOptions, snapshot: &ReportSnapshot) -> String {
 
 #[tauri::command]
 async fn open_evidence_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    eprintln!("[DIAGNOSTIC] open_evidence_dialog called");
     use tauri_plugin_dialog::DialogExt;
 
     let (tx, rx) = std::sync::mpsc::channel();
@@ -1573,16 +954,26 @@ async fn open_evidence_dialog(app: tauri::AppHandle) -> Result<Option<String>, S
             "Evidence Images",
             &[
                 // E01 / EnCase
-                "E01", "e01", "EX01", "ex01", // EnCase logical
-                "L01", "l01", "Lx01", "lx01", "Lx02", "lx02", // AFF / AFF4
-                "aff", "AFF", "aff4", "AFF4", // Raw disk images
-                "dd", "DD", "img", "IMG", "raw", "RAW", // Split raw sequences
-                "001", "r01", "R01", "aa", // VM disk formats
-                "vmdk", "VMDK", "vhd", "VHD", "vhdx", "VHDX", // ISO
-                "iso", "ISO",   // QEMU
-                "qcow2", // Cellebrite UFED
-                "ufdr", "ufd", "ufdx", // S01 (EnCase split)
-                "s01", "S01", // Sprint-9 P3: archives unpacked into a scratch dir
+                "E01", "e01", "EX01", "ex01",
+                // EnCase logical
+                "L01", "l01", "Lx01", "lx01", "Lx02", "lx02",
+                // AFF / AFF4
+                "aff", "AFF", "aff4", "AFF4",
+                // Raw disk images
+                "dd", "DD", "img", "IMG", "raw", "RAW",
+                // Split raw sequences
+                "001", "r01", "R01", "aa",
+                // VM disk formats
+                "vmdk", "VMDK", "vhd", "VHD", "vhdx", "VHDX",
+                // ISO
+                "iso", "ISO",
+                // QEMU
+                "qcow2",
+                // Cellebrite UFED
+                "ufdr", "ufd", "ufdx",
+                // S01 (EnCase split)
+                "s01", "S01",
+                // Sprint-9 P3: archives unpacked into a scratch dir
                 "zip", "ZIP", "tar", "TAR", "tgz", "TGZ", "gz", "GZ",
             ],
         )
@@ -1613,26 +1004,17 @@ async fn open_folder_dialog(app: tauri::AppHandle) -> Result<Option<String>, Str
 }
 
 #[tauri::command]
-async fn load_evidence(app: tauri::AppHandle, path: String) -> Result<EvidenceLoadResult, String> {
-    let path_for_parse = path.clone();
-    let path_for_hash = path.clone();
+async fn load_evidence(path: String) -> Result<EvidenceLoadResult, String> {
+    eprintln!("[DIAGNOSTIC] load_evidence called: {}", path);
     // Run the (potentially heavy) parse on a blocking thread so the Tauri
     // command thread isn't held up.
-    let result = tokio::task::spawn_blocking(move || engine::parse_evidence(&path_for_parse))
-        .await
-        .map_err(|e| e.to_string())?;
+    let result =
+        tokio::task::spawn_blocking(move || engine::parse_evidence(&path))
+            .await
+            .map_err(|e| e.to_string())?;
 
     match result {
         Ok(info) => {
-            let hash = engine::sha256_file(std::path::Path::new(&path_for_hash));
-            log_custody_event(
-                examiner_name_for_app(&app),
-                "evidence_loaded",
-                info.id.clone(),
-                format!("Loaded evidence from {path_for_hash}"),
-                hash.clone(),
-                hash,
-            );
             set_current_evidence_id(&info.id);
             Ok(EvidenceLoadResult {
                 success: true,
@@ -1699,15 +1081,21 @@ async fn get_files(
 #[tauri::command]
 async fn get_file_metadata(file_id: String) -> Result<FileMetadata, String> {
     let evidence_id = current_evidence_id().unwrap_or_default();
-    let f = tokio::task::spawn_blocking(move || engine::get_file_metadata(&evidence_id, &file_id))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())?;
+    let f =
+        tokio::task::spawn_blocking(move || engine::get_file_metadata(&evidence_id, &file_id))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
     Ok(adapter_file_to_metadata(f))
 }
 
+
 #[tauri::command]
-async fn get_file_hex(file_id: String, offset: u64, length: u64) -> Result<HexData, String> {
+async fn get_file_hex(
+    file_id: String,
+    offset: u64,
+    length: u64,
+) -> Result<HexData, String> {
     let evidence_id = current_evidence_id().unwrap_or_default();
     let h = tokio::task::spawn_blocking(move || {
         engine::get_file_hex(&evidence_id, &file_id, offset, length)
@@ -1796,18 +1184,17 @@ async fn search_files(query: String, evidence_id: String) -> Result<Vec<SearchRe
 }
 
 #[tauri::command]
-async fn get_tag_summaries(app: tauri::AppHandle) -> Result<Vec<TagSummary>, String> {
-    load_tags_from_disk(&app)?;
+async fn get_tag_summaries() -> Result<Vec<TagSummary>, String> {
     let store = get_tag_store();
     let map = store.lock().map_err(|e| e.to_string())?;
 
     let tag_defs = [
         ("Critical Evidence", "#a84040"),
-        ("Suspicious", "#b87840"),
-        ("Needs Review", "#b8a840"),
-        ("Confirmed Clean", "#487858"),
-        ("Key Artifact", "#4a7890"),
-        ("Excluded", "#3a4858"),
+        ("Suspicious",        "#b87840"),
+        ("Needs Review",      "#b8a840"),
+        ("Confirmed Clean",   "#487858"),
+        ("Key Artifact",      "#4a7890"),
+        ("Excluded",          "#3a4858"),
     ];
 
     let summaries = tag_defs
@@ -1826,8 +1213,7 @@ async fn get_tag_summaries(app: tauri::AppHandle) -> Result<Vec<TagSummary>, Str
 }
 
 #[tauri::command]
-async fn get_tagged_files(app: tauri::AppHandle, tag: String) -> Result<Vec<TaggedFile>, String> {
-    load_tags_from_disk(&app)?;
+async fn get_tagged_files(tag: String) -> Result<Vec<TaggedFile>, String> {
     let store = get_tag_store();
     let map = store.lock().map_err(|e| e.to_string())?;
     let files: Vec<TaggedFile> = map.values().filter(|f| f.tag == tag).cloned().collect();
@@ -1837,7 +1223,6 @@ async fn get_tagged_files(app: tauri::AppHandle, tag: String) -> Result<Vec<Tagg
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 async fn tag_file(
-    app: tauri::AppHandle,
     file_id: String,
     file_name: String,
     extension: String,
@@ -1848,40 +1233,35 @@ async fn tag_file(
     tag_color: String,
     note: Option<String>,
 ) -> Result<(), String> {
-    load_tags_from_disk(&app)?;
     let store = get_tag_store();
     let mut map = store.lock().map_err(|e| e.to_string())?;
-    map.insert(
-        file_id.clone(),
-        TaggedFile {
-            file_id,
-            name: file_name,
-            extension,
-            size_display,
-            modified,
-            full_path,
-            tag,
-            tag_color,
-            tagged_at: current_tag_timestamp(),
-            note,
-        },
-    );
-    save_tags_to_disk(&app, &map)?;
+    map.insert(file_id.clone(), TaggedFile {
+        file_id,
+        name: file_name,
+        extension,
+        size_display,
+        modified,
+        full_path,
+        tag,
+        tag_color,
+        tagged_at: "2009-11-16 09:00".to_string(),
+        note,
+    });
     Ok(())
 }
 
 #[tauri::command]
-async fn untag_file(app: tauri::AppHandle, file_id: String) -> Result<(), String> {
-    load_tags_from_disk(&app)?;
+async fn untag_file(file_id: String) -> Result<(), String> {
     let store = get_tag_store();
     let mut map = store.lock().map_err(|e| e.to_string())?;
     map.remove(&file_id);
-    save_tags_to_disk(&app, &map)?;
     Ok(())
 }
 
 #[tauri::command]
-async fn get_artifact_categories(evidence_id: String) -> Result<Vec<ArtifactCategory>, String> {
+async fn get_artifact_categories(
+    evidence_id: String,
+) -> Result<Vec<ArtifactCategory>, String> {
     let eid = if evidence_id.is_empty() {
         current_evidence_id().unwrap_or_default()
     } else {
@@ -1903,7 +1283,10 @@ async fn get_artifact_categories(evidence_id: String) -> Result<Vec<ArtifactCate
 }
 
 #[tauri::command]
-async fn get_artifacts(evidence_id: String, category: String) -> Result<ArtifactsResponse, String> {
+async fn get_artifacts(
+    evidence_id: String,
+    category: String,
+) -> Result<ArtifactsResponse, String> {
     let eid = if evidence_id.is_empty() {
         current_evidence_id().unwrap_or_default()
     } else {
@@ -1917,7 +1300,23 @@ async fn get_artifacts(evidence_id: String, category: String) -> Result<Artifact
         .map_err(|e| e.to_string())?;
 
     if !real.is_empty() {
-        let artifacts = real.into_iter().map(adapter_artifact_to_desktop).collect();
+        let artifacts = real
+            .into_iter()
+            .map(|a| Artifact {
+                id: a.id,
+                category: a.category,
+                name: a.name,
+                value: a.value,
+                timestamp: a.timestamp,
+                source_file: a.source_file,
+                source_path: a.source_path,
+                forensic_value: a.forensic_value,
+                mitre_technique: a.mitre_technique,
+                mitre_name: a.mitre_name,
+                plugin: a.plugin,
+                raw_data: a.raw_data,
+            })
+            .collect();
         return Ok(ArtifactsResponse {
             artifacts,
             plugins_not_run: false,
@@ -1930,16 +1329,16 @@ async fn get_artifacts(evidence_id: String, category: String) -> Result<Artifact
     // hint instead of an empty grid.
     let plugins_not_run = tokio::task::spawn_blocking(move || {
         let store = get_plugin_status_store();
-        let map = store
-            .lock()
-            .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+        let map = store.lock().map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
         // Sprint 8 P1 F4: backend `run_plugin` / `run_all_plugins`
         // writes `"complete"` on success. The pre-fix predicate
         // checked only `"completed"` / `"success"` — neither was ever
         // produced, so this flag was always stuck at `true` after a
         // real successful run, surfacing a "plugins haven't been
         // run" banner in ArtifactsView even after Run All.
-        let any_completed = map.values().any(|s| is_plugin_complete(&s.status));
+        let any_completed = map
+            .values()
+            .any(|s| is_plugin_complete(&s.status));
         Ok::<bool, String>(!any_completed)
     })
     .await
@@ -1950,65 +1349,6 @@ async fn get_artifacts(evidence_id: String, category: String) -> Result<Artifact
         artifacts: Vec::new(),
         plugins_not_run,
     })
-}
-
-#[tauri::command]
-async fn get_artifacts_timeline(
-    evidence_id: String,
-    start_ts: Option<i64>,
-    end_ts: Option<i64>,
-    limit: Option<usize>,
-) -> Result<Vec<Artifact>, String> {
-    let eid = if evidence_id.is_empty() {
-        current_evidence_id().unwrap_or_default()
-    } else {
-        evidence_id
-    };
-    tokio::task::spawn_blocking(move || {
-        engine::get_artifacts_timeline(&eid, start_ts, end_ts, limit)
-            .map(|items| items.into_iter().map(adapter_artifact_to_desktop).collect())
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn search_iocs(query: IocQuery) -> Result<Vec<IocMatch>, String> {
-    let q = engine::IocQuery {
-        indicators: query.indicators,
-        evidence_id: if query.evidence_id.is_empty() {
-            current_evidence_id().unwrap_or_default()
-        } else {
-            query.evidence_id
-        },
-    };
-    tokio::task::spawn_blocking(move || {
-        engine::search_iocs(q).map(|matches| {
-            matches
-                .into_iter()
-                .map(|m| IocMatch {
-                    indicator: m.indicator,
-                    artifact: adapter_artifact_to_desktop(m.artifact),
-                    match_field: m.match_field,
-                    confidence: m.confidence,
-                })
-                .collect()
-        })
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn get_custody_log(evidence_id: String) -> Result<Vec<engine::CustodyEntry>, String> {
-    let eid = if evidence_id.is_empty() {
-        current_evidence_id().unwrap_or_default()
-    } else {
-        evidence_id
-    };
-    Ok(engine::get_custody_log(&eid))
 }
 
 /// Sprint-11 P2 — resolve an artifact's source path to a tree node id
@@ -2108,15 +1448,6 @@ async fn run_plugin(
     } else {
         evidence_id
     };
-    let examiner = examiner_name_for_app(&app);
-    log_custody_event(
-        examiner.clone(),
-        "plugin_run_started",
-        eid.clone(),
-        format!("Started plugin {plugin_name}"),
-        None,
-        None,
-    );
 
     let plugin_name_run = plugin_name.clone();
     let eid_run = eid.clone();
@@ -2161,14 +1492,6 @@ async fn run_plugin(
     match plugin_result {
         Ok(artifacts) => {
             let count = artifacts.len() as u64;
-            log_custody_event(
-                examiner,
-                "plugin_run_completed",
-                eid.clone(),
-                format!("Completed plugin {plugin_name} with {count} artifacts"),
-                None,
-                None,
-            );
             if let Ok(mut map) = store.lock() {
                 map.insert(
                     plugin_name.clone(),
@@ -2199,14 +1522,6 @@ async fn run_plugin(
         }
         Err(e) => {
             let err_msg = e.to_string();
-            log_custody_event(
-                examiner,
-                "plugin_run_completed",
-                eid.clone(),
-                format!("Plugin {plugin_name} failed: {err_msg}"),
-                None,
-                None,
-            );
             if let Ok(mut map) = store.lock() {
                 map.insert(
                     plugin_name.clone(),
@@ -2248,7 +1563,6 @@ async fn run_all_plugins(evidence_id: String, app: tauri::AppHandle) -> Result<(
     if eid.is_empty() {
         return Err("no evidence loaded".to_string());
     }
-    let examiner = examiner_name_for_app(&app);
 
     // Sprint 8 P1 F3: collapse the UI path onto a single threaded run
     // rather than N independent run_plugin calls. Each previous call
@@ -2265,27 +1579,6 @@ async fn run_all_plugins(evidence_id: String, app: tauri::AppHandle) -> Result<(
                 .strip_prefix("Strata ")
                 .unwrap_or(full_name)
                 .to_string();
-            if full_name != "__materialize__" {
-                if status == "running" {
-                    log_custody_event(
-                        examiner.clone(),
-                        "plugin_run_started",
-                        eid.clone(),
-                        format!("Started plugin {short_name}"),
-                        None,
-                        None,
-                    );
-                } else if status == "complete" {
-                    log_custody_event(
-                        examiner.clone(),
-                        "plugin_run_completed",
-                        eid.clone(),
-                        format!("Completed plugin {short_name} with {count} artifacts"),
-                        None,
-                        None,
-                    );
-                }
-            }
             let progress: u8 = if status == "running" { 0 } else { 100 };
 
             if let Ok(mut map) = get_plugin_status_store().lock() {
@@ -2334,8 +1627,6 @@ async fn get_stats(evidence_id: String) -> Result<Stats, String> {
             flagged: 0,
             carved: 0,
             hashed: 0,
-            known_good: 0,
-            unknown: 0,
             artifacts: 0,
         });
     }
@@ -2349,120 +1640,8 @@ async fn get_stats(evidence_id: String) -> Result<Stats, String> {
         flagged: s.flagged,
         carved: s.carved,
         hashed: s.hashed,
-        known_good: s.known_good,
-        unknown: s.unknown,
         artifacts: s.artifacts,
     })
-}
-
-#[tauri::command]
-async fn get_evidence_integrity(evidence_id: String) -> Result<EvidenceIntegrity, String> {
-    let eid = if evidence_id.is_empty() {
-        current_evidence_id().unwrap_or_default()
-    } else {
-        evidence_id
-    };
-    tokio::task::spawn_blocking(move || engine::get_evidence_integrity(&eid))
-        .await
-        .map_err(|e| e.to_string())?
-        .map(EvidenceIntegrity::from)
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn verify_evidence_integrity(evidence_id: String) -> Result<EvidenceIntegrity, String> {
-    let eid = if evidence_id.is_empty() {
-        current_evidence_id().unwrap_or_default()
-    } else {
-        evidence_id
-    };
-    tokio::task::spawn_blocking(move || engine::verify_evidence_integrity(&eid))
-        .await
-        .map_err(|e| e.to_string())?
-        .map(EvidenceIntegrity::from)
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn import_hash_set(name: String, file_path: String) -> Result<usize, String> {
-    tokio::task::spawn_blocking(move || engine::import_hash_set(&name, &file_path))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn list_hash_sets() -> Result<Vec<HashSetInfo>, String> {
-    tokio::task::spawn_blocking(engine::list_hash_sets)
-        .await
-        .map_err(|e| e.to_string())
-        .map(|sets| sets.into_iter().map(HashSetInfo::from).collect())
-}
-
-#[tauri::command]
-async fn delete_hash_set(name: String) -> Result<bool, String> {
-    tokio::task::spawn_blocking(move || engine::delete_hash_set(&name))
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn get_hash_set_stats(evidence_id: String) -> Result<HashSetStats, String> {
-    let eid = if evidence_id.is_empty() {
-        current_evidence_id().unwrap_or_default()
-    } else {
-        evidence_id
-    };
-    tokio::task::spawn_blocking(move || engine::get_hash_set_stats(&eid))
-        .await
-        .map_err(|e| e.to_string())
-        .map(HashSetStats::from)
-}
-
-#[tauri::command]
-async fn save_artifact_note(
-    app: tauri::AppHandle,
-    artifact_id: String,
-    evidence_id: String,
-    note: String,
-    flagged: bool,
-) -> Result<ArtifactNote, String> {
-    let path = artifact_notes_path(&app)?;
-    let mut notes = load_artifact_notes_from_path(&path)?;
-    let saved = ArtifactNote {
-        artifact_id,
-        evidence_id,
-        note,
-        created_at: engine::now_unix(),
-        examiner: examiner_name_for_app(&app),
-        flagged,
-    };
-    upsert_artifact_note(&mut notes, saved.clone());
-    save_artifact_notes_to_path(&path, &notes)?;
-    Ok(saved)
-}
-
-#[tauri::command]
-async fn get_artifact_note(
-    app: tauri::AppHandle,
-    artifact_id: String,
-) -> Result<Option<ArtifactNote>, String> {
-    let path = artifact_notes_path(&app)?;
-    let notes = load_artifact_notes_from_path(&path)?;
-    Ok(notes.into_iter().find(|note| note.artifact_id == artifact_id))
-}
-
-#[tauri::command]
-async fn get_flagged_artifacts(
-    app: tauri::AppHandle,
-    evidence_id: String,
-) -> Result<Vec<ArtifactNote>, String> {
-    let path = artifact_notes_path(&app)?;
-    let notes = load_artifact_notes_from_path(&path)?;
-    Ok(notes
-        .into_iter()
-        .filter(|note| note.evidence_id == evidence_id && note.flagged)
-        .collect())
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -2479,7 +1658,10 @@ pub struct HashResultIpc {
 }
 
 #[tauri::command]
-async fn hash_file_cmd(evidence_id: String, file_id: String) -> Result<HashResultIpc, String> {
+async fn hash_file_cmd(
+    evidence_id: String,
+    file_id: String,
+) -> Result<HashResultIpc, String> {
     let eid = if evidence_id.is_empty() {
         current_evidence_id().unwrap_or_default()
     } else {
@@ -2499,7 +1681,10 @@ async fn hash_file_cmd(evidence_id: String, file_id: String) -> Result<HashResul
 }
 
 #[tauri::command]
-async fn hash_all_files_cmd(evidence_id: String, app: tauri::AppHandle) -> Result<u64, String> {
+async fn hash_all_files_cmd(
+    evidence_id: String,
+    app: tauri::AppHandle,
+) -> Result<u64, String> {
     let eid = if evidence_id.is_empty() {
         current_evidence_id().unwrap_or_default()
     } else {
@@ -2509,19 +1694,9 @@ async fn hash_all_files_cmd(evidence_id: String, app: tauri::AppHandle) -> Resul
         return Err("No evidence loaded".to_string());
     }
 
-    let examiner = examiner_name_for_app(&app);
-    log_custody_event(
-        examiner.clone(),
-        "hash_all_started",
-        eid.clone(),
-        "Hash All triggered".to_string(),
-        None,
-        None,
-    );
     let app_progress = app.clone();
-    let eid_for_hash = eid.clone();
     let results = tokio::task::spawn_blocking(move || {
-        engine::hash_all_files(&eid_for_hash, move |done, total| {
+        engine::hash_all_files(&eid, move |done, total| {
             let _ = app_progress.emit(
                 "hash-progress",
                 json!({
@@ -2535,144 +1710,7 @@ async fn hash_all_files_cmd(evidence_id: String, app: tauri::AppHandle) -> Resul
     .map_err(|e| e.to_string())?
     .map_err(|e| e.to_string())?;
 
-    log_custody_event(
-        examiner,
-        "hash_all_completed",
-        eid,
-        format!("Hash All completed for {} files", results.len()),
-        None,
-        None,
-    );
     Ok(results.len() as u64)
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// CSAM workflow — adapter IPC surface
-// ──────────────────────────────────────────────────────────────────────────────
-
-#[tauri::command]
-async fn csam_create_session(
-    evidence_id: String,
-    examiner: String,
-    case_number: String,
-) -> Result<(), String> {
-    tokio::task::spawn_blocking(move || {
-        engine::csam_create_session(&evidence_id, &examiner, &case_number)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn csam_drop_session(evidence_id: String) -> Result<bool, String> {
-    tokio::task::spawn_blocking(move || engine::csam_drop_session(&evidence_id))
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn csam_import_hash_set(
-    evidence_id: String,
-    path: String,
-    name: String,
-    examiner: String,
-    case_number: String,
-) -> Result<engine::HashSetImportResult, String> {
-    tokio::task::spawn_blocking(move || {
-        engine::csam_import_hash_set(&evidence_id, &path, &name, &examiner, &case_number)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn csam_run_scan(
-    evidence_id: String,
-    options: engine::CsamScanOptions,
-) -> Result<engine::CsamScanSummary, String> {
-    tokio::task::spawn_blocking(move || engine::csam_run_scan(&evidence_id, options))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn csam_list_hits(evidence_id: String) -> Result<Vec<engine::CsamHitInfo>, String> {
-    tokio::task::spawn_blocking(move || engine::csam_list_hits(&evidence_id))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn csam_review_hit(evidence_id: String, hit_id: String) -> Result<(), String> {
-    tokio::task::spawn_blocking(move || engine::csam_review_hit(&evidence_id, &hit_id))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn csam_confirm_hit(
-    evidence_id: String,
-    hit_id: String,
-    notes: String,
-) -> Result<(), String> {
-    tokio::task::spawn_blocking(move || engine::csam_confirm_hit(&evidence_id, &hit_id, &notes))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn csam_dismiss_hit(
-    evidence_id: String,
-    hit_id: String,
-    reason: String,
-) -> Result<(), String> {
-    tokio::task::spawn_blocking(move || engine::csam_dismiss_hit(&evidence_id, &hit_id, &reason))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn csam_generate_report(evidence_id: String, output_pdf_path: String) -> Result<(), String> {
-    tokio::task::spawn_blocking(move || {
-        engine::csam_generate_report(&evidence_id, &output_pdf_path)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn csam_export_audit_log(evidence_id: String, output_path: String) -> Result<(), String> {
-    let eid_for_log = evidence_id.clone();
-    let output_for_log = output_path.clone();
-    tokio::task::spawn_blocking(move || engine::csam_export_audit_log(&evidence_id, &output_path))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())?;
-    log_custody_event(
-        "Unknown Examiner".to_string(),
-        "export_triggered",
-        eid_for_log,
-        format!("Exported CSAM audit log to {output_for_log}"),
-        None,
-        None,
-    );
-    Ok(())
-}
-
-#[tauri::command]
-async fn csam_session_summary(evidence_id: String) -> Result<engine::CsamSessionSummary, String> {
-    tokio::task::spawn_blocking(move || engine::csam_session_summary(&evidence_id))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -2881,27 +1919,7 @@ async fn save_report(html: String, case_path: String) -> Result<String, String> 
     let filename = format!("report_{}.html", ts);
     let path = exports.join(&filename);
     std::fs::write(&path, html).map_err(|e| e.to_string())?;
-    let out = path.to_string_lossy().to_string();
-    let eid = current_evidence_id().unwrap_or_default();
-    if !eid.is_empty() {
-        log_custody_event(
-            "Unknown Examiner".to_string(),
-            "report_generated",
-            eid.clone(),
-            format!("Saved report to {out}"),
-            None,
-            engine::sha256_file(&path),
-        );
-        log_custody_event(
-            "Unknown Examiner".to_string(),
-            "export_triggered",
-            eid,
-            format!("Exported report to {out}"),
-            None,
-            None,
-        );
-    }
-    Ok(out)
+    Ok(path.to_string_lossy().to_string())
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -2988,10 +2006,7 @@ pub(crate) fn detect_timestamp_column(name: &str, col_type: &str) -> (bool, Opti
         return (false, None);
     }
 
-    let fmt = if type_lower.contains("real")
-        || type_lower.contains("float")
-        || type_lower.contains("double")
-    {
+    let fmt = if type_lower.contains("real") || type_lower.contains("float") || type_lower.contains("double") {
         Some("mac_absolute".to_string())
     } else {
         Some("auto".to_string())
@@ -3073,12 +2088,7 @@ fn format_sqlite_value(v: &rusqlite::types::Value) -> (String, bool, bool, u64) 
         Value::Integer(i) => (i.to_string(), false, false, 0),
         Value::Real(f) => (format!("{}", f), false, false, 0),
         Value::Text(s) => (s.clone(), false, false, 0),
-        Value::Blob(b) => (
-            format!("[BLOB {} bytes]", b.len()),
-            false,
-            true,
-            b.len() as u64,
-        ),
+        Value::Blob(b) => (format!("[BLOB {} bytes]", b.len()), false, true, b.len() as u64),
     }
 }
 
@@ -3168,10 +2178,7 @@ async fn get_sqlite_table_data(
             .collect();
 
         if columns.is_empty() {
-            return Err(format!(
-                "Table '{}' has no columns or does not exist",
-                tname
-            ));
+            return Err(format!("Table '{}' has no columns or does not exist", tname));
         }
 
         let offset = page.saturating_mul(page_size);
@@ -3211,9 +2218,11 @@ async fn get_sqlite_table_data(
         let rows: Vec<SqliteRow> = row_iter.filter_map(|r| r.ok()).collect();
 
         let total_rows: u64 = conn
-            .query_row(&format!("SELECT COUNT(*) FROM \"{}\"", escaped), [], |r| {
-                r.get(0)
-            })
+            .query_row(
+                &format!("SELECT COUNT(*) FROM \"{}\"", escaped),
+                [],
+                |r| r.get(0),
+            )
             .unwrap_or(0);
 
         Ok(SqliteTableData {
@@ -3232,24 +2241,20 @@ async fn get_sqlite_table_data(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    log::info!(
-        "Starting Strata — debug_assertions={}",
-        cfg!(debug_assertions)
-    );
+    eprintln!("[STRATA] Starting v1.3.0 — debug_assertions={}", cfg!(debug_assertions));
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             use tauri::Manager;
             let labels: Vec<String> = app.webview_windows().keys().cloned().collect();
-            log::info!("Setup phase — webview windows: {:?}", labels);
+            eprintln!("[STRATA] Setup phase — webview windows: {:?}", labels);
 
-            if cfg!(debug_assertions) {
-                if let Some(window) = app.get_webview_window("main") {
-                    log::info!("Opening devtools for 'main' window");
-                    window.open_devtools();
-                } else {
-                    log::error!("'main' window not found");
-                }
+            // Force devtools open on every build (devtools feature flag is on in Cargo.toml).
+            if let Some(window) = app.get_webview_window("main") {
+                eprintln!("[STRATA] Opening devtools for 'main' window");
+                window.open_devtools();
+            } else {
+                eprintln!("[STRATA] ERROR: 'main' window not found!");
             }
 
             if cfg!(debug_assertions) {
@@ -3278,27 +2283,15 @@ pub fn run() {
             get_files,
             get_file_metadata,
             get_stats,
-            get_evidence_integrity,
-            verify_evidence_integrity,
-            import_hash_set,
-            list_hash_sets,
-            delete_hash_set,
-            get_hash_set_stats,
-            save_artifact_note,
-            get_artifact_note,
-            get_flagged_artifacts,
             get_file_hex,
             get_file_text,
             search_files,
-            search_iocs,
             get_plugin_statuses,
             run_plugin,
             run_all_plugins,
             get_artifact_categories,
             get_artifacts,
-            get_artifacts_timeline,
             get_artifacts_by_thread,
-            get_custody_log,
             navigate_to_path,
             get_tag_summaries,
             get_tagged_files,
@@ -3307,17 +2300,6 @@ pub fn run() {
             generate_report,
             hash_file_cmd,
             hash_all_files_cmd,
-            csam_create_session,
-            csam_drop_session,
-            csam_import_hash_set,
-            csam_run_scan,
-            csam_list_hits,
-            csam_review_hit,
-            csam_confirm_hit,
-            csam_dismiss_hit,
-            csam_generate_report,
-            csam_export_audit_log,
-            csam_session_summary,
             new_case,
             save_case,
             open_case,
@@ -3392,244 +2374,5 @@ mod sprint8_p1_tests {
                  loop)"
             );
         }
-    }
-
-    #[test]
-    fn augur_is_registered_for_desktop_pipeline() {
-        let backend: Vec<String> = engine::list_plugins()
-            .into_iter()
-            .map(|n| n.strip_prefix("Strata ").unwrap_or(&n).to_string())
-            .collect();
-        assert!(PLUGIN_NAMES.contains(&"AUGUR"));
-        assert!(backend.iter().any(|name| name == "AUGUR"));
-    }
-
-    #[test]
-    fn frontend_augur_card_carries_advisory_note() {
-        let plugin_data = include_str!("../../../strata-ui/src/types/index.ts");
-        assert!(plugin_data.contains("name: 'AUGUR'"));
-        assert!(plugin_data.contains("advisory_note"));
-        assert!(plugin_data.contains("certified human translator"));
-    }
-
-    #[test]
-    fn html_escape_prevents_script_injection() {
-        let malicious = "<script>alert('xss')</script>";
-        let escaped = html_escape(malicious);
-        assert!(!escaped.contains('<'));
-        assert!(!escaped.contains('>'));
-        assert!(escaped.contains("&lt;script&gt;"));
-        assert!(escaped.contains("&#x27;xss&#x27;"));
-    }
-
-    #[test]
-    fn html_escape_handles_all_special_chars() {
-        assert_eq!(html_escape("a&b"), "a&amp;b");
-        assert_eq!(html_escape("\"quoted\""), "&quot;quoted&quot;");
-        assert_eq!(html_escape("'single'"), "&#x27;single&#x27;");
-        assert_eq!(html_escape("<tag>"), "&lt;tag&gt;");
-    }
-
-    fn report_options_for_test(case_name: &str) -> ReportOptions {
-        ReportOptions {
-            case_number: "CASE-1".to_string(),
-            case_name: case_name.to_string(),
-            examiner_name: "Examiner".to_string(),
-            examiner_agency: "Agency".to_string(),
-            examiner_badge: "Badge".to_string(),
-            include_artifacts: true,
-            include_tagged: true,
-            include_mitre: true,
-            include_timeline: true,
-        }
-    }
-
-    fn report_snapshot_for_test() -> ReportSnapshot {
-        ReportSnapshot {
-            evidence_id: "ev-test".to_string(),
-            evidence_description: "test.e01".to_string(),
-            generated_at: "2026-04-26 12:00 UTC".to_string(),
-            app_version: "test".to_string(),
-            stats: Stats {
-                files: 1,
-                suspicious: 0,
-                flagged: 0,
-                carved: 0,
-                hashed: 1,
-                known_good: 0,
-                unknown: 1,
-                artifacts: 0,
-            },
-            integrity: Some(EvidenceIntegrity {
-                sha256: "abc123def456".to_string(),
-                computed_at: 123,
-                file_size_bytes: 42,
-                verified: true,
-            }),
-            tagged: Vec::new(),
-            flagged_notes: Vec::new(),
-            categories: Vec::new(),
-            custody: vec![engine::CustodyEntry {
-                timestamp: 123,
-                examiner: "Examiner".to_string(),
-                action: "evidence_loaded".to_string(),
-                evidence_id: "ev-test".to_string(),
-                details: "Loaded evidence".to_string(),
-                hash_before: None,
-                hash_after: Some("abc123def456".to_string()),
-            }],
-            hash_sets: Vec::new(),
-            augur_artifacts: Vec::new(),
-        }
-    }
-
-    #[test]
-    fn report_includes_evidence_hash() {
-        let html = build_report_html(&report_options_for_test("Case"), &report_snapshot_for_test());
-        assert!(html.contains("abc123def456"));
-        assert!(html.contains("Evidence Integrity"));
-    }
-
-    #[test]
-    fn report_html_escapes_case_name() {
-        let html = build_report_html(
-            &report_options_for_test("<script>alert('x')</script>"),
-            &report_snapshot_for_test(),
-        );
-        assert!(!html.contains("<script>"));
-        assert!(html.contains("&lt;script&gt;alert(&#x27;x&#x27;)&lt;/script&gt;"));
-    }
-
-    #[test]
-    fn report_includes_custody_log() {
-        let html = build_report_html(&report_options_for_test("Case"), &report_snapshot_for_test());
-        assert!(html.contains("Chain of Custody Log"));
-        assert!(html.contains("evidence_loaded"));
-        assert!(html.contains("Loaded evidence"));
-    }
-
-    #[test]
-    fn report_contains_table_of_contents() {
-        let html = build_report_html(&report_options_for_test("Case"), &report_snapshot_for_test());
-        assert!(html.contains("Table of Contents"));
-        assert!(html.contains("href=\"#chain-of-custody\""));
-        assert!(html.contains("id=\"augur-advisory\""));
-    }
-
-    #[test]
-    fn report_certification_block_includes_examiner_name() {
-        let html = build_report_html(&report_options_for_test("Case"), &report_snapshot_for_test());
-        assert!(html.contains("I, Examiner, of Agency"));
-        assert!(html.contains("id=\"examiner-certification\""));
-    }
-
-    #[test]
-    fn report_filename_includes_case_number() {
-        let dt = chrono::DateTime::parse_from_rfc3339("2026-04-26T12:34:56Z")
-            .expect("fixed datetime")
-            .with_timezone(&chrono::Utc);
-        assert_eq!(
-            report_filename_for_case("Case 19/A", dt),
-            "Strata_Report_Case_19_A_20260426_123456.html"
-        );
-    }
-
-    #[test]
-    fn report_augur_section_present_when_advisory_artifacts_exist() {
-        let mut snapshot = report_snapshot_for_test();
-        snapshot.augur_artifacts.push(engine::PluginArtifact {
-            id: "augur-1".to_string(),
-            category: "Communications".to_string(),
-            name: "AUGUR Translation: clip.mp3".to_string(),
-            value: "translated text".to_string(),
-            timestamp: None,
-            source_file: "clip.mp3".to_string(),
-            source_path: "/evidence/clip.mp3".to_string(),
-            forensic_value: "medium".to_string(),
-            mitre_technique: Some("T1005".to_string()),
-            mitre_name: None,
-            plugin: "AUGUR".to_string(),
-            raw_data: None,
-            is_advisory: true,
-            advisory_notice: Some("Review by a certified human translator.".to_string()),
-            confidence_score: 0.5,
-            confidence_basis: "advisory".to_string(),
-        });
-        let html = build_report_html(&report_options_for_test("Case"), &snapshot);
-        assert!(html.contains("AUGUR Advisory Translation Findings"));
-        assert!(html.contains("translated text"));
-        assert!(html.contains("Review by a certified human translator."));
-    }
-
-    #[test]
-    fn artifact_note_persists_across_sessions() {
-        let path = std::env::temp_dir().join(format!(
-            "strata-artifact-notes-{}-persist.json",
-            std::process::id()
-        ));
-        let note = ArtifactNote {
-            artifact_id: "artifact-1".to_string(),
-            evidence_id: "ev-1".to_string(),
-            note: "reviewed".to_string(),
-            created_at: 123,
-            examiner: "Examiner".to_string(),
-            flagged: true,
-        };
-        save_artifact_notes_to_path(&path, &[note.clone()]).expect("save notes");
-        let loaded = load_artifact_notes_from_path(&path).expect("load notes");
-
-        assert_eq!(loaded, vec![note]);
-        let _ = std::fs::remove_file(path);
-    }
-
-    #[test]
-    fn flagged_artifacts_queryable_by_evidence() {
-        let path = std::env::temp_dir().join(format!(
-            "strata-artifact-notes-{}-flagged.json",
-            std::process::id()
-        ));
-        let notes = vec![
-            ArtifactNote {
-                artifact_id: "artifact-1".to_string(),
-                evidence_id: "ev-1".to_string(),
-                note: "one".to_string(),
-                created_at: 1,
-                examiner: "Examiner".to_string(),
-                flagged: true,
-            },
-            ArtifactNote {
-                artifact_id: "artifact-2".to_string(),
-                evidence_id: "ev-1".to_string(),
-                note: "two".to_string(),
-                created_at: 2,
-                examiner: "Examiner".to_string(),
-                flagged: true,
-            },
-            ArtifactNote {
-                artifact_id: "artifact-3".to_string(),
-                evidence_id: "ev-2".to_string(),
-                note: "three".to_string(),
-                created_at: 3,
-                examiner: "Examiner".to_string(),
-                flagged: true,
-            },
-            ArtifactNote {
-                artifact_id: "artifact-4".to_string(),
-                evidence_id: "ev-1".to_string(),
-                note: "four".to_string(),
-                created_at: 4,
-                examiner: "Examiner".to_string(),
-                flagged: false,
-            },
-        ];
-        save_artifact_notes_to_path(&path, &notes).expect("save notes");
-        let loaded = load_artifact_notes_from_path(&path).expect("load notes");
-        let flagged_for_ev1 = loaded
-            .into_iter()
-            .filter(|note| note.evidence_id == "ev-1" && note.flagged)
-            .count();
-
-        assert_eq!(flagged_for_ev1, 2);
-        let _ = std::fs::remove_file(path);
     }
 }
