@@ -944,7 +944,6 @@ fn build_report_html(o: &ReportOptions) -> String {
 
 #[tauri::command]
 async fn open_evidence_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
-    eprintln!("[DIAGNOSTIC] open_evidence_dialog called");
     use tauri_plugin_dialog::DialogExt;
 
     let (tx, rx) = std::sync::mpsc::channel();
@@ -1005,7 +1004,6 @@ async fn open_folder_dialog(app: tauri::AppHandle) -> Result<Option<String>, Str
 
 #[tauri::command]
 async fn load_evidence(path: String) -> Result<EvidenceLoadResult, String> {
-    eprintln!("[DIAGNOSTIC] load_evidence called: {}", path);
     // Run the (potentially heavy) parse on a blocking thread so the Tauri
     // command thread isn't held up.
     let result =
